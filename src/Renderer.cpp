@@ -144,10 +144,10 @@ void Renderer::CreateShaders()
     m_Shader = new QOpenGLShaderProgram(this);
 
     m_VertexShader = new QOpenGLShader(QOpenGLShader::Vertex, this);
-    Q_ASSERT(m_VertexShader->compileSourceFile("I:/Qt projects/jc3-rbmdl-viewer/shaders/vertexshader.glsl"));
+    Q_ASSERT(m_VertexShader->compileSourceFile("I:/Qt projects/jc3-rbm-renderer/resources/shaders/vertexshader.glsl"));
 
     m_FragmentShader = new QOpenGLShader(QOpenGLShader::Fragment, this);
-    Q_ASSERT(m_FragmentShader->compileSourceFile("I:/Qt projects/jc3-rbmdl-viewer/shaders/fragmentshader.glsl"));
+    Q_ASSERT(m_FragmentShader->compileSourceFile("I:/Qt projects/jc3-rbm-renderer/resources/shaders/fragmentshader.glsl"));
 
     m_Shader->addShader(m_VertexShader);
     m_Shader->addShader(m_FragmentShader);

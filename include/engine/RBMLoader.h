@@ -93,6 +93,32 @@ public:
         //vertexBuffer->Create<GLfloat>(0);
     }
 
+    /*
+     *  Packed vertex model vertices
+     *
+     *  posX    posY    posZ    normX   normY   normZ   uvX     uvY
+     *
+     *
+        97, 	-1, 	-33, 	-47, 	-125, 	-114, 	0,      0
+        -84, 	127, 	-118, 	-47, 	16, 	62, 	0,      0
+        1, 		-128, 	-118, 	-47, 	-69, 	62, 	0,      0
+        -84, 	127, 	-41, 	48, 	16, 	62, 	0,      0
+        97, 	-1, 	-126, 	48, 	-125, 	-114, 	0,      0
+        1, 		-128, 	-41, 	48, 	-69, 	62, 	0,      0
+        1, 		-128, 	-41, 	48, 	-69, 	62, 	0,      0
+        1, 		-128, 	-118, 	-47, 	-69, 	62, 	0,      0
+        -84, 	127, 	-41, 	48, 	16, 	62, 	0,      0
+        -84, 	127, 	-118, 	-47, 	16, 	62, 	0,      0
+        -84, 	127, 	-118, 	-47, 	16, 	62, 	0,      0
+        97, 	-1, 	-33, 	-47, 	-125, 	-114, 	0,      0
+        -84, 	127, 	-41, 	48, 	16, 	62, 	0,      0
+        97, 	-1, 	-126, 	48, 	-125, 	-114, 	0,      0
+        97, 	-1, 	-33, 	-47, 	-125, 	-114, 	0,      0
+        1, 		-128, 	-118, 	-47, 	-69, 	62, 	0,      0
+        97, 	-1, 	-126, 	48, 	-125, 	-114, 	0,      0
+        1, 		-128, 	-41, 	48, 	-69, 	62, 	0,      0
+    */
+
     inline void ReadPackedVertexBuffer(uint32_t stride, VertexBuffer* vertexBuffer) noexcept
     {
         uint32_t vertices;
@@ -107,11 +133,11 @@ public:
         for (auto &byte : bytes) {
             buffer.push_back(byte);
 
-            qDebug() << QString::number(byte);
+            //qDebug() << QString::number(byte);
         }
 
-        exit(0);
-        vertexBuffer->Create(buffer);
+        //exit(0);
+        //vertexBuffer->Create(buffer);
     }
 
     inline void ReadIndexBuffer(IndexBuffer* indexBuffer) noexcept
