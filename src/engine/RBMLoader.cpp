@@ -1,4 +1,4 @@
-#include "RBMLoader.h"
+#include <engine/RBMLoader.h>
 #include <QFile>
 #include <QDebug>
 #include <QString>

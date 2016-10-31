@@ -1,5 +1,5 @@
-#include "Renderer.h"
-#include "engine/RBMLoader.h"
+#include <Renderer.h>
+#include <engine/RBMLoader.h>
 
 Renderer::Renderer(QWidget* parent) : QOpenGLWidget(parent)
 {
