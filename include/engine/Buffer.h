@@ -12,8 +12,7 @@ public:
     QOpenGLBuffer m_Buffer;
     uint32_t m_Count = 0;
 
-    template <typename T>
-    void Create(const QVector<T>& buffer)
+    void Create(const QVector<GLfloat>& buffer)
     {
         m_Count = buffer.size();
 
@@ -21,7 +20,7 @@ public:
         m_Buffer.create();
         m_Buffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
         m_Buffer.bind();
-        m_Buffer.allocate(buffer.constData(), sizeof(T) * m_Count);
+        m_Buffer.allocate(buffer.constData(), sizeof(GLfloat) * m_Count);
         m_Buffer.release();
     }
 

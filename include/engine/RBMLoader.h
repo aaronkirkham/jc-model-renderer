@@ -93,51 +93,36 @@ public:
         //vertexBuffer->Create<GLfloat>(0);
     }
 
-    /*
-     *  Packed vertex model vertices
-     *
-     *  posX    posY    posZ    normX   normY   normZ   uvX     uvY
-     *
-     *
-        97, 	-1, 	-33, 	-47, 	-125, 	-114, 	0,      0
-        -84, 	127, 	-118, 	-47, 	16, 	62, 	0,      0
-        1, 		-128, 	-118, 	-47, 	-69, 	62, 	0,      0
-        -84, 	127, 	-41, 	48, 	16, 	62, 	0,      0
-        97, 	-1, 	-126, 	48, 	-125, 	-114, 	0,      0
-        1, 		-128, 	-41, 	48, 	-69, 	62, 	0,      0
-        1, 		-128, 	-41, 	48, 	-69, 	62, 	0,      0
-        1, 		-128, 	-118, 	-47, 	-69, 	62, 	0,      0
-        -84, 	127, 	-41, 	48, 	16, 	62, 	0,      0
-        -84, 	127, 	-118, 	-47, 	16, 	62, 	0,      0
-        -84, 	127, 	-118, 	-47, 	16, 	62, 	0,      0
-        97, 	-1, 	-33, 	-47, 	-125, 	-114, 	0,      0
-        -84, 	127, 	-41, 	48, 	16, 	62, 	0,      0
-        97, 	-1, 	-126, 	48, 	-125, 	-114, 	0,      0
-        97, 	-1, 	-33, 	-47, 	-125, 	-114, 	0,      0
-        1, 		-128, 	-118, 	-47, 	-69, 	62, 	0,      0
-        97, 	-1, 	-126, 	48, 	-125, 	-114, 	0,      0
-        1, 		-128, 	-41, 	48, 	-69, 	62, 	0,      0
-    */
+    struct PackedVertex
+    {
+        uint16_t m_Position[4];
+    };
 
     inline void ReadPackedVertexBuffer(uint32_t stride, VertexBuffer* vertexBuffer) noexcept
     {
+        static auto unpack = [](uint16_t value) -> GLfloat {
+            if (value == -1)
+                return -1.0f;
+
+            return (value * (1.0f / 32767));
+        };
+
         uint32_t vertices;
         Read(vertices);
         qDebug() << "Vertices:" << vertices << "" << (vertices * stride);
 
-        // read vertices
-        QByteArray bytes;
-        ReadLength(bytes, (stride * vertices));
+        QVector<GLfloat> buffer;
+        for (int i = 0; i < vertices; i++) {
+            PackedVertex vertex;
+            Read(vertex);
 
-        QVector<uint16_t> buffer;
-        for (auto &byte : bytes) {
-            buffer.push_back(byte);
-
-            //qDebug() << QString::number(byte);
+            buffer.push_back(unpack(vertex.m_Position[0]));
+            buffer.push_back(unpack(vertex.m_Position[1]));
+            buffer.push_back(unpack(vertex.m_Position[2]));
         }
 
-        //exit(0);
-        //vertexBuffer->Create(buffer);
+        qDebug() << buffer;
+        vertexBuffer->Create(buffer);
     }
 
     inline void ReadIndexBuffer(IndexBuffer* indexBuffer) noexcept
