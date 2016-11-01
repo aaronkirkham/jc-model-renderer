@@ -1,7 +1,7 @@
 <p align="center"><img src="http://i.imgur.com/wEE9x53.png"></p>
 
 ## Just Cause 3 .rbm Renderer
-A small application for Just Cause 3 to preview Render Block Model files. Load an archive and select the rbm file you want to view, you can do fancy things like rotate the model, show normals and toggle textures.
+A small application to preview Just Cause 3's Render Block Model files. Load an archive and select the rbm file you want to view, you can do fancy things like rotate the model, show normals and toggle textures.
 
 ### Build Requirements
 If you want to compile the code yourself for any reason, here's a few things you'll need.
