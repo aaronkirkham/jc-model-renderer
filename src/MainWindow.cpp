@@ -1,20 +1,12 @@
 #include <MainWindow.h>
 #include "ui_mainwindow.h"
 
-#include <QFileDialog>
-#include <qDebug>
-
-static const char* model = "D:/Steam/steamapps/common/Just Cause 3/jc3mp/models/jc_design_tools/racing_arrows/general_red_outter_body_lod1.rbm";
-
-MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow)
+MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_Interface(new Ui::MainWindow)
 {
-    ui->setupUi(this);
+    m_Interface->setupUi(this);
 
-    connect(ui->actionOpenFile, SIGNAL(triggered(bool)), this, SLOT(OnClickLoadFile()));
-
-    setWindowTitle("Just Cause 3 - RBM Renderer");
-    setMinimumSize(1024, 788);
-    setMaximumSize(1024, 788);
+    connect(m_Interface->actionOpenFile, SIGNAL(triggered(bool)), this, SLOT(SelectModelFile()));
+    connect(m_Interface->actionExit, SIGNAL(triggered(bool)), qApp, SLOT(quit()));
 
     m_Renderer = new Renderer(this);
     m_Renderer->setGeometry(0, 20, 1024, 768);
@@ -23,13 +15,16 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 MainWindow::~MainWindow()
 {
     delete m_Renderer;
-    delete ui;
+    delete m_Interface;
 }
 
-void MainWindow::OnClickLoadFile()
+void MainWindow::SelectModelFile()
 {
-    auto file = QFileDialog::getOpenFileName(this, "Select RBM File", "D:/Steam/steamapps/common/Just Cause 3/jc3mp/models/jc_design_tools/racing_arrows", "*.rbm");
+    // E:/jc3-unpack
+    auto file = QFileDialog::getOpenFileName(this, "Select RBM File", "E:/jc3-unpack/locations/rom/region_01/air_races/ar_r1_02_unpack/models/jc_design_tools/racing_arrows", "*.rbm");
+    qDebug() << "Selected file" << file;
 
-    // load file
-    //m_ModelLoader->OpenFile(file);
+    RBMLoader::instance()->OpenFile(file);
+
+    // TODO: Save the last opened directory so we can just re-select that folder after.
 }

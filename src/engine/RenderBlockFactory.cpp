@@ -1,5 +1,4 @@
-#include <engine/RenderBlockFactory.h>
-#include <engine/renderblocks/RenderBlockGeneralJC3.h>
+#include <MainWindow.h>
 
 RenderBlockFactory::RenderBlockFactory()
 {

@@ -1,16 +1,22 @@
 #ifndef BUFFER_H
 #define BUFFER_H
 
-#include <QVector>
-#include <QVector3D>
-#include <QtOpenGL>
-#include <QDebug>
+#include <MainWindow.h>
 
 class VertexBuffer
 {
 public:
     QOpenGLBuffer m_Buffer;
     uint32_t m_Count = 0;
+
+    ~VertexBuffer()
+    {
+        if (IsCreated())
+        {
+            m_Buffer.release();
+            m_Buffer.destroy();
+        }
+    }
 
     void Create(const QVector<GLfloat>& buffer)
     {
@@ -33,6 +39,15 @@ class IndexBuffer
 public:
     QOpenGLBuffer m_Buffer;
     uint32_t m_Count = 0;
+
+    ~IndexBuffer()
+    {
+        if (IsCreated())
+        {
+            m_Buffer.release();
+            m_Buffer.destroy();
+        }
+    }
 
     template <typename T>
     void Create(const QVector<T>& buffer)

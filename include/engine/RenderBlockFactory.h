@@ -1,9 +1,9 @@
 #ifndef RENDERBLOCKFACTORY_H
 #define RENDERBLOCKFACTORY_H
 
-#include <QMap>
-#include <QDebug>
-#include "renderblocks/IRenderBlock.h"
+#include <MainWindow.h>
+
+QT_FORWARD_DECLARE_CLASS(IRenderBlock)
 
 class RenderBlockFactory
 {
@@ -15,10 +15,8 @@ public:
 
     IRenderBlock* GetRenderBlock(uint32_t typeHash)
     {
-        if (!IsValidRenderBlock(typeHash)) {
-            Q_ASSERT(false);
-            return false;
-        }
+        if (!IsValidRenderBlock(typeHash))
+            return nullptr;
 
         return m_RenderBlockTypes[typeHash];
     }

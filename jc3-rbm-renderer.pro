@@ -18,12 +18,11 @@ HEADERS         +=  include/engine/renderblocks/RenderBlockGeneralJC3.h \
                     include/MainWindow.h \
                     include/Renderer.h \
                     include/engine/renderblocks/IRenderBlock.h \
-                    include/engine/Buffer.h
+                    include/engine/Buffer.h \
+                    include/Singleton.h
 
 FORMS           +=  resources/mainwindow.ui
-
-DISTFILES       +=  resources/shaders/vertexshader.glsl \
-                    resources/shaders/fragmentshader.glsl
+RESOURCES       +=  resources/resources.qrc
 
 debug:DESTDIR   =   build/debug
 release:DESTDIR =   build/release

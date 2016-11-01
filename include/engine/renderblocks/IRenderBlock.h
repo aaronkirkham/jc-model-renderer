@@ -1,7 +1,7 @@
 #ifndef IRENDERBLOCK_H
 #define IRENDERBLOCK_H
 
-#include "../buffer.h"
+#include <MainWindow.h>
 
 QT_FORWARD_DECLARE_CLASS(RBMLoader)
 
@@ -12,6 +12,7 @@ public:
 
     virtual void Read(RBMLoader* loader) = 0;
 
+    virtual QVector<QString> GetMaterials() const = 0;
     virtual VertexBuffer* GetVertexBuffer() = 0;
     virtual IndexBuffer* GetIndexBuffer() = 0;
 };

@@ -1,7 +1,5 @@
-#include <engine/RBMLoader.h>
-#include <QFile>
-#include <QDebug>
-#include <QString>
+#include <MainWindow.h>
+#include <QApplication>
 
 RBMLoader::RBMLoader()
 {
@@ -22,6 +20,10 @@ RBMLoader::~RBMLoader()
 
 void RBMLoader::OpenFile(const QString& filename)
 {
+    // cleanup if we already have an open file
+    if (m_File)
+        m_File->close();
+
     m_File->setFileName(filename);
     if (!m_File->open(QIODevice::ReadOnly))
         return;
@@ -43,7 +45,10 @@ void RBMLoader::OpenFile(const QString& filename)
 
         qDebug() << QString("Reading block 0x%1").arg(QString::number(typeHash, 16).toUpper());
 
-        m_CurrentRenderBlock = m_RenderBlockFactory->GetRenderBlock(typeHash);
-        m_CurrentRenderBlock->Read(this);
+        // read the render block if we found the type
+        if (m_CurrentRenderBlock = m_RenderBlockFactory->GetRenderBlock(typeHash))
+            m_CurrentRenderBlock->Read(this);
+        else
+            QMessageBox::critical(MainWindow::instance(), "RBM Renderer", "Unsupported Render Block type.");
     }
 }

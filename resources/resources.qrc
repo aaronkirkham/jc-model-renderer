@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/rbm.png</file>
+        <file>shaders/fragmentshader.glsl</file>
+        <file>shaders/vertexshader.glsl</file>
+    </qresource>
+</RCC>

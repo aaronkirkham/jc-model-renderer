@@ -1,9 +1,7 @@
 #ifndef RENDERBLOCKGENERALJC3_H
 #define RENDERBLOCKGENERALJC3_H
 
-#include "irenderblock.h"
-#include "../RBMLoader.h"
-#include <QDebug>
+#include <MainWindow.h>
 
 #pragma pack(push, 1)
 struct SPackedAttribute
@@ -24,7 +22,7 @@ struct GeneralJC3
 {
     uint8_t version;
     GeneralJC3Attribute attributes;
-    int32_t textureCount;
+    uint32_t textureCount;
 };
 #pragma pack(pop)
 
@@ -41,6 +39,7 @@ struct Vec4Buffer
 class RenderBlockGeneralJC3 : public IRenderBlock
 {
 private:
+    QVector<QString> m_Materials;
     VertexBuffer m_VertexBuffer;
     IndexBuffer m_IndexBuffer;
 
@@ -61,11 +60,16 @@ public:
         loader->Read(block);
 
         // read textures
-        for (int i = 0; i < block.textureCount; i++) {
-            QString t;
-            loader->Read(t);
-            qDebug() << t;
+        {
+            for (uint32_t i = 0; i < block.textureCount; i++)
+            {
+                QString material;
+                loader->Read(material);
+                m_Materials.push_back(material);
+            }
         }
+
+        qDebug() << m_Materials.at(0);
 
         // unknown stuff
         uint32_t unk[4];
@@ -90,7 +94,7 @@ public:
                     buffer.push_back(unpack(vertex.m_Position[2]) * block.attributes.packed.scale);
                     //buffer.push_back(unpack(vertex.m_Position[3]) * block.attributes.packed.scale);
 
-                    qDebug() << unpack(vertex.m_Position[0]) << unpack(vertex.m_Position[1]) << unpack(vertex.m_Position[2]);
+                    //qDebug() << unpack(vertex.m_Position[0]) << unpack(vertex.m_Position[1]) << unpack(vertex.m_Position[2]);
                 }
             }
 
@@ -128,6 +132,7 @@ public:
         }
     }
 
+    virtual QVector<QString> GetMaterials() const override { return m_Materials; }
     virtual VertexBuffer* GetVertexBuffer() override { return &m_VertexBuffer; }
     virtual IndexBuffer* GetIndexBuffer() override { return &m_IndexBuffer; }
 };

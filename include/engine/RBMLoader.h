@@ -1,11 +1,7 @@
 #ifndef RBMLOADER_H
 #define RBMLOADER_H
 
-#include <QString>
-#include <QFile>
-#include <QVector3D>
-#include <QVector4D>
-#include "RenderBlockFactory.h"
+#include <MainWindow.h>
 
 struct CAABox
 {
@@ -30,7 +26,10 @@ struct RenderBlockModel
 };
 #pragma pack(pop)
 
-class RBMLoader
+QT_FORWARD_DECLARE_CLASS(RenderBlockFactory)
+QT_FORWARD_DECLARE_CLASS(IRenderBlock)
+
+class RBMLoader : public Singleton<RBMLoader>
 {
 private:
     RenderBlockFactory* m_RenderBlockFactory = nullptr;

@@ -1,17 +1,14 @@
-#include <Renderer.h>
-#include <engine/RBMLoader.h>
+#include <MainWindow.h>
+#include <QPainter>
 
 Renderer::Renderer(QWidget* parent) : QOpenGLWidget(parent)
-{
-    m_ModelLoader = new RBMLoader;
-}
+{ }
 
 Renderer::~Renderer()
 {
     delete m_FragmentShader;
     delete m_VertexShader;
     delete m_Shader;
-    delete m_ModelLoader;
 }
 
 void Renderer::initializeGL()
@@ -28,9 +25,6 @@ void Renderer::initializeGL()
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     //glEnable(GL_CULL_FACE);
-
-    //m_ModelLoader->OpenFile("D:/Steam/steamapps/common/Just Cause 3/jc3mp/models/jc_design_tools/racing_arrows/general_red_outter_body_lod1.rbm");
-    m_ModelLoader->OpenFile("D:/Steam/steamapps/common/Just Cause 3/jc3mp/models/jc_design_tools/racing_arrows/races_teal_arrow_body_lod1.rbm");
 }
 
 void Renderer::paintGL()
@@ -45,7 +39,7 @@ void Renderer::paintGL()
 
     // render the current model
     {
-        auto renderBlock = m_ModelLoader->GetCurrentRenderBlock();
+        auto renderBlock = RBMLoader::instance()->GetCurrentRenderBlock();
         if (renderBlock)
         {
             auto vertexBuffer = renderBlock->GetVertexBuffer();
@@ -74,13 +68,11 @@ void Renderer::paintGL()
 
     painter.endNativePainting();
     painter.end();
-
-    update();
 }
 
 void Renderer::resizeGL(int w, int h)
 {
-    const qreal zNear = 0.1, zFar = 100.0, fov = 65.0;
+    static const qreal zNear = 0.1, zFar = 100.0, fov = 65.0;
     qreal aspect = qreal(w) / qreal(h ? h : 1);
 
     glViewport(0, 0, w, h);
@@ -91,16 +83,35 @@ void Renderer::resizeGL(int w, int h)
 
 void Renderer::mousePressEvent(QMouseEvent* event)
 {
-    m_LastMousePosition = event->pos();
+    if (event->button() == Qt::LeftButton)
+    {
+        m_LastMousePosition = event->pos();
+        m_IsRotatingModel = true;
+    }
+}
+
+void Renderer::mouseReleaseEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton)
+    {
+        m_IsRotatingModel = false;
+    }
 }
 
 void Renderer::mouseMoveEvent(QMouseEvent* event)
 {
-    auto pos = event->pos();
-    m_Rotation.setX(m_Rotation.x() + (pos.x() - m_LastMousePosition.x()) * 0.5f);
-    m_Rotation.setY(m_Rotation.y() + (pos.y() - m_LastMousePosition.y()) * 0.5f);
+    if (m_IsRotatingModel)
+    {
+        auto pos = event->pos();
+        m_Rotation.setX(m_Rotation.x() + (pos.x() - m_LastMousePosition.x()) * 0.5f);
+        m_Rotation.setY(m_Rotation.y() + (pos.y() - m_LastMousePosition.y()) * 0.5f);
 
-    m_LastMousePosition = event->pos();
+        m_LastMousePosition = pos;
+
+        update();
+
+        MainWindow::instance()->GetInterafce();
+    }
 }
 
 void Renderer::CreateShaders()

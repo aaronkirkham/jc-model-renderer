@@ -1,21 +1,13 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include <QWidget>
-#include <QOpenGLWidget>
-#include <QOpenGLShaderProgram>
-#include <QMouseEvent>
-
-#include <gl/GLU.h>
-#include <gl/GL.h>
-
-#include "engine/RBMLoader.h"
+#include <MainWindow.h>
 
 class Renderer : public QOpenGLWidget, protected QOpenGLFunctions
 {
-private:
-    RBMLoader* m_ModelLoader = nullptr;
+    Q_OBJECT
 
+private:
     QOpenGLShaderProgram* m_Shader = nullptr;
     QOpenGLShader* m_VertexShader = nullptr;
     QOpenGLShader* m_FragmentShader = nullptr;
@@ -23,11 +15,13 @@ private:
     QMatrix4x4 m_Projection;
     QVector2D m_Rotation;
     QPoint m_LastMousePosition;
+    bool m_IsRotatingModel = false;
 
-    int m_MatrixUniform;
-    int m_VertexLocation;
+    int m_MatrixUniform = -1;
+    int m_VertexLocation = -1;
 
     void CreateShaders();
+    bool ShouldUpdateScene() { return m_IsRotatingModel; }
 
 protected:
     void initializeGL() Q_DECL_OVERRIDE;
@@ -35,6 +29,7 @@ protected:
     void resizeGL(int w, int h) Q_DECL_OVERRIDE;
 
     void mousePressEvent(QMouseEvent* event);
+    void mouseReleaseEvent(QMouseEvent* event);
     void mouseMoveEvent(QMouseEvent* event);
 
 public:
