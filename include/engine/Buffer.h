@@ -6,11 +6,6 @@
 #include <QtOpenGL>
 #include <QDebug>
 
-struct VertexData
-{
-    QVector3D pos;
-};
-
 class VertexBuffer
 {
 public:
