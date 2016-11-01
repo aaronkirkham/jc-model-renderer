@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QOpenGLWidget>
 #include <QOpenGLShaderProgram>
+#include <QMouseEvent>
 
 #include <gl/GLU.h>
 #include <gl/GL.h>
@@ -19,9 +20,12 @@ private:
     QOpenGLShader* m_VertexShader = nullptr;
     QOpenGLShader* m_FragmentShader = nullptr;
 
+    QMatrix4x4 m_Projection;
+    QVector2D m_Rotation;
+    QPoint m_LastMousePosition;
+
     int m_MatrixUniform;
-    int m_VertexAttribute;
-    int m_ColorAttribute;
+    int m_VertexLocation;
 
     void CreateShaders();
 
@@ -29,6 +33,9 @@ protected:
     void initializeGL() Q_DECL_OVERRIDE;
     void paintGL() Q_DECL_OVERRIDE;
     void resizeGL(int w, int h) Q_DECL_OVERRIDE;
+
+    void mousePressEvent(QMouseEvent* event);
+    void mouseMoveEvent(QMouseEvent* event);
 
 public:
     explicit Renderer(QWidget* parent = nullptr);

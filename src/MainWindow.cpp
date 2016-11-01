@@ -18,7 +18,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     m_Renderer = new Renderer(this);
     m_Renderer->setGeometry(0, 20, 1024, 768);
-    m_Renderer->show();
 }
 
 MainWindow::~MainWindow()

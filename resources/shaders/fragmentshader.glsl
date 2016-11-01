@@ -1,4 +1,4 @@
-varying vec4 colour_v;
+varying vec4 v_texcoord;
 
 void main(void)
 {

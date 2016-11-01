@@ -1,12 +1,12 @@
-#version 330 core
+uniform mat4 mvp_matrix;
 
-layout(location = 0) in vec4 vertex;
-attribute vec4 colour;
-uniform mat4 m_ModelViewProjection;
-varying vec4 colour_v;
+attribute vec4 a_position;
+attribute vec2 a_texcoord;
 
-void main(void)
+varying vec2 v_texcoord;
+
+void main()
 {
-    gl_Position = m_ModelViewProjection * vertex;
-    colour_v = colour;
+    gl_Position = mvp_matrix * a_position;
+    v_texcoord = a_texcoord;
 }

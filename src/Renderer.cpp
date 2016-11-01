@@ -4,14 +4,13 @@
 Renderer::Renderer(QWidget* parent) : QOpenGLWidget(parent)
 {
     m_ModelLoader = new RBMLoader;
-
-    QTimer *timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), this, SLOT(update()));
-    timer->start(50);
 }
 
 Renderer::~Renderer()
 {
+    delete m_FragmentShader;
+    delete m_VertexShader;
+    delete m_Shader;
     delete m_ModelLoader;
 }
 
@@ -20,106 +19,53 @@ void Renderer::initializeGL()
     initializeOpenGLFunctions();
     CreateShaders();
 
-    glClearColor(0.2, 0.2, 0.2, 1.0);
+    glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
     glEnable(GL_DEPTH_TEST);
     //glEnable(GL_LIGHT0);
     //glEnable(GL_LIGHTING);
     //glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
     //glEnable(GL_COLOR_MATERIAL);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glEnable(GL_CULL_FACE);
 
-    m_ModelLoader->OpenFile("D:/Steam/steamapps/common/Just Cause 3/jc3mp/models/jc_design_tools/racing_arrows/general_red_outter_body_lod1.rbm");
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    //glEnable(GL_CULL_FACE);
+
+    //m_ModelLoader->OpenFile("D:/Steam/steamapps/common/Just Cause 3/jc3mp/models/jc_design_tools/racing_arrows/general_red_outter_body_lod1.rbm");
+    m_ModelLoader->OpenFile("D:/Steam/steamapps/common/Just Cause 3/jc3mp/models/jc_design_tools/racing_arrows/races_teal_arrow_body_lod1.rbm");
 }
 
-void DrawGround(void)
-{
-    const GLfloat fExtent = 100.0f;
-    const GLfloat fStep = 0.5f;
-    GLfloat y = -0.4f;
-    GLfloat iLine;
-
-    glLineWidth(1);
-    glColor3f(0.5, 0.5, 0.5);
-    glBegin(GL_LINES);
-
-    for (iLine = -fExtent; iLine <= fExtent; iLine += fStep)
-    {
-        glVertex3f(iLine, y, fExtent);    // Draw Z lines
-        glVertex3f(iLine, y, -fExtent);
-
-        glVertex3f(fExtent, y, iLine); // Draw X lines
-        glVertex3f(-fExtent, y, iLine);
-    }
-
-    glEnd();
-}
-
-static float angle = 0.0f;
-static int frame = 0;
-static VertexBuffer vertex_buffer;
 void Renderer::paintGL()
 {
     QPainter painter;
     painter.begin(this);
-
     painter.beginNativePainting();
 
-    glViewport(0, 0, 1024, 768);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     m_Shader->bind();
 
-    // render triangle
-    {
-        QMatrix4x4 matrix;
-        matrix.perspective(65.0f, 1.333f, 0.1f, 100.0f);
-        //matrix.rotate(angle, 0, 1, 0);
-        matrix.translate(0, 0, -5);
-
-        m_Shader->setUniformValue(m_MatrixUniform, matrix);
-
-        if (!vertex_buffer.IsCreated()) {
-            QVector<GLfloat> vertices { 0, 1, 0, -1, -1, 0, 1, -1, 0 };
-            vertex_buffer.Create(vertices);
-        }
-
-        m_Shader->enableAttributeArray(m_VertexAttribute);
-
-        vertex_buffer.m_Buffer.bind();
-        m_Shader->setAttributeBuffer(m_VertexAttribute, GL_FLOAT, 0, 3);
-        vertex_buffer.m_Buffer.release();
-
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-
-        m_Shader->disableAttributeArray(m_VertexAttribute);
-    }
-
-
-    // testing
+    // render the current model
     {
         auto renderBlock = m_ModelLoader->GetCurrentRenderBlock();
         if (renderBlock)
         {
-            auto buffer = renderBlock->GetVertexBuffer();
-            if (buffer && buffer->IsCreated())
+            auto vertexBuffer = renderBlock->GetVertexBuffer();
+            auto indexBuffer = renderBlock->GetIndexBuffer();
+            if (vertexBuffer && vertexBuffer->IsCreated())
             {
                 QMatrix4x4 matrix;
-                matrix.perspective(65.0f, 1.333f, 0.1f, 100.0f);
-                matrix.translate(-3, 0, -5);
+                matrix.translate(0, 0, -10);
+                matrix.rotate(m_Rotation.x(), 0, 1, 0);
+                matrix.rotate(m_Rotation.y(), 1, 0, 0);
 
-                m_Shader->setUniformValue(m_MatrixUniform, matrix);
+                m_Shader->setUniformValue(m_MatrixUniform, m_Projection * matrix);
 
+                vertexBuffer->m_Buffer.bind();
+                indexBuffer->m_Buffer.bind();
 
-                m_Shader->enableAttributeArray(m_VertexAttribute);
+                m_Shader->enableAttributeArray(m_VertexLocation);
+                m_Shader->setAttributeBuffer(m_VertexLocation, GL_FLOAT, 0, 3);
 
-                buffer->m_Buffer.bind();
-                m_Shader->setAttributeBuffer(m_VertexAttribute, GL_FLOAT, 0, 3);
-                buffer->m_Buffer.release();
-
-                glDrawArrays(GL_TRIANGLES, 0, 3);
-
-                m_Shader->disableAttributeArray(m_VertexAttribute);
+                glDrawElements(GL_TRIANGLES, indexBuffer->m_Count, GL_UNSIGNED_SHORT, 0);
             }
         }
     }
@@ -129,14 +75,32 @@ void Renderer::paintGL()
     painter.endNativePainting();
     painter.end();
 
-    angle += 1.0f;
-    frame++;
-
     update();
 }
 
 void Renderer::resizeGL(int w, int h)
 {
+    const qreal zNear = 0.1, zFar = 100.0, fov = 65.0;
+    qreal aspect = qreal(w) / qreal(h ? h : 1);
+
+    glViewport(0, 0, w, h);
+
+    m_Projection.setToIdentity();
+    m_Projection.perspective(fov, aspect, zNear, zFar);
+}
+
+void Renderer::mousePressEvent(QMouseEvent* event)
+{
+    m_LastMousePosition = event->pos();
+}
+
+void Renderer::mouseMoveEvent(QMouseEvent* event)
+{
+    auto pos = event->pos();
+    m_Rotation.setX(m_Rotation.x() + (pos.x() - m_LastMousePosition.x()) * 0.5f);
+    m_Rotation.setY(m_Rotation.y() + (pos.y() - m_LastMousePosition.y()) * 0.5f);
+
+    m_LastMousePosition = event->pos();
 }
 
 void Renderer::CreateShaders()
@@ -153,7 +117,6 @@ void Renderer::CreateShaders()
     m_Shader->addShader(m_FragmentShader);
     m_Shader->link();
 
-    m_MatrixUniform = m_Shader->uniformLocation("m_ModelViewProjection");
-    m_VertexAttribute = m_Shader->attributeLocation("vertex");
-    //m_ColorAttribute = m_Shader->attributeLocation("colour");
+    m_MatrixUniform = m_Shader->uniformLocation("mvp_matrix");
+    m_VertexLocation = m_Shader->attributeLocation("a_position");
 }

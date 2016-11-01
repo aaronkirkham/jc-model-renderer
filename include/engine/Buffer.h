@@ -6,6 +6,11 @@
 #include <QtOpenGL>
 #include <QDebug>
 
+struct VertexData
+{
+    QVector3D pos;
+};
+
 class VertexBuffer
 {
 public:
@@ -18,10 +23,11 @@ public:
 
         m_Buffer = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
         m_Buffer.create();
-        m_Buffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
         m_Buffer.bind();
         m_Buffer.allocate(buffer.constData(), sizeof(GLfloat) * m_Count);
-        m_Buffer.release();
+        //m_Buffer.release();
+
+        qDebug() << "VertexBuffer allocated" << m_Buffer.size();
     }
 
     bool IsCreated() { return m_Count != 0; }
@@ -40,10 +46,11 @@ public:
 
         m_Buffer = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
         m_Buffer.create();
-        m_Buffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
         m_Buffer.bind();
         m_Buffer.allocate(buffer.constData(), sizeof(T) * m_Count);
-        m_Buffer.release();
+        //m_Buffer.release();
+
+        qDebug() << "IndexBuffer allocated" << m_Buffer.size();
     }
 
     bool IsCreated() { return m_Count != 0; }

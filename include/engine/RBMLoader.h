@@ -79,64 +79,6 @@ public:
         value = m_File->read(length);
         m_FileReadOffset += length;
     }
-
-    inline void ReadVertexBuffer(uint32_t stride, VertexBuffer* vertexBuffer) noexcept
-    {
-        uint32_t vertices;
-        Read(vertices);
-        qDebug() << "Vertices:" << vertices;
-
-        // read vertices
-        QByteArray bytes;
-        ReadLength(bytes, (stride * vertices));
-
-        //vertexBuffer->Create<GLfloat>(0);
-    }
-
-    struct PackedVertex
-    {
-        uint16_t m_Position[4];
-    };
-
-    inline void ReadPackedVertexBuffer(uint32_t stride, VertexBuffer* vertexBuffer) noexcept
-    {
-        static auto unpack = [](uint16_t value) -> GLfloat {
-            if (value == -1)
-                return -1.0f;
-
-            return (value * (1.0f / 32767));
-        };
-
-        uint32_t vertices;
-        Read(vertices);
-        qDebug() << "Vertices:" << vertices << "" << (vertices * stride);
-
-        QVector<GLfloat> buffer;
-        for (int i = 0; i < vertices; i++) {
-            PackedVertex vertex;
-            Read(vertex);
-
-            buffer.push_back(unpack(vertex.m_Position[0]));
-            buffer.push_back(unpack(vertex.m_Position[1]));
-            buffer.push_back(unpack(vertex.m_Position[2]));
-        }
-
-        qDebug() << buffer;
-        vertexBuffer->Create(buffer);
-    }
-
-    inline void ReadIndexBuffer(IndexBuffer* indexBuffer) noexcept
-    {
-        uint32_t indices;
-        Read(indices);
-        qDebug() << "Indices:" << indices;
-
-        // read indices
-        QByteArray bytes;
-        ReadLength(bytes, (2 * indices));
-
-        //indexBuffer->Create<uint16_t>(0);
-    }
 };
 
 #endif // RBMLOADER_H

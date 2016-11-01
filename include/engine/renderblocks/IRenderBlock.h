@@ -3,7 +3,8 @@
 
 #include "../buffer.h"
 
-class RBMLoader;
+QT_FORWARD_DECLARE_CLASS(RBMLoader)
+
 class IRenderBlock
 {
 public:
