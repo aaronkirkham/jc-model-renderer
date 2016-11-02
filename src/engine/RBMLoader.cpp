@@ -14,6 +14,8 @@ RBMLoader::~RBMLoader()
 void RBMLoader::ReadFile(const QString& filename)
 {
     FileReader::instance()->RequestFile(filename, [=](QDataStream& data) {
+        MainWindow::instance()->GetRenderer()->Reset();
+
         RenderBlockModel rbm;
         Read(data, rbm);
 

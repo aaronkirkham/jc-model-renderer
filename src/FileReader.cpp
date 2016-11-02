@@ -8,8 +8,6 @@ FileReader::~FileReader()
 
 void FileReader::RequestFile(const QString& filename, FileReaderCallback callback)
 {
-    qDebug() << "requesting file" << filename;
-
     auto request = new FileRequest(filename, callback);
     request->moveToThread(&m_WorkerThread);
 

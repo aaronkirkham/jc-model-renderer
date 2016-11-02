@@ -1,5 +1,6 @@
 #include <MainWindow.h>
 
+// TODO: Clean this up. Only create the instance of the render block if we need to!
 RenderBlockFactory::RenderBlockFactory()
 {
     //0x45DBC85F - 2DTex1

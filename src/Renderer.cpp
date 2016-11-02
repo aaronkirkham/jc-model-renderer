@@ -11,6 +11,41 @@ Renderer::~Renderer()
     delete m_Shader;
 }
 
+void Renderer::CreateShaders()
+{
+    m_Shader = new QOpenGLShaderProgram(this);
+
+    m_VertexShader = new QOpenGLShader(QOpenGLShader::Vertex, this);
+    Q_ASSERT(m_VertexShader->compileSourceFile("I:/Qt projects/jc3-rbm-renderer/resources/shaders/vertexshader.glsl"));
+
+    m_FragmentShader = new QOpenGLShader(QOpenGLShader::Fragment, this);
+    Q_ASSERT(m_FragmentShader->compileSourceFile("I:/Qt projects/jc3-rbm-renderer/resources/shaders/fragmentshader.glsl"));
+
+    m_Shader->addShader(m_VertexShader);
+    m_Shader->addShader(m_FragmentShader);
+    m_Shader->link();
+
+    m_MatrixUniform = m_Shader->uniformLocation("mvp_matrix");
+    m_VertexLocation = m_Shader->attributeLocation("a_position");
+}
+
+void Renderer::SetFieldOfView(float fov)
+{
+    m_Fov = fov;
+
+    m_Projection.setToIdentity();
+    m_Projection.perspective(m_Fov, static_cast<float>(m_Resolution.width() / m_Resolution.height()), NEAR_PLANE, FAR_PLANE);
+
+    update();
+}
+
+void Renderer::Reset()
+{
+    m_Rotation = QVector2D();
+    m_IsRotatingModel = false;
+    SetFieldOfView(FIELD_OF_VIEW);
+}
+
 void Renderer::initializeGL()
 {
     initializeOpenGLFunctions();
@@ -23,7 +58,7 @@ void Renderer::initializeGL()
     //glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
     //glEnable(GL_COLOR_MATERIAL);
 
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     //glEnable(GL_CULL_FACE);
 }
 
@@ -42,15 +77,11 @@ void Renderer::paintGL()
         auto renderBlock = RBMLoader::instance()->GetCurrentRenderBlock();
         if (renderBlock)
         {
-            auto vertexBuffer = renderBlock->GetVertexBuffer();
-            auto indexBuffer = renderBlock->GetIndexBuffer();
-            if (vertexBuffer && indexBuffer)
+            auto buffer = renderBlock->GetBuffer();
+            if (buffer)
             {
-                if (!vertexBuffer->IsCreated())
-                    vertexBuffer->Create();
-
-                if (!indexBuffer->IsCreated())
-                    indexBuffer->Create();
+                if (!buffer->IsCreated())
+                    buffer->Create(this);
 
                 QMatrix4x4 matrix;
                 matrix.translate(0, 0, -10);
@@ -59,13 +90,9 @@ void Renderer::paintGL()
 
                 m_Shader->setUniformValue(m_MatrixUniform, m_Projection * matrix);
 
-                vertexBuffer->m_Buffer.bind();
-                indexBuffer->m_Buffer.bind();
-
-                m_Shader->enableAttributeArray(m_VertexLocation);
-                m_Shader->setAttributeBuffer(m_VertexLocation, GL_FLOAT, 0, 3);
-
-                glDrawElements(GL_TRIANGLES, indexBuffer->m_Count, GL_UNSIGNED_SHORT, 0);
+                buffer->m_VAO.bind();
+                glDrawElements(GL_TRIANGLES, buffer->m_Indices.size(), GL_UNSIGNED_SHORT, 0);
+                buffer->m_VAO.release();
             }
         }
     }
@@ -78,13 +105,15 @@ void Renderer::paintGL()
 
 void Renderer::resizeGL(int w, int h)
 {
-    static const qreal zNear = 0.1, zFar = 100.0, fov = 65.0;
-    qreal aspect = qreal(w) / qreal(h ? h : 1);
+    m_Resolution.setWidth(w);
+    m_Resolution.setHeight(h);
+
+    float aspect = static_cast<float>(w / h);
 
     glViewport(0, 0, w, h);
 
     m_Projection.setToIdentity();
-    m_Projection.perspective(fov, aspect, zNear, zFar);
+    m_Projection.perspective(m_Fov, aspect, NEAR_PLANE, FAR_PLANE);
 }
 
 void Renderer::mousePressEvent(QMouseEvent* event)
@@ -93,6 +122,10 @@ void Renderer::mousePressEvent(QMouseEvent* event)
     {
         m_LastMousePosition = event->pos();
         m_IsRotatingModel = true;
+    }
+    else if (event->button() == Qt::MiddleButton)
+    {
+        Reset();
     }
 }
 
@@ -120,20 +153,8 @@ void Renderer::mouseMoveEvent(QMouseEvent* event)
     }
 }
 
-void Renderer::CreateShaders()
+void Renderer::wheelEvent(QWheelEvent* event)
 {
-    m_Shader = new QOpenGLShaderProgram(this);
-
-    m_VertexShader = new QOpenGLShader(QOpenGLShader::Vertex, this);
-    Q_ASSERT(m_VertexShader->compileSourceFile("I:/Qt projects/jc3-rbm-renderer/resources/shaders/vertexshader.glsl"));
-
-    m_FragmentShader = new QOpenGLShader(QOpenGLShader::Fragment, this);
-    Q_ASSERT(m_FragmentShader->compileSourceFile("I:/Qt projects/jc3-rbm-renderer/resources/shaders/fragmentshader.glsl"));
-
-    m_Shader->addShader(m_VertexShader);
-    m_Shader->addShader(m_FragmentShader);
-    m_Shader->link();
-
-    m_MatrixUniform = m_Shader->uniformLocation("mvp_matrix");
-    m_VertexLocation = m_Shader->attributeLocation("a_position");
+    float fov = qBound(0.0f, (m_Fov + -event->delta() * 0.05f), 168.0f);
+    SetFieldOfView(fov);
 }

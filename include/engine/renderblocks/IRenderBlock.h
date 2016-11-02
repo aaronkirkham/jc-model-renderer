@@ -7,8 +7,7 @@ class IRenderBlock
 {
 protected:
     QVector<QString> m_Materials;
-    VertexBuffer m_VertexBuffer;
-    IndexBuffer m_IndexBuffer;
+    Buffer m_Buffer;
 
 public:
     virtual ~IRenderBlock() = default;
@@ -16,15 +15,13 @@ public:
     virtual void Reset()
     {
         m_Materials.clear();
-        m_VertexBuffer.Destroy();
-        m_IndexBuffer.Destroy();
+        m_Buffer.Destroy();
     }
 
     virtual void Read(QDataStream& data) = 0;
 
     virtual QVector<QString> GetMaterials() const { return m_Materials; }
-    virtual VertexBuffer* GetVertexBuffer() { return &m_VertexBuffer; }
-    virtual IndexBuffer* GetIndexBuffer() { return &m_IndexBuffer; }
+    virtual Buffer* GetBuffer() { return &m_Buffer; }
 };
 
 #endif // IRENDERBLOCK_H

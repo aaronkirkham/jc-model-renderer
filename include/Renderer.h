@@ -3,7 +3,11 @@
 
 #include <MainWindow.h>
 
-class Renderer : public QOpenGLWidget, protected QOpenGLFunctions
+static const float FIELD_OF_VIEW = 65.0f;
+static const float NEAR_PLANE = 0.1f;
+static const float FAR_PLANE = 1000.0f;
+
+class Renderer : public QOpenGLWidget, public QOpenGLFunctions
 {
     Q_OBJECT
 
@@ -11,6 +15,9 @@ private:
     QOpenGLShaderProgram* m_Shader = nullptr;
     QOpenGLShader* m_VertexShader = nullptr;
     QOpenGLShader* m_FragmentShader = nullptr;
+
+    float m_Fov = FIELD_OF_VIEW;
+    QSize m_Resolution;
 
     QMatrix4x4 m_Projection;
     QVector2D m_Rotation;
@@ -31,10 +38,14 @@ protected:
     void mousePressEvent(QMouseEvent* event);
     void mouseReleaseEvent(QMouseEvent* event);
     void mouseMoveEvent(QMouseEvent* event);
+    void wheelEvent(QWheelEvent* event);
 
 public:
     explicit Renderer(QWidget* parent = nullptr);
     ~Renderer();
+
+    void SetFieldOfView(float fov);
+    void Reset();
 };
 
 #endif // RENDERER_H

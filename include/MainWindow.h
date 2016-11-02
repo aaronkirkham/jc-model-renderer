@@ -10,8 +10,9 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
-#include <QOpenGLContext>
+#include <QOpenGLVertexArrayObject>
 #include <QMouseEvent>
+#include <QWheelEvent>
 #include <QMessageBox>
 #include <QThread>
 #include <QDebug>
@@ -23,7 +24,7 @@
 #include "Singleton.h"
 #include "Renderer.h"
 #include "FileReader.h"
-#include "engine/Buffer.h"
+#include "Buffer.h"
 #include "engine/RBMLoader.h"
 #include "engine/RenderBlockFactory.h"
 #include "engine/renderblocks/IRenderBlock.h"
@@ -51,6 +52,7 @@ public:
     ~MainWindow();
 
     Ui::MainWindow* GetInterafce() { return m_Interface; }
+    Renderer* GetRenderer() { return m_Renderer; }
 };
 
 #endif // MAINWINDOW_H

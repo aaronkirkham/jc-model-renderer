@@ -24,17 +24,19 @@ struct GeneralJC3
     GeneralJC3Attribute attributes;
     uint32_t textureCount;
 };
-#pragma pack(pop)
 
 struct PackedVertex
 {
-    uint16_t m_Position[4];
+    int16_t m_Position[4];
 };
 
 struct Vec4Buffer
 {
-    float m_Position[5];
+    int16_t coords[3];
+    int16_t normals[3];
+    float uv[2];
 };
+#pragma pack(pop)
 
 class RenderBlockGeneralJC3 : public IRenderBlock
 {
@@ -46,7 +48,7 @@ public:
     {
         Reset();
 
-        static auto unpack = [](uint16_t value) -> GLfloat {
+        static auto unpack = [](int16_t value) -> GLfloat {
             if (value == -1)
                 return -1.0f;
 
@@ -71,24 +73,26 @@ public:
         uint32_t unk[4];
         RBMLoader::instance()->Read(data, unk);
 
+        QVector<GLfloat> vertices;
+        QVector<uint16_t> indices;
+
         // read buffers
         if (block.attributes.packed.format == 1)
         {
-            QVector<GLfloat> buffer;
-
             // vertices
             {
-                uint32_t vertices;
-                RBMLoader::instance()->Read(data, vertices);
+                uint32_t verticesCount;
+                RBMLoader::instance()->Read(data, verticesCount);
 
-                for (uint32_t i = 0; i < vertices; i++) {
+                for (uint32_t i = 0; i < verticesCount; i++)
+                {
                     PackedVertex vertex;
                     RBMLoader::instance()->Read(data, vertex);
 
-                    buffer.push_back(unpack(vertex.m_Position[0]) * block.attributes.packed.scale);
-                    buffer.push_back(unpack(vertex.m_Position[1]) * block.attributes.packed.scale);
-                    buffer.push_back(unpack(vertex.m_Position[2]) * block.attributes.packed.scale);
-                    //buffer.push_back(unpack(vertex.m_Position[3]) * block.attributes.packed.scale);
+                    vertices.push_back(unpack(vertex.m_Position[0]) * block.attributes.packed.scale);
+                    vertices.push_back(unpack(vertex.m_Position[1]) * block.attributes.packed.scale);
+                    vertices.push_back(unpack(vertex.m_Position[2]) * block.attributes.packed.scale);
+                    //vertices.push_back(unpack(vertex.m_Position[3]) * block.attributes.packed.scale);
 
                     //qDebug() << unpack(vertex.m_Position[0]) << unpack(vertex.m_Position[1]) << unpack(vertex.m_Position[2]);
                 }
@@ -99,31 +103,37 @@ public:
                 uint32_t uvs;
                 RBMLoader::instance()->Read(data, uvs);
 
-                for (uint32_t i = 0; i < uvs; i++) {
+                for (uint32_t i = 0; i < uvs; i++)
+                {
                     Vec4Buffer buffer;
                     RBMLoader::instance()->Read(data, buffer);
+
+                    //qDebug() << unpack(buffer.coords[0]) << unpack(buffer.coords[1]) << unpack(buffer.coords[2]);
+                    //qDebug() << unpack(buffer.normals[0]) << unpack(buffer.normals[1]) << unpack(buffer.normals[2]);
+                    //qDebug() << buffer.uv[0] << buffer.uv[1];
+                    //qDebug() << "";
                 }
             }
-
-            m_VertexBuffer.Setup(buffer);
         }
 
         // read indices
         {
-            uint32_t indices;
-            RBMLoader::instance()->Read(data, indices);
+            uint32_t indicesCount;
+            RBMLoader::instance()->Read(data, indicesCount);
 
             // read indices
-            QVector<uint16_t> buffer;
-            for (uint32_t i = 0; i < indices; i++) {
+            for (uint32_t i = 0; i < indicesCount; i++)
+            {
                 uint16_t val;
                 RBMLoader::instance()->Read(data, val);
 
-                buffer.push_back(val);
+                indices.push_back(val);
             }
 
-            m_IndexBuffer.Setup(buffer);
+            //qDebug() << indices;
         }
+
+        m_Buffer.Setup(vertices, indices);
     }
 };
 
