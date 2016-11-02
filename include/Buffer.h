@@ -20,12 +20,6 @@ public:
         Destroy();
     }
 
-    void Setup(const QVector<GLfloat>& vertices, const QVector<uint16_t>& indices)
-    {
-        m_Vertices = vertices;
-        m_Indices = indices;
-    }
-
     void Create(Renderer* renderer);
 
     void Destroy()

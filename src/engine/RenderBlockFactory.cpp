@@ -90,4 +90,5 @@ RenderBlockFactory::RenderBlockFactory()
     //0x5B2003F6 - Window
 
     m_RenderBlockTypes[0x2EE0F4A9] = new RenderBlockGeneralJC3;
+    m_RenderBlockTypes[0x9D6E332A] = new RenderBlockCharacter;
 }

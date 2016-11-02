@@ -24,6 +24,18 @@ struct RenderBlockModel
     uint32_t numberOfBlocks;
     uint32_t flags;
 };
+
+struct PackedVertex
+{
+    int16_t m_Position[4];
+};
+
+struct UnknownStruct
+{
+    int16_t coords[3];
+    int16_t normals[3];
+    float uv[2];
+};
 #pragma pack(pop)
 
 QT_FORWARD_DECLARE_CLASS(RenderBlockFactory)
@@ -60,6 +72,67 @@ public:
 
         value = QString(str);
         delete[] str;
+    }
+
+    inline void ReadVertexBuffer(QDataStream& data, QVector<GLfloat>* vertices, bool compressed = false) noexcept
+    {
+        if (compressed)
+        {
+            static auto expand = [](int16_t value) -> GLfloat {
+                if (value == -1)
+                    return -1.0f;
+
+                return (value * (1.0f / 32767));
+            };
+
+            // read vertices
+            {
+                uint32_t verticesCount;
+                Read(data, verticesCount);
+
+                for (uint32_t i = 0; i < verticesCount; i++)
+                {
+                    PackedVertex vertex;
+                    Read(data, vertex);
+
+                    vertices->push_back(expand(vertex.m_Position[0]));
+                    vertices->push_back(expand(vertex.m_Position[1]));
+                    vertices->push_back(expand(vertex.m_Position[2]));
+                }
+            }
+
+            // read uvs?
+            {
+                uint32_t uvs;
+                Read(data, uvs);
+
+                for (uint32_t i = 0; i < uvs; i++)
+                {
+                    UnknownStruct unk;
+                    Read(data, unk);
+                }
+            }
+        }
+        else
+        {
+            qDebug() << "TODO: Implement reading of unpacked vertices.";
+            Q_ASSERT(false);
+        }
+    }
+
+    inline void ReadIndexBuffer(QDataStream& data, QVector<uint16_t>* indices) noexcept
+    {
+        uint32_t indicesCount;
+        Read(data, indicesCount);
+
+        // read indices
+        for (uint32_t i = 0; i < indicesCount; i++)
+        {
+            uint16_t index;
+            Read(data, index);
+
+            indices->push_back(index);
+        }
     }
 };
 

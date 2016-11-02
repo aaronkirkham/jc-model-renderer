@@ -16,10 +16,10 @@ void Renderer::CreateShaders()
     m_Shader = new QOpenGLShaderProgram(this);
 
     m_VertexShader = new QOpenGLShader(QOpenGLShader::Vertex, this);
-    Q_ASSERT(m_VertexShader->compileSourceFile("I:/Qt projects/jc3-rbm-renderer/resources/shaders/vertexshader.glsl"));
+    Q_ASSERT(m_VertexShader->compileSourceFile(":/shaders/vertexshader.glsl"));
 
     m_FragmentShader = new QOpenGLShader(QOpenGLShader::Fragment, this);
-    Q_ASSERT(m_FragmentShader->compileSourceFile("I:/Qt projects/jc3-rbm-renderer/resources/shaders/fragmentshader.glsl"));
+    Q_ASSERT(m_FragmentShader->compileSourceFile(":/shaders/fragmentshader.glsl"));
 
     m_Shader->addShader(m_VertexShader);
     m_Shader->addShader(m_FragmentShader);
@@ -58,7 +58,7 @@ void Renderer::initializeGL()
     //glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
     //glEnable(GL_COLOR_MATERIAL);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     //glEnable(GL_CULL_FACE);
 }
 
@@ -69,6 +69,8 @@ void Renderer::paintGL()
     painter.beginNativePainting();
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    int32_t triangles = 0, vertices = 0, indices = 0;
 
     m_Shader->bind();
 
@@ -93,6 +95,10 @@ void Renderer::paintGL()
                 buffer->m_VAO.bind();
                 glDrawElements(GL_TRIANGLES, buffer->m_Indices.size(), GL_UNSIGNED_SHORT, 0);
                 buffer->m_VAO.release();
+
+                vertices += buffer->m_Vertices.size();
+                triangles += (vertices / 3);
+                indices += buffer->m_Indices.size();
             }
         }
     }
@@ -100,6 +106,14 @@ void Renderer::paintGL()
     m_Shader->release();
 
     painter.endNativePainting();
+
+    QFont font = painter.font();
+    font.setPixelSize(14);
+    painter.setFont(font);
+
+    painter.setPen(Qt::white);
+    painter.drawText(10, 758, QString("Drawing %1 triangles (%2 vertices, %3 indices)").arg(QString::number(triangles), QString::number(vertices), QString::number(indices)));
+
     painter.end();
 }
 

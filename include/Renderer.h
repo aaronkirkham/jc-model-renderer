@@ -28,7 +28,6 @@ private:
     int m_VertexLocation = -1;
 
     void CreateShaders();
-    bool ShouldUpdateScene() { return m_IsRotatingModel; }
 
 protected:
     void initializeGL() Q_DECL_OVERRIDE;

@@ -20,13 +20,17 @@ MainWindow::~MainWindow()
 
 void MainWindow::SelectModelFile()
 {
-    // E:/jc3-unpack
-    auto file = QFileDialog::getOpenFileName(this, "Select RBM File", "E:/jc3-unpack/locations/rom/region_01/air_races/ar_r1_02_unpack/models/jc_design_tools/racing_arrows", "*.rbm");
-    qDebug() << "Selected file" << file;
+    // TODO: Get the path to the game folder.
+    if (m_LastOpenedDirectory.isEmpty())
+        //m_LastOpenedDirectory = "E:/jc3-unpack/editor/entities/gameobjects/main_character_unpack/models/jc_characters/main_characters/rico";
+        m_LastOpenedDirectory = "E:/jc3-unpack/locations/rom/region_01/air_races/ar_r1_02_unpack/models/jc_design_tools/racing_arrows";
+
+    auto file = QFileDialog::getOpenFileName(this, "Select RBM File", m_LastOpenedDirectory, "*.rbm");
+
+    auto fileInfo = QFileInfo(file);
+    m_LastOpenedDirectory = fileInfo.absolutePath();
+
+    setWindowTitle("Just Cause 3 RBM Renderer - " + fileInfo.fileName());
 
     RBMLoader::instance()->ReadFile(file);
-    //RBMLoader::instance()->OpenFile("D:/Steam/steamapps/common/Just Cause 3/archives_win64/game0.arc");
-
-
-    // TODO: Save the last opened directory so we can just re-select that folder after.
 }

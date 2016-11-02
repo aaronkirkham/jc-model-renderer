@@ -22,7 +22,9 @@ HEADERS         +=  include/engine/renderblocks/RenderBlockGeneralJC3.h \
                     include/engine/renderblocks/IRenderBlock.h \
                     include/Buffer.h \
                     include/Singleton.h \
-                    include/FileReader.h
+                    include/FileReader.h \
+                    include/engine/renderblocks/RenderBlockCharacter.h \
+    include/engine/Materials.h
 
 FORMS           +=  resources/mainwindow.ui
 RESOURCES       +=  resources/resources.qrc

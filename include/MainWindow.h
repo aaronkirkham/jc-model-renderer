@@ -11,6 +11,7 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
+#include <QOpenGLTexture>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QMessageBox>
@@ -27,8 +28,10 @@
 #include "Buffer.h"
 #include "engine/RBMLoader.h"
 #include "engine/RenderBlockFactory.h"
+#include "engine/Materials.h"
 #include "engine/renderblocks/IRenderBlock.h"
 #include "engine/renderblocks/RenderBlockGeneralJC3.h"
+#include "engine/renderblocks/RenderBlockCharacter.h"
 
 namespace Ui {
 class MainWindow;
@@ -43,6 +46,7 @@ class MainWindow : public QMainWindow, public Singleton<MainWindow>
 private:
     Ui::MainWindow* m_Interface = nullptr;
     Renderer* m_Renderer = nullptr;
+    QString m_LastOpenedDirectory;
 
 private slots:
     void SelectModelFile();
@@ -53,6 +57,7 @@ public:
 
     Ui::MainWindow* GetInterafce() { return m_Interface; }
     Renderer* GetRenderer() { return m_Renderer; }
+    const QString& GetLastOpenedDirectory() { return m_LastOpenedDirectory; }
 };
 
 #endif // MAINWINDOW_H

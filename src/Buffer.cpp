@@ -1,5 +1,6 @@
 #include <MainWindow.h>
 
+// TODO: Use the correct context so we don't have to call this in the paint thread
 void Buffer::Create(Renderer* renderer)
 {
     m_VAO.create();
@@ -21,6 +22,8 @@ void Buffer::Create(Renderer* renderer)
     m_IndexBuffer->allocate(m_Indices.constData(), m_Indices.size() * sizeof(uint16_t));
 
     m_VAO.release();
+    m_VertexBuffer->release();
+    m_IndexBuffer->release();
 
     m_IsCreated = true;
 }

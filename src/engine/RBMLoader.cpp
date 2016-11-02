@@ -34,7 +34,11 @@ void RBMLoader::ReadFile(const QString& filename)
             if (m_CurrentRenderBlock = m_RenderBlockFactory->GetRenderBlock(typeHash))
                 m_CurrentRenderBlock->Read(data);
             else
-                QMessageBox::critical(MainWindow::instance(), "RBM Renderer", "Unsupported Render Block type.");
+            {
+                qDebug() << "Unsupported type.";
+                //QMessageBox::critical(MainWindow::instance(), "RBM Renderer", "Unsupported Render Block type.");
+                break;
+            }
         }
     });
 }
