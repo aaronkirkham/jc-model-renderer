@@ -3,8 +3,6 @@
 
 #include <MainWindow.h>
 
-QT_FORWARD_DECLARE_CLASS(RBMLoader)
-
 class IRenderBlock
 {
 protected:
