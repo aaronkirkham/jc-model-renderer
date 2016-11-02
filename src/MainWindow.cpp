@@ -1,4 +1,7 @@
 #include <MainWindow.h>
+
+#include <QMimeData>
+
 #include "ui_mainwindow.h"
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_Interface(new Ui::MainWindow)
@@ -33,4 +36,27 @@ void MainWindow::SelectModelFile()
     setWindowTitle("Just Cause 3 RBM Renderer - " + fileInfo.fileName());
 
     RBMLoader::instance()->ReadFile(file);
+}
+
+void MainWindow::dropEvent(QDropEvent *event)
+{
+    const QMimeData* mimeData = event->mimeData();
+
+    if (mimeData->hasUrls())
+    {
+        QStringList pathList;
+        QList<QUrl> urlList = mimeData->urls();
+
+        if(urlList.empty()) {
+            return;
+        }
+
+        RBMLoader::instance()->ReadFile(urlList.at(0).toLocalFile());
+        event->acceptProposedAction();
+    }
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent* event)
+{
+    event->acceptProposedAction();
 }

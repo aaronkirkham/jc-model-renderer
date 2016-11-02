@@ -58,6 +58,10 @@ public:
     Ui::MainWindow* GetInterafce() { return m_Interface; }
     Renderer* GetRenderer() { return m_Renderer; }
     const QString& GetLastOpenedDirectory() { return m_LastOpenedDirectory; }
+
+protected:
+    void dropEvent(QDropEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent* event) override;
 };
 
 #endif // MAINWINDOW_H
