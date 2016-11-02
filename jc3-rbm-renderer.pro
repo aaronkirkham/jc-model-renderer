@@ -10,7 +10,8 @@ SOURCES         +=  src/main.cpp\
                     src/engine/RBMLoader.cpp \
                     src/engine/RenderBlockFactory.cpp \
                     src/MainWindow.cpp \
-                    src/Renderer.cpp
+                    src/Renderer.cpp \
+                    src/FileReader.cpp
 
 HEADERS         +=  include/engine/renderblocks/RenderBlockGeneralJC3.h \
                     include/engine/RBMLoader.h \
@@ -19,7 +20,8 @@ HEADERS         +=  include/engine/renderblocks/RenderBlockGeneralJC3.h \
                     include/Renderer.h \
                     include/engine/renderblocks/IRenderBlock.h \
                     include/engine/Buffer.h \
-                    include/Singleton.h
+                    include/Singleton.h \
+                    include/FileReader.h
 
 FORMS           +=  resources/mainwindow.ui
 RESOURCES       +=  resources/resources.qrc

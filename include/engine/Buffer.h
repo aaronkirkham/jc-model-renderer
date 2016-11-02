@@ -3,67 +3,71 @@
 
 #include <MainWindow.h>
 
-class VertexBuffer
+template <typename T>
+class Buffer
 {
 public:
     QOpenGLBuffer m_Buffer;
+    uint32_t m_BufferSize = 0;
     uint32_t m_Count = 0;
+    QVector<T> m_Data;
 
-    ~VertexBuffer()
+    ~Buffer()
+    {
+        Destroy();
+    }
+
+    void Setup(const QVector<T>& data)
+    {
+        m_Data = data;
+        m_Count = m_Data.size();
+    }
+
+    void Destroy()
     {
         if (IsCreated())
         {
             m_Buffer.release();
             m_Buffer.destroy();
+            m_BufferSize = 0;
+            m_Count = 0;
         }
     }
 
-    void Create(const QVector<GLfloat>& buffer)
+    bool IsCreated()
     {
-        m_Count = buffer.size();
-
-        m_Buffer = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-        m_Buffer.create();
-        m_Buffer.bind();
-        m_Buffer.allocate(buffer.constData(), sizeof(GLfloat) * m_Count);
-        //m_Buffer.release();
-
-        qDebug() << "VertexBuffer allocated" << m_Buffer.size();
+        return (m_BufferSize > 0);
     }
-
-    bool IsCreated() { return m_Count != 0; }
 };
 
-class IndexBuffer
+class VertexBuffer : public Buffer<GLfloat>
 {
 public:
-    QOpenGLBuffer m_Buffer;
-    uint32_t m_Count = 0;
-
-    ~IndexBuffer()
+    // This function must be called in the open gl context
+    void Create()
     {
-        if (IsCreated())
-        {
-            m_Buffer.release();
-            m_Buffer.destroy();
-        }
-    }
-
-    template <typename T>
-    void Create(const QVector<T>& buffer)
-    {
-        m_Count = buffer.size();
-
-        m_Buffer = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
-        m_Buffer.create();
+        m_Buffer = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+        Q_ASSERT(m_Buffer.create());
         m_Buffer.bind();
-        m_Buffer.allocate(buffer.constData(), sizeof(T) * m_Count);
-        //m_Buffer.release();
-
-        qDebug() << "IndexBuffer allocated" << m_Buffer.size();
+        m_Buffer.allocate(m_Data.constData(), sizeof(GLfloat) * m_Count);
+        m_BufferSize = m_Buffer.size();
+        m_Buffer.release();
     }
+};
 
-    bool IsCreated() { return m_Count != 0; }
+class IndexBuffer : public Buffer<uint16_t>
+{
+public:
+    // This function must be called in the open gl context
+    void Create()
+    {
+        m_Buffer = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+        Q_ASSERT(m_Buffer.create());
+        m_Buffer.bind();
+        m_Buffer.allocate(m_Data.constData(), sizeof(uint16_t) * m_Count);
+        m_BufferSize = m_Buffer.size();
+        m_Buffer.release();
+    }
 };
 
 #endif // BUFFER_H

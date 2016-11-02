@@ -24,7 +24,9 @@ void MainWindow::SelectModelFile()
     auto file = QFileDialog::getOpenFileName(this, "Select RBM File", "E:/jc3-unpack/locations/rom/region_01/air_races/ar_r1_02_unpack/models/jc_design_tools/racing_arrows", "*.rbm");
     qDebug() << "Selected file" << file;
 
-    RBMLoader::instance()->OpenFile(file);
+    RBMLoader::instance()->ReadFile(file);
+    //RBMLoader::instance()->OpenFile("D:/Steam/steamapps/common/Just Cause 3/archives_win64/game0.arc");
+
 
     // TODO: Save the last opened directory so we can just re-select that folder after.
 }

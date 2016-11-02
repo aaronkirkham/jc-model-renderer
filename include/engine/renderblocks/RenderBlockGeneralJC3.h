@@ -38,16 +38,14 @@ struct Vec4Buffer
 
 class RenderBlockGeneralJC3 : public IRenderBlock
 {
-private:
-    QVector<QString> m_Materials;
-    VertexBuffer m_VertexBuffer;
-    IndexBuffer m_IndexBuffer;
-
 public:
     RenderBlockGeneralJC3() = default;
+    virtual ~RenderBlockGeneralJC3() = default;
 
-    virtual void Read(RBMLoader* loader) override
+    virtual void Read(QDataStream& data) override
     {
+        Reset();
+
         static auto unpack = [](uint16_t value) -> GLfloat {
             if (value == -1)
                 return -1.0f;
@@ -57,23 +55,21 @@ public:
 
         // read general block info
         GeneralJC3 block;
-        loader->Read(block);
+        RBMLoader::instance()->Read(data, block);
 
         // read textures
         {
             for (uint32_t i = 0; i < block.textureCount; i++)
             {
                 QString material;
-                loader->Read(material);
+                RBMLoader::instance()->Read(data, material);
                 m_Materials.push_back(material);
             }
         }
 
-        qDebug() << m_Materials.at(0);
-
         // unknown stuff
         uint32_t unk[4];
-        loader->Read(unk);
+        RBMLoader::instance()->Read(data, unk);
 
         // read buffers
         if (block.attributes.packed.format == 1)
@@ -83,11 +79,11 @@ public:
             // vertices
             {
                 uint32_t vertices;
-                loader->Read(vertices);
+                RBMLoader::instance()->Read(data, vertices);
 
                 for (uint32_t i = 0; i < vertices; i++) {
                     PackedVertex vertex;
-                    loader->Read(vertex);
+                    RBMLoader::instance()->Read(data, vertex);
 
                     buffer.push_back(unpack(vertex.m_Position[0]) * block.attributes.packed.scale);
                     buffer.push_back(unpack(vertex.m_Position[1]) * block.attributes.packed.scale);
@@ -101,40 +97,34 @@ public:
             // read uvs
             {
                 uint32_t uvs;
-                loader->Read(uvs);
+                RBMLoader::instance()->Read(data, uvs);
 
                 for (uint32_t i = 0; i < uvs; i++) {
                     Vec4Buffer buffer;
-                    loader->Read(buffer);
+                    RBMLoader::instance()->Read(data, buffer);
                 }
             }
 
-            m_VertexBuffer.Create(buffer);
-            qDebug() << "vertex buffer count:" << m_VertexBuffer.m_Count;
+            m_VertexBuffer.Setup(buffer);
         }
 
         // read indices
         {
             uint32_t indices;
-            loader->Read(indices);
-            qDebug() << "Indices:" << indices;
+            RBMLoader::instance()->Read(data, indices);
 
             // read indices
             QVector<uint16_t> buffer;
             for (uint32_t i = 0; i < indices; i++) {
                 uint16_t val;
-                loader->Read(val);
+                RBMLoader::instance()->Read(data, val);
 
                 buffer.push_back(val);
             }
 
-            m_IndexBuffer.Create(buffer);
+            m_IndexBuffer.Setup(buffer);
         }
     }
-
-    virtual QVector<QString> GetMaterials() const override { return m_Materials; }
-    virtual VertexBuffer* GetVertexBuffer() override { return &m_VertexBuffer; }
-    virtual IndexBuffer* GetIndexBuffer() override { return &m_IndexBuffer; }
 };
 
 #endif // RENDERBLOCKGENERALJC3_H

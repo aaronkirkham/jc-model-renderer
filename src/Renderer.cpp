@@ -44,8 +44,14 @@ void Renderer::paintGL()
         {
             auto vertexBuffer = renderBlock->GetVertexBuffer();
             auto indexBuffer = renderBlock->GetIndexBuffer();
-            if (vertexBuffer && vertexBuffer->IsCreated())
+            if (vertexBuffer && indexBuffer)
             {
+                if (!vertexBuffer->IsCreated())
+                    vertexBuffer->Create();
+
+                if (!indexBuffer->IsCreated())
+                    indexBuffer->Create();
+
                 QMatrix4x4 matrix;
                 matrix.translate(0, 0, -10);
                 matrix.rotate(m_Rotation.x(), 0, 1, 0);

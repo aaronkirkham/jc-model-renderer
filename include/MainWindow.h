@@ -10,15 +10,19 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
+#include <QOpenGLContext>
 #include <QMouseEvent>
 #include <QMessageBox>
+#include <QThread>
 #include <QDebug>
 
+#include <functional>
 #include <gl/GLU.h>
 #include <gl/GL.h>
 
 #include "Singleton.h"
 #include "Renderer.h"
+#include "FileReader.h"
 #include "engine/Buffer.h"
 #include "engine/RBMLoader.h"
 #include "engine/RenderBlockFactory.h"

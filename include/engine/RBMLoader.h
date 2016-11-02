@@ -34,49 +34,32 @@ class RBMLoader : public Singleton<RBMLoader>
 private:
     RenderBlockFactory* m_RenderBlockFactory = nullptr;
     IRenderBlock* m_CurrentRenderBlock = nullptr;
-    QFile* m_File = nullptr;
-    qint64 m_FileReadOffset = 0;
 
 public:
     RBMLoader();
     ~RBMLoader();
 
-    void OpenFile(const QString& filename);
-
-    void SetReadOffset(qint64 offset) { m_FileReadOffset = offset; }
-    qint64 GetReadOffset() const { return m_FileReadOffset; }
-
+    void ReadFile(const QString& filename);
     IRenderBlock* GetCurrentRenderBlock() { return m_CurrentRenderBlock; }
 
     template <typename T>
-    inline void Read(T& value) noexcept
+    inline void Read(QDataStream& data, T& value) noexcept
     {
-        if (!m_File)
-            return;
-
-        m_File->seek(m_FileReadOffset);
-        m_File->read((char *)&value, sizeof(T));
-        m_FileReadOffset += sizeof(T);
+        data.readRawData((char *)&value, sizeof(T));
     }
 
-    inline void Read(QString& value) noexcept
+    inline void Read(QDataStream& data, QString& value) noexcept
     {
-        if (!m_File)
-            return;
-
         uint32_t length;
-        Read(length);
+        Read(data, length);
 
-        m_File->seek(m_FileReadOffset);
-        value = m_File->read(length);
-        m_FileReadOffset += length;
-    }
+        // ugly..
+        auto str = new char[length + 1];
+        data.readRawData(str, length);
+        str[length] = '\0';
 
-    inline void ReadLength(QByteArray& value, uint32_t length) noexcept
-    {
-        m_File->seek(m_FileReadOffset);
-        value = m_File->read(length);
-        m_FileReadOffset += length;
+        value = QString(str);
+        delete[] str;
     }
 };
 
