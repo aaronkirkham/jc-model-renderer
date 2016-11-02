@@ -16,6 +16,14 @@ void RBMLoader::ReadFile(const QString& filename)
     FileReader::instance()->RequestFile(filename, [=](QDataStream& data) {
         MainWindow::instance()->GetRenderer()->Reset();
 
+        // cleanup old render blocks
+        {
+            for (auto &renderBlock : m_RenderBlocks)
+                renderBlock->Reset();
+
+            m_RenderBlocks.clear();
+        }
+
         RenderBlockModel rbm;
         Read(data, rbm);
 
