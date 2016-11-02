@@ -7,7 +7,6 @@ A small application to preview Just Cause 3's Render Block Model files. Load an 
 If you want to compile the code yourself for any reason, here's a few things you'll need.
  - Qt 5.7 or later
  - OpenGL
- - MSVC 2013 compiler or later
  
 #### MIT License
 Permission is hereby granted, free of charge, to any person obtaining a copy
