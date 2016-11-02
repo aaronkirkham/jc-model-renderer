@@ -45,14 +45,14 @@ class RBMLoader : public Singleton<RBMLoader>
 {
 private:
     RenderBlockFactory* m_RenderBlockFactory = nullptr;
-    IRenderBlock* m_CurrentRenderBlock = nullptr;
+    QVector<IRenderBlock*> m_RenderBlocks;
 
 public:
     RBMLoader();
     ~RBMLoader();
 
     void ReadFile(const QString& filename);
-    IRenderBlock* GetCurrentRenderBlock() { return m_CurrentRenderBlock; }
+    const QVector<IRenderBlock*>& GetRenderBlocks() { return m_RenderBlocks; }
 
     template <typename T>
     inline void Read(QDataStream& data, T& value) noexcept

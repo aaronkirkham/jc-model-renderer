@@ -76,8 +76,7 @@ void Renderer::paintGL()
 
     // render the current model
     {
-        auto renderBlock = RBMLoader::instance()->GetCurrentRenderBlock();
-        if (renderBlock)
+        for (auto &renderBlock : RBMLoader::instance()->GetRenderBlocks())
         {
             auto buffer = renderBlock->GetBuffer();
             if (buffer)
