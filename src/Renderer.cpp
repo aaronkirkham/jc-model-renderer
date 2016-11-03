@@ -153,11 +153,23 @@ void Renderer::mouseReleaseEvent(QMouseEvent* event)
 
 void Renderer::mouseMoveEvent(QMouseEvent* event)
 {
-    if (m_IsRotatingModel)
+    if (m_IsRotatingModel && event->modifiers() != Qt::AltModifier)
     {
         auto pos = event->pos();
         m_Rotation.setX(m_Rotation.x() + (pos.x() - m_LastMousePosition.x()) * 0.5f);
         m_Rotation.setY(m_Rotation.y() + (pos.y() - m_LastMousePosition.y()) * 0.5f);
+
+        m_LastMousePosition = pos;
+
+        update();
+
+        MainWindow::instance()->GetInterafce();
+    }
+    else if(m_IsRotatingModel && event->modifiers() == Qt::AltModifier)
+    {
+        auto pos = event->pos();
+        m_Position.setX(m_Position.x() + (pos.x() - m_LastMousePosition.x()) * 0.005f);
+        m_Position.setY(m_Position.y() - (pos.y() - m_LastMousePosition.y()) * 0.005f);
 
         m_LastMousePosition = pos;
 
