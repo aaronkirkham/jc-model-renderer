@@ -20,6 +20,7 @@ private:
     QSize m_Resolution;
 
     QMatrix4x4 m_Projection;
+    QVector3D m_Position;
     QVector2D m_Rotation;
     QPoint m_LastMousePosition;
     bool m_IsRotatingModel = false;
