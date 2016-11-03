@@ -162,8 +162,6 @@ void Renderer::mouseMoveEvent(QMouseEvent* event)
         m_LastMousePosition = pos;
 
         update();
-
-        MainWindow::instance()->GetInterafce();
     }
     else if(m_IsRotatingModel && event->modifiers() == Qt::AltModifier)
     {
@@ -174,8 +172,6 @@ void Renderer::mouseMoveEvent(QMouseEvent* event)
         m_LastMousePosition = pos;
 
         update();
-
-        MainWindow::instance()->GetInterafce();
     }
 }
 

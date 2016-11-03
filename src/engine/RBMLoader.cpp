@@ -72,5 +72,8 @@ void RBMLoader::ReadFile(const QString& filename)
         {
             qDebug() << "Unknown file format.";
         }
+
+        // Update the renderer so the model is visible
+        MainWindow::instance()->GetRenderer()->update();
     });
 }

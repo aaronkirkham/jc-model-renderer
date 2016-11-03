@@ -29,13 +29,15 @@ void MainWindow::SelectModelFile()
         m_LastOpenedDirectory = "E:/jc3-unpack/locations/rom/region_01/air_races/ar_r1_02_unpack/models/jc_design_tools/racing_arrows";
 
     auto file = QFileDialog::getOpenFileName(this, "Select RBM File", m_LastOpenedDirectory, "*.rbm");
+    if (!file.isEmpty())
+    {
+        auto fileInfo = QFileInfo(file);
+        m_LastOpenedDirectory = fileInfo.absolutePath();
 
-    auto fileInfo = QFileInfo(file);
-    m_LastOpenedDirectory = fileInfo.absolutePath();
+        setWindowTitle("Just Cause 3 RBM Renderer - " + fileInfo.fileName());
 
-    setWindowTitle("Just Cause 3 RBM Renderer - " + fileInfo.fileName());
-
-    RBMLoader::instance()->ReadFile(file);
+        RBMLoader::instance()->ReadFile(file);
+    }
 }
 
 void MainWindow::dropEvent(QDropEvent *event)
