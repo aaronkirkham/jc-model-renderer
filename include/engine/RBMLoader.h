@@ -126,6 +126,10 @@ public:
                     UnpackedVertex vertex;
                     Read(data, vertex);
 
+                    vertices->push_back(vertex.m_Position[0]);
+                    vertices->push_back(vertex.m_Position[1]);
+                    vertices->push_back(vertex.m_Position[2]);
+
                     if (stride > sizeof(vertex)) {
                         data.skipRawData(stride - sizeof(vertex));
                     }

@@ -1,5 +1,7 @@
 #include <MainWindow.h>
 
+#include <engine/renderblocks/RenderBlockCarPaintMM.h>
+
 // TODO: Clean this up. Only create the instance of the render block if we need to!
 RenderBlockFactory::RenderBlockFactory()
 {
@@ -91,6 +93,7 @@ RenderBlockFactory::RenderBlockFactory()
 
     m_RenderBlockTypes[0x2EE0F4A9] = new RenderBlockGeneralJC3;
     m_RenderBlockTypes[0x9D6E332A] = new RenderBlockCharacter;
+    m_RenderBlockTypes[0x483304D6] = new RenderBlockCarPaintMM;
 }
 
 IRenderBlock* RenderBlockFactory::GetRenderBlock(uint32_t typeHash)
@@ -103,6 +106,10 @@ IRenderBlock* RenderBlockFactory::GetRenderBlock(uint32_t typeHash)
     }
     if (typeHash == 0x2EE0F4A9) {
         return new RenderBlockGeneralJC3;
+    }
+
+    if(typeHash == 0x483304D6) {
+        return new RenderBlockCarPaintMM;
     }
 
     return nullptr;
