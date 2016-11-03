@@ -15,6 +15,8 @@ SOURCES         +=  src/main.cpp\
                     src/Buffer.cpp
 
 HEADERS         +=  include/engine/renderblocks/RenderBlockGeneralJC3.h \
+                    include/engine/renderblocks/RenderBlockCharacter.h \
+                    include/engine/renderblocks/RenderBlockCarPaintMM.h \
                     include/engine/RBMLoader.h \
                     include/engine/RenderBlockFactory.h \
                     include/MainWindow.h \
@@ -23,8 +25,7 @@ HEADERS         +=  include/engine/renderblocks/RenderBlockGeneralJC3.h \
                     include/Buffer.h \
                     include/Singleton.h \
                     include/FileReader.h \
-                    include/engine/renderblocks/RenderBlockCharacter.h \
-    include/engine/Materials.h
+                    include/engine/Materials.h
 
 FORMS           +=  resources/mainwindow.ui
 RESOURCES       +=  resources/resources.qrc
