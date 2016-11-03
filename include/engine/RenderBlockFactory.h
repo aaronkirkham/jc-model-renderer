@@ -13,13 +13,8 @@ private:
 public:
     RenderBlockFactory();
 
-    IRenderBlock* GetRenderBlock(uint32_t typeHash)
-    {
-        if (!IsValidRenderBlock(typeHash))
-            return nullptr;
-
-        return m_RenderBlockTypes[typeHash];
-    }
+    IRenderBlock* GetRenderBlock(uint32_t typeHash);
+   
 
     bool IsValidRenderBlock(uint32_t typeHash) { return m_RenderBlockTypes.find(typeHash) != m_RenderBlockTypes.end(); }
 };

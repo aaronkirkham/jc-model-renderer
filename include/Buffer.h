@@ -47,11 +47,11 @@ public:
                 m_IndexBuffer = nullptr;
             }
 
-            m_Vertices.clear();
-            m_Indices.clear();
-
             m_IsCreated = false;
         }
+
+        m_Vertices.clear();
+        m_Indices.clear();
     }
 
     bool IsCreated()

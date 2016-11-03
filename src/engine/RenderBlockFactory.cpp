@@ -92,3 +92,18 @@ RenderBlockFactory::RenderBlockFactory()
     m_RenderBlockTypes[0x2EE0F4A9] = new RenderBlockGeneralJC3;
     m_RenderBlockTypes[0x9D6E332A] = new RenderBlockCharacter;
 }
+
+IRenderBlock* RenderBlockFactory::GetRenderBlock(uint32_t typeHash)
+{
+    if (!IsValidRenderBlock(typeHash))
+       return nullptr;
+
+    if (typeHash == 0x9D6E332A) {
+        return new RenderBlockCharacter;
+    }
+    if (typeHash == 0x2EE0F4A9) {
+        return new RenderBlockGeneralJC3;
+    }
+
+    return nullptr;
+}
