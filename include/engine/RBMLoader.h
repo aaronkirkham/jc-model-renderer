@@ -30,6 +30,11 @@ struct PackedVertex
     int16_t m_Position[4];
 };
 
+struct UnpackedVertex
+{
+    float m_Position[4];
+};
+
 struct UnknownStruct
 {
     int16_t coords[3];
@@ -74,7 +79,7 @@ public:
         delete[] str;
     }
 
-    inline void ReadVertexBuffer(QDataStream& data, QVector<GLfloat>* vertices, bool compressed = false) noexcept
+    inline void ReadVertexBuffer(QDataStream& data, QVector<GLfloat>* vertices, bool compressed = true, uint32_t stride = 0x8) noexcept
     {
         if (compressed)
         {
@@ -98,25 +103,38 @@ public:
                     vertices->push_back(expand(vertex.m_Position[0]));
                     vertices->push_back(expand(vertex.m_Position[1]));
                     vertices->push_back(expand(vertex.m_Position[2]));
+                   
+                    if (stride > sizeof(vertex)) {
+                        data.skipRawData(stride - sizeof(vertex));
+                    }
+                    else if(stride > 8) {
+                        qDebug() << "Invalid stride/vertex size";
+                        Q_ASSERT(false);
+                    }
                 }
-            }
-
-            // read uvs?
-            {
-                uint32_t uvs;
-                Read(data, uvs);
-
-                for (uint32_t i = 0; i < uvs; i++)
-                {
-                    UnknownStruct unk;
-                    Read(data, unk);
-                }
-            }
+            } 
         }
         else
         {
-            qDebug() << "TODO: Implement reading of unpacked vertices.";
-            Q_ASSERT(false);
+            // read vertices
+            {
+                uint32_t verticesCount;
+                Read(data, verticesCount);
+
+                for (uint32_t i = 0; i < verticesCount; i++)
+                {
+                    UnpackedVertex vertex;
+                    Read(data, vertex);
+
+                    if (stride > sizeof(vertex)) {
+                        data.skipRawData(stride - sizeof(vertex));
+                    }
+                    else if (stride > 8) {
+                        qDebug() << "Invalid stride/vertex size";
+                        Q_ASSERT(false);
+                    }
+                }
+            } 
         }
     }
 

@@ -50,16 +50,16 @@ void RBMLoader::ReadFile(const QString& filename)
                     uint32_t checksum;
                     Read(data, checksum);
 
+                    m_RenderBlocks.push_back(renderBlock);
+                   
                     // if we didn't read the file correctly, get out now
                     if (checksum != 0x89ABCDEF)
                     {
                         qDebug() << "ERROR: Read checksum mismatch!";
 
-                        renderBlock->Reset();
+                        //
                         break;
                     }
-
-                    m_RenderBlocks.push_back(renderBlock);
                 }
                 else
                 {

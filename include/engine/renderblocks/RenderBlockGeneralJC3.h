@@ -31,7 +31,7 @@ public:
     RenderBlockGeneralJC3() = default;
     virtual ~RenderBlockGeneralJC3() = default;
 
-    virtual void Read(QDataStream& data) override
+    virtual void Read(QDataStream& data) override 
     {
         Reset();
 
@@ -43,7 +43,13 @@ public:
         m_Materials.Read(data);
 
         // read vertex & index buffers
-        RBMLoader::instance()->ReadVertexBuffer(data, &m_Buffer.m_Vertices, block.attributes.packed.format == 1);
+        if (block.attributes.packed.format) {
+            if (block.attributes.packed.format == 1) {
+                RBMLoader::instance()->ReadVertexBuffer(data, &m_Buffer.m_Vertices, true);
+                QVector<GLfloat> vertexBufferInt16;
+                RBMLoader::instance()->ReadVertexBuffer(data, &vertexBufferInt16, false, 0x14);
+            }
+        }
         RBMLoader::instance()->ReadIndexBuffer(data, &m_Buffer.m_Indices);
     }
 };

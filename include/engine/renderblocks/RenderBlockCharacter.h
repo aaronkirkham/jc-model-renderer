@@ -24,6 +24,19 @@ public:
     RenderBlockCharacter() = default;
     virtual ~RenderBlockCharacter() = default;
 
+    int64_t GetStride(uint32_t flags) const {
+        int strides[] = {
+            0x18,
+            0x1C,
+            0x20,
+            0x20,
+            0x24,
+            0x28
+        };
+
+        return strides[3 * ((flags >> 1) & 1) + ((flags >> 5) & 1) + ((flags >> 4) & 1)];
+    }
+
     virtual void Read(QDataStream& data) override
     {
         Reset();
@@ -35,7 +48,29 @@ public:
         // read materials
         m_Materials.Read(data);
 
-        // TODO: this reads a weird vertex buffer. need to modify the current vertex buffer reader so we can specify a stride to read.
+        RBMLoader::instance()->ReadVertexBuffer(data, &m_Buffer.m_Vertices, true, GetStride(block.attributes.flags));
+        auto ReadSkinBatch = [](QDataStream &data) {
+            uint32_t newSize;
+            data.readRawData((char*)&newSize, 4);
+            uint32_t i = 0;
+            do 
+            {
+                uint32_t size;
+                data.readRawData((char*)&size, 4);
+                uint32_t offset;
+                data.readRawData((char*)&offset, 4);
+                uint32_t batchSize;
+                data.readRawData((char*)&batchSize, 4);
+                for (uint32_t n = 0; n < batchSize; ++n) {
+                    uint16_t unknown;
+                    data.readRawData((char*)&unknown, 2);
+                }
+                ++i;
+            } while (i < newSize);
+        };
+        ReadSkinBatch(data);
+
+        RBMLoader::instance()->ReadIndexBuffer(data, &m_Buffer.m_Indices);
     }
 };
 
