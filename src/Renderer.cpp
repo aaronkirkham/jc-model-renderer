@@ -41,6 +41,7 @@ void Renderer::SetFieldOfView(float fov)
 
 void Renderer::Reset()
 {
+    m_Position = QVector3D(0, 0, -10);
     m_Rotation = QVector2D();
     m_IsRotatingModel = false;
     SetFieldOfView(FIELD_OF_VIEW);
@@ -85,7 +86,7 @@ void Renderer::paintGL()
                     buffer->Create(this);
 
                 QMatrix4x4 matrix;
-                matrix.translate(0, 0, -10);
+                matrix.translate(m_Position);
                 matrix.rotate(m_Rotation.x(), 0, 1, 0);
                 matrix.rotate(m_Rotation.y(), 1, 0, 0);
 
@@ -168,6 +169,7 @@ void Renderer::mouseMoveEvent(QMouseEvent* event)
 
 void Renderer::wheelEvent(QWheelEvent* event)
 {
-    float fov = qBound(0.0f, (m_Fov + -event->delta() * 0.05f), 168.0f);
-    SetFieldOfView(fov);
+    float scale = event->modifiers() == Qt::ControlModifier ? 0.05f : 0.005f;
+    m_Position.setZ(m_Position.z() + event->delta() * scale);
+    update();
 }
