@@ -49,6 +49,12 @@ void Renderer::Reset()
     SetFieldOfView(FIELD_OF_VIEW);
 }
 
+void Renderer::SetFlag(RendererFlag flag, bool toggle)
+{
+    m_Flags.setFlag(flag, toggle);
+    update();
+}
+
 void Renderer::initializeGL()
 {
     initializeOpenGLFunctions();
@@ -57,7 +63,6 @@ void Renderer::initializeGL()
     glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 }
 
 void Renderer::paintGL()
@@ -69,6 +74,9 @@ void Renderer::paintGL()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     int32_t triangles = 0, vertices = 0, indices = 0;
+
+    if (m_Flags & RendererFlag::ENABLE_WIREFRAME)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     m_Shader->bind();
 
@@ -97,10 +105,14 @@ void Renderer::paintGL()
 
                 buffer->m_VAO.bind();
 
-                for (auto &texture : renderBlock->GetMaterials()->GetTextures())
-                    texture->bind();
+                if (!(m_Flags & RendererFlag::DISABLE_TEXTURES))
+                    materials->bind();
 
                 glDrawElements(GL_TRIANGLES, buffer->m_Indices.size(), GL_UNSIGNED_SHORT, 0);
+
+                if (!(m_Flags & RendererFlag::DISABLE_TEXTURES))
+                    materials->release();
+
                 buffer->m_VAO.release();
 
                 vertices += buffer->m_Vertices.size();
@@ -111,6 +123,10 @@ void Renderer::paintGL()
     }
 
     m_Shader->release();
+
+    // turn off wireframes after rendering if they're enabled
+    if (m_Flags & RendererFlag::ENABLE_WIREFRAME)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     painter.endNativePainting();
 

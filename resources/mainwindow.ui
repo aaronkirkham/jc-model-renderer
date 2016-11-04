@@ -42,39 +42,100 @@
       <x>1024</x>
       <y>0</y>
       <width>300</width>
-      <height>1024</height>
+      <height>394</height>
      </rect>
     </property>
     <item>
      <property name="text">
-      <string>New Item</string>
+      <string>This is the archive view</string>
      </property>
     </item>
-    <item>
-     <property name="text">
-      <string>New Item</string>
+   </widget>
+   <widget class="QWidget" name="formLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>1040</x>
+      <y>450</y>
+      <width>281</width>
+      <height>311</height>
+     </rect>
+    </property>
+    <layout class="QFormLayout" name="formLayout">
+     <property name="fieldGrowthPolicy">
+      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
      </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>New Item</string>
+     <property name="rowWrapPolicy">
+      <enum>QFormLayout::DontWrapRows</enum>
      </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>New Item</string>
+     <property name="labelAlignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
      </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>New Item</string>
+     <property name="formAlignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
      </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>New Item</string>
+     <property name="horizontalSpacing">
+      <number>10</number>
      </property>
-    </item>
+     <property name="verticalSpacing">
+      <number>14</number>
+     </property>
+     <item row="0" column="0">
+      <widget class="QCheckBox" name="wireframeCheckBox">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLabel" name="wireframeLabel">
+       <property name="text">
+        <string>Wireframe</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QCheckBox" name="showNormalsCheckBox"/>
+     </item>
+     <item row="2" column="1">
+      <widget class="QLabel" name="showNormalsLabel">
+       <property name="text">
+        <string>Show Normals</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QLabel" name="disableTexturesLabel">
+       <property name="text">
+        <string>Disable Textures</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QCheckBox" name="disableTexturesCheckBox"/>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>1040</x>
+      <y>400</y>
+      <width>281</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>12</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+      <stylestrategy>PreferAntialias</stylestrategy>
+      <kerning>true</kerning>
+     </font>
+    </property>
+    <property name="text">
+     <string>Renderer Settings</string>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">

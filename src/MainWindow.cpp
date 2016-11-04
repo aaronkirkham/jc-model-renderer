@@ -8,8 +8,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_Interface(new U
 {
     m_Interface->setupUi(this);
 
-    connect(m_Interface->actionOpenFile, SIGNAL(triggered(bool)), this, SLOT(SelectModelFile()));
-    connect(m_Interface->actionExit, SIGNAL(triggered(bool)), qApp, SLOT(quit()));
+    connect(m_Interface->actionOpenFile, &QAction::triggered, this, &MainWindow::SelectModelFile);
+    connect(m_Interface->actionExit, &QAction::triggered, qApp, &QApplication::quit);
+
+    connect(m_Interface->wireframeCheckBox, &QCheckBox::released, this, &MainWindow::ChangeRendererSettings);
+    connect(m_Interface->showNormalsCheckBox, &QCheckBox::released, this, &MainWindow::ChangeRendererSettings);
+    connect(m_Interface->disableTexturesCheckBox, &QCheckBox::released, this, &MainWindow::ChangeRendererSettings);
 
     m_Renderer = new Renderer(this);
     m_Renderer->setGeometry(0, 20, 1024, 768);
@@ -39,6 +43,21 @@ void MainWindow::SelectModelFile()
 
         RBMLoader::instance()->ReadFile(file);
     }
+}
+
+void MainWindow::ChangeRendererSettings()
+{
+    auto widget = (QCheckBox *)sender();
+    RendererFlag flag;
+
+    if (widget == m_Interface->wireframeCheckBox)
+        flag = RendererFlag::ENABLE_WIREFRAME;
+    else if (widget == m_Interface->showNormalsCheckBox)
+        flag = RendererFlag::ENABLE_NORMALS;
+    else if (widget == m_Interface->disableTexturesCheckBox)
+        flag = RendererFlag::DISABLE_TEXTURES;
+
+    m_Renderer->SetFlag(flag, widget->isChecked());
 }
 
 void MainWindow::dropEvent(QDropEvent *event)

@@ -50,6 +50,7 @@ private:
 
 private slots:
     void SelectModelFile();
+    void ChangeRendererSettings();
 
 public:
     explicit MainWindow(QWidget* parent = nullptr);

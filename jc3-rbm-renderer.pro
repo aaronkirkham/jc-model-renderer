@@ -13,7 +13,7 @@ SOURCES         +=  src/main.cpp\
                     src/Renderer.cpp \
                     src/FileReader.cpp \
                     src/Buffer.cpp \
-    src/engine/Materials.cpp
+                    src/engine/Materials.cpp
 
 HEADERS         +=  include/engine/renderblocks/RenderBlockGeneralJC3.h \
                     include/engine/renderblocks/RenderBlockCharacter.h \

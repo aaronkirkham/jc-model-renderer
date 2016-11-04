@@ -47,6 +47,18 @@ public:
         m_IsCreated = true;
     }
 
+    inline void bind()
+    {
+        for (auto &texture : m_Textures)
+            texture->bind();
+    }
+
+    inline void release()
+    {
+        for (auto &texture : m_Textures)
+            texture->release();
+    }
+
     bool IsCreated() { return m_IsCreated; }
     const QVector<QOpenGLTexture*>& GetTextures() { return m_Textures; }
 };
