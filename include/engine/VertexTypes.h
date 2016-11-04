@@ -78,6 +78,55 @@ namespace Vertex
         float t;
         float col;
     };
+    
+    struct UnpackedVertexPosition
+    {
+        float x;
+        float y;
+        float z;
+    };
+
+    struct VertexDeformPos
+    {
+        float x;
+        float y;
+        float z;
+        float d;
+        __int16 wi0;
+        __int16 wi1;
+        __int16 wi2;
+        __int16 wi3;
+    };
+
+    struct VertexDeformNormal2
+    {
+        float u;
+        float v;
+        float u2;
+        float v2;
+        float n;
+        float t;
+        float dn;
+        float dt;
+    };
+
+    struct VertexNormals
+    {
+        float u;
+        float v;
+        float u2;
+        float v2;
+        float n;
+        float t;
+    };
+
+    struct UnpackedVertexWithNormal1
+    {
+        float x;
+        float y;
+        float z;
+        float normal;
+    };
 
     struct PackedTex2UV
     {
@@ -101,6 +150,8 @@ namespace Vertex
     static_assert(sizeof(PackedCharacterPos4) == 0x18, "PackedCharacterPos4 has the wrong size!");
     static_assert(sizeof(Unpacked) == 0x28, "Unpacked has the wrong size!");
     static_assert(sizeof(PackedTex2UV) == 0x8, "PackedTex2UV has the wrong size!");
+    static_assert(sizeof(UnpackedVertexPosition) == 0xC, "UnpackedVertexPosition has the wrong size!");
+    static_assert(sizeof(VertexNormals) == 0x18, "VertexNormals has the wrong size!");
 };
 #pragma pack(pop)
 
