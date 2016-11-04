@@ -12,7 +12,8 @@ SOURCES         +=  src/main.cpp\
                     src/MainWindow.cpp \
                     src/Renderer.cpp \
                     src/FileReader.cpp \
-                    src/Buffer.cpp
+                    src/Buffer.cpp \
+    src/engine/Materials.cpp
 
 HEADERS         +=  include/engine/renderblocks/RenderBlockGeneralJC3.h \
                     include/engine/renderblocks/RenderBlockCharacter.h \
@@ -25,7 +26,11 @@ HEADERS         +=  include/engine/renderblocks/RenderBlockGeneralJC3.h \
                     include/Buffer.h \
                     include/Singleton.h \
                     include/FileReader.h \
-                    include/engine/Materials.h
+                    include/engine/Materials.h \
+                    include/engine/renderblocks/RenderBlockCharacter.h \
+                    include/engine/renderblocks/RenderBlockBuildingJC3.h \
+                    include/engine/renderblocks/RenderBlockLandmark.h \
+                    include/engine/VertexTypes.h
 
 FORMS           +=  resources/mainwindow.ui
 RESOURCES       +=  resources/resources.qrc

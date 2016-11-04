@@ -10,8 +10,10 @@ class Buffer
 public:
     QOpenGLVertexArrayObject m_VAO;
     QOpenGLBuffer* m_VertexBuffer = nullptr;
+    QOpenGLBuffer* m_TextureBuffer = nullptr;
     QOpenGLBuffer* m_IndexBuffer = nullptr;
     QVector<GLfloat> m_Vertices;
+    QVector<GLfloat> m_TexCoords;
     QVector<uint16_t> m_Indices;
     bool m_IsCreated = false;
 
@@ -20,7 +22,7 @@ public:
         Destroy();
     }
 
-    void Create(Renderer* renderer);
+    void Create();
 
     void Destroy()
     {
@@ -38,6 +40,15 @@ public:
                 m_VertexBuffer = nullptr;
             }
 
+            // destroy texture buffer
+            if (m_TextureBuffer)
+            {
+                m_TextureBuffer->destroy();
+
+                delete m_TextureBuffer;
+                m_TextureBuffer = nullptr;
+            }
+
             // destroy index buffer
             if (m_IndexBuffer)
             {
@@ -51,6 +62,7 @@ public:
         }
 
         m_Vertices.clear();
+        m_TexCoords.clear();
         m_Indices.clear();
     }
 

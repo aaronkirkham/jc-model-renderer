@@ -24,23 +24,6 @@ struct RenderBlockModel
     uint32_t numberOfBlocks;
     uint32_t flags;
 };
-
-struct PackedVertex
-{
-    int16_t m_Position[4];
-};
-
-struct UnpackedVertex
-{
-    float m_Position[4];
-};
-
-struct UnknownStruct
-{
-    int16_t coords[3];
-    int16_t normals[3];
-    float uv[2];
-};
 #pragma pack(pop)
 
 QT_FORWARD_DECLARE_CLASS(RenderBlockFactory)
@@ -79,66 +62,19 @@ public:
         delete[] str;
     }
 
-    inline void ReadVertexBuffer(QDataStream& data, QVector<GLfloat>* vertices, bool compressed = true, uint32_t stride = 0x8) noexcept
+    template <typename T>
+    inline void ReadVertexBuffer(QDataStream& data, QVector<T>* output) noexcept
     {
-        if (compressed)
+        uint32_t verticesCount;
+        Read(data, verticesCount);
+
+        // read vertices data
+        for (uint32_t i = 0; i < verticesCount; i++)
         {
-            static auto expand = [](int16_t value) -> GLfloat {
-                if (value == -1)
-                    return -1.0f;
+            T vertexData;
+            Read(data, vertexData);
 
-                return (value * (1.0f / 32767));
-            };
-
-            // read vertices
-            {
-                uint32_t verticesCount;
-                Read(data, verticesCount);
-
-                for (uint32_t i = 0; i < verticesCount; i++)
-                {
-                    PackedVertex vertex;
-                    Read(data, vertex);
-
-                    vertices->push_back(expand(vertex.m_Position[0]));
-                    vertices->push_back(expand(vertex.m_Position[1]));
-                    vertices->push_back(expand(vertex.m_Position[2]));
-                   
-                    if (stride > sizeof(vertex)) {
-                        data.skipRawData(stride - sizeof(vertex));
-                    }
-                    else if(stride > 8) {
-                        qDebug() << "Invalid stride/vertex size";
-                        Q_ASSERT(false);
-                    }
-                }
-            } 
-        }
-        else
-        {
-            // read vertices
-            {
-                uint32_t verticesCount;
-                Read(data, verticesCount);
-
-                for (uint32_t i = 0; i < verticesCount; i++)
-                {
-                    UnpackedVertex vertex;
-                    Read(data, vertex);
-
-                    vertices->push_back(vertex.m_Position[0]);
-                    vertices->push_back(vertex.m_Position[1]);
-                    vertices->push_back(vertex.m_Position[2]);
-
-                    if (stride > sizeof(vertex)) {
-                        data.skipRawData(stride - sizeof(vertex));
-                    }
-                    else if (stride > 8) {
-                        qDebug() << "Invalid stride/vertex size";
-                        Q_ASSERT(false);
-                    }
-                }
-            } 
+            output->push_back(vertexData);
         }
     }
 

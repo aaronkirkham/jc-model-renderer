@@ -25,8 +25,10 @@ private:
     QPoint m_LastMousePosition;
     bool m_IsRotatingModel = false;
 
-    int m_MatrixUniform = -1;
-    int m_VertexLocation = -1;
+    int32_t m_MatrixUniform = -1;
+    int32_t m_VertexLocation = -1;
+    int32_t m_TexCoordLocation = -1;
+    int32_t m_TextureUniform = -1;
 
     void CreateShaders();
 
@@ -46,6 +48,9 @@ public:
 
     void SetFieldOfView(float fov);
     void Reset();
+
+    int32_t GetVertexLocation() { return m_VertexLocation; }
+    int32_t GetTexCoordLocation() { return m_TexCoordLocation; }
 };
 
 #endif // RENDERER_H

@@ -33,6 +33,7 @@ void MainWindow::SelectModelFile()
     {
         auto fileInfo = QFileInfo(file);
         m_LastOpenedDirectory = fileInfo.absolutePath();
+        m_CurrentOpenFile = fileInfo.absoluteFilePath();
 
         setWindowTitle("Just Cause 3 RBM Renderer - " + fileInfo.fileName());
 
@@ -53,7 +54,11 @@ void MainWindow::dropEvent(QDropEvent *event)
             return;
         }
 
-        RBMLoader::instance()->ReadFile(urlList.at(0).toLocalFile());
+        auto fileInfo = QFileInfo(urlList.at(0).toLocalFile());
+        setWindowTitle("Just Cause 3 RBM Renderer - " + fileInfo.fileName());
+        m_CurrentOpenFile = fileInfo.absoluteFilePath();
+
+        RBMLoader::instance()->ReadFile(fileInfo.filePath());
         event->acceptProposedAction();
     }
 }

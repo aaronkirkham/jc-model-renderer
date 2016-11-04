@@ -1,43 +1,35 @@
-#ifndef RENDERBLOCKGENERALJC3_H
-#define RENDERBLOCKGENERALJC3_H
+#ifndef RENDERBLOCKBUILDINGJC3_H
+#define RENDERBLOCKBUILDINGJC3_H
 
 #include <MainWindow.h>
 
 #pragma pack(push, 1)
-struct GeneralJC3Attributes
+struct BuildingJC3Attributes
 {
-    char pad[0x34];
+    char pad[0x68];
     SPackedAttribute packed;
-    char pad2[0x4];
+    char pad2[0x1C];
 };
 
-struct GeneralJC3
+struct BuildingJC3
 {
     uint8_t version;
-    GeneralJC3Attributes attributes;
+    BuildingJC3Attributes attributes;
 };
 #pragma pack(pop)
 
-class RenderBlockGeneralJC3 : public IRenderBlock
+class RenderBlockBuildingJC3 : public IRenderBlock
 {
 public:
-    RenderBlockGeneralJC3() = default;
-    virtual ~RenderBlockGeneralJC3() = default;
+    RenderBlockBuildingJC3() = default;
+    virtual ~RenderBlockBuildingJC3() = default;
 
-    virtual void Read(QDataStream& data) override 
+    virtual void Read(QDataStream& data) override
     {
         Reset();
 
-        // move to a shared file.
-        static auto expand = [](int16_t value) -> GLfloat {
-            if (value == -1)
-                return -1.0f;
-
-            return (value * (1.0f / 32767));
-        };
-
         // read general block info
-        GeneralJC3 block;
+        BuildingJC3 block;
         RBMLoader::instance()->Read(data, block);
 
         // read materials
@@ -98,4 +90,4 @@ public:
     }
 };
 
-#endif // RENDERBLOCKGENERALJC3_H
+#endif // RENDERBLOCKBUILDINGJC3_H

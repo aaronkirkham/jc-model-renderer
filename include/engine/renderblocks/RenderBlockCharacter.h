@@ -48,7 +48,23 @@ public:
         // read materials
         m_Materials.Read(data);
 
-        RBMLoader::instance()->ReadVertexBuffer(data, &m_Buffer.m_Vertices, true, GetStride(block.attributes.flags));
+        // read vertices data
+        // TODO: need to implement the different vertex types depending on the flags above (GetStride).
+        // The stride should be the size of the struct we read from.
+        {
+            QVector<Vertex::PackedCharacterPos4> result;
+            RBMLoader::instance()->ReadVertexBuffer(data, &result);
+
+            for (Vertex::PackedCharacterPos4 &vertexData : result)
+            {
+                m_Buffer.m_Vertices.push_back(Vertex::expand(vertexData.x) * block.attributes.scale);
+                m_Buffer.m_Vertices.push_back(Vertex::expand(vertexData.y) * block.attributes.scale);
+                m_Buffer.m_Vertices.push_back(Vertex::expand(vertexData.z) * block.attributes.scale);
+
+                m_Buffer.m_TexCoords.push_back(Vertex::expand(vertexData.u0));
+                m_Buffer.m_TexCoords.push_back(Vertex::expand(vertexData.v0));
+            }
+        }
 
         ReadSkinBatch(data);
 

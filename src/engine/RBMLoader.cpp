@@ -19,7 +19,10 @@ void RBMLoader::ReadFile(const QString& filename)
         // cleanup old render blocks
         {
             for (auto &renderBlock : m_RenderBlocks)
+            {
                 renderBlock->Reset();
+                delete renderBlock;
+            }
 
             m_RenderBlocks.clear();
         }

@@ -51,6 +51,7 @@ public:
         // read materials
         m_Materials.Read(data);
 
+#if 0
         // read vertex & index buffers
         if(_bittest((const long*)&block.attributes.flags, 0xD)) {
             RBMLoader::instance()->ReadVertexBuffer(data, &m_Buffer.m_Vertices, false, 0x10);
@@ -68,11 +69,12 @@ public:
 
             qDebug() << "This format is currently not supported";
         }
+#endif
 
         auto v12 = (block.attributes.flags & 0x60) == 0;
         if (!v12) {
-            QVector<GLfloat> unknownVerts;
-            RBMLoader::instance()->ReadVertexBuffer(data, &unknownVerts, true, 8);
+            //QVector<GLfloat> unknownVerts;
+            //RBMLoader::instance()->ReadVertexBuffer(data, &unknownVerts, true, 8);
         }
 
         RBMLoader::instance()->ReadIndexBuffer(data, &m_Buffer.m_Indices);

@@ -27,6 +27,8 @@ void Renderer::CreateShaders()
 
     m_MatrixUniform = m_Shader->uniformLocation("mvp_matrix");
     m_VertexLocation = m_Shader->attributeLocation("a_position");
+    m_TexCoordLocation = m_Shader->attributeLocation("a_texcoord");
+    m_TextureUniform = m_Shader->uniformLocation("texture");
 }
 
 void Renderer::SetFieldOfView(float fov)
@@ -54,13 +56,8 @@ void Renderer::initializeGL()
 
     glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
     glEnable(GL_DEPTH_TEST);
-    //glEnable(GL_LIGHT0);
-    //glEnable(GL_LIGHTING);
-    //glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-    //glEnable(GL_COLOR_MATERIAL);
-
+    glEnable(GL_CULL_FACE);
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    //glEnable(GL_CULL_FACE);
 }
 
 void Renderer::paintGL()
@@ -80,10 +77,16 @@ void Renderer::paintGL()
         for (auto &renderBlock : RBMLoader::instance()->GetRenderBlocks())
         {
             auto buffer = renderBlock->GetBuffer();
+            auto materials = renderBlock->GetMaterials();
             if (buffer)
             {
                 if (!buffer->IsCreated())
-                    buffer->Create(this);
+                    buffer->Create();
+
+                // TODO: Once we have textures loading correctly, we need to also wait for all the textures to be decompressed
+                // and be ready before we create the textures.
+                if (!materials->IsCreated())
+                    materials->Create();
 
                 QMatrix4x4 matrix;
                 matrix.translate(m_Position);
@@ -93,6 +96,10 @@ void Renderer::paintGL()
                 m_Shader->setUniformValue(m_MatrixUniform, m_Projection * matrix);
 
                 buffer->m_VAO.bind();
+
+                for (auto &texture : renderBlock->GetMaterials()->GetTextures())
+                    texture->bind();
+
                 glDrawElements(GL_TRIANGLES, buffer->m_Indices.size(), GL_UNSIGNED_SHORT, 0);
                 buffer->m_VAO.release();
 

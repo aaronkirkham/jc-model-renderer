@@ -1,8 +1,10 @@
 #include <MainWindow.h>
-
+#include <engine/renderblocks/RenderBlockGeneralJC3.h>
+#include <engine/renderblocks/RenderBlockCharacter.h>
 #include <engine/renderblocks/RenderBlockCarPaintMM.h>
+#include <engine/renderblocks/RenderBlockBuildingJC3.h>
+#include <engine/renderblocks/RenderBlockLandmark.h>
 
-// TODO: Clean this up. Only create the instance of the render block if we need to!
 RenderBlockFactory::RenderBlockFactory()
 {
     //0x45DBC85F - 2DTex1
@@ -16,11 +18,9 @@ RenderBlockFactory::RenderBlockFactory()
     //0x1B5E8315 - Beam
     //0x389265A9 - Billboard
     //0x416C4035 - Box
-    //0x35BF53D5 - BuildingJC3
     //0x91571CF0 - Bullet
     //0xDB948BF1 - CarLight
     //0x483304D6 - CarPaintMM
-    //0x9D6E332A - Character
     //0x626F5E3B - CharacterSkin
     //0x3449988B - CirrusClouds
     //0xA399123E - Clouds
@@ -40,13 +40,11 @@ RenderBlockFactory::RenderBlockFactory()
     //0xAE7E6231 - FullScreenVideo
     //0x91C2D583 - GIOnly
     //0xA7583B2B - General
-    //0x2EE0F4A9 - GeneralJC3
     //0x8F2335EC - GeneralMaskedJC3
     //0x2CEC5AD5 - GeneralMkIII
     //0x65D9B5B2 - Halo
     //0xE13A427D - LRCloudsCompose
     //0x6B535F86 - LRParticleCompose
-    //0x3B630E6D - Landmark
     //0xC7021EE3 - Layered
     //0xD2033C51 - LightGlow
     //0xDB48F55A - Lights
@@ -90,27 +88,20 @@ RenderBlockFactory::RenderBlockFactory()
     //0x910EDC80 - WaterReflectionPlane
     //0x89215D85 - Weather
     //0x5B2003F6 - Window
-
-    m_RenderBlockTypes[0x2EE0F4A9] = new RenderBlockGeneralJC3;
-    m_RenderBlockTypes[0x9D6E332A] = new RenderBlockCharacter;
-    m_RenderBlockTypes[0x483304D6] = new RenderBlockCarPaintMM;
 }
 
 IRenderBlock* RenderBlockFactory::GetRenderBlock(uint32_t typeHash)
 {
-    if (!IsValidRenderBlock(typeHash))
-       return nullptr;
-
-    if (typeHash == 0x9D6E332A) {
+    if (typeHash == 0x9D6E332A)
         return new RenderBlockCharacter;
-    }
-    if (typeHash == 0x2EE0F4A9) {
+    else if (typeHash == 0x2EE0F4A9)
         return new RenderBlockGeneralJC3;
-    }
-
-    if(typeHash == 0x483304D6) {
+    else if (typeHash == 0x483304D6)
         return new RenderBlockCarPaintMM;
-    }
+    else if (typeHash == 0x35BF53D5)
+        return new RenderBlockBuildingJC3;
+    else if (typeHash == 0x3B630E6D)
+        return new RenderBlockLandmark;
 
     return nullptr;
 }

@@ -1,29 +1,70 @@
 #include <MainWindow.h>
 
 // TODO: Use the correct context so we don't have to call this in the paint thread
-void Buffer::Create(Renderer* renderer)
+void Buffer::Create()
 {
-    m_VAO.create();
-    m_VAO.bind();
+    if (!m_IsCreated)
+    {
+        auto renderer = MainWindow::instance()->GetRenderer();
 
-    m_VertexBuffer = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-    Q_ASSERT(m_VertexBuffer->create());
-    m_VertexBuffer->setUsagePattern(QOpenGLBuffer::StaticDraw);
-    m_VertexBuffer->bind();
-    m_VertexBuffer->allocate(m_Vertices.constData(), m_Vertices.size() * sizeof(GLfloat));
+        m_VAO.create();
+        m_VAO.bind();
 
-    renderer->glEnableVertexAttribArray(0);
-    renderer->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        // bind vertices
+        {
+            if (m_Vertices.size() > 0)
+            {
+                m_VertexBuffer = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+                Q_ASSERT(m_VertexBuffer->create());
+                m_VertexBuffer->setUsagePattern(QOpenGLBuffer::StaticDraw);
+                m_VertexBuffer->bind();
+                m_VertexBuffer->allocate(m_Vertices.constData(), m_Vertices.size() * sizeof(GLfloat));
 
-    m_IndexBuffer = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
-    Q_ASSERT(m_IndexBuffer->create());
-    m_IndexBuffer->setUsagePattern(QOpenGLBuffer::StaticDraw);
-    m_IndexBuffer->bind();
-    m_IndexBuffer->allocate(m_Indices.constData(), m_Indices.size() * sizeof(uint16_t));
+                renderer->glEnableVertexAttribArray(renderer->GetVertexLocation());
+                renderer->glVertexAttribPointer(renderer->GetVertexLocation(), 3, GL_FLOAT, GL_FALSE, 0, 0);
+            }
+        }
 
-    m_VAO.release();
-    m_VertexBuffer->release();
-    m_IndexBuffer->release();
+        // bind texcoords
+        {
+            if (m_TexCoords.size() > 0)
+            {
+                m_TextureBuffer = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+                Q_ASSERT(m_TextureBuffer->create());
+                m_TextureBuffer->setUsagePattern(QOpenGLBuffer::StaticDraw);
+                m_TextureBuffer->bind();
+                m_TextureBuffer->allocate(m_TexCoords.constData(), m_TexCoords.size() * sizeof(GLfloat));
 
-    m_IsCreated = true;
+                renderer->glEnableVertexAttribArray(renderer->GetTexCoordLocation());
+                renderer->glVertexAttribPointer(renderer->GetTexCoordLocation(), 4, GL_FLOAT, GL_FALSE, 0, 0);
+                // TODO: need to get the vertex size for UVs from the class which constructed the buffer.
+                // Some models have 2 UVs and others have 4.
+            }
+        }
+
+        // bind indices
+        {
+            if (m_Indices.size() > 0)
+            {
+                m_IndexBuffer = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+                Q_ASSERT(m_IndexBuffer->create());
+                m_IndexBuffer->setUsagePattern(QOpenGLBuffer::StaticDraw);
+                m_IndexBuffer->bind();
+                m_IndexBuffer->allocate(m_Indices.constData(), m_Indices.size() * sizeof(uint16_t));
+            }
+        }
+
+        m_VAO.release();
+
+        if (m_VertexBuffer)
+            m_VertexBuffer->release();
+
+        if (m_TextureBuffer)
+            m_TextureBuffer->release();
+
+        if (m_IndexBuffer)
+            m_IndexBuffer->release();
+
+        m_IsCreated = true;
+    }
 }
