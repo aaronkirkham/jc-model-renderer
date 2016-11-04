@@ -15,7 +15,8 @@ void Buffer::Create()
             if (m_Vertices.size() > 0)
             {
                 m_VertexBuffer = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-                Q_ASSERT(m_VertexBuffer->create());
+                auto result = m_VertexBuffer->create();
+                Q_ASSERT(result);
                 m_VertexBuffer->setUsagePattern(QOpenGLBuffer::StaticDraw);
                 m_VertexBuffer->bind();
                 m_VertexBuffer->allocate(m_Vertices.constData(), m_Vertices.size() * sizeof(GLfloat));
@@ -30,7 +31,8 @@ void Buffer::Create()
             if (m_TexCoords.size() > 0)
             {
                 m_TextureBuffer = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-                Q_ASSERT(m_TextureBuffer->create());
+                auto result = m_TextureBuffer->create();
+                Q_ASSERT(result);
                 m_TextureBuffer->setUsagePattern(QOpenGLBuffer::StaticDraw);
                 m_TextureBuffer->bind();
                 m_TextureBuffer->allocate(m_TexCoords.constData(), m_TexCoords.size() * sizeof(GLfloat));
@@ -47,7 +49,8 @@ void Buffer::Create()
             if (m_Indices.size() > 0)
             {
                 m_IndexBuffer = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
-                Q_ASSERT(m_IndexBuffer->create());
+                auto result = m_IndexBuffer->create();
+                Q_ASSERT(result);
                 m_IndexBuffer->setUsagePattern(QOpenGLBuffer::StaticDraw);
                 m_IndexBuffer->bind();
                 m_IndexBuffer->allocate(m_Indices.constData(), m_Indices.size() * sizeof(uint16_t));

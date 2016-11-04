@@ -16,10 +16,12 @@ void Renderer::CreateShaders()
     m_Shader = new QOpenGLShaderProgram(this);
 
     m_VertexShader = new QOpenGLShader(QOpenGLShader::Vertex, this);
-    Q_ASSERT(m_VertexShader->compileSourceFile(":/shaders/vertexshader.glsl"));
+    auto result = m_VertexShader->compileSourceFile(":/shaders/vertexshader.glsl");
+    Q_ASSERT(result);
 
     m_FragmentShader = new QOpenGLShader(QOpenGLShader::Fragment, this);
-    Q_ASSERT(m_FragmentShader->compileSourceFile(":/shaders/fragmentshader.glsl"));
+    result = m_FragmentShader->compileSourceFile(":/shaders/fragmentshader.glsl");
+    Q_ASSERT(result);
 
     m_Shader->addShader(m_VertexShader);
     m_Shader->addShader(m_FragmentShader);
