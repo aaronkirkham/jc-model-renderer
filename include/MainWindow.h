@@ -29,6 +29,7 @@
 #include "engine/VertexTypes.h"
 #include "engine/RBMLoader.h"
 #include "engine/RenderBlockFactory.h"
+#include "engine/TextureCache.h"
 #include "engine/Materials.h"
 #include "engine/renderblocks/IRenderBlock.h"
 

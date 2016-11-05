@@ -5,14 +5,32 @@
 #include <QOpenGLWidget>
 #include <QGLWidget>
 
+#pragma pack(push, 1)
+struct DDSC
+{
+    uint32_t magic;
+    uint16_t version;
+    uint8_t unknown;
+    uint8_t dimension;
+    uint32_t format;
+    uint16_t width;
+    uint16_t height;
+    uint16_t depth;
+    uint16_t flags;
+    uint8_t mipCount;
+    uint8_t headerMipCount;
+    uint8_t unknown2[6];
+    uint32_t unknown3;
+};
+#pragma pack(pop)
+
 class Materials
 {
 private:
     QVector<QString> m_Materials;
+    QVector<QImage*> m_PreLoadedTextures;
     QVector<QOpenGLTexture*> m_Textures;
     bool m_IsCreated = false;
-
-    void LoadTextureToMemory(const QString& filename);
 
 public:
     Materials() = default;
@@ -29,7 +47,13 @@ public:
             delete texture;
         }
 
+        // free the texture
+        for (auto &material : m_Materials)
+            TextureCache::instance()->FreeTexture(material);
+
         m_Materials.clear();
+        m_PreLoadedTextures.clear();
+        m_Textures.clear();
     }
 
     void Read(QDataStream& data);
@@ -37,12 +61,8 @@ public:
     // Must be called in paint context
     void Create()
     {
-        for (auto &material : m_Materials)
-        {
-            auto image = QGLWidget::convertToGLFormat(QImage(material));
-            auto texture = new QOpenGLTexture(image.mirrored().rgbSwapped());
-            m_Textures.push_back(texture);
-        }
+        for (auto &texture : m_PreLoadedTextures)
+            m_Textures.push_back(new QOpenGLTexture(*texture));
 
         m_IsCreated = true;
     }

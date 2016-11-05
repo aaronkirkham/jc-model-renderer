@@ -22,7 +22,7 @@ public:
         Destroy();
     }
 
-    void Create();
+    void Create(uint8_t texCoordStride);
 
     void Destroy()
     {

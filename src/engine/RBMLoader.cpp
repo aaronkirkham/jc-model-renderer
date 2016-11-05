@@ -18,6 +18,8 @@ void RBMLoader::ReadFile(const QString& filename)
 
         // cleanup old render blocks
         {
+            std::lock_guard<std::recursive_mutex> _lk { m_RenderBlockMutex };
+
             for (auto &renderBlock : m_RenderBlocks)
             {
                 renderBlock->Reset();

@@ -13,7 +13,8 @@ SOURCES         +=  src/main.cpp\
                     src/Renderer.cpp \
                     src/FileReader.cpp \
                     src/Buffer.cpp \
-                    src/engine/Materials.cpp
+                    src/engine/Materials.cpp \
+                    src/engine/TextureCache.cpp
 
 HEADERS         +=  include/engine/renderblocks/RenderBlockGeneralJC3.h \
                     include/engine/renderblocks/RenderBlockCharacter.h \
@@ -30,7 +31,9 @@ HEADERS         +=  include/engine/renderblocks/RenderBlockGeneralJC3.h \
                     include/engine/renderblocks/RenderBlockCharacter.h \
                     include/engine/renderblocks/RenderBlockBuildingJC3.h \
                     include/engine/renderblocks/RenderBlockLandmark.h \
-                    include/engine/VertexTypes.h
+                    include/engine/VertexTypes.h \
+                    include/engine/renderblocks/RenderBlockCharacterSkin.h \
+                    include/engine/TextureCache.h
 
 FORMS           +=  resources/mainwindow.ui
 RESOURCES       +=  resources/resources.qrc

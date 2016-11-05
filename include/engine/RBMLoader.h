@@ -2,6 +2,7 @@
 #define RBMLOADER_H
 
 #include <MainWindow.h>
+#include <mutex>
 
 struct CAABox
 {
@@ -38,6 +39,8 @@ private:
 public:
     RBMLoader();
     ~RBMLoader();
+
+    std::recursive_mutex m_RenderBlockMutex;
 
     void ReadFile(const QString& filename);
     const QVector<IRenderBlock*>& GetRenderBlocks() { return m_RenderBlocks; }

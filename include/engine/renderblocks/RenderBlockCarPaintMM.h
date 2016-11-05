@@ -25,6 +25,8 @@ public:
     RenderBlockCarPaintMM() = default;
     virtual ~RenderBlockCarPaintMM() = default;
 
+    virtual uint8_t GetTexCoordSize() const override { return 4; }
+
     virtual void Read(QDataStream& data) override
     {
         Reset();

@@ -24,17 +24,11 @@ public:
     RenderBlockGeneralJC3() = default;
     virtual ~RenderBlockGeneralJC3() = default;
 
+    virtual uint8_t GetTexCoordSize() const override { return 4; }
+
     virtual void Read(QDataStream& data) override 
     {
         Reset();
-
-        // move to a shared file.
-        static auto expand = [](int16_t value) -> GLfloat {
-            if (value == -1)
-                return -1.0f;
-
-            return (value * (1.0f / 32767));
-        };
 
         // read general block info
         GeneralJC3 block;

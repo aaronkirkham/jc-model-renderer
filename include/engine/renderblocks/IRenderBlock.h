@@ -43,6 +43,7 @@ public:
 
     virtual Buffer* GetBuffer() { return &m_Buffer; }
     virtual Materials* GetMaterials() { return &m_Materials; }
+    virtual uint8_t GetTexCoordSize() const { return 0; }
 };
 
 #endif // IRENDERBLOCK_H

@@ -1,6 +1,7 @@
 #include <MainWindow.h>
 #include <engine/renderblocks/RenderBlockGeneralJC3.h>
 #include <engine/renderblocks/RenderBlockCharacter.h>
+#include <engine/renderblocks/RenderBlockCharacterSkin.h>
 #include <engine/renderblocks/RenderBlockCarPaintMM.h>
 #include <engine/renderblocks/RenderBlockBuildingJC3.h>
 #include <engine/renderblocks/RenderBlockLandmark.h>
@@ -21,7 +22,6 @@ RenderBlockFactory::RenderBlockFactory()
     //0x91571CF0 - Bullet
     //0xDB948BF1 - CarLight
     //0x483304D6 - CarPaintMM
-    //0x626F5E3B - CharacterSkin
     //0x3449988B - CirrusClouds
     //0xA399123E - Clouds
     //0xDF9E9916 - DecalDeformable
@@ -94,6 +94,8 @@ IRenderBlock* RenderBlockFactory::GetRenderBlock(uint32_t typeHash)
 {
     if (typeHash == 0x9D6E332A)
         return new RenderBlockCharacter;
+    else if (typeHash == 0x626F5E3B)
+        return new RenderBlockCharacterSkin;
     else if (typeHash == 0x2EE0F4A9)
         return new RenderBlockGeneralJC3;
     else if (typeHash == 0x483304D6)

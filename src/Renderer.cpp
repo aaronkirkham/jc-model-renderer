@@ -84,6 +84,8 @@ void Renderer::paintGL()
 
     // render the current model
     {
+        std::lock_guard<std::recursive_mutex> _lk { RBMLoader::instance()->m_RenderBlockMutex };
+
         for (auto &renderBlock : RBMLoader::instance()->GetRenderBlocks())
         {
             auto buffer = renderBlock->GetBuffer();
@@ -91,7 +93,7 @@ void Renderer::paintGL()
             if (buffer)
             {
                 if (!buffer->IsCreated())
-                    buffer->Create();
+                    buffer->Create(renderBlock->GetTexCoordSize());
 
                 // TODO: Once we have textures loading correctly, we need to also wait for all the textures to be decompressed
                 // and be ready before we create the textures.
@@ -118,8 +120,8 @@ void Renderer::paintGL()
                 buffer->m_VAO.release();
 
                 vertices += buffer->m_Vertices.size();
-                triangles += (vertices / 3);
                 indices += buffer->m_Indices.size();
+                triangles += (indices / 3);
             }
         }
     }

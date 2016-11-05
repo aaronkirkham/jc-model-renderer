@@ -1,4 +1,6 @@
 #include <MainWindow.h>
+#include <QBuffer>
+#include <dds/ddsheader.h>
 
 void Materials::Read(QDataStream& data)
 {
@@ -21,34 +23,18 @@ void Materials::Read(QDataStream& data)
         {
             auto materialPath = currentFile.mid(0, modelsIndex).append(material);
             if (materialPath.endsWith("ddsc"))
-                LoadTextureToMemory(materialPath);
-        }
+            {
+                m_Materials.push_back(materialPath);
 
-#if 0
-        // temp, testing the actual texture rendering.
-        if (i == 0) {
-            material = "E:/jc3-unpack/locations/rom/region_01/air_races/ar_r1_02_unpack/models/jc_design_tools/racing_arrows/textures/racing_arrows_dif0.dds";
+                auto texture = TextureCache::instance()->GetTexture(materialPath);
 
-            m_Materials.push_back(material);
+                if (texture)
+                    m_PreLoadedTextures.push_back(texture);
+            }
         }
-#endif
     }
 
     // unknown stuff
     uint32_t unk[4];
     RBMLoader::instance()->Read(data, unk);
-}
-
-void Materials::LoadTextureToMemory(const QString& filename)
-{
-    QFile file(filename);
-    if (file.open(QIODevice::ReadOnly))
-    {
-        QDataStream data(&file.readAll(), QIODevice::ReadOnly);
-        file.close();
-
-        // TODO: Get dds data from ddsc file
-    }
-    else
-        qDebug() << "ERROR: Failed to load file" << filename;
 }

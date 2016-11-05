@@ -24,6 +24,8 @@ public:
     RenderBlockBuildingJC3() = default;
     virtual ~RenderBlockBuildingJC3() = default;
 
+    virtual uint8_t GetTexCoordSize() const override { return 4; }
+
     virtual void Read(QDataStream& data) override
     {
         Reset();

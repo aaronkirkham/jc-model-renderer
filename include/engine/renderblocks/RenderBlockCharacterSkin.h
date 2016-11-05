@@ -1,28 +1,28 @@
-#ifndef RENDERBLOCKCHARACTER_H
-#define RENDERBLOCKCHARACTER_H
+#ifndef RENDERBLOCKCHARACTERSKIN_H
+#define RENDERBLOCKCHARACTERSKIN_H
 
 #include <MainWindow.h>
 
 #pragma pack(push, 1)
-struct CharacterAttributes
+struct CharacterSkinAttributes
 {
     uint32_t flags;
     float scale;
-    char pad[0x64];
+    char pad[0x30];
 };
 
-struct Character
+struct CharacterSkin
 {
     uint8_t version;
-    CharacterAttributes attributes;
+    CharacterSkinAttributes attributes;
 };
 #pragma pack(pop)
 
-class RenderBlockCharacter : public IRenderBlock
+class RenderBlockCharacterSkin : public IRenderBlock
 {
 public:
-    RenderBlockCharacter() = default;
-    virtual ~RenderBlockCharacter() = default;
+    RenderBlockCharacterSkin() = default;
+    virtual ~RenderBlockCharacterSkin() = default;
 
     virtual uint8_t GetTexCoordSize() const override { return 2; }
 
@@ -44,7 +44,7 @@ public:
         Reset();
 
         // read general block info
-        Character block;
+        CharacterSkin block;
         RBMLoader::instance()->Read(data, block);
 
         // read materials
@@ -57,7 +57,7 @@ public:
             QVector<Vertex::PackedCharacterPos4> result;
             RBMLoader::instance()->ReadVertexBuffer(data, &result);
 
-            for (auto &vertexData : result)
+            for (Vertex::PackedCharacterPos4 &vertexData : result)
             {
                 m_Buffer.m_Vertices.push_back(Vertex::expand(vertexData.x) * block.attributes.scale);
                 m_Buffer.m_Vertices.push_back(Vertex::expand(vertexData.y) * block.attributes.scale);
@@ -74,4 +74,4 @@ public:
     }
 };
 
-#endif // RENDERBLOCKCHARACTER_H
+#endif // RENDERBLOCKCHARACTERSKIN_H

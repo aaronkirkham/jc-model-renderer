@@ -1,7 +1,7 @@
 #include <MainWindow.h>
 
 // TODO: Use the correct context so we don't have to call this in the paint thread
-void Buffer::Create()
+void Buffer::Create(uint8_t texCoordStride)
 {
     if (!m_IsCreated)
     {
@@ -38,9 +38,7 @@ void Buffer::Create()
                 m_TextureBuffer->allocate(m_TexCoords.constData(), m_TexCoords.size() * sizeof(GLfloat));
 
                 renderer->glEnableVertexAttribArray(renderer->GetTexCoordLocation());
-                renderer->glVertexAttribPointer(renderer->GetTexCoordLocation(), 4, GL_FLOAT, GL_FALSE, 0, 0);
-                // TODO: need to get the vertex size for UVs from the class which constructed the buffer.
-                // Some models have 2 UVs and others have 4.
+                renderer->glVertexAttribPointer(renderer->GetTexCoordLocation(), texCoordStride, GL_FLOAT, GL_FALSE, 0, 0);
             }
         }
 
