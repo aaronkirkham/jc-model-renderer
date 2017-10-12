@@ -5,13 +5,8 @@ A small application to preview Just Cause 3's Render Block Model files. Load an 
 
 ### Build Requirements
 If you want to compile the code yourself for any reason, here's a few things you'll need.
-<<<<<<< HEAD
- - Qt 5.7 or later
- - OpenGL
-=======
  - Visual Studio 2015
  - Python 2.7
->>>>>>> 248e0afe0e0384cb46311a8f15ba235cc66a3d18
  
 #### MIT License
 Permission is hereby granted, free of charge, to any person obtaining a copy
