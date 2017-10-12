@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # C++ objects and libs
 
 *.slo
@@ -36,3 +37,39 @@ Makefile*
 # QtCtreator CMake
 CMakeLists.txt.user
 
+=======
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+out/
+*.pyc
+config.gypi
+config.mk
+>>>>>>> 248e0afe0e0384cb46311a8f15ba235cc66a3d18

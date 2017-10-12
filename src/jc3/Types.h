@@ -1,0 +1,190 @@
+#pragma once
+
+#include <cstdint>
+#include <glm.hpp>
+
+#pragma pack(push, 1)
+namespace JustCause3
+{
+    namespace Vertex
+    {
+        struct SPackedAttribute
+        {
+            int32_t format;
+            float scale;
+            glm::vec2 uv0Extent;
+            glm::vec2 uv1Extent;
+            float colourExtent;
+            uint8_t colour[4];
+        };
+
+        struct Packed
+        {
+            int16_t x;
+            int16_t y;
+            int16_t z;
+            int16_t pad;
+        };
+
+        struct GeneralShortPacked
+        {
+            int16_t u0;
+            int16_t v0;
+            int16_t u1;
+            int16_t v1;
+            float n;
+            float t;
+            float col;
+        };
+
+        namespace RenderBlockCharacter
+        {
+            struct PackedCharacterPos4Bones1UVs
+            {
+                int16_t x;
+                int16_t y;
+                int16_t z;
+                int16_t dummy;
+                uint8_t w0[4];
+                uint8_t i0[4];
+                int16_t u0;
+                int16_t v0;
+                uint32_t tangent_space;
+            };
+        };
+
+        namespace RenderBlockCharacterSkin
+        {
+            struct PackedCharacterSkinPos4Bones1UVs
+            {
+                int16_t x;
+                int16_t y;
+                int16_t z;
+                int16_t dummy;
+                uint8_t w0[4];
+                uint8_t i0[4];
+                int16_t u0;
+                int16_t v0;
+                uint32_t tangent_space;
+            };
+        };
+
+        template <typename T>
+        static T pack(float value) {
+            return static_cast<T>(value / 1.0f * std::numeric_limits<T>::max());
+        }
+
+        template <typename T>
+        static float unpack(T value) {
+            return (value * 1.0f / std::numeric_limits<T>::max());
+        }
+
+        static float pack_vector() {
+            return 0.0f;
+        }
+
+        static glm::vec3 unpack_vector(float packed, bool colour = false) {
+            float x = 0.0f;
+            float y = 0.0f;
+            float z = 0.0f;
+
+            if (colour) {
+                x = packed;
+                y = packed / 64;
+                z = packed / 4096;
+            }
+            else {
+                x = packed;
+                y = packed / 256.0f;
+                z = packed / 65536.0f;
+            }
+
+            x -= std::floorf(x);
+            y -= std::floorf(y);
+            z -= std::floorf(z);
+
+            if (!colour) {
+                x = x * 2 - 1;
+                y = y * 2 - 1;
+                z = z * 2 - 1;
+            }
+
+            return { x, y, z };
+        }
+    };
+
+    struct DDSC
+    {
+        uint32_t magic;
+        uint16_t version;
+        uint8_t unknown;
+        uint8_t dimension;
+        uint32_t format;
+        uint16_t width;
+        uint16_t height;
+        uint16_t depth;
+        uint16_t flags;
+        uint8_t mipCount;
+        uint8_t headerMipCount;
+        uint8_t unknown2[6];
+        uint32_t unknown3;
+    };
+
+    namespace ArchiveTable
+    {
+        struct VfsTabEntry
+        {
+            uint32_t hash;
+            uint32_t offset;
+            uint32_t size;
+        };
+
+        struct VfsCompressedTabEntry
+        {
+            uint32_t hash;
+            uint32_t offset;
+            uint32_t size;
+            uint32_t decompressedSize;
+        };
+
+        struct VfsArchive
+        {
+            uint64_t magic;
+            int64_t size;
+            int64_t offset;
+            uint32_t index;
+            uint16_t version;
+            std::vector<VfsTabEntry> entries;
+        };
+
+        struct TabFileHeader
+        {
+            uint32_t magic;
+            uint16_t version;
+            uint16_t endian;
+            int32_t alignment;
+        };
+    };
+
+    struct RBM
+    {
+        uint32_t m_MagicLength;
+        uint8_t m_Magic[5];
+        uint32_t m_VersionMajor;
+        uint32_t m_VersionMinor;
+        uint32_t m_VersionRevision;
+        glm::vec3 m_BoundingBoxMin;
+        glm::vec3 m_BoundingBoxMax;
+        uint32_t m_NumberOfBlocks;
+        uint32_t m_Flags;
+    };
+
+    struct CSkinBatch
+    {
+        char pad[8];
+        int32_t batchSize;
+        int32_t size;
+        int32_t offset;
+    };
+};
+#pragma pack(pop)
