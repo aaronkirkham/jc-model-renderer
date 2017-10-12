@@ -5,9 +5,16 @@
 
 #include <streambuf>
 
-std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const fs::path& file)
+std::string getexepath()
 {
-    auto key = fnv_1_32::hash(file.string().c_str(), file.string().length());
+    char result[MAX_PATH];
+    return std::string(result, GetModuleFileName(NULL, result, MAX_PATH));
+}
+
+std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string& file)
+{
+    auto filename = (file + ".vs");
+    auto key = fnv_1_32::hash(filename.c_str(), filename.length());
 
     auto it = m_VertexShaders.find(key);
     if (it != std::end(m_VertexShaders)) {
@@ -15,7 +22,7 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const fs::path& f
     }
 
     // read the shader file contents
-    std::ifstream contents(file, std::ios::binary);
+    std::ifstream contents(fs::current_path() / "assets" / filename, std::ios::binary);
     std::vector<uint8_t> bytes = { std::istreambuf_iterator<char>(contents), std::istreambuf_iterator<char>() };
 
     // create the shader instance
@@ -33,14 +40,15 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const fs::path& f
 
     m_VertexShaders[key] = std::make_shared<VertexShader_t>(shader);
 
-    Window::Get()->DebugString("VertexShader: Cached vertex shader '%s'.", file.filename().string().c_str());
+    Window::Get()->DebugString("VertexShader: Cached vertex shader '%s'.", file.c_str());
 
     return m_VertexShaders[key];
 }
 
-std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const fs::path& file)
+std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& file)
 {
-    auto key = fnv_1_32::hash(file.string().c_str(), file.string().length());
+    auto filename = (file + ".ps");
+    auto key = fnv_1_32::hash(filename.c_str(), file.length());
 
     auto it = m_PixelShaders.find(key);
     if (it != std::end(m_PixelShaders)) {
@@ -48,7 +56,7 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const fs::path& fil
     }
 
     // read the shader file contents
-    std::ifstream contents(file, std::ios::binary);
+    std::ifstream contents(fs::current_path() / "assets" / filename, std::ios::binary);
     std::vector<uint8_t> bytes = { std::istreambuf_iterator<char>(contents), std::istreambuf_iterator<char>() };
 
     // create the shader instance
@@ -66,7 +74,7 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const fs::path& fil
 
     m_PixelShaders[key] = std::make_shared<PixelShader_t>(shader);
 
-    Window::Get()->DebugString("PixelShader: Cached pixel shader '%s'.", file.filename().string().c_str());
+    Window::Get()->DebugString("PixelShader: Cached pixel shader '%s'.", file.c_str());
 
     return m_PixelShaders[key];
 }

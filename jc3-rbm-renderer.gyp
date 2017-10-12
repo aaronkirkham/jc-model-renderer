@@ -30,7 +30,16 @@
 		'sources': [
 			'<!@pymod_do_main(glob-files src/**/*.cpp)',
 			'<!@pymod_do_main(glob-files src/**/*.h)',
+			'<!@pymod_do_main(glob-files assets/shaders/*.hlsl)',
 		],
+		'actions': [
+		{
+			'action_name': 'build_assets',
+			'inputs': ['tools/build_assets.py'],
+			'outputs': ['test'],
+			'action': ['python', '<@(_inputs)', '>', '<@(_outputs)'],
+		},
+		]
 	},
 	]
 }

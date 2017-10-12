@@ -12,7 +12,7 @@ FileLoader::FileLoader()
     m_FileList = std::make_unique<DirectoryList>();
 
     std::thread load([this] {
-        std::ifstream file("assets/dictionary.json");
+        std::ifstream file(fs::current_path() / "assets/dictionary.json");
         if (file.fail()) {
             throw std::runtime_error("FileLoader::FileLoader - Failed to read file list dictionary.");
         }
