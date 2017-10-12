@@ -82,7 +82,7 @@ bool Renderer::Initialise(const HWND& hwnd)
     m_RenderContext.m_Device = m_Device;
     m_RenderContext.m_DeviceContext = m_DeviceContext;
 
-    Window::Get()->DebugString("Renderer is ready!");
+    DEBUG_LOG("Renderer is ready!");
     return true;
 }
 

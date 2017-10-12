@@ -27,8 +27,8 @@ RenderBlockModel::RenderBlockModel(const fs::path& file)
     JustCause3::RBM header;
     fh.read((char *)&header, sizeof(header));
 
-    Window::Get()->DebugString("RBMDL v%d.%d.%d", header.m_VersionMajor, header.m_VersionMinor, header.m_VersionRevision);
-    Window::Get()->DebugString(" - m_NumberOfBlocks = %d", header.m_NumberOfBlocks);
+    DEBUG_LOG("RBMDL v" << header.m_VersionMajor << "." << header.m_VersionMinor << "." << header.m_VersionRevision);
+    DEBUG_LOG(" - m_NumberOfBlocks=" << header.m_NumberOfBlocks);
 
     m_RenderBlocks.reserve(header.m_NumberOfBlocks);
 
@@ -56,16 +56,14 @@ RenderBlockModel::RenderBlockModel(const fs::path& file)
             }
 
             m_RenderBlocks.emplace_back(renderBlock);
-
-            Window::Get()->DebugString("Finished reading render block...\n\n");
         }
         else {
-            Window::Get()->DebugString("[ERROR] Unknown Render Block hash 0x%p!", hash);
+            // TODO: error message to the user!
+            DEBUG_LOG("[ERROR] Unknown Render Block hash " << hash << "!");
             break;
         }
     }
 
-    Window::Get()->DebugString("ReadNativeFormat complete!\n");
     fh.close();
 
     // create the mesh constant buffer

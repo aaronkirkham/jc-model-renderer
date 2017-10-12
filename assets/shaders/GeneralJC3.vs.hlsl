@@ -29,7 +29,7 @@ struct VertexIn
 
 struct VertexOut
 {
-	float4 position : SV_POSITION;
+    float4 position : SV_POSITION;
     float2 tex : TEXCOORD;
     float3 normal : NORMAL;
     float3 tangent : TANGENT;

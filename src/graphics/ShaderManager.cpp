@@ -40,7 +40,7 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
 
     m_VertexShaders[key] = std::make_shared<VertexShader_t>(shader);
 
-    Window::Get()->DebugString("VertexShader: Cached vertex shader '%s'.", file.c_str());
+    DEBUG_LOG("VertexShader: Cached vertex shader '" << file.c_str() << "'");
 
     return m_VertexShaders[key];
 }
@@ -74,7 +74,7 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
 
     m_PixelShaders[key] = std::make_shared<PixelShader_t>(shader);
 
-    Window::Get()->DebugString("PixelShader: Cached pixel shader '%s'.", file.c_str());
+    DEBUG_LOG("PixelShader: Cached pixel shader '" << file.c_str() << "'");
 
     return m_PixelShaders[key];
 }

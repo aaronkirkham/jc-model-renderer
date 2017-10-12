@@ -5,6 +5,13 @@
 
 static constexpr auto g_WindowName = "Engine";
 
+#define DEBUG_LOG(s)                                    \
+{                                                       \
+    std::stringstream ss_;                              \
+    ss_ << s << std::endl;                              \
+    OutputDebugStringA(ss_.str().c_str());              \
+}
+
 struct WindowEvents
 {
     ksignals::Event<void(const glm::vec2& size)> WindowResized;
@@ -34,8 +41,6 @@ public:
     void Run();
 
     void UpdateClip();
-
-    void DebugString(const char* format, ...);
 
     void SetClipEnabled(bool state) { m_ClipCursor = state; }
     bool IsClipEnabled() const { return m_ClipCursor; }

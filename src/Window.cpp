@@ -142,20 +142,6 @@ void Window::UpdateClip()
     m_LastClip = m_ClipCursor;
 }
 
-void Window::DebugString(const char* format, ...)
-{
-    va_list args;
-    char buffer[2048];
-    va_start(args, format);
-    vsnprintf(buffer, sizeof(buffer), format, args);
-    va_end(args);
-
-    std::stringstream str;
-    str << buffer << std::endl;
-
-    OutputDebugStringA(str.str().c_str());
-}
-
 glm::vec2 Window::GetSize() const
 {
     RECT rect{};

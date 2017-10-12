@@ -6,7 +6,7 @@
 
 Texture::~Texture()
 {
-    Window::Get()->DebugString("Deleting texture '%s'...", m_Filename.string().c_str());
+    DEBUG_LOG("Deleting texture '" << m_Filename.string().c_str() << "'...");
 
     safe_release(m_SRV);
     safe_release(m_Texture);
@@ -25,11 +25,11 @@ bool Texture::LoadFromBuffer(const std::vector<uint8_t>& buffer)
     //assert(SUCCEEDED(result));
 
     if (FAILED(result)) {
-        Window::Get()->DebugString("[ERROR] Failed to create texture '%s'.", m_Filename.filename().string().c_str());
+        DEBUG_LOG("[ERROR] Failed to create texture '" << m_Filename.filename().string().c_str() << "'.");
         return false;
     }
 
-    Window::Get()->DebugString("Texture::Create('%s') - Texture=0x%p, SRV=0x%p", m_Filename.filename().string().c_str(), m_Texture, m_SRV);
+    DEBUG_LOG("Texture::Create '" << m_Filename.filename().string().c_str() << "', m_Texture=" << m_Texture << ", SRV=" << m_SRV);
 
     return SUCCEEDED(result);
 }
@@ -47,7 +47,7 @@ bool Texture::LoadFromFile()
     // load the texture
     std::ifstream texture(m_Filename, std::ios::binary);
     if (texture.fail()) {
-        Window::Get()->DebugString("Texture::LoadFromFile - Failed to read input file. (%s)", m_Filename.c_str());
+        DEBUG_LOG("Texture::LoadFromFile - Failed to read input file. (" << m_Filename.c_str() << ")");
         return false;
     }
 
@@ -73,7 +73,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename)
     // if we have already cached this texture, use that
     auto it = m_Textures.find(key);
     if (it != std::end(m_Textures)) {
-        Window::Get()->DebugString("INFO: Using cached texture '%s' (refcount: %d).", name.c_str(), it->second.use_count());
+        DEBUG_LOG("INFO: Using cached texture '" << name.c_str() << "' (refcount: " << it->second.use_count() << ")");
         return it->second;
     }
 

@@ -14,7 +14,7 @@ FileLoader::FileLoader()
     std::thread load([this] {
         std::ifstream file(fs::current_path() / "assets/dictionary.json");
         if (file.fail()) {
-            throw std::runtime_error("FileLoader::FileLoader - Failed to read file list dictionary.");
+            throw std::runtime_error("FileLoader::FileLoader - Failed to read file list dictionary");
         }
 
         m_FileListDictionary = json::parse(file);
@@ -76,7 +76,7 @@ void FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::Archi
         output->entries.emplace_back(entry);
     }
 
-    Window::Get()->DebugString("FileLoader::ReadArchiveTable - %d files in archive.", output->entries.size());
+    DEBUG_LOG("FileLoader::ReadArchiveTable - " << output->entries.size() << " files in archive");
 
     file.close();
 }
@@ -100,7 +100,7 @@ void FileLoader::ReadCompressedTexture(const fs::path& filename, std::vector<uin
 
     std::ifstream file(filename, std::ios::binary);
     if (file.fail()) {
-        Window::Get()->DebugString("FileLoader::ReadCompressedTexture - Can't find file '%s'.", filename.string().c_str());
+        DEBUG_LOG("FileLoader::ReadCompressedTexture - can't find input file '" << filename.string().c_str() << "'");
         return;
     }
 
@@ -167,8 +167,6 @@ void FileLoader::ReadCompressedTexture(const fs::path& filename, std::vector<uin
     header.ddspf = TextureManager::GetDDSCPixelFormat(ddsc.format);
     header.caps = (8 | 0x1000);
     header.caps2 = 0;
-
-    //Window::Get()->DebugString("FileLoader::ReadCompressedTexture('%s') - reserving %d bytes for result.", filename.c_str(), (sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + length));
 
     // ugly things
     output->resize(sizeof(uint32_t) + sizeof(DDS_HEADER) + length);

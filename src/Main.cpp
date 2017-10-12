@@ -37,8 +37,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
     auto _y1 = JustCause3::Vertex::pack<int16_t>(-0.360393f);
     auto _z1 = JustCause3::Vertex::pack<int16_t>(-0.886654f);
 
-    Window::Get()->DebugString("%f [%d, %d] %f [%d, %d] %f [%d, %d]", _x, x, _x1, _y, y, _y1, _z, z, _z1);
-
     while (true) { Sleep(100); };
     return false;
 #endif
@@ -133,7 +131,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         list.add("ai/tiles/32_43.navmeshc");
         list.add("ai/tiles/34_34.navmeshc");
 
-        Window::Get()->DebugString(list.GetStructure().dump().c_str());
+        DEBUG_LOG(list.GetStructure().dump().c_str());
         __debugbreak();
 #endif
 
