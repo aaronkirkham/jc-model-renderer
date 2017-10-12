@@ -1,6 +1,6 @@
 #pragma once
 
-#include <engine/Types.h>
+#include <jc3/Types.h>
 #include <graphics/ShaderManager.h>
 #include <graphics/TextureManager.h>
 #include <graphics/Types.h>

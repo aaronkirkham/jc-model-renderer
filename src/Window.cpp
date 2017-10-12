@@ -1,8 +1,9 @@
-#include "Window.h"
-#include "graphics/Renderer.h"
-#include "Input/Input.h"
+#include <Window.h>
+#include <Input.h>
+#include <graphics/Renderer.h>
+#include <examples/directx11_example/imgui_impl_dx11.h>
+
 #include <sstream>
-#include <imgui/examples/directx11_example/imgui_impl_dx11.h>
 
 extern LRESULT ImGui_ImplDX11_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)

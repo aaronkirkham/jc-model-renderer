@@ -1,6 +1,7 @@
 #include <graphics/Camera.h>
 #include <graphics/Renderer.h>
 #include <Window.h>
+#include <Input.h>
 
 constexpr float g_MouseSensitivity = 0.0025f;
 constexpr float g_MovementSensitivity = 0.05f;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <glm/glm.hpp>
+#include <glm.hpp>
 
 #pragma pack(push, 1)
 namespace JustCause3
@@ -104,7 +104,7 @@ namespace JustCause3
             z -= std::floorf(z);
 
             if (!colour) {
-                x = z * 2 - 1;
+                x = x * 2 - 1;
                 y = y * 2 - 1;
                 z = z * 2 - 1;
             }

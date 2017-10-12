@@ -1,7 +1,7 @@
-#include <engine/formats/RenderBlockModel.h>
-#include <engine/RenderBlockFactory.h>
+#include <jc3/formats/RenderBlockModel.h>
+#include <jc3/RenderBlockFactory.h>
 #include <Window.h>
-#include <engine/RenderBlockFactory.h>
+#include <jc3/RenderBlockFactory.h>
 #include <graphics/Renderer.h>
 #include <graphics/Camera.h>
 #include <graphics/Renderer2D.h>

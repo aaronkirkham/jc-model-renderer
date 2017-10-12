@@ -306,13 +306,35 @@ def _ConfigWindowsTargetPlatformVersion(config_data, version):
         continue
       version = MSVSVersion._RegistryGetValue(key % ver, 'ProductVersion') or ''
       # Find a matching entry in sdk_dir\include.
-      names = sorted([x for x in os.listdir(r'%s\include' % sdk_dir)
+      expected_sdk_dir=r'%s\include' % sdk_dir
+      names = sorted([x for x in (os.listdir(expected_sdk_dir)
+                                  if os.path.isdir(expected_sdk_dir)
+                                  else []
+                                  )
                       if x.startswith(version)], reverse=True)
-      return names[0]
+      if names:
+        return names[0]
+      else:
+        print >> sys.stdout, (
+          'Warning: No include files found for '
+          'detected Windows SDK version %s' % (version)
+        )
 
 
-def _BuildCommandLineForRuleRaw(spec, cmd, cygwin_shell, has_input_path,
+def commonprefix(m):
+  "Given a list of pathnames, returns the longest common leading component"
+  if not m: return ''
+  s1 = min(m)
+  s2 = max(m)
+  for i, c in enumerate(s1):
+    if not c.startswith("$"):
+      if c != s2[i]:
+        return s1[:i]
+  return s1
+
+def _BuildCommandLineForRuleRaw(spec, rule, cmd, cygwin_shell, has_input_path,
                                 quote_cmd, do_setup_env):
+
 
   if [x for x in cmd if '$(InputDir)' in x]:
     input_dir_preamble = (
@@ -364,26 +386,66 @@ def _BuildCommandLineForRuleRaw(spec, cmd, cygwin_shell, has_input_path,
       command = ['type']
     else:
       command = [cmd[0].replace('/', '\\')]
-    # Add call before command to ensure that commands can be tied together one
-    # after the other without aborting in Incredibuild, since IB makes a bat
-    # file out of the raw command string, and some commands (like python) are
-    # actually batch files themselves.
-    command.insert(0, 'call')
+
     # Fix the paths
     # TODO(quote): This is a really ugly heuristic, and will miss path fixing
     #              for arguments like "--arg=path" or "/opt:path".
     # If the argument starts with a slash or dash, it's probably a command line
     # switch
-    arguments = [i if (i[:1] in "/-") else _FixPath(i) for i in cmd[1:]]
-    arguments = [i.replace('$(InputDir)', '%INPUTDIR%') for i in arguments]
-    arguments = [MSVSSettings.FixVCMacroSlashes(i) for i in arguments]
-    if quote_cmd:
-      # Support a mode for using cmd directly.
-      # Convert any paths to native form (first element is used directly).
-      # TODO(quote):  regularize quoting path names throughout the module
-      arguments = ['"%s"' % i for i in arguments]
-    # Collapse into a single command.
-    return input_dir_preamble + ' '.join(command + arguments)
+
+    # nanos
+    # special handling because of long paths
+    # this transforms the command to something 
+    
+    if not rule is None and not rule.get('outputs') is None and cmd[0] == 'python' and cmd[1] != 'tools/mkssldef.py' and cmd[1] != 'icutrim.py' and 'CodeGenerator.py' not in cmd[1] and 'xxd.py' not in cmd[1]:
+      inputs = rule.get('inputs')
+      if not inputs is None and len(inputs) > 1 and not inputs[0].startswith('..') and not rule.get('outputs')[0] is str and rule.get('outputs')[0].startswith('$'):
+        inputs = [i if (i[:1] in "/-") else _FixPath(i) for i in inputs]
+        inputs.insert(0, _FixPath(cmd[1]))
+        if len(rule.get('inputs')) > 1:
+          # We can now just use cd then call command with shorter names
+          # This is to avoid character count limit in MSVS cmd calls
+          # Meh
+          prefix = commonprefix(inputs)
+          command.insert(0, 'pushd ' + prefix + '&')
+          for i, e in enumerate(inputs):
+            if e.startswith(prefix):
+                inputs[i] = e[len(prefix):]
+          command.append(inputs[0])
+          command.append(rule.get('outputs')[0])
+          inputs = inputs[1:]
+          return input_dir_preamble + ' '.join(command + inputs) + '&popd'
+      # Add call before command to ensure that commands can be tied together one
+      # after the other without aborting in Incredibuild, since IB makes a bat
+      # file out of the raw command string, and some commands (like python) are
+      # actually batch files themselves.
+      command.insert(0, 'call')
+      arguments = [i if (i[:1] in "/-") else _FixPath(i) for i in cmd[1:]]
+      arguments = [i.replace('$(InputDir)', '%INPUTDIR%') for i in arguments]
+      arguments = [MSVSSettings.FixVCMacroSlashes(i) for i in arguments]
+      if quote_cmd:
+        # Support a mode for using cmd directly.
+        # Convert any paths to native form (first element is used directly).
+        # TODO(quote):  regularize quoting path names throughout the module
+        arguments = ['"%s"' % i for i in arguments]
+      # Collapse into a single command.
+      return input_dir_preamble + ' '.join(command + arguments)
+    else:
+      # Add call before command to ensure that commands can be tied together one
+      # after the other without aborting in Incredibuild, since IB makes a bat
+      # file out of the raw command string, and some commands (like python) are
+      # actually batch files themselves.
+      command.insert(0, 'call')
+      arguments = [i if (i[:1] in "/-") else _FixPath(i) for i in cmd[1:]]
+      arguments = [i.replace('$(InputDir)', '%INPUTDIR%') for i in arguments]
+      arguments = [MSVSSettings.FixVCMacroSlashes(i) for i in arguments]
+      if quote_cmd:
+        # Support a mode for using cmd directly.
+        # Convert any paths to native form (first element is used directly).
+        # TODO(quote):  regularize quoting path names throughout the module
+        arguments = ['"%s"' % i for i in arguments]
+      # Collapse into a single command.
+      return input_dir_preamble + ' '.join(command + arguments)
 
 
 def _BuildCommandLineForRule(spec, rule, has_input_path, do_setup_env):
@@ -397,7 +459,7 @@ def _BuildCommandLineForRule(spec, rule, has_input_path, do_setup_env):
   elif isinstance(mcs, str):
     mcs = int(mcs)
   quote_cmd = int(rule.get('msvs_quote_cmd', 1))
-  return _BuildCommandLineForRuleRaw(spec, rule['action'], mcs, has_input_path,
+  return _BuildCommandLineForRuleRaw(spec, rule, rule['action'], mcs, has_input_path,
                                      quote_cmd, do_setup_env=do_setup_env)
 
 
@@ -658,7 +720,7 @@ def _GenerateExternalRules(rules, output_dir, spec,
          'IntDir=$(IntDir)',
          '-j', '${NUMBER_OF_PROCESSORS_PLUS_1}',
          '-f', filename]
-  cmd = _BuildCommandLineForRuleRaw(spec, cmd, True, False, True, True)
+  cmd = _BuildCommandLineForRuleRaw(spec, None, cmd, True, False, True, True)
   # Insert makefile as 0'th input, so it gets the action attached there,
   # as this is easier to understand from in the IDE.
   all_inputs = list(all_inputs)
@@ -2721,7 +2783,7 @@ def _GetMSBuildGlobalProperties(spec, version, guid, gyp_file_name):
     properties[0].append(['WindowsTargetPlatformVersion',
                           str(msvs_windows_sdk_version)])
   elif version.compatible_sdks:
-    raise GypError('%s requires any SDK of %o version, but non were found' %
+    raise GypError('%s requires any SDK of %s version, but none were found' %
                    (version.description, version.compatible_sdks))
 
   if platform_name == 'ARM':
@@ -3425,13 +3487,13 @@ def _GetMSBuildExternalBuilderTargets(spec):
     List of MSBuild 'Target' specs.
   """
   build_cmd = _BuildCommandLineForRuleRaw(
-      spec, spec['msvs_external_builder_build_cmd'],
+      spec, None, spec['msvs_external_builder_build_cmd'],
       False, False, False, False)
   build_target = ['Target', {'Name': 'Build'}]
   build_target.append(['Exec', {'Command': build_cmd}])
 
   clean_cmd = _BuildCommandLineForRuleRaw(
-      spec, spec['msvs_external_builder_clean_cmd'],
+      spec, None, spec['msvs_external_builder_clean_cmd'],
       False, False, False, False)
   clean_target = ['Target', {'Name': 'Clean'}]
   clean_target.append(['Exec', {'Command': clean_cmd}])
@@ -3440,7 +3502,7 @@ def _GetMSBuildExternalBuilderTargets(spec):
 
   if spec.get('msvs_external_builder_clcompile_cmd'):
     clcompile_cmd = _BuildCommandLineForRuleRaw(
-        spec, spec['msvs_external_builder_clcompile_cmd'],
+        spec, None, spec['msvs_external_builder_clcompile_cmd'],
         False, False, False, False)
     clcompile_target = ['Target', {'Name': 'ClCompile'}]
     clcompile_target.append(['Exec', {'Command': clcompile_cmd}])
@@ -3490,8 +3552,8 @@ def _GenerateActionsForMSBuild(spec, actions_to_add):
       # return and continue executing.  msbuild_use_call provides a way to
       # disable this but I have not seen any adverse effect from doing that
       # for everything.
-      if action.get('msbuild_use_call', True):
-        cmd = 'call ' + cmd
+     # if action.get('msbuild_use_call', True):
+      #  cmd = 'call ' + cmd
       commands.append(cmd)
     # Add the custom build action for one input file.
     description = ', and also '.join(descriptions)
@@ -3519,6 +3581,7 @@ def _AddMSBuildAction(spec, primary_input, inputs, outputs, cmd, description,
   primary_input = _FixPath(primary_input)
   inputs_array = _FixPaths(inputs)
   outputs_array = _FixPaths(outputs)
+
   additional_inputs = ';'.join([i for i in inputs_array
                                 if i != primary_input])
   outputs = ';'.join(outputs_array)

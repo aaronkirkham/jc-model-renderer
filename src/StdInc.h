@@ -1,7 +1,5 @@
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN
-
 #include <windows.h>
 #include <d3d11.h>
 
@@ -16,11 +14,11 @@
 #include <fstream>
 #include <filesystem>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include <glm.hpp>
+#include <gtc/matrix_transform.hpp>
 
-#include <ksignals/ksignals.h>
+#include <ksignals.h>
 #include <json.hpp>
 
 namespace fs = std::experimental::filesystem;
-namespace json = nlohmann::json;
+using json = nlohmann::json;

@@ -400,6 +400,20 @@ def _DetectVisualStudioVersions(versions_to_check, force_express):
   }
   versions = []
   for version in versions_to_check:
+    if version == '15.0':
+      here = os.path.normpath(os.path.dirname(__file__))
+      tool_path = os.path.join(here, '..', '..', 'tools', 'msvs-com-helper',
+                               'GetKey.ps1')
+      args = ['powershell', '-NoProfile', '-ExecutionPolicy', 'Unrestricted',
+              '%s IsVcCompatible InstallationPath' % tool_path]
+      try:
+        instPath2017 = subprocess.check_output(args).split('\n')[0].strip()
+        if os.path.exists(instPath2017):
+          versions.append(_CreateVersion('2017', instPath2017))
+      except Exception as e:
+        pass
+      continue
+
     # Old method of searching for which VS version is installed
     # We don't use the 2010-encouraged-way because we also want to get the
     # path to the binaries, which it doesn't offer.

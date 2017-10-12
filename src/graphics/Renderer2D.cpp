@@ -1,7 +1,7 @@
 #include <graphics/Renderer2D.h>
 #include <graphics/Renderer.h>
-#include <engine/Types.h>
 #include <graphics/ShaderManager.h>
+#include <jc3/Types.h>
 
 struct Vertex2D
 {

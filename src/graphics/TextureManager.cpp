@@ -1,7 +1,7 @@
 #include <graphics/TextureManager.h>
 #include <graphics/Renderer.h>
 #include <Window.h>
-#include <engine/FileLoader.h>
+#include <jc3/FileLoader.h>
 #include <fnv1.h>
 
 Texture::~Texture()

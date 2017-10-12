@@ -7,3 +7,6 @@
 [submodule "vendor/ksignals"]
 	path = vendor/ksignals
 	url = https://github.com/xforce/ksignals.git
+[submodule "vendor/glm"]
+	path = vendor/glm
+	url = https://github.com/g-truc/glm.git

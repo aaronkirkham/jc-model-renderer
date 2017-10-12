@@ -1,7 +1,7 @@
 #pragma once
 
 #include <StdInc.h>
-#include <engine/renderblocks/IRenderBlock.h>
+#include <jc3/renderblocks/IRenderBlock.h>
 
 class RenderBlockModel
 {

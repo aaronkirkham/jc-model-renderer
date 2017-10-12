@@ -2,10 +2,9 @@
 
 #include <StdInc.h>
 #include <singleton.h>
-#include <imgui/imgui.h>
-#include <imgui/examples/directx11_example/imgui_impl_dx11.h>
-
 #include <graphics/Types.h>
+#include <imgui.h>
+#include <examples/directx11_example/imgui_impl_dx11.h>
 
 #define test_hresult(hr) if (FAILED(hr)) { return false; }
 #define safe_release(obj) if (obj) { obj->Release(); obj = 0; }
