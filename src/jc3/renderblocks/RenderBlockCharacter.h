@@ -48,16 +48,20 @@ public:
         // create the element input desc
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
             { "POSITION", 0, DXGI_FORMAT_R16G16B16A16_SINT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R16G16_SINT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
 
         // create the vertex declaration
-        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 1, m_VertexShader.get());
+        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 2, m_VertexShader.get());
     }
 
     virtual void Read(fs::path& filename, std::istream& stream) override final
     {
         // read the block header
         stream.read((char *)&m_Block, sizeof(m_Block));
+
+        // set vertex shader constants
+        m_Constants.scale = m_Block.attributes.scale;
 
         // read the materials
         ReadMaterials(filename, stream);
@@ -67,25 +71,6 @@ public:
         // The stride should be the size of the struct we read from.
         {
             ReadVertexBuffer<JustCause3::Vertex::RenderBlockCharacter::PackedCharacterPos4Bones1UVs>(stream, &m_Vertices);
-#if 0
-            std::vector<JustCause3::Vertex::RenderBlockCharacter::PackedCharacterPos4Bones1UVs> vb_data;
-            ReadVertexBuffer(file, &vb_data);
-
-            std::vector<Vertex> vertices;
-            vertices.reserve(vb_data.size());
-
-            for (auto& vertex : vb_data) {
-                Vertex v;
-                v.position = { JustCause3::Vertex::expand(vertex.x), JustCause3::Vertex::expand(vertex.y), JustCause3::Vertex::expand(vertex.z) };
-                v.uv = { JustCause3::Vertex::expand(vertex.u0), JustCause3::Vertex::expand(vertex.v0) };
-
-                v.position *= m_Block.attributes.scale;
-
-                vertices.emplace_back(v);
-            }
-
-            m_VertexBuffer->Create(vertices);
-#endif
         }
 
         // read skin batch
@@ -102,7 +87,15 @@ public:
         context->m_DeviceContext->VSSetShader(m_VertexShader->m_Shader, nullptr, 0);
         context->m_DeviceContext->PSSetShader(m_PixelShader->m_Shader, nullptr, 0);
 
-        context->m_CullFace = static_cast<D3D11_CULL_MODE>(2 * (~LOBYTE(m_Block.attributes.flags) & 1) | 1);
+        Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+
+        // enable textures
+        for (uint32_t i = 0; i < m_Textures.size(); ++i) {
+            auto texture = m_Textures[i];
+            if (texture && texture->IsLoaded()) {
+                texture->Use(i);
+            }
+        }
 
         // set the 1st vertex buffers
         uint32_t offset = 0;

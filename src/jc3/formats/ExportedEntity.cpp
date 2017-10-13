@@ -90,7 +90,7 @@ ExportedEntity::ExportedEntity(const fs::path& file)
         std::string model = "models/jc_characters/animals/cow/cow_mesh_body_lod1.rbm";
         uint32_t offset = 0;
         uint32_t size = 0;
-        JustCause3::AvalancheArchiveChunk chunk;
+        JustCause3::AvalancheArchiveChunk chunk_;
 
         uint32_t i = 0;
         for (auto& chunk : m_ArchiveChunks) {
@@ -98,7 +98,7 @@ ExportedEntity::ExportedEntity(const fs::path& file)
                 if (entry.m_Filename == model) {
                     offset = entry.m_Offset;
                     size = entry.m_Size;
-                    chunk = chunk;
+                    chunk_ = chunk;
 
                     DEBUG_LOG("Found '" << model << "' in chunk " << i);
                 }
@@ -107,21 +107,17 @@ ExportedEntity::ExportedEntity(const fs::path& file)
             i++;
         }
 
-        auto first = m_ArchiveChunks[0].m_BlockData.begin() + offset;
-        auto last = m_ArchiveChunks[0].m_BlockData.begin() + offset + size;
+        auto first = chunk_.m_BlockData.begin() + offset;
+        auto last = chunk_.m_BlockData.begin() + offset + size;
         std::vector<uint8_t> data(first, last);
 
         test_model = new RenderBlockModel(data);
-
-        Renderer::Get()->Events().RenderFrame.connect([](RenderContext_t* context) {
-            if (test_model) {
-                test_model->Draw(context);
-            }
-        });
     }
 #endif
 }
 
 ExportedEntity::~ExportedEntity()
 {
+    delete test_model;
+    test_model = nullptr;
 }

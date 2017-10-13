@@ -18,6 +18,17 @@ void UI::Render()
 
             ImGui::EndMenu();
         }
+
+        if (ImGui::BeginMenu("Renderer"))
+        {
+            static bool wireframe = false;
+            if (ImGui::Checkbox("Wireframe", &wireframe))
+            {
+                Renderer::Get()->SetFillMode(wireframe ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID);
+            }
+
+            ImGui::EndMenu();
+        }
         
         ImGui::EndMainMenuBar();
     }

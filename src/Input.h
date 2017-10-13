@@ -30,8 +30,6 @@ public:
     bool HandleMessage(MSG* message);
     void Update();
 
-    void ResetCursor();
-
     bool IsKeyPressed(uint8_t key) { return m_KeyboardState[key]; }
 
     const glm::vec2& GetMousePosition() { return m_MousePosition; }

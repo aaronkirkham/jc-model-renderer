@@ -3,12 +3,21 @@
 #include <d3d11.h>
 #include <cstdint>
 #include <vector>
+#include <bitset>
+
+enum ERasterStateBits
+{
+    BLENDING_ENABLED = 0,
+
+};
 
 struct RenderContext_t
 {
     ID3D11Device* m_Device = nullptr;
     ID3D11DeviceContext* m_DeviceContext = nullptr;
-    D3D11_CULL_MODE m_CullFace = D3D11_CULL_BACK;
+    D3D11_FILL_MODE m_FillMode = D3D11_FILL_SOLID;
+    D3D11_CULL_MODE m_CullMode = D3D11_CULL_BACK;
+    bool m_RasterIsDirty = true;
     bool m_BlendEnabled = true;
     D3D11_BLEND m_BlendMode;
 };

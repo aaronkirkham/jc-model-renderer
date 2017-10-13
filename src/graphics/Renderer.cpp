@@ -158,7 +158,7 @@ bool Renderer::Render()
 void Renderer::SetupRenderStates()
 {
     //CreateBlendState();
-    //CreateRasterizerState();
+    CreateRasterizerState();
 }
 
 void Renderer::SetDefaultRenderStates()
@@ -201,6 +201,22 @@ void Renderer::SetBlendingEnabled(bool state)
 void Renderer::SetDepthEnabled(bool state)
 {
     m_DeviceContext->OMSetDepthStencilState(state ? m_DepthStencilEnabledState : m_DepthStencilDisabledState, 1);
+}
+
+void Renderer::SetFillMode(D3D11_FILL_MODE mode)
+{
+    if (m_RenderContext.m_FillMode != mode) {
+        m_RenderContext.m_FillMode = mode;
+        m_RenderContext.m_RasterIsDirty = true;
+    }
+}
+
+void Renderer::SetCullMode(D3D11_CULL_MODE mode)
+{
+    if (m_RenderContext.m_CullMode != mode) {
+        m_RenderContext.m_CullMode = mode;
+        m_RenderContext.m_RasterIsDirty = true;
+    }
 }
 
 void Renderer::CreateRenderTarget(const glm::vec2& size)
@@ -328,17 +344,23 @@ void Renderer::CreateBlendState()
 
 void Renderer::CreateRasterizerState()
 {
-    D3D11_RASTERIZER_DESC rasterDesc;
-    ZeroMemory(&rasterDesc, sizeof(D3D11_RASTERIZER_DESC));
+    if (m_RenderContext.m_RasterIsDirty) {
+        safe_release(m_RasterizerState);
 
-    rasterDesc.FillMode = D3D11_FILL_SOLID; // D3D11_FILL_WIREFRAME
-    rasterDesc.CullMode = m_RenderContext.m_CullFace;
-    rasterDesc.DepthClipEnable = true;
+        D3D11_RASTERIZER_DESC rasterDesc;
+        ZeroMemory(&rasterDesc, sizeof(D3D11_RASTERIZER_DESC));
 
-    auto result = m_Device->CreateRasterizerState(&rasterDesc, &m_RasterizerState);
-    assert(SUCCEEDED(result));
+        rasterDesc.FillMode = m_RenderContext.m_FillMode;
+        rasterDesc.CullMode = m_RenderContext.m_CullMode;
+        rasterDesc.DepthClipEnable = true;
 
-    //m_DeviceContext->RSSetState(m_RasterizerState);
+        auto result = m_Device->CreateRasterizerState(&rasterDesc, &m_RasterizerState);
+        assert(SUCCEEDED(result));
+
+        m_DeviceContext->RSSetState(m_RasterizerState);
+
+        m_RenderContext.m_RasterIsDirty = false;
+    }
 }
 
 void Renderer::DestroyRenderTarget()

@@ -29,22 +29,19 @@ Camera::Camera()
 
     auto& events = Input::Get()->Events();
     events.MouseDown.connect([&](const glm::vec2& position) {
-        /*m_IsRotatingView = true;
-        Window::Get()->SetClipEnabled(true);
-        Input::Get()->ResetCursor();*/
+        m_IsRotatingView = true;
         return true;
     });
 
     events.MouseUp.connect([&](const glm::vec2& position) {
-        /*m_IsRotatingView = false;
-        Window::Get()->SetClipEnabled(false);*/
+        m_IsRotatingView = false;
         return true;
     });
 
     events.MouseMove.connect([&](const glm::vec2& position) {
         if (m_IsRotatingView) {
-            m_Rotation.z -= position.x * g_MouseSensitivity;
-            m_Rotation.y -= position.y * g_MouseSensitivity;
+            m_Rotation.z += position.x * g_MouseSensitivity;
+            m_Rotation.y += position.y * g_MouseSensitivity;
         }
 
         return true;

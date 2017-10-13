@@ -36,12 +36,23 @@ bool Input::HandleMessage(MSG* event)
 
         if (event->message == WM_LBUTTONUP) {
             m_InputEvents.MouseUp(position);
+
+            ReleaseCapture();
         } 
         else {
             m_InputEvents.MouseDown(position);
+
+            SetCapture(event->hwnd);
         }
 
         m_LastClickPosition = position;
+    }
+    else if (event->message == WM_MOUSEMOVE)
+    {
+        auto position = glm::vec2{ static_cast<float>(GET_X_LPARAM(event->lParam)), static_cast<float>(GET_Y_LPARAM(event->lParam)) };
+        m_InputEvents.MouseMove((m_MousePosition - position));
+
+        m_MousePosition = position;
     }
 
     return true;
@@ -49,29 +60,4 @@ bool Input::HandleMessage(MSG* event)
 
 void Input::Update()
 {
-    auto window = Window::Get();
-    if (window->IsClipEnabled()) {
-        auto center = window->GetCenterPoint();
-
-        POINT pointCursor;
-        GetCursorPos(&pointCursor);
-
-        auto cursorPos = glm::vec2{ pointCursor.x, pointCursor.y };
-        if (cursorPos != center) {
-            // reset to center of the window
-            SetCursorPos(static_cast<int32_t>(center.x), static_cast<int32_t>(center.y));
-
-            // calculate the delta
-            auto cursorDelta = (cursorPos - center);
-            if ((std::abs(cursorDelta.x) + std::abs(cursorDelta.y)) > 2) {
-                m_InputEvents.MouseMove(cursorDelta);
-            }
-        }
-    }
-}
-
-void Input::ResetCursor()
-{
-    auto center = Window::Get()->GetCenterPoint();
-    SetCursorPos(static_cast<int32_t>(center.x), static_cast<int32_t>(center.y));
 }

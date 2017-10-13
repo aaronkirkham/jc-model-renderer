@@ -6,8 +6,53 @@
 #include <graphics/Camera.h>
 #include <graphics/Renderer2D.h>
 
+static std::vector<RenderBlockModel*> g_Models;
+
 void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 {
+    g_Models.emplace_back(this);
+
+    static std::once_flag once_;
+    std::call_once(once_, [&] {
+        Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
+            for (auto& model : g_Models) {
+                model->Draw(context);
+            }
+
+            // debug model info
+            ImGui::Begin("Model Stats", nullptr, ImVec2(800, 800), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove));
+            {
+                std::size_t vertices = 0;
+                std::size_t indices = 0;
+                std::size_t triangles = 0;
+
+                for (auto& model : g_Models) {
+                    for (auto& block : model->GetRenderBlocks()) {
+                        auto index_count = block->GetIndexBuffer()->m_ElementCount;
+
+                        vertices += block->GetVertexBuffer()->m_ElementCount;
+                        indices += index_count;
+                        triangles += (index_count / 3);
+                    }
+                }
+
+                ImGui::Text("Models: %d, Vertices: %d, Indices: %d, Triangles: %d, Textures: %d", g_Models.size(), vertices, indices, triangles, TextureManager::Get()->GetCacheSize());
+
+                for (auto& model : g_Models) {
+                    size_t block_index = 0;
+
+                    ImGui::Text("%s", model->GetPath().filename().string().c_str());
+
+                    for (auto& block : model->GetRenderBlocks()) {
+                        ImGui::Text("\t%d: %s", block_index, block->GetTypeName());
+                        block_index++;
+                    }
+                }
+            }
+            ImGui::End();
+        });
+    });
+
     // read the model header
     JustCause3::RBM header;
     stream.read((char *)&header, sizeof(header));

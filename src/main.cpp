@@ -9,8 +9,6 @@
 #include <jc3/formats/RenderBlockModel.h>
 #include <jc3/formats/ExportedEntity.h>
 
-std::vector<RenderBlockModel*> m_Models;
-
 // normal: 32512.4961
 // colour: 262143.984
 
@@ -61,66 +59,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
                 auto model3 = new RenderBlockModel("E:/jc3-unpack/locations/rom/region_01/air_races/ar_r1_02_unpack/models/jc_design_tools/racing_arrows/races_teal_arrow_body_lod1.rbm");
                 model3->SetPosition(model3->GetPosition() + glm::vec3{ 0, 0, 3 });
-
-                m_Models.emplace_back(model);
-                m_Models.emplace_back(model1);
-                m_Models.emplace_back(model2);
-                m_Models.emplace_back(model3);
             }
             else if (key == VK_F2) {
-                //m_Models.emplace_back(new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/cow/cow_branded_mesh_body_lod1.rbm"));
-                //m_Models.emplace_back(new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/deer/deer_buck_mesh_body_lod1.rbm"));
+                //new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/cow/cow_branded_mesh_body_lod1.rbm");
+                //new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/deer/deer_buck_mesh_body_lod1.rbm");
 
                 auto ee = new ExportedEntity("E:/jc3-unpack/editor/entities/jc_characters/animals/cow/cow.ee");
             }
             else if (key == VK_F3) {
                 auto model = new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/seagull/seagull_body_lod1.rbm");
                 model->SetScale(glm::vec3{ 2, 2, 2 });
-
-                m_Models.emplace_back(model);
             }
             else if (key == VK_F4) {
-                m_Models.emplace_back(new RenderBlockModel("E:/jc3-unpack/editor/entities/gameobjects/main_character_unpack/models/jc_characters/main_characters/rico/rico_body_lod3.rbm"));
+                new RenderBlockModel("E:/jc3-unpack/editor/entities/gameobjects/main_character_unpack/models/jc_characters/main_characters/rico/rico_body_lod3.rbm");
                 //m_Models.emplace_back(new RenderBlockModel("E:/jc3-unpack/models/jc_characters/main_characters/rico/rico_body_lod1.rbm"));
             }
-        });
-
-        Renderer::Get()->Events().RenderFrame.connect([](RenderContext_t* context) {
-            for (auto& model : m_Models) {
-                model->Draw(context);
-            }
-
-            // debug model info
-            ImGui::Begin("Model Stats", nullptr, ImVec2(800, 800), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove));
-            {
-                std::size_t vertices = 0;
-                std::size_t indices = 0;
-                std::size_t triangles = 0;
-
-                for (auto& model : m_Models) {
-                    for (auto& block : model->GetRenderBlocks()) {
-                        auto index_count = block->GetIndexBuffer()->m_ElementCount;
-
-                        vertices += block->GetVertexBuffer()->m_ElementCount;
-                        indices += index_count;
-                        triangles += (index_count / 3);
-                    }
-                }
-
-                ImGui::Text("Models: %d, Vertices: %d, Indices: %d, Triangles: %d, Textures: %d", m_Models.size(), vertices, indices, triangles, TextureManager::Get()->GetCacheSize());
-
-                for (auto& model : m_Models) {
-                    size_t block_index = 0;
-
-                    ImGui::Text("%s", model->GetPath().filename().string().c_str());
-
-                    for (auto& block : model->GetRenderBlocks()) {
-                        ImGui::Text("\t%d: %s", block_index, block->GetTypeName());
-                        block_index++;
-                    }
-                }
-            }
-            ImGui::End();
         });
 
 #if 0

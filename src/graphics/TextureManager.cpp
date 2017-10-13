@@ -63,6 +63,10 @@ void Texture::Use(uint32_t slot)
 
 std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename)
 {
+    if (!fs::exists(filename)) {
+        return nullptr;
+    }
+
     auto name = filename.filename().string();
     auto key = fnv_1_32::hash(name.c_str(), name.length());
 

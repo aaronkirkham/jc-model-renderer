@@ -83,7 +83,7 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
-        context->m_CullFace = static_cast<D3D11_CULL_MODE>(2 * (~LOBYTE(m_Block.attributes.flags) & 1) | 1);
+        Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
     }
 
     virtual void Draw(RenderContext_t* context) override final

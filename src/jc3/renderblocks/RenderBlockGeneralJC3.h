@@ -126,8 +126,7 @@ public:
         context->m_DeviceContext->VSSetShader(m_VertexShader->m_Shader, nullptr, 0);
         context->m_DeviceContext->PSSetShader(m_PixelShader->m_Shader, nullptr, 0);
 
-        // face culling
-        context->m_CullFace = (!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE;
+        Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 
         // enable textures
         for (uint32_t i = 0; i < m_Textures.size(); ++i) {

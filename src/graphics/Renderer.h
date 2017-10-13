@@ -73,6 +73,9 @@ public:
     void SetBlendingEnabled(bool state);
     void SetDepthEnabled(bool state);
 
+    void SetFillMode(D3D11_FILL_MODE mode);
+    void SetCullMode(D3D11_CULL_MODE mode);
+
     // buffers
     VertexBuffer_t* CreateVertexBuffer(uint32_t count, uint32_t stride);
     VertexBuffer_t* CreateVertexBuffer(const void* data, uint32_t count, uint32_t stride, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
