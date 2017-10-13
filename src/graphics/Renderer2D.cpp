@@ -33,6 +33,7 @@ Renderer2D::~Renderer2D()
 
 void Renderer2D::Render(RenderContext_t* context)
 {
+    // DrawLine({ 200, 200 }, { 300, 300 }, { 1, 1, 1, 1 });
 }
 
 void Renderer2D::DrawLine(const glm::vec2& from, const glm::vec2& to, const glm::vec4& colour)

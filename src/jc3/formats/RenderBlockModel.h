@@ -9,8 +9,8 @@ private:
     std::vector<IRenderBlock*> m_RenderBlocks;
     fs::path m_File = "";
 
-    glm::vec3 m_Position;
-    glm::vec3 m_Rotation;
+    glm::vec3 m_Position = { 0, 0, 0 };
+    glm::vec3 m_Rotation = { 0, 0, 0 };
     glm::vec3 m_Scale = { 1, 1, 1 };
     glm::mat4x4 m_WorldMatrix;
 
@@ -18,6 +18,8 @@ private:
     glm::vec3 m_BoundingBoxMax;
 
     ConstantBuffer_t* m_MeshConstants = nullptr;
+
+    void ParseRenderBlockModel(std::istream& stream);
 
 public:
     struct MeshConstants
@@ -28,6 +30,7 @@ public:
     };
 
     RenderBlockModel(const fs::path& file);
+    RenderBlockModel(const std::vector<uint8_t>& data);
     virtual ~RenderBlockModel();
 
     void Draw(RenderContext_t* context);

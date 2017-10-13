@@ -5,6 +5,7 @@
 		'type': 'executable',
 		'dependencies': [
 			'imgui.gyp:imgui',
+			'zlib.gyp:zlib',
 		],
 		'defines': [
 			'WIN32_LEAN_AND_MEAN'

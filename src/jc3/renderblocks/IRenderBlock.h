@@ -47,7 +47,7 @@ public:
     virtual const char* GetTypeName() = 0;
 
     virtual void Create() = 0;
-    virtual void Read(fs::path& filename, std::ifstream& file) = 0;
+    virtual void Read(fs::path& filename, std::istream& file) = 0;
     virtual void Setup(RenderContext_t* context) = 0;
 
     virtual void Draw(RenderContext_t* context)
@@ -60,49 +60,49 @@ public:
     virtual IndexBuffer_t* GetIndexBuffer() { return m_Indices; }
 
     template <typename T>
-    void ReadVertexBuffer(std::ifstream& file, VertexBuffer_t** outBuffer)
+    void ReadVertexBuffer(std::istream& stream, VertexBuffer_t** outBuffer)
     {
         auto stride = static_cast<uint32_t>(sizeof(T));
 
         uint32_t count;
-        file.read((char *)&count, sizeof(count));
+        stream.read((char *)&count, sizeof(count));
 
         std::vector<T> vertices;
         vertices.resize(count);
-        file.read((char *)vertices.data(), (count * stride));
+        stream.read((char *)vertices.data(), (count * stride));
 
         *outBuffer = Renderer::Get()->CreateVertexBuffer(vertices.data(), count, stride);
     }
 
-    void ReadIndexBuffer(std::ifstream& file, IndexBuffer_t** outBuffer)
+    void ReadIndexBuffer(std::istream& stream, IndexBuffer_t** outBuffer)
     {
         uint32_t count;
-        file.read((char *)&count, sizeof(count));
+        stream.read((char *)&count, sizeof(count));
 
         std::vector<uint16_t> indices;
         indices.resize(count);
-        file.read((char *)indices.data(), (count * sizeof(uint16_t)));
+        stream.read((char *)indices.data(), (count * sizeof(uint16_t)));
 
         *outBuffer = Renderer::Get()->CreateIndexBuffer(indices.data(), count);
     }
 
-    void ReadMaterials(fs::path& filename, std::ifstream& file)
+    void ReadMaterials(fs::path& filename, std::istream& stream)
     {
         uint32_t count;
-        file.read((char *)&count, sizeof(count));
+        stream.read((char *)&count, sizeof(count));
 
         m_Materials.reserve(count);
 
         for (uint32_t i = 0; i < count; ++i) {
             uint32_t length;
-            file.read((char *)&length, sizeof(length));
+            stream.read((char *)&length, sizeof(length));
 
             if (length == 0) {
                 continue;
             }
 
             auto buffer = new char[length + 1];
-            file.read(buffer, length);
+            stream.read(buffer, length);
             buffer[length] = '\0';
 
             m_Materials.emplace_back(buffer);
@@ -117,28 +117,28 @@ public:
         }
 
         uint32_t unknown[4];
-        file.read((char *)&unknown, sizeof(unknown));
+        stream.read((char *)&unknown, sizeof(unknown));
 
         // flush the texture cache
         TextureManager::Get()->Flush();
     }
 
-    void ReadSkinBatch(std::ifstream& file)
+    void ReadSkinBatch(std::istream& stream)
     {
         uint32_t count;
-        file.read((char *)&count, sizeof(count));
+        stream.read((char *)&count, sizeof(count));
         m_SkinBatches.reserve(count);
 
         for (uint32_t i = 0; i < count; ++i) {
             JustCause3::CSkinBatch batch;
 
-            file.read((char *)&batch.size, sizeof(batch.size));
-            file.read((char *)&batch.offset, sizeof(batch.offset));
-            file.read((char *)&batch.batchSize, sizeof(batch.batchSize));
+            stream.read((char *)&batch.size, sizeof(batch.size));
+            stream.read((char *)&batch.offset, sizeof(batch.offset));
+            stream.read((char *)&batch.batchSize, sizeof(batch.batchSize));
 
             for (int32_t n = 0; n < batch.batchSize; ++n) {
                 int16_t unknown;
-                file.read((char *)&unknown, sizeof(unknown));
+                stream.read((char *)&unknown, sizeof(unknown));
             }
 
             m_SkinBatches.emplace_back(batch);

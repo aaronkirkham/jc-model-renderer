@@ -5,6 +5,7 @@
 #include <Window.h>
 
 #include <thread>
+#include <istream>
 
 FileLoader::FileLoader()
 {
@@ -78,6 +79,61 @@ void FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::Archi
 
     DEBUG_LOG("FileLoader::ReadArchiveTable - " << output->entries.size() << " files in archive");
 
+    file.close();
+}
+
+void FileLoader::ParseStreamArchive(std::istream& stream, std::vector<JustCause3::StreamArchive::FileEntry>* output)
+{
+    JustCause3::StreamArchive::SARCHeader header;
+    stream.read((char *)&header, sizeof(header));
+
+    // ensure the header magic is correct
+    if (strncmp(header.m_Magic, "SARC", 4) != 0) {
+        throw std::runtime_error("Invalid file header. Input file probably isn't an StreamArchive file.");
+    }
+
+    auto start_pos = stream.tellg();
+    while (true) {
+        JustCause3::StreamArchive::FileEntry entry;
+
+        uint32_t length;
+        stream.read((char *)&length, sizeof(length));
+
+        auto buffer = new char[length + 1];
+        stream.read(buffer, length);
+        buffer[length] = '\0';
+
+        entry.m_Filename = buffer;
+        delete[] buffer;
+
+        stream.read((char *)&entry.m_Offset, sizeof(entry.m_Offset));
+        stream.read((char *)&entry.m_Size, sizeof(entry.m_Size));
+
+        DEBUG_LOG("StreamArchiveEntry - m_Filename='" << entry.m_Filename.c_str() << "', m_Offset=" << entry.m_Offset << ", m_Size=" << entry.m_Size);
+
+        output->emplace_back(entry);
+
+        auto current_pos = stream.tellg();
+        if (header.m_Size - (current_pos - start_pos) <= 15) {
+            break;
+        }
+    }
+}
+
+void FileLoader::ParseStreamArchive(const std::vector<uint8_t>& data, std::vector<JustCause3::StreamArchive::FileEntry>* output)
+{
+    std::istringstream stream(std::string{ (char*)data.data(), data.size() });
+    ParseStreamArchive(stream, output);
+}
+
+void FileLoader::ReadStreamArchive(const std::string& filename, std::vector<JustCause3::StreamArchive::FileEntry>* output)
+{
+    std::ifstream file(filename, std::ios::binary);
+    if (file.fail()) {
+        throw std::runtime_error("FileLoader::ReadStreamArchive - Failed to read input file.");
+    }
+
+    ParseStreamArchive(file, output);
     file.close();
 }
 

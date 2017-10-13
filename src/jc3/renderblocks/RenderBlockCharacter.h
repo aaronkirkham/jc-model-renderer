@@ -28,30 +28,46 @@ class RenderBlockCharacter : public IRenderBlock
 {
 private:
     JustCause3::RenderBlocks::Character m_Block;
+    VertexDeclaration_t* m_VertexDeclaration = nullptr;
 
 public:
     RenderBlockCharacter() = default;
-    virtual ~RenderBlockCharacter() = default;
+    virtual ~RenderBlockCharacter()
+    {
+        Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
+    }
 
     virtual const char* GetTypeName() override final { return "RenderBlockCharacter"; }
 
     virtual void Create() override final
     {
+        // load shaders
+        m_VertexShader = ShaderManager::Get()->GetVertexShader("Character");
+        m_PixelShader = ShaderManager::Get()->GetPixelShader("Character");
+
+        // create the element input desc
+        D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+            { "POSITION", 0, DXGI_FORMAT_R16G16B16A16_SINT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        };
+
+        // create the vertex declaration
+        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 1, m_VertexShader.get());
     }
 
-    virtual void Read(fs::path& filename, std::ifstream& file) override final
+    virtual void Read(fs::path& filename, std::istream& stream) override final
     {
-#if 0
         // read the block header
-        file.read((char *)&m_Block, sizeof(m_Block));
+        stream.read((char *)&m_Block, sizeof(m_Block));
 
         // read the materials
-        ReadMaterials(filename, file);
+        ReadMaterials(filename, stream);
 
         // read vertex data
         // TODO: need to implement the different vertex types depending on the flags above (GetStride).
         // The stride should be the size of the struct we read from.
         {
+            ReadVertexBuffer<JustCause3::Vertex::RenderBlockCharacter::PackedCharacterPos4Bones1UVs>(stream, &m_Vertices);
+#if 0
             std::vector<JustCause3::Vertex::RenderBlockCharacter::PackedCharacterPos4Bones1UVs> vb_data;
             ReadVertexBuffer(file, &vb_data);
 
@@ -69,45 +85,41 @@ public:
             }
 
             m_VertexBuffer->Create(vertices);
+#endif
         }
 
         // read skin batch
-        ReadSkinBatch(file);
+        ReadSkinBatch(stream);
 
         // read index buffer
-        ReadIndexBuffer(file);
-#endif
+        ReadIndexBuffer(stream, &m_Indices);
     }
 
     virtual void Setup(RenderContext_t* context) override final
     {
+        // enable the vertex and pixel shaders
+        context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
+        context->m_DeviceContext->VSSetShader(m_VertexShader->m_Shader, nullptr, 0);
+        context->m_DeviceContext->PSSetShader(m_PixelShader->m_Shader, nullptr, 0);
+
         context->m_CullFace = static_cast<D3D11_CULL_MODE>(2 * (~LOBYTE(m_Block.attributes.flags) & 1) | 1);
+
+        // set the 1st vertex buffers
+        uint32_t offset = 0;
+        context->m_DeviceContext->IASetVertexBuffers(0, 1, &m_Vertices->m_Buffer, &m_Vertices->m_ElementStride, &offset);
     }
 
     virtual void Draw(RenderContext_t* context) override final
     {
-#if 0
-        assert(m_VertexBuffer->Created());
-        assert(m_IndexBuffer->Created());
+        IRenderBlock::Draw(context);
 
-        m_VertexShader->Activate();
-        m_PixelShader->Activate();
+        context->m_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        // bind the textures
-        for (uint32_t i = 0; i < m_Textures.size(); ++i) {
-            auto texture = m_Textures[i];
-            if (texture && texture->IsLoaded()) {
-                texture->Use(i);
-            }
+        if (m_Indices) {
+            Renderer::Get()->DrawIndexed(0, m_Indices->m_ElementCount, m_Indices);
         }
-
-        m_VertexBuffer->Use(0);
-
-        Renderer::Get()->GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-        for (auto& batch : m_SkinBatches) {
-            Renderer::Get()->DrawIndexed(batch.offset, batch.size / 3, m_IndexBuffer.get());
+        else {
+            Renderer::Get()->Draw(0, m_Vertices->m_ElementCount / 3);
         }
-#endif
     }
 };

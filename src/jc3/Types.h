@@ -166,6 +166,43 @@ namespace JustCause3
         };
     };
 
+    namespace StreamArchive
+    {
+        struct SARCHeader
+        {
+            uint32_t m_MagicLength;
+            char m_Magic[4];
+            int32_t m_Version;
+            uint32_t m_Size;
+        };
+
+        struct FileEntry
+        {
+            std::string m_Filename;
+            uint32_t m_Offset;
+            uint32_t m_Size;
+        };
+    };
+
+    struct AvalancheArchiveHeader
+    {
+        char m_Magic[4];
+        uint32_t m_Version;
+        char m_Magic2[28];
+        uint32_t m_TotalUncompressedSize;
+        uint32_t m_BlockSize;
+        uint32_t m_BlockCount;
+    };
+
+    struct AvalancheArchiveChunk
+    {
+        uint64_t m_DataOffset;
+        uint32_t m_CompressedSize;
+        uint32_t m_UncompressedSize;
+        std::vector<uint8_t> m_BlockData;
+        std::vector<StreamArchive::FileEntry> m_FileEntries;
+    };
+
     struct RBM
     {
         uint32_t m_MagicLength;

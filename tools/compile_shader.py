@@ -43,6 +43,9 @@ def Compile(sourcePath, entrypoint, shaderProfile):
 	directory = os.path.dirname(sourcePath)
 	
 	destDirectory = (directory + '/../../out/assets/')
+	
+	if not os.path.exists(destDirectory):
+		os.makedirs(destDirectory)
 
 	if ".vs" in identifier:
 		objectPath = os.path.join(destDirectory, (identifier.replace(".vs", "") + '.vs'))

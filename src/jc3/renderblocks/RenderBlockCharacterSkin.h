@@ -39,19 +39,21 @@ public:
     {
     }
 
-    virtual void Read(fs::path& filename, std::ifstream& file) override final
+    virtual void Read(fs::path& filename, std::istream& stream) override final
     {
-#if 0
         // read the block header
-        file.read((char *)&m_Block, sizeof(m_Block));
+        stream.read((char *)&m_Block, sizeof(m_Block));
 
         // read the materials
-        ReadMaterials(filename, file);
+        ReadMaterials(filename, stream);
 
         // read vertex data
         // TODO: need to implement the different vertex types depending on the flags above (GetStride).
         // The stride should be the size of the struct we read from.
         {
+            ReadVertexBuffer<JustCause3::Vertex::RenderBlockCharacterSkin::PackedCharacterSkinPos4Bones1UVs>(stream, &m_Vertices);
+
+#if 0
             std::vector<JustCause3::Vertex::RenderBlockCharacterSkin::PackedCharacterSkinPos4Bones1UVs> vb_data;
             ReadVertexBuffer(file, &vb_data);
 
@@ -69,14 +71,14 @@ public:
             }
 
             m_VertexBuffer->Create(vertices);
+#endif
         }
 
         // read skin batch
-        ReadSkinBatch(file);
+        ReadSkinBatch(stream);
 
         // read index buffer
-        ReadIndexBuffer(file);
-#endif
+        ReadIndexBuffer(stream, &m_Indices);
     }
 
     virtual void Setup(RenderContext_t* context) override final
@@ -86,28 +88,5 @@ public:
 
     virtual void Draw(RenderContext_t* context) override final
     {
-#if 0
-        assert(m_VertexBuffer->Created());
-        assert(m_IndexBuffer->Created());
-
-        m_VertexShader->Activate();
-        m_PixelShader->Activate();
-
-        // bind the textures
-        for (uint32_t i = 0; i < m_Textures.size(); ++i) {
-            auto texture = m_Textures[i];
-            if (texture && texture->IsLoaded()) {
-                texture->Use(i);
-            }
-        }
-
-        m_VertexBuffer->Use(0);
-
-        Renderer::Get()->GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-        for (auto& batch : m_SkinBatches) {
-            Renderer::Get()->DrawIndexed(batch.offset, batch.size / 3, m_IndexBuffer.get());
-        }
-#endif
     }
 };

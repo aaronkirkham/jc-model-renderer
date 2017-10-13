@@ -57,11 +57,16 @@ private:
 
     inline std::string TrimArchiveName(const std::string& filename);
 
+    void ParseStreamArchive(std::istream& stream, std::vector<JustCause3::StreamArchive::FileEntry>* output);
+
 public:
     FileLoader();
     virtual ~FileLoader() = default;
 
     void ReadArchiveTable(const std::string& filename, JustCause3::ArchiveTable::VfsArchive* output);
+    void ParseStreamArchive(const std::vector<uint8_t>& data, std::vector<JustCause3::StreamArchive::FileEntry>* output);
+    void ReadStreamArchive(const std::string& filename, std::vector<JustCause3::StreamArchive::FileEntry>* output);
+
     void ReadCompressedTexture(const fs::path& filename, std::vector<uint8_t>* output);
 
     std::string GetFileName(uint32_t hash);

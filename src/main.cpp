@@ -7,6 +7,7 @@
 
 #include <jc3/FileLoader.h>
 #include <jc3/formats/RenderBlockModel.h>
+#include <jc3/formats/ExportedEntity.h>
 
 std::vector<RenderBlockModel*> m_Models;
 
@@ -68,7 +69,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
             }
             else if (key == VK_F2) {
                 //m_Models.emplace_back(new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/cow/cow_branded_mesh_body_lod1.rbm"));
-                m_Models.emplace_back(new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/deer/deer_buck_mesh_body_lod1.rbm"));
+                //m_Models.emplace_back(new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/deer/deer_buck_mesh_body_lod1.rbm"));
+
+                auto ee = new ExportedEntity("E:/jc3-unpack/editor/entities/jc_characters/animals/cow/cow.ee");
             }
             else if (key == VK_F3) {
                 auto model = new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/seagull/seagull_body_lod1.rbm");

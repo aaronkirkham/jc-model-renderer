@@ -83,11 +83,10 @@ void Camera::Update()
 {
     // calculate the view matrix
     {
-        auto roll = glm::rotate({}, m_Rotation.x, glm::vec3{ 0.0f, 0.0f, 1.0f });
-        auto pitch = glm::rotate({}, m_Rotation.y, glm::vec3{ 1.0f, 0.0f, 0.0f });
-        auto yaw = glm::rotate({}, m_Rotation.z, glm::vec3{ 0.0f, 1.0f, 0.0f });
-
-        m_View = (roll * pitch * yaw) * glm::translate({}, -m_Position);
+        m_View = glm::translate(glm::mat4(1.0f), -m_Position);
+        m_View = glm::rotate(m_View, m_Rotation.x, glm::vec3{ 0.0f, 0.0f, 1.0f });
+        m_View = glm::rotate(m_View, m_Rotation.y, glm::vec3{ 1.0f, 0.0f, 0.0f });
+        m_View = glm::rotate(m_View, m_Rotation.z, glm::vec3{ 0.0f, 1.0f, 0.0f });
     }
 
     // update frame constants
