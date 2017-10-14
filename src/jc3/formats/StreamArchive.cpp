@@ -1,0 +1,1 @@
+#include <jc3/formats/StreamArchive.h>

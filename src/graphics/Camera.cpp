@@ -5,6 +5,7 @@
 
 constexpr float g_MouseSensitivity = 0.0025f;
 constexpr float g_MovementSensitivity = 0.05f;
+constexpr float g_MouseScrollSensitivity = 0.01f;
 
 Camera::Camera()
 {
@@ -45,6 +46,10 @@ Camera::Camera()
         }
 
         return true;
+    });
+
+    events.MouseScroll.connect([&](float delta) {
+        m_Position.z += (delta * g_MouseScrollSensitivity);
     });
 
     events.KeyDown.connect([&](uint32_t key) {

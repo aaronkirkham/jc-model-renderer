@@ -14,6 +14,9 @@
 			'CharacterSet': '0',
 		},
 		'msvs_settings': {
+			'VCCLCompilerTool': {
+				'AdditionalOptions': ['/std:c++latest'],
+			},
 			'VCLinkerTool': {
 				'SubSystem': '2',
 			},

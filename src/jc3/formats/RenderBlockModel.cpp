@@ -20,7 +20,7 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
             }
 
             // debug model info
-            ImGui::Begin("Model Stats", nullptr, ImVec2(800, 800), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove));
+            ImGui::Begin("Model Stats", nullptr, ImVec2(0, 0), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs));
             {
                 std::size_t vertices = 0;
                 std::size_t indices = 0;
@@ -115,21 +115,22 @@ RenderBlockModel::RenderBlockModel(const fs::path& file)
         throw std::runtime_error("Failed to read RenderBlockModel file!");
     }
 
-    ParseRenderBlockModel(stream);
-
     // create the mesh constant buffer
     MeshConstants constants;
     m_MeshConstants = Renderer::Get()->CreateConstantBuffer(constants);
+
+    ParseRenderBlockModel(stream);
 }
 
-RenderBlockModel::RenderBlockModel(const std::vector<uint8_t>& data)
+RenderBlockModel::RenderBlockModel(const fs::path& filename, const std::vector<uint8_t>& buffer)
+    : m_File(filename)
 {
-    std::istringstream stream(std::string{ (char*)data.data(), data.size() });
-    ParseRenderBlockModel(stream);
-
     // create the mesh constant buffer
     MeshConstants constants;
     m_MeshConstants = Renderer::Get()->CreateConstantBuffer(constants);
+
+    std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
+    ParseRenderBlockModel(stream);
 }
 
 RenderBlockModel::~RenderBlockModel()

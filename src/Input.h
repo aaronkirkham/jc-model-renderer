@@ -10,6 +10,7 @@ struct InputEvents
     ksignals::Event<void(const glm::vec2&)> MouseDown;
     ksignals::Event<void(const glm::vec2&)> MouseUp;
     ksignals::Event<void(const glm::vec2&)> MouseMove;
+    ksignals::Event<void(float delta)> MouseScroll;
 };
 
 class Input : public Singleton<Input>
@@ -19,6 +20,7 @@ private:
     std::array<bool, 255> m_KeyboardState = { false };
     glm::vec2 m_MousePosition;
     glm::vec2 m_LastClickPosition;
+    bool m_IsMouseDown = false;
 
 public:
     virtual ~Input();

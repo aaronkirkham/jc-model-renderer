@@ -9,6 +9,8 @@ void UI::Render()
 {
     if (ImGui::BeginMainMenuBar())
     {
+        m_MainMenuBarHeight = ImGui::GetWindowHeight();
+
         if (ImGui::BeginMenu("File"))
         {
             if (ImGui::MenuItem("Exit"))
@@ -34,70 +36,69 @@ void UI::Render()
     }
 
     // Stats
-    ImGui::Begin("Stats", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove));
+    ImGui::Begin("Stats", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs));
     {
         auto windowSize = Window::Get()->GetSize();
 
-        ImGui::SetWindowPos(ImVec2(10, windowSize.y - 50));
-        ImGui::Text("%.01f FPS (%.02f ms)", ImGui::GetIO().Framerate, (1000.0f / ImGui::GetIO().Framerate));
+        ImGui::SetWindowPos(ImVec2(10, windowSize.y - 40));
+        ImGui::Text("%.01f FPS (%.02f ms) (%.0f x %.0f)", ImGui::GetIO().Framerate, (1000.0f / ImGui::GetIO().Framerate), windowSize.x, windowSize.y);
     }
     ImGui::End();
 
-    //RenderFileTreeView();
-
-#if 0
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("ListBox %d hovered", i);
-    }
-#endif
-
+    RenderFileTreeView();
 }
 
-// TODO: this is terrible
-void RenderDirectoryList(const json& current) {
-
-    if (current.is_object()) {
-        for (auto it = current.begin(); it != current.end(); ++it)
-        {
+void RenderDirectoryList(json* current)
+{
+    if (current->is_object()) {
+        for (auto it = current->begin(); it != current->end(); ++it) {
             auto current_key = it.key();
-            auto current_data = it.value();
+            
+            if (current_key != "/") {
+                ImGuiTreeNodeFlags flags = 0;
 
-            // if this is not the root directory, create a tree node
-            if (current_key != "/")
-            {
-                if (ImGui::TreeNode(current_key.c_str()))
-                {
-                    RenderDirectoryList(current[current_key]);
+                // open the root directories
+                if (current_key == "editor" || current_key == "entities" || current_key == "models") {
+                    flags |= ImGuiTreeNodeFlags_DefaultOpen;
+                }
+
+                if (ImGui::TreeNodeEx(current_key.c_str(), flags)) {
+                    auto next = &current->operator[](current_key);
+                    RenderDirectoryList(next);
+
                     ImGui::TreePop();
                 }
             }
-            else
-            {
-                RenderDirectoryList(current[current_key]);
+            else {
+                auto next = &current->operator[](current_key);
+                RenderDirectoryList(next);
             }
         }
     }
     else {
-        if (current.is_string()) {
-            ImGui::Text(current.get<std::string>().c_str());
+        if (current->is_string()) {
+            ImGui::TextWrapped("I FORGOT WHAT THIS IS :(");
         }
-        // probably an array
         else {
-            for (auto& o : current) {
-                ImGui::Text(o.get<std::string>().c_str());
+            for (auto& leaf : *current) {
+                auto filename = leaf.get<std::string>();
+
+                ImGui::TreeNodeEx(filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen));
+                if (ImGui::IsItemClicked()) {
+                    UI::Get()->Events().FileTreeItemSelected(filename);
+                }
             }
         }
     }
-
 };
 
 void UI::RenderFileTreeView()
 {
-    ImGui::Begin("Just Cause 3", nullptr, ImVec2(), 1.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings));
+    ImGui::Begin("Entity Explorer", nullptr, ImVec2(), 1.0f, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse));
     {
         auto size = Window::Get()->GetSize();
-        ImGui::SetWindowPos(ImVec2(size.x - 400, 0));
-        ImGui::SetWindowSize(ImVec2(400, size.y));
+        ImGui::SetWindowPos(ImVec2(size.x - 400, m_MainMenuBarHeight));
+        ImGui::SetWindowSize(ImVec2(400, (size.y - m_MainMenuBarHeight)));
 
         ImGui::PushItemWidth(-1);
         {

@@ -1,7 +1,9 @@
 #pragma once
 
 #include <StdInc.h>
-#include "singleton.h"
+#include <singleton.h>
+
+#include <chrono>
 
 static constexpr auto g_WindowName = "Engine";
 
@@ -24,7 +26,6 @@ private:
 
     HINSTANCE m_Instance = nullptr;
     HWND m_Hwnd = nullptr;
-    bool m_ClipCursor = false;
 
     static LRESULT CALLBACK WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam);
 
@@ -39,11 +40,6 @@ public:
 
     bool Frame();
     void Run();
-
-    void UpdateClip();
-
-    void SetClipEnabled(bool state) { m_ClipCursor = state; }
-    bool IsClipEnabled() const { return m_ClipCursor; }
 
     glm::vec2 GetSize() const;
     glm::vec2 GetPosition() const;

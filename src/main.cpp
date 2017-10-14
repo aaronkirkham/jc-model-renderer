@@ -1,6 +1,7 @@
 #include <Window.h>
 #include <Input.h>
 #include <graphics/Renderer.h>
+#include <graphics/UI.h>
 
 #include <vector>
 #include <json.hpp>
@@ -15,12 +16,12 @@
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine, int32_t iCmdShow)
 {
 #if 0
-     float packed = 32512.4961f;
+    float packed = 32512.4961f;
 
-     auto r = UnpackVector(262143.984f, true);
+    auto r = UnpackVector(262143.984f, true);
 
-     while (true) { Sleep(100); };
-     return false;
+    while (true) { Sleep(100); };
+    return false;
 #endif
 
 #if 0
@@ -64,7 +65,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 //new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/cow/cow_branded_mesh_body_lod1.rbm");
                 //new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/deer/deer_buck_mesh_body_lod1.rbm");
 
-                auto ee = new ExportedEntity("E:/jc3-unpack/editor/entities/jc_characters/animals/cow/cow.ee");
+                //new ExportedEntity("E:/jc3-unpack/editor/entities/jc_characters/animals/cow/cow.ee");
+                new ExportedEntity("E:/jc3-unpack/editor/entities/gameobjects/main_character.ee");
             }
             else if (key == VK_F3) {
                 auto model = new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/seagull/seagull_body_lod1.rbm");
@@ -76,21 +78,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
             }
         });
 
-#if 0
-        DirectoryList list;
+        UI::Get()->Events().FileTreeItemSelected.connect([](const std::string& filename) {
+            DEBUG_LOG("look for " << filename);
 
-        list.add("animations/jc_cinematics/test.ban");
+            FileLoader::Get()->LocateFileInDictionary(filename, [](bool success, std::string archive, uint32_t namehash, std::string filename) {
+                if (success) {
+                    DEBUG_LOG(archive);
+                    DEBUG_LOG(namehash << " " << filename);
 
-        list.add("animations/jc_cinematics/act2/mm250_csb/animations/0000_mm250_csb__char_sheldon.ban");
-        list.add("animations/jc_cinematics/act2/mm250_csb/animations/test.ban");
+                    FileLoader::Get()->ReadFileFromArchive(archive, filename, namehash);
+                }
+                else {
+                    DEBUG_LOG("[WARNING] FileTreeItemSelected -> LocateFileInDictionary - Can't find " << filename << " in dictionary");
+                }
+            });
 
-        list.add("ai/tiles/32_43.navmeshc");
-        list.add("ai/tiles/34_34.navmeshc");
-
-        DEBUG_LOG(list.GetStructure().dump().c_str());
-        __debugbreak();
-#endif
-
+            return true;
+        });
     
         Window::Get()->Run();
     }

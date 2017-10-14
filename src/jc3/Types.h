@@ -175,13 +175,6 @@ namespace JustCause3
             int32_t m_Version;
             uint32_t m_Size;
         };
-
-        struct FileEntry
-        {
-            std::string m_Filename;
-            uint32_t m_Offset;
-            uint32_t m_Size;
-        };
     };
 
     struct AvalancheArchiveHeader
@@ -200,7 +193,6 @@ namespace JustCause3
         uint32_t m_CompressedSize;
         uint32_t m_UncompressedSize;
         std::vector<uint8_t> m_BlockData;
-        std::vector<StreamArchive::FileEntry> m_FileEntries;
     };
 
     struct RBM

@@ -12,6 +12,7 @@ class UI : public Singleton<UI>
 {
 private:
     UIEvents m_UIEvents;
+    float m_MainMenuBarHeight = 0.0f;
 
     void RenderFileTreeView();
 

@@ -3,6 +3,8 @@
 #include <StdInc.h>
 #include <jc3/renderblocks/IRenderBlock.h>
 
+#include <mutex>
+
 class RenderBlockModel
 {
 private:
@@ -30,7 +32,7 @@ public:
     };
 
     RenderBlockModel(const fs::path& file);
-    RenderBlockModel(const std::vector<uint8_t>& data);
+    RenderBlockModel(const fs::path& filename, const std::vector<uint8_t>& buffer);
     virtual ~RenderBlockModel();
 
     void Draw(RenderContext_t* context);

@@ -4,10 +4,14 @@
 #include <jc3/renderblocks/IRenderBlock.h>
 #include <jc3/Types.h>
 
+#include <jc3/formats/StreamArchive.h>
+
+#include <functional>
+
 class DirectoryList
 {
 private:
-    json structure;
+    json m_Structure;
 
     void split(std::string str, json& current)
     {
@@ -41,11 +45,13 @@ public:
     virtual ~DirectoryList() = default;
 
     void Add(const std::string& filename) {
-        split(filename, structure);
+        split(filename, m_Structure);
     }
 
-    const json& GetStructure() { return structure; }
+    json* GetStructure() { return &m_Structure; }
 };
+
+using DictionaryLookupCallback = std::function<void(bool, std::string, uint32_t, std::string)>;
 
 class FileLoader : public Singleton<FileLoader>
 {
@@ -55,22 +61,30 @@ private:
     json m_FileListDictionary;
     bool m_LoadingDictionary = false;
 
-    inline std::string TrimArchiveName(const std::string& filename);
-
-    void ParseStreamArchive(std::istream& stream, std::vector<JustCause3::StreamArchive::FileEntry>* output);
+    StreamArchive_t* ParseStreamArchive(std::istream& stream);
+    std::vector<uint8_t> DecompressArchiveFromStream(std::istream& stream);
 
 public:
     FileLoader();
     virtual ~FileLoader() = default;
 
+    // archives
     void ReadArchiveTable(const std::string& filename, JustCause3::ArchiveTable::VfsArchive* output);
-    void ParseStreamArchive(const std::vector<uint8_t>& data, std::vector<JustCause3::StreamArchive::FileEntry>* output);
-    void ReadStreamArchive(const std::string& filename, std::vector<JustCause3::StreamArchive::FileEntry>* output);
+    void ReadFileFromArchive(const std::string& archive, const std::string& filename, uint32_t namehash);
 
+    // stream archive
+    StreamArchive_t* ReadStreamArchive(const std::vector<uint8_t>& buffer);
+    StreamArchive_t* ReadStreamArchive(const fs::path& filename);
+
+    // textures
     void ReadCompressedTexture(const fs::path& filename, std::vector<uint8_t>* output);
 
+
+    // shit
     std::string GetFileName(uint32_t hash);
     std::string GetArchiveName(const std::string& filename);
+
+    void LocateFileInDictionary(const std::string& filename, DictionaryLookupCallback callback);
 
     bool IsLoadingDictionary() const { return m_LoadingDictionary; }
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }

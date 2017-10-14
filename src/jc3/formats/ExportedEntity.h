@@ -1,15 +1,20 @@
 #pragma once
 
 #include <StdInc.h>
-#include <jc3/Types.h>
+#include <jc3/formats/StreamArchive.h>
 
 class ExportedEntity
 {
 private:
     fs::path m_File = "";
-    std::vector<JustCause3::AvalancheArchiveChunk> m_ArchiveChunks;
+    StreamArchive_t* m_StreamArchive = nullptr;
+
+    void Init();
 
 public:
     ExportedEntity(const fs::path& file);
+    ExportedEntity(const fs::path& filename, const std::vector<uint8_t>& buffer);
     virtual ~ExportedEntity();
+
+    StreamArchive_t* GetStreamArchive() { return m_StreamArchive; }
 };
