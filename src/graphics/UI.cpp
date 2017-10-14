@@ -29,10 +29,43 @@ void UI::Render()
                 Renderer::Get()->SetFillMode(wireframe ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID);
             }
 
+            static bool bounding_boxes = false;
+            if (ImGui::Checkbox("Bounding Boxes", &bounding_boxes))
+            {
+                
+            }
+
             ImGui::EndMenu();
         }
         
         ImGui::EndMainMenuBar();
+    }
+
+    // render archive windows
+    {
+        auto archives = FileLoader::Get()->GetLoadedArchives();
+        for (auto& archive : archives)
+        {
+            ImGui::Begin(archive->m_Filename.string().c_str(), nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings));
+            {
+                for (auto& entry : archive->m_Files)
+                {
+                    if (entry.m_Filename.find(".rbm") != std::string::npos)
+                    {
+                        ImGui::TreeNodeEx(entry.m_Filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen));
+
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip(entry.m_Filename.c_str());
+                        }
+
+                        if (ImGui::IsItemClicked()) {
+                            UI::Get()->Events().FileTreeItemSelected(entry.m_Filename);
+                        }
+                    }
+                }
+            }
+            ImGui::End();
+        }
     }
 
     // Stats
@@ -84,6 +117,11 @@ void RenderDirectoryList(json* current)
                 auto filename = leaf.get<std::string>();
 
                 ImGui::TreeNodeEx(filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen));
+
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip(filename.c_str());
+                }
+
                 if (ImGui::IsItemClicked()) {
                     UI::Get()->Events().FileTreeItemSelected(filename);
                 }

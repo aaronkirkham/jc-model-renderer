@@ -21,6 +21,7 @@ protected:
     ConstantBuffer_t* m_ConstantBuffer = nullptr;
     std::shared_ptr<VertexShader_t> m_VertexShader = nullptr;
     std::shared_ptr<PixelShader_t> m_PixelShader = nullptr;
+    SamplerState_t* m_SamplerState = nullptr;
 
     std::vector<fs::path> m_Materials;
     std::vector<std::shared_ptr<Texture>> m_Textures;
@@ -42,6 +43,7 @@ public:
         Renderer::Get()->DestroyBuffer(m_Vertices);
         Renderer::Get()->DestroyBuffer(m_Indices);
         Renderer::Get()->DestroyBuffer(m_ConstantBuffer);
+        Renderer::Get()->DestroySamplerState(m_SamplerState);
     }
 
     virtual const char* GetTypeName() = 0;
@@ -108,8 +110,8 @@ public:
             m_Materials.emplace_back(buffer);
 
             // load the material
-            auto texture = TextureManager::Get()->GetTexture(filename.parent_path() / "textures" / fs::path(buffer).filename());
-            if (texture && (texture->IsLoaded() || (!texture->IsLoaded() && texture->LoadFromFile()))) {
+            auto texture = TextureManager::Get()->GetTexture(buffer);
+            if (texture && texture->IsLoaded()) {
                 m_Textures.emplace_back(texture);
             }
 

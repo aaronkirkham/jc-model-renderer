@@ -4,6 +4,54 @@
 #include <jc3/FileLoader.h>
 #include <fnv1.h>
 
+Texture::Texture(const fs::path& filename)
+    : m_Filename(filename)
+{
+    std::vector<uint8_t> buffer;
+
+    auto [archive, entry] = FileLoader::Get()->GetStreamArchiveFromFile(m_Filename);
+    if (archive) {
+        DEBUG_LOG("found texture " << filename.string() << " in archive " << archive->m_Filename.string());
+
+        auto data = archive->ReadEntryFromArchive(entry);
+
+        // is the texture compressed?
+        if (m_Filename.extension() == ".ddsc") {
+            FileLoader::Get()->ReadCompressedTexture(data, entry.m_Size, &buffer);
+        }
+        else {
+            buffer = std::move(data);
+        }
+    }
+    // TODO: need to also use the dictionary lookup stuff, we might need to read it straight from an .arc file!
+    // texture is not in any current loaded archive, let's try read it from disk
+    else {
+        if (!fs::exists(m_Filename)) {
+            DEBUG_LOG("Texture::LoadFromFile - Failed to read input file. (" << m_Filename.c_str() << ")");
+            return;
+        }
+
+        std::ifstream stream(m_Filename, std::ios::binary);
+        if (stream.fail()) {
+            DEBUG_LOG("Texture::LoadFromFile - Failed to read input file. (" << m_Filename.c_str() << ")");
+            return;
+        }
+
+        std::vector<uint8_t> input_buffer = { std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>() };
+
+        // is the texture compressed?
+        if (m_Filename.extension() == ".ddsc") {
+            FileLoader::Get()->ReadCompressedTexture(input_buffer, std::numeric_limits<uint64_t>::max(), &buffer);
+        }
+        else {
+            buffer = std::move(input_buffer);
+        }
+    }
+
+
+    LoadFromBuffer(buffer);
+}
+
 Texture::~Texture()
 {
     DEBUG_LOG("Deleting texture '" << m_Filename.string().c_str() << "'...");
@@ -34,27 +82,6 @@ bool Texture::LoadFromBuffer(const std::vector<uint8_t>& buffer)
     return SUCCEEDED(result);
 }
 
-bool Texture::LoadFromFile()
-{
-    // load compressed variant if needed
-    if (m_Filename.extension() == ".ddsc") {
-        std::vector<uint8_t> bytes;
-        FileLoader::Get()->ReadCompressedTexture(m_Filename, &bytes);
-
-        return LoadFromBuffer(bytes);
-    }
-
-    // load the texture
-    std::ifstream texture(m_Filename, std::ios::binary);
-    if (texture.fail()) {
-        DEBUG_LOG("Texture::LoadFromFile - Failed to read input file. (" << m_Filename.c_str() << ")");
-        return false;
-    }
-
-    std::vector<uint8_t> bytes = { std::istreambuf_iterator<char>(texture), std::istreambuf_iterator<char>() };
-    return LoadFromBuffer(bytes);
-}
-
 void Texture::Use(uint32_t slot)
 {
     assert(m_SRV != nullptr);
@@ -63,10 +90,6 @@ void Texture::Use(uint32_t slot)
 
 std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename)
 {
-    if (!fs::exists(filename)) {
-        return nullptr;
-    }
-
     auto name = filename.filename().string();
     auto key = fnv_1_32::hash(name.c_str(), name.length());
 
@@ -101,7 +124,7 @@ void TextureManager::Flush()
     }
 }
 
-DDS_PIXELFORMAT TextureManager::GetDDSCPixelFormat(uint32_t format)
+DDS_PIXELFORMAT TextureManager::GetPixelFormat(DXGI_FORMAT format)
 {
     DDS_PIXELFORMAT pixelFormat;
     pixelFormat.size = 32;

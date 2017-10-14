@@ -2,7 +2,7 @@
 #include <graphics/ShaderManager.h>
 #include <graphics/UI.h>
 #include <graphics/Camera.h>
-#include <graphics/Renderer2D.h>
+#include <graphics/DebugRenderer.h>
 #include <Window.h>
 
 void SetupImGuiStyle();
@@ -141,7 +141,7 @@ bool Renderer::Render()
     SetDepthEnabled(false);
 
     // Render 2D
-    Renderer2D::Get()->Render(&m_RenderContext);
+    DebugRenderer::Get()->Render(&m_RenderContext);
 
     // Render UI
     UI::Get()->Render();
@@ -504,18 +504,18 @@ SamplerState_t* Renderer::CreateSamplerState(const SamplerStateCreationParams_t&
     ZeroMemory(&samplerDesc, sizeof(D3D11_SAMPLER_DESC));
 
     samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    samplerDesc.AddressU = params.m_AddressU;
-    samplerDesc.AddressV = params.m_AddressV;
-    samplerDesc.AddressW = params.m_AddressW;
-    samplerDesc.MipLODBias = 0;
+    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    samplerDesc.MipLODBias = 0.0f;
     samplerDesc.MaxAnisotropy = 1;
     samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
     samplerDesc.BorderColor[0] = 1.0f;
     samplerDesc.BorderColor[1] = 1.0f;
     samplerDesc.BorderColor[2] = 1.0f;
     samplerDesc.BorderColor[3] = 1.0f;
-    samplerDesc.MinLOD = -3.402823466e+38F; // -FLT_MAX
-    samplerDesc.MaxLOD = 3.402823466e+38F; // FLT_MAX
+    samplerDesc.MinLOD = -D3D11_FLOAT32_MAX;
+    samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
     auto result = m_Device->CreateSamplerState(&samplerDesc, &sampler->m_SamplerState);
     assert(SUCCEEDED(result));

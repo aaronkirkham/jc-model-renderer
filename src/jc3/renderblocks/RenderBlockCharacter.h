@@ -53,6 +53,18 @@ public:
 
         // create the vertex declaration
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 2, m_VertexShader.get());
+
+        // create the sampler states
+        {
+            SamplerStateCreationParams_t params;
+            params.m_AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.m_AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.m_AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.m_MinMip = 12.0f;
+            params.m_MaxMip = 13.0f;
+
+            m_SamplerState = Renderer::Get()->CreateSamplerState(params);
+        }
     }
 
     virtual void Read(fs::path& filename, std::istream& stream) override final
@@ -100,6 +112,9 @@ public:
         // set the 1st vertex buffers
         uint32_t offset = 0;
         context->m_DeviceContext->IASetVertexBuffers(0, 1, &m_Vertices->m_Buffer, &m_Vertices->m_ElementStride, &offset);
+
+        // set the samplers
+        context->m_DeviceContext->PSSetSamplers(0, 1, &m_SamplerState->m_SamplerState);
     }
 
     virtual void Draw(RenderContext_t* context) override final

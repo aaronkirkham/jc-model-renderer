@@ -4,7 +4,7 @@
 #include <jc3/RenderBlockFactory.h>
 #include <graphics/Renderer.h>
 #include <graphics/Camera.h>
-#include <graphics/Renderer2D.h>
+#include <graphics/DebugRenderer.h>
 
 static std::vector<RenderBlockModel*> g_Models;
 
@@ -144,7 +144,7 @@ RenderBlockModel::~RenderBlockModel()
 
 void RenderBlockModel::Draw(RenderContext_t* context)
 {
-    m_Rotation.z += 0.015f;
+    //m_Rotation.z += 0.015f;
 
     // calculate the world matrix
     {
@@ -174,13 +174,13 @@ void RenderBlockModel::Draw(RenderContext_t* context)
         renderBlock->Draw(context);
     }
 
-#if 0
+#if 1
     glm::vec3 screen;
     if (Camera::Get()->WorldToScreen(m_Position, &screen)) {
-        float size = 100.0f;
-        screen -= (size * 0.5f);
+        auto _min = m_BoundingBoxMin + m_Position;
+        auto _max = m_BoundingBoxMax + m_Position;
 
-        Renderer2D::Get()->DrawRect({ screen.x, screen.y }, { size, size }, { 1, 0, 0, 1 });
+        DebugRenderer::Get()->DrawBBox(_min, _max, { 1, 0, 0, 1 });
     }
 #endif
 }

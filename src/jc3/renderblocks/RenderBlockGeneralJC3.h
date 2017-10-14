@@ -30,7 +30,6 @@ private:
     JustCause3::RenderBlocks::GeneralJC3 m_Block;
     VertexBuffer_t* m_VertexBufferInt16 = nullptr;
     VertexDeclaration_t* m_VertexDeclaration = nullptr;
-    SamplerState_t* m_SamplerState = nullptr;
     SamplerState_t* m_SamplerStateNormalMap = nullptr;
 
 public:
@@ -40,7 +39,6 @@ public:
         OutputDebugStringA("~RenderBlockGeneralJC3\n");
 
         Renderer::Get()->DestroySamplerState(m_SamplerStateNormalMap);
-        Renderer::Get()->DestroySamplerState(m_SamplerState);
         Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
         Renderer::Get()->DestroyBuffer(m_VertexBufferInt16);
     }

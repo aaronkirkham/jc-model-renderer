@@ -51,4 +51,6 @@ public:
 
     void SetScale(const glm::vec3& scale) { m_Scale = scale; }
     const glm::vec3& GetScale() const { return m_Scale; }
+
+    std::tuple<glm::vec3, glm::vec3> GetBoundingBox() { return { m_BoundingBoxMin, m_BoundingBoxMax }; }
 };

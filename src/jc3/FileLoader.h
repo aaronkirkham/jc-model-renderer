@@ -57,12 +57,13 @@ class FileLoader : public Singleton<FileLoader>
 {
 private:
     std::unique_ptr<DirectoryList> m_FileList = nullptr;
-
     json m_FileListDictionary;
     bool m_LoadingDictionary = false;
+    std::vector<StreamArchive_t*> m_LoadedArchives;
 
     StreamArchive_t* ParseStreamArchive(std::istream& stream);
     std::vector<uint8_t> DecompressArchiveFromStream(std::istream& stream);
+    void ParseCompressedTexture(std::istream& stream, uint64_t size, std::vector<uint8_t>* output);
 
 public:
     FileLoader();
@@ -77,7 +78,15 @@ public:
     StreamArchive_t* ReadStreamArchive(const fs::path& filename);
 
     // textures
+    void ReadCompressedTexture(const std::vector<uint8_t>& buffer, uint64_t size, std::vector<uint8_t>* output);
     void ReadCompressedTexture(const fs::path& filename, std::vector<uint8_t>* output);
+
+
+    // stream archive caching
+    void CacheLoadedArchive(StreamArchive_t* archive);
+    void RemoveLoadedArchive(StreamArchive_t* archive);
+    std::tuple<StreamArchive_t*, StreamArchiveEntry_t> GetStreamArchiveFromFile(const fs::path& file);
+
 
 
     // shit
@@ -88,4 +97,6 @@ public:
 
     bool IsLoadingDictionary() const { return m_LoadingDictionary; }
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
+
+    std::vector<StreamArchive_t*> GetLoadedArchives() { return m_LoadedArchives; }
 };

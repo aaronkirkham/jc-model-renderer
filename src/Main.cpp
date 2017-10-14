@@ -70,7 +70,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
             }
             else if (key == VK_F3) {
                 auto model = new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/seagull/seagull_body_lod1.rbm");
-                model->SetScale(glm::vec3{ 2, 2, 2 });
+                //model->SetScale(glm::vec3{ 2, 2, 2 });
             }
             else if (key == VK_F4) {
                 new RenderBlockModel("E:/jc3-unpack/editor/entities/gameobjects/main_character_unpack/models/jc_characters/main_characters/rico/rico_body_lod3.rbm");
@@ -80,6 +80,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
         UI::Get()->Events().FileTreeItemSelected.connect([](const std::string& filename) {
             DEBUG_LOG("look for " << filename);
+
+            // try find the file in our loaded archives first
+            auto [archive, entry] = FileLoader::Get()->GetStreamArchiveFromFile(filename);
+            if (archive && entry.m_Offset != 0) {
+                auto data = archive->ReadEntryFromArchive(entry);
+                new RenderBlockModel(filename, data);
+
+                DEBUG_LOG("Found " << filename << " is already loaded stream archive");
+
+                return true;
+            }
 
             FileLoader::Get()->LocateFileInDictionary(filename, [](bool success, std::string archive, uint32_t namehash, std::string filename) {
                 if (success) {

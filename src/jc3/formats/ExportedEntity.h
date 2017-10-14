@@ -9,8 +9,6 @@ private:
     fs::path m_File = "";
     StreamArchive_t* m_StreamArchive = nullptr;
 
-    void Init();
-
 public:
     ExportedEntity(const fs::path& file);
     ExportedEntity(const fs::path& filename, const std::vector<uint8_t>& buffer);

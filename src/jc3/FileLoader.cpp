@@ -12,6 +12,9 @@
 
 #include <zlib.h>
 
+// Credits to gibbed for most of the archive format stuff
+// http://gib.me
+
 FileLoader::FileLoader()
 {
     m_LoadingDictionary = true;
@@ -91,7 +94,7 @@ StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
 
     // ensure the header magic is correct
     if (strncmp(header.m_Magic, "SARC", 4) != 0) {
-        throw std::runtime_error("Invalid file header. Input file probably isn't an StreamArchive file.");
+        throw std::runtime_error("Invalid file header. Input file probably isn't a StreamArchive file.");
     }
 
     auto start_pos = stream.tellg();
@@ -134,7 +137,7 @@ std::vector<uint8_t> FileLoader::DecompressArchiveFromStream(std::istream& strea
 
     // ensure the header magic is correct
     if (strncmp(header.m_Magic, "AAF", 4) != 0) {
-        throw std::runtime_error("Invalid file header. Input file probably isn't an ExportedEntity file.");
+        throw std::runtime_error("Invalid file header. Input file probably isn't an AvalancheArchiveFormat file.");
     }
 
     DEBUG_LOG("AvalancheArchiveFormat v" << header.m_Version);
@@ -239,101 +242,54 @@ StreamArchive_t* FileLoader::ReadStreamArchive(const fs::path& filename)
     return result;
 }
 
-#pragma pack(push, 1)
-struct TextureElement {
-    uint32_t offset;
-    uint32_t size;
-    uint16_t unknown;
-    uint8_t unknown2;
-    bool external;
-};
-#pragma pack(pop)
+void FileLoader::ReadCompressedTexture(const std::vector<uint8_t>& buffer, uint64_t size, std::vector<uint8_t>* output)
+{
+    std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
+    ParseCompressedTexture(stream, size, output);
+}
 
-// Credits to gibbed for most of this
-// http://gib.me
 void FileLoader::ReadCompressedTexture(const fs::path& filename, std::vector<uint8_t>* output)
 {
-    static uint32_t headerLength = 0x80;
-    static uint32_t elementsCount = 8;
-
-    std::ifstream file(filename, std::ios::binary);
-    if (file.fail()) {
+    if (!fs::exists(filename)) {
         DEBUG_LOG("FileLoader::ReadCompressedTexture - can't find input file '" << filename.string().c_str() << "'");
         return;
     }
 
-    // get the file size
-    file.seekg(0, std::ios::end);
-    auto fileSize = static_cast<int32_t>(file.tellg());
-    file.seekg(0, std::ios::beg);
-
-    // read the ddsc file
-    JustCause3::DDSC ddsc;
-    file.read((char *)&ddsc, sizeof(ddsc));
-
-    // make sure this is the correct file
-    if (ddsc.magic != 0x58545641) {
+    std::ifstream stream(filename, std::ios::binary);
+    if (stream.fail()) {
+        DEBUG_LOG("FileLoader::ReadCompressedTexture - can't find input file '" << filename.string().c_str() << "'");
         return;
     }
 
-    // read the elements
-    TextureElement elements[8];
-    uint32_t biggestIndex = 0, biggestSize = 0;
+    ParseCompressedTexture(stream, std::numeric_limits<uint64_t>::max(), output);
+    stream.close();
+}
 
-    for (uint32_t i = 0; i < elementsCount; i++) {
-        file.read((char *)&elements[i], sizeof(TextureElement));
+void FileLoader::CacheLoadedArchive(StreamArchive_t* archive)
+{
+    if (std::find(m_LoadedArchives.begin(), m_LoadedArchives.end(), archive) == m_LoadedArchives.end()) {
+        m_LoadedArchives.emplace_back(archive);
+    }
+}
 
-        if (elements[i].size == 0) {
-            continue;
-        }
+void FileLoader::RemoveLoadedArchive(StreamArchive_t* archive)
+{
+    if (std::find(m_LoadedArchives.begin(), m_LoadedArchives.end(), archive) != m_LoadedArchives.end()) {
+        m_LoadedArchives.erase(std::remove(m_LoadedArchives.begin(), m_LoadedArchives.end(), archive), m_LoadedArchives.end());
+    }
+}
 
-        if ((false && elements[i].external) || (elements[i].external == false) && elements[i].size > biggestSize)
-        {
-            biggestSize = elements[i].size;
-            biggestIndex = i;
+std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveFromFile(const fs::path& file)
+{
+    for (auto& archive : m_LoadedArchives) {
+        for (auto& entry : archive->m_Files) {
+            if (entry.m_Filename == file) {
+                return { archive, entry };
+            }
         }
     }
 
-    // find the texture rank
-    uint32_t rank = 0;
-    for (uint32_t i = 0; i < elementsCount; ++i)
-    {
-        if (i == biggestIndex) {
-            continue;
-        }
-
-        if (elements[i].size > elements[biggestIndex].size) {
-            ++rank;
-        }
-    }
-
-    auto length = (fileSize - headerLength);
-    auto block = new char[length];
-
-    file.seekg(headerLength);
-    file.read(block, length);
-
-    DDS_HEADER header;
-    ZeroMemory(&header, sizeof(DDS_HEADER));
-    header.size = 124;
-    header.flags = (0x1007 | 0x20000);
-    header.width = ddsc.width >> rank;
-    header.height = ddsc.height >> rank;
-    header.pitchOrLinearSize = 0;
-    header.depth = ddsc.depth;
-    header.mipMapCount = 1;
-    header.ddspf = TextureManager::GetDDSCPixelFormat(ddsc.format);
-    header.caps = (8 | 0x1000);
-    header.caps2 = 0;
-
-    // ugly things
-    output->resize(sizeof(uint32_t) + sizeof(DDS_HEADER) + length);
-    memcpy(&output->front(), (void *)&DDS_MAGIC, sizeof(uint32_t));
-    memcpy(&output->front() + sizeof(uint32_t), (void *)&header, sizeof(DDS_HEADER));
-    memcpy(&output->front() + sizeof(uint32_t) + sizeof(DDS_HEADER), block, length);
-
-    delete[] block;
-    file.close();
+    return { nullptr, StreamArchiveEntry_t{} };
 }
 
 void FileLoader::ReadFileFromArchive(const std::string& archive, const std::string& filename, uint32_t namehash)
@@ -453,4 +409,55 @@ void FileLoader::LocateFileInDictionary(const std::string& filename, DictionaryL
     });
 
     lookup.detach();
+}
+
+void FileLoader::ParseCompressedTexture(std::istream& stream, uint64_t size, std::vector<uint8_t>* output)
+{
+    // figure out the file size if we need to
+    if (size == std::numeric_limits<uint64_t>::max()) {
+        stream.seekg(0, std::ios::end);
+        size = static_cast<uint64_t>(stream.tellg());
+        stream.seekg(0, std::ios::beg);
+    }
+
+    JustCause3::AvalancheTexture texture;
+    stream.read((char *)&texture, sizeof(texture));
+
+    // load avalanche texture
+    if (texture.m_Magic == 0x58545641) {
+        auto stream_index = 0;
+        auto offset = texture.m_Streams[stream_index].m_Offset;
+
+        auto mipCount = texture.m_Mips - texture.m_MipsRedisent + stream_index;
+        auto width = texture.m_Width >> mipCount;
+        auto height = texture.m_Height >> mipCount;
+        auto depth = texture.m_Depth >> mipCount;
+
+        stream.seekg(offset);
+        auto block_size = (size - offset);
+
+        auto block = new char[block_size + 1];
+        stream.read(block, block_size);
+
+        DDS_HEADER header;
+        ZeroMemory(&header, sizeof(header));
+        header.size = 124;
+        header.flags = (0x1007 | 0x20000);
+        header.width = width;
+        header.height = height;
+        header.pitchOrLinearSize = 0;
+        header.depth = depth;
+        header.mipMapCount = mipCount;
+        header.ddspf = TextureManager::GetPixelFormat(texture.m_Format);
+        header.caps = (8 | 0x1000);
+        header.caps2 = 0;
+
+        // ugly things
+        output->resize(sizeof(uint32_t) + sizeof(header) + block_size);
+        memcpy(&output->front(), (char *)&DDS_MAGIC, sizeof(uint32_t));
+        memcpy(&output->front() + sizeof(uint32_t), (char *)&header, sizeof(header));
+        memcpy(&output->front() + sizeof(uint32_t) + sizeof(header), block, block_size);
+
+        delete[] block;
+    }
 }

@@ -113,21 +113,29 @@ namespace JustCause3
         }
     };
 
-    struct DDSC
+    struct AvalancheTextureStream
     {
-        uint32_t magic;
-        uint16_t version;
-        uint8_t unknown;
-        uint8_t dimension;
-        uint32_t format;
-        uint16_t width;
-        uint16_t height;
-        uint16_t depth;
-        uint16_t flags;
-        uint8_t mipCount;
-        uint8_t headerMipCount;
-        uint8_t unknown2[6];
-        uint32_t unknown3;
+        uint32_t m_Offset;
+        uint32_t m_Size;
+        uint16_t m_Alignment;
+        char unknown[2];
+    };
+
+    struct AvalancheTexture
+    {
+        uint32_t m_Magic;
+        uint8_t m_Version;
+        char unknown[2];
+        uint8_t m_Dimension;
+        DXGI_FORMAT m_Format;
+        uint16_t m_Width;
+        uint16_t m_Height;
+        uint16_t m_Depth;
+        uint16_t m_Flags;
+        uint8_t m_Mips;
+        uint8_t m_MipsRedisent;
+        char pad[10];
+        AvalancheTextureStream m_Streams[8];
     };
 
     namespace ArchiveTable

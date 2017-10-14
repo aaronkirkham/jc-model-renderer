@@ -1,16 +1,15 @@
-#include <graphics/Renderer2D.h>
+#include <graphics/DebugRenderer.h>
 #include <graphics/Renderer.h>
 #include <graphics/ShaderManager.h>
 #include <jc3/Types.h>
 
 struct Vertex2D
 {
-    int16_t x;
-    int16_t y;
+    glm::vec3 pos;
     glm::vec4 colour;
 };
 
-Renderer2D::Renderer2D()
+DebugRenderer::DebugRenderer()
 {
     m_VertexBuffer = Renderer::Get()->CreateVertexBuffer(30, sizeof(Vertex2D));
     m_VertexShader = ShaderManager::Get()->GetVertexShader("default2d");
@@ -18,30 +17,31 @@ Renderer2D::Renderer2D()
 
     // TODO: compress colour
     D3D11_INPUT_ELEMENT_DESC layout[] = {
-        { "POSITION", 0, DXGI_FORMAT_R16G16_SINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
     };
 
     m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(layout, 2, m_VertexShader.get());
 }
 
-Renderer2D::~Renderer2D()
+DebugRenderer::~DebugRenderer()
 {
     Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
     Renderer::Get()->DestroyBuffer(m_VertexBuffer);
 }
 
-void Renderer2D::Render(RenderContext_t* context)
+void DebugRenderer::Render(RenderContext_t* context)
 {
     // DrawLine({ 200, 200 }, { 300, 300 }, { 1, 1, 1, 1 });
 }
 
-void Renderer2D::DrawLine(const glm::vec2& from, const glm::vec2& to, const glm::vec4& colour)
+#if 0
+void DebugRenderer::DrawLine(const glm::vec2& from, const glm::vec2& to, const glm::vec4& colour)
 {
     DrawLine(from, to, colour, colour);
 }
 
-void Renderer2D::DrawLine(const glm::vec2& from, const glm::vec2& to, const glm::vec4& from_colour, const glm::vec4& to_colour)
+void DebugRenderer::DrawLine(const glm::vec2& from, const glm::vec2& to, const glm::vec4& from_colour, const glm::vec4& to_colour)
 {
     auto context = Renderer::Get()->GetDeviceContext();
 
@@ -72,7 +72,7 @@ void Renderer2D::DrawLine(const glm::vec2& from, const glm::vec2& to, const glm:
     context->Draw(2, 0);
 }
 
-void Renderer2D::DrawRect(const glm::vec2& topleft, const glm::vec2& bottomright, const glm::vec4& colour)
+void DebugRenderer::DrawRect(const glm::vec2& topleft, const glm::vec2& bottomright, const glm::vec4& colour)
 {
     auto to = topleft + bottomright;
     auto topright = (topleft + bottomright.x);
@@ -94,7 +94,7 @@ void Renderer2D::DrawRect(const glm::vec2& topleft, const glm::vec2& bottomright
     DrawLine({ bottomleft.x, bottomleft.y }, { to.x, to.y }, colour);
 }
 
-void Renderer2D::DrawFilledRect(const glm::vec2& topleft, const glm::vec2& bottomright, const glm::vec4& colour)
+void DebugRenderer::DrawFilledRect(const glm::vec2& topleft, const glm::vec2& bottomright, const glm::vec4& colour)
 {
     auto context = Renderer::Get()->GetDeviceContext();
 
@@ -127,4 +127,49 @@ void Renderer2D::DrawFilledRect(const glm::vec2& topleft, const glm::vec2& botto
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
     context->Draw(4, 0);
+}
+#endif
+
+void DebugRenderer::DrawLine(const glm::vec3& from, const glm::vec3& to, const glm::vec4& colour)
+{
+    auto context = Renderer::Get()->GetDeviceContext();
+
+    Vertex2D vertices[] = {
+        { from, colour },
+        { to, colour },
+    };
+
+    Renderer::Get()->MapBuffer(m_VertexBuffer->m_Buffer, vertices);
+
+    context->IASetInputLayout(m_VertexDeclaration->m_Layout);
+    context->VSSetShader(m_VertexShader->m_Shader, nullptr, 0);
+    context->PSSetShader(m_PixelShader->m_Shader, nullptr, 0);
+
+    uint32_t offset = 0;
+    context->IASetVertexBuffers(0, 1, &m_VertexBuffer->m_Buffer, &m_VertexBuffer->m_ElementStride, &offset);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP);
+
+    context->Draw(2, 0);
+}
+
+void DebugRenderer::DrawBBox(const glm::vec3& min, const glm::vec3& max, const glm::vec4& colour)
+{
+    glm::vec3 bb[2] = { min, max };
+    glm::vec3 points[8];
+
+    // calculate all the points
+    for (int i = 0; i < 8; i++)
+    {
+        points[i].x = bb[(i ^ (i >> 1)) & 1].x;
+        points[i].y = bb[(i >> 1) & 1].y;
+        points[i].z = bb[(i >> 2) & 1].z;
+    }
+
+    // draw the lines
+    for (int i = 0; i < 4; ++i)
+    {
+        DrawLine(points[i], points[(i + 1) & 3], colour);
+        DrawLine(points[4 + i], points[4 + ((i + 1) & 3)], colour);
+        DrawLine(points[i], points[4 + i], colour);
+    }
 }
