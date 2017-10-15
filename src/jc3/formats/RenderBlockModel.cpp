@@ -7,14 +7,17 @@
 #include <graphics/DebugRenderer.h>
 
 static std::vector<RenderBlockModel*> g_Models;
+static std::recursive_mutex g_ModelsMutex;
 
 void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 {
+    std::lock_guard<std::recursive_mutex> _lk{ g_ModelsMutex };
     g_Models.emplace_back(this);
 
     static std::once_flag once_;
     std::call_once(once_, [&] {
         Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
+            std::lock_guard<std::recursive_mutex> _lk{ g_ModelsMutex };
             for (auto& model : g_Models) {
                 model->Draw(context);
             }
