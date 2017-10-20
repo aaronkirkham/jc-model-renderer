@@ -12,6 +12,8 @@
 
 #include <zlib.h>
 
+// SARC file extensions: .ee, .bl, .nl
+
 // Credits to gibbed for most of the archive format stuff
 // http://gib.me
 
@@ -41,7 +43,8 @@ FileLoader::FileLoader()
                     auto valueStr = value.get<std::string>();
                     if (valueStr.find(".rbm") != std::string::npos ||
                         valueStr.find(".ee") != std::string::npos || 
-                        valueStr.find(".bl") != std::string::npos)
+                        valueStr.find(".bl") != std::string::npos ||
+                        valueStr.find(".nl") != std::string::npos)
                     {
                         m_FileList->Add(valueStr);
                     }
@@ -334,7 +337,8 @@ void FileLoader::ReadFileFromArchive(const std::string& archive, const std::stri
 
             // TODO: a proper handler for this stuff
             if (filename.find(".ee") != std::string::npos ||
-                filename.find(".bl") != std::string::npos) {
+                filename.find(".bl") != std::string::npos ||
+                filename.find(".nl") != std::string::npos) {
                 new ExportedEntity(filename, data);
             }
             else if (filename.find(".rbm") != std::string::npos) {
@@ -399,13 +403,13 @@ void FileLoader::LocateFileInDictionary(const std::string& filename, DictionaryL
                         DEBUG_LOG("LocateFileInDictionary - Found '" << valueStr << "' (" << key << ") in archive '" << archive << "'");
 
                         auto namehash = static_cast<uint32_t>(std::stoul(key, nullptr, 0));
-                        callback(true, archive, namehash, valueStr);
+                        return callback(true, archive, namehash, valueStr);
                     }
                 }
             }
         }
 
-        callback(false, "", 0, filename);
+        return callback(false, "", 0, filename);
     });
 
     lookup.detach();

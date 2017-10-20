@@ -91,7 +91,7 @@ void RenderDirectoryList(json* current)
                 ImGuiTreeNodeFlags flags = 0;
 
                 // open the root directories
-                if (current_key == "editor" || current_key == "entities" || current_key == "models") {
+                if (current_key == "editor" || current_key == "entities" || current_key == "models" || current_key == "locations") {
                     flags |= ImGuiTreeNodeFlags_DefaultOpen;
                 }
 
