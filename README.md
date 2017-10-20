@@ -8,6 +8,12 @@ If you want to compile the code yourself for any reason, here's a few things you
  - Visual Studio 2017.3 or later
  - Python 2.7
  
+### Build Instructions
+ - Clone this repository
+ - Run `git submodule update --init --recursive`
+ - Run `python configure.py`
+ - Build `out/jc3-rbm-renderer.sln` in Visual Studio or Run `python build.py`
+ 
 #### MIT License
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
