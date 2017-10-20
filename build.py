@@ -118,7 +118,7 @@ def RunMSBuild(configuration, builddir=""):
     if gypi_values['target_arch'] == "x64":
         platform = "x64"
         
-    var = execute([msbuild, "out/jc3_handling_editor.sln", "/t:Build", "/p:Configuration=" + configuration,  "/p:Platform=" + platform])
+    var = execute([msbuild, "out/jc3-rbm-renderer.sln", "/t:Build", "/p:Configuration=" + configuration,  "/p:Platform=" + platform])
     return var
 
 def RunMake(configuration, builddir=""):
