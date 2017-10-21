@@ -18,12 +18,33 @@ namespace JustCause3
             uint8_t colour[4];
         };
 
-        struct Packed
+        struct PackedVertexPosition
         {
             int16_t x;
             int16_t y;
             int16_t z;
             int16_t pad;
+        };
+
+        struct UnpackedVertexPosition
+        {
+            float x;
+            float y;
+            float z;
+        };
+
+        struct UnpackedVertexPositionWith
+        {
+            float x;
+            float y;
+            float z;
+            float u0;
+            float v0;
+            float u1;
+            float v1;
+            float n;
+            float t;
+            float col;
         };
 
         struct GeneralShortPacked
@@ -35,6 +56,56 @@ namespace JustCause3
             float n;
             float t;
             float col;
+        };
+
+        struct UnpackedVertexWithNormal1
+        {
+            float x;
+            float y;
+            float z;
+            float n;
+        };
+
+        struct PackedTex2UV
+        {
+            int16_t u0;
+            int16_t v0;
+            int16_t u1;
+            int16_t v1;
+        };
+
+        struct UnpackedNormals
+        {
+            float u0;
+            float v0;
+            float u1;
+            float v1;
+            float n;
+            float t;
+        };
+
+        struct VertexDeformPos
+        {
+            float x;
+            float y;
+            float z;
+            float d;
+            int16_t wi0;
+            int16_t wi1;
+            int16_t wi2;
+            int16_t wi3;
+        };
+
+        struct VertexDeformNormal2
+        {
+            float u0;
+            float v0;
+            float u1;
+            float v1;
+            float n;
+            float t;
+            float dn;
+            float dt;
         };
 
         namespace RenderBlockCharacter
@@ -222,6 +293,31 @@ namespace JustCause3
         int32_t batchSize;
         int32_t size;
         int32_t offset;
+        char pad2[4];
+    };
+
+    namespace RuntimeContainer
+    {
+        struct Header
+        {
+            char m_Magic[4];
+            uint32_t m_Version;
+        };
+
+        struct Node
+        {
+            uint32_t m_NameHash;
+            uint32_t m_DataOffset;
+            uint16_t m_PropertyCount;
+            uint16_t m_InstanceCount;
+        };
+
+        struct Property
+        {
+            uint32_t m_NameHash;
+            uint8_t m_Data[4];
+            uint8_t m_Type;
+        };
     };
 };
 #pragma pack(pop)

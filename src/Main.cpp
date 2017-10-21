@@ -1,5 +1,6 @@
 #include <Window.h>
 #include <Input.h>
+#include <Settings.h>
 #include <graphics/Renderer.h>
 #include <graphics/UI.h>
 
@@ -10,71 +11,92 @@
 #include <jc3/formats/RenderBlockModel.h>
 #include <jc3/formats/ExportedEntity.h>
 
+#include <shlobj.h>
+
 // normal: 32512.4961
 // colour: 262143.984
 
+extern fs::path g_JC3Directory = "";
+extern bool g_DrawBoundingBoxes = true;
+extern bool g_DrawDebugInfo = true;
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine, int32_t iCmdShow)
 {
-#if 0
-    float packed = 32512.4961f;
+    static auto ReadRegistryKeyString = [](HKEY location, const char* subkey, const char* key, char* data, DWORD size) {
+        HKEY hKey = nullptr;
+        if (RegOpenKeyExA(location, subkey, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+            DWORD type = REG_SZ;
+            auto status = RegQueryValueExA(hKey, key, 0, &type, (uint8_t *)data, &size);
+            RegCloseKey(hKey);
 
-    auto r = UnpackVector(262143.984f, true);
+            return (status == ERROR_SUCCESS);
+        }
 
-    while (true) { Sleep(100); };
-    return false;
-#endif
+        return false;
+    };
 
-#if 0
-    int16_t x = 0xff61;
-    int16_t y = 0xd1df;
-    int16_t z = 0x8e83;
+    g_JC3Directory = Settings::Get()->GetValue<std::string>("jc3_directory");
+    g_DrawBoundingBoxes = Settings::Get()->GetValue<bool>("draw_bounding_boxes", true);
+    g_DrawDebugInfo = Settings::Get()->GetValue<bool>("draw_debug_info", true);
 
-    auto _x = JustCause3::Vertex::unpack(x);
-    auto _y = JustCause3::Vertex::unpack(y);
-    auto _z = JustCause3::Vertex::unpack(z);
+    DEBUG_LOG("JC3 Directory: " << g_JC3Directory);
 
-    auto _x1 = JustCause3::Vertex::pack<int16_t>(-0.004852f);
-    auto _y1 = JustCause3::Vertex::pack<int16_t>(-0.360393f);
-    auto _z1 = JustCause3::Vertex::pack<int16_t>(-0.886654f);
+    // is the directory invalid?
+    if (g_JC3Directory.empty() || !fs::exists(g_JC3Directory)) {
+        // try find the install directory via the steam install folder
+        char steam_path[MAX_PATH] = { 0 };
+        if (ReadRegistryKeyString(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam", "SteamPath", steam_path, MAX_PATH)) {
+            g_JC3Directory = fs::path(steam_path) / "steamapps" / "common" / "Just Cause 3";
 
-    while (true) { Sleep(100); };
-    return false;
-#endif
+            // if the directory exists, save the settings now
+            if (fs::exists(g_JC3Directory)) {
+                Settings::Get()->SetValue("jc3_directory", g_JC3Directory.string());
+            }
+        }
+    }
 
     if (Window::Get()->Initialise(hInstance)) {
+        // do we need to select the install directory manually?
+        if (g_JC3Directory.empty() || !fs::exists(g_JC3Directory)) {
+            std::thread th([] {
+                TCHAR szDir[MAX_PATH];
+
+                BROWSEINFO bi;
+                ZeroMemory(&bi, sizeof(bi));
+
+                bi.hwndOwner = Window::Get()->GetHwnd();
+                bi.pidlRoot = nullptr;
+                bi.pszDisplayName = szDir;
+                bi.lpszTitle = "Please select your Just Cause 3 folder.";
+                bi.ulFlags = BIF_RETURNONLYFSDIRS;
+                bi.lpfn = nullptr;
+
+                LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
+                if (pidl) {
+                    SHGetPathFromIDList(pidl, szDir);
+                    g_JC3Directory = szDir;
+
+                    DEBUG_LOG("selected: " << g_JC3Directory);
+                    Settings::Get()->SetValue("jc3_directory", g_JC3Directory.string());
+                }
+            });
+
+            th.detach();
+        }
+
         Input::Get()->Events().KeyUp.connect([](uint32_t key) {
             if (key == VK_F1) {
-                //JustCause3::ArchiveTable::VfsArchive archive;
-                //FileLoader::Get()->ReadArchiveTable("D:/Steam/steamapps/common/Just Cause 3/archives_win64/game0.tab", &archive);
+                // "editor/entities/jc_vehicles/01_land/v0012_car_autostraad_atv/v0012_car_autostraad_atv_civilian_01.ee"
 
-                //auto model = new RenderBlockModel("E:/jc3-unpack/editor/entities/gameobjects/main_character_unpack/models/jc_characters/main_characters/rico/rico_body_lod3.rbm");
-                //auto model = new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/cow/cow_branded_mesh_body_lod1.rbm");
+                FileLoader::Get()->ReadFileFromArchive("game35", 0x6DC24513, [](bool success, std::vector<uint8_t> data) {
+                    auto ee = new ExportedEntity("v0012_car_autostraad_atv_civilian_01.ee", data);
 
-                auto model = new RenderBlockModel("E:/jc3-unpack/locations/rom/region_01/air_races/ar_r1_02_unpack/models/jc_design_tools/racing_arrows/general_green_outter_body_lod1.rbm");
-                model->SetPosition(model->GetPosition() + glm::vec3{ -2, 0, 0 });
-
-                auto model1 = new RenderBlockModel("E:/jc3-unpack/locations/rom/region_01/air_races/ar_r1_02_unpack/models/jc_design_tools/racing_arrows/general_red_outter_body_lod1.rbm");
-
-                auto model2 = new RenderBlockModel("E:/jc3-unpack/locations/rom/region_01/air_races/ar_r1_02_unpack/models/jc_design_tools/racing_arrows/general_white_outter_body_lod1.rbm");
-                model2->SetPosition(model2->GetPosition() + glm::vec3{ 2, 0, 0 });
-
-                auto model3 = new RenderBlockModel("E:/jc3-unpack/locations/rom/region_01/air_races/ar_r1_02_unpack/models/jc_design_tools/racing_arrows/races_teal_arrow_body_lod1.rbm");
-                model3->SetPosition(model3->GetPosition() + glm::vec3{ 0, 0, 3 });
-            }
-            else if (key == VK_F2) {
-                //new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/cow/cow_branded_mesh_body_lod1.rbm");
-                //new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/deer/deer_buck_mesh_body_lod1.rbm");
-
-                //new ExportedEntity("E:/jc3-unpack/editor/entities/jc_characters/animals/cow/cow.ee");
-                new ExportedEntity("E:/jc3-unpack/editor/entities/gameobjects/main_character.ee");
-            }
-            else if (key == VK_F3) {
-                auto model = new RenderBlockModel("E:/jc3-unpack/models/jc_characters/animals/seagull/seagull_body_lod1.rbm");
-                //model->SetScale(glm::vec3{ 2, 2, 2 });
-            }
-            else if (key == VK_F4) {
-                new RenderBlockModel("E:/jc3-unpack/editor/entities/gameobjects/main_character_unpack/models/jc_characters/main_characters/rico/rico_body_lod3.rbm");
-                //m_Models.emplace_back(new RenderBlockModel("E:/jc3-unpack/models/jc_characters/main_characters/rico/rico_body_lod1.rbm"));
+                    auto [archive, entry] = FileLoader::Get()->GetStreamArchiveFromFile("v0012_car_autostraad_atv_civilian_01.epe");
+                    if (archive && entry.m_Offset != 0) {
+                        auto epe_data = archive->ReadEntryFromArchive(entry);
+                        FileLoader::Get()->ReadRuntimeContainer(epe_data);
+                    }
+                });
             }
         });
 
@@ -87,7 +109,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 auto data = archive->ReadEntryFromArchive(entry);
                 new RenderBlockModel(filename, data);
 
-                DEBUG_LOG("Found " << filename << " is already loaded stream archive");
+                DEBUG_LOG("Found " << filename << " in already loaded stream archive");
 
                 return true;
             }
@@ -97,7 +119,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     DEBUG_LOG(archive);
                     DEBUG_LOG(namehash << " " << filename);
 
-                    FileLoader::Get()->ReadFileFromArchive(archive, filename, namehash);
+                    FileLoader::Get()->ReadFileFromArchive(archive, namehash, [filename](bool success, std::vector<uint8_t> data) {
+                        if (success) {
+                            DEBUG_LOG("Read from archive finished.");
+
+                            // TODO: a proper handler for this stuff
+                            if (filename.find(".ee") != std::string::npos ||
+                                filename.find(".bl") != std::string::npos ||
+                                filename.find(".nl") != std::string::npos) {
+                                new ExportedEntity(filename, data);
+                            }
+                            else if (filename.find(".rbm") != std::string::npos) {
+                                new RenderBlockModel(filename, data);
+                            }
+                        }
+                    });
                 }
                 else {
                     DEBUG_LOG("[WARNING] FileTreeItemSelected -> LocateFileInDictionary - Can't find " << filename << " in dictionary");

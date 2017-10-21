@@ -21,6 +21,7 @@ protected:
     ConstantBuffer_t* m_ConstantBuffer = nullptr;
     std::shared_ptr<VertexShader_t> m_VertexShader = nullptr;
     std::shared_ptr<PixelShader_t> m_PixelShader = nullptr;
+    VertexDeclaration_t* m_VertexDeclaration = nullptr;
     SamplerState_t* m_SamplerState = nullptr;
 
     std::vector<fs::path> m_Materials;
@@ -43,19 +44,58 @@ public:
         Renderer::Get()->DestroyBuffer(m_Vertices);
         Renderer::Get()->DestroyBuffer(m_Indices);
         Renderer::Get()->DestroyBuffer(m_ConstantBuffer);
+        Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
         Renderer::Get()->DestroySamplerState(m_SamplerState);
     }
 
     virtual const char* GetTypeName() = 0;
-
     virtual void Create() = 0;
     virtual void Read(fs::path& filename, std::istream& file) = 0;
-    virtual void Setup(RenderContext_t* context) = 0;
+
+    virtual void Setup(RenderContext_t* context)
+    {
+        assert(m_VertexShader);
+        assert(m_PixelShader);
+        assert(m_VertexDeclaration);
+
+        // enable the vertex and pixel shaders
+        context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
+        context->m_DeviceContext->VSSetShader(m_VertexShader->m_Shader, nullptr, 0);
+        context->m_DeviceContext->PSSetShader(m_PixelShader->m_Shader, nullptr, 0);
+
+        // enable textures
+        for (uint32_t i = 0; i < m_Textures.size(); ++i) {
+            auto texture = m_Textures[i];
+            if (texture && texture->IsLoaded()) {
+                texture->Use(i);
+            }
+        }
+
+        // set the vertex buffer
+        uint32_t offset = 0;
+        context->m_DeviceContext->IASetVertexBuffers(0, 1, &m_Vertices->m_Buffer, &m_Vertices->m_ElementStride, &offset);
+
+        // set the sampler state
+        if (m_SamplerState) {
+            context->m_DeviceContext->PSSetSamplers(0, 1, &m_SamplerState->m_SamplerState);
+        }
+
+        // set the constant buffers
+        Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
+
+        // set the topology
+        context->m_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    }
 
     virtual void Draw(RenderContext_t* context)
     {
-        Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
-        Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        if (m_Indices) {
+            Renderer::Get()->DrawIndexed(0, m_Indices->m_ElementCount, m_Indices);
+        }
+        else {
+            Renderer::Get()->Draw(0, m_Vertices->m_ElementCount / 3);
+        }
     }
 
     virtual VertexBuffer_t* GetVertexBuffer() { return m_Vertices; }
@@ -144,6 +184,13 @@ public:
             }
 
             m_SkinBatches.emplace_back(batch);
+        }
+    }
+
+    void DrawSkinBatches(RenderContext_t* context)
+    {
+        for (auto& batch : m_SkinBatches) {
+            Renderer::Get()->DrawIndexed(batch.offset, batch.size, m_Indices);
         }
     }
 };

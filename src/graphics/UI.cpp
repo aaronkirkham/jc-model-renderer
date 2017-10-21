@@ -1,20 +1,29 @@
 #include <graphics/UI.h>
 #include <Window.h>
+#include <Settings.h>
 #include <jc3/FileLoader.h>
+#include <fonts/fontawesome_icons.h>
+#include <graphics/imgui/imgui_rotate.h>
 
 #include <imgui.h>
 #include <json.hpp>
+#include <jc3/formats/ExportedEntity.h>
+
+extern bool g_DrawBoundingBoxes;
+extern bool g_DrawDebugInfo;
+extern ExportedEntity* g_CurrentLoadedArchive;
 
 void UI::Render()
 {
+    bool open_settings_modal = false;
+
     if (ImGui::BeginMainMenuBar())
     {
         m_MainMenuBarHeight = ImGui::GetWindowHeight();
 
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem("Exit"))
-            {
+            if (ImGui::MenuItem("Exit")) {
                 TerminateProcess(GetCurrentProcess(), 0);
             }
 
@@ -24,15 +33,16 @@ void UI::Render()
         if (ImGui::BeginMenu("Renderer"))
         {
             static bool wireframe = false;
-            if (ImGui::Checkbox("Wireframe", &wireframe))
-            {
+            if (ImGui::Checkbox("Wireframe", &wireframe)) {
                 Renderer::Get()->SetFillMode(wireframe ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID);
             }
 
-            static bool bounding_boxes = false;
-            if (ImGui::Checkbox("Bounding Boxes", &bounding_boxes))
-            {
-                
+            if (ImGui::Checkbox("Bounding Boxes", &g_DrawBoundingBoxes)) {
+                Settings::Get()->SetValue("draw_bounding_boxes", g_DrawBoundingBoxes);
+            }
+
+            if (ImGui::Checkbox("Debug Info", &g_DrawDebugInfo)) {
+                Settings::Get()->SetValue("draw_debug_info", g_DrawDebugInfo);
             }
 
             ImGui::EndMenu();
@@ -41,35 +51,8 @@ void UI::Render()
         ImGui::EndMainMenuBar();
     }
 
-    // render archive windows
-    {
-        auto archives = FileLoader::Get()->GetLoadedArchives();
-        for (auto& archive : archives)
-        {
-            ImGui::Begin(archive->m_Filename.string().c_str(), nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings));
-            {
-                for (auto& entry : archive->m_Files)
-                {
-                    if (entry.m_Filename.find(".rbm") != std::string::npos)
-                    {
-                        ImGui::TreeNodeEx(entry.m_Filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen));
-
-                        if (ImGui::IsItemHovered()) {
-                            ImGui::SetTooltip(entry.m_Filename.c_str());
-                        }
-
-                        if (ImGui::IsItemClicked()) {
-                            UI::Get()->Events().FileTreeItemSelected(entry.m_Filename);
-                        }
-                    }
-                }
-            }
-            ImGui::End();
-        }
-    }
-
     // Stats
-    ImGui::Begin("Stats", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs));
+    ImGui::Begin("Stats", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
     {
         auto windowSize = Window::Get()->GetSize();
 
@@ -81,7 +64,7 @@ void UI::Render()
     RenderFileTreeView();
 }
 
-void RenderDirectoryList(json* current)
+void RenderDirectoryList(json* current, bool open_folders = false)
 {
     if (current->is_object()) {
         for (auto it = current->begin(); it != current->end(); ++it) {
@@ -91,20 +74,23 @@ void RenderDirectoryList(json* current)
                 ImGuiTreeNodeFlags flags = 0;
 
                 // open the root directories
-                if (current_key == "editor" || current_key == "entities" || current_key == "models" || current_key == "locations") {
+                if (open_folders || (current_key == "editor" || current_key == "entities" || current_key == "models" || current_key == "locations")) {
                     flags |= ImGuiTreeNodeFlags_DefaultOpen;
                 }
 
-                if (ImGui::TreeNodeEx(current_key.c_str(), flags)) {
+                auto id = ImGui::GetID(current_key.c_str());
+                auto is_open = ImGui::GetStateStorage()->GetInt(id, flags & ImGuiTreeNodeFlags_DefaultOpen);
+                 
+                if (ImGui::TreeNodeEx(current_key.c_str(), flags, "%s %s", is_open ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER, current_key.c_str())) {
                     auto next = &current->operator[](current_key);
-                    RenderDirectoryList(next);
+                    RenderDirectoryList(next, open_folders);
 
                     ImGui::TreePop();
                 }
             }
             else {
                 auto next = &current->operator[](current_key);
-                RenderDirectoryList(next);
+                RenderDirectoryList(next, open_folders);
             }
         }
     }
@@ -115,8 +101,9 @@ void RenderDirectoryList(json* current)
         else {
             for (auto& leaf : *current) {
                 auto filename = leaf.get<std::string>();
+                auto is_archive = filename.find(".rbm") == std::string::npos;
 
-                ImGui::TreeNodeEx(filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen));
+                ImGui::TreeNodeEx(filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen), "%s %s", is_archive ? ICON_FA_FILE_ARCHIVE_O : ICON_FA_FILE_O, filename.c_str());
 
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip(filename.c_str());
@@ -128,28 +115,49 @@ void RenderDirectoryList(json* current)
             }
         }
     }
-};
+}
 
 void UI::RenderFileTreeView()
 {
-    ImGui::Begin("Entity Explorer", nullptr, ImVec2(), 1.0f, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse));
+    std::stringstream title;
+    if (g_CurrentLoadedArchive) {
+        title << ICON_FA_FOLDER_OPEN << " " << g_CurrentLoadedArchive->GetStreamArchive()->m_Filename.filename().string().c_str();
+    }
+    else {
+        title << "Entity Explorer";
+    }
+
+    ImGui::Begin(title.str().c_str(), nullptr, ImVec2(), 1.0f, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings));
     {
         auto size = Window::Get()->GetSize();
         ImGui::SetWindowPos(ImVec2(size.x - 400, m_MainMenuBarHeight));
         ImGui::SetWindowSize(ImVec2(400, (size.y - m_MainMenuBarHeight)));
 
-        ImGui::PushItemWidth(-1);
-        {
+        // should we render the root entity explorer?
+        if (!g_CurrentLoadedArchive) {
             if (!FileLoader::Get()->IsLoadingDictionary())
             {
                 RenderDirectoryList(FileLoader::Get()->GetDirectoryList()->GetStructure());
             }
             else
             {
+                ImRotateStart();
+                ImGui::Text(ICON_FA_SPINNER);
+                ImRotateEnd(-0.005f * GetTickCount());
+
+                ImGui::SameLine();
                 ImGui::Text("Loading archive dictionary...");
             }
         }
-        ImGui::PopItemWidth();
+        else {
+            // unload the archive
+            if (ImGui::Button("Go Back")) {
+                delete g_CurrentLoadedArchive;
+            }
+            else {
+                RenderDirectoryList(g_CurrentLoadedArchive->GetDirectoryList()->GetStructure(), false);
+            }
+        }
     }
     ImGui::End();
 }

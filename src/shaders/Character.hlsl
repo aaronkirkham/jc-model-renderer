@@ -1,5 +1,6 @@
 #include "helper.hlsl"
 
+// @gyp_compile(vs_5_0, vs_main)
 cbuffer FrameConstant : register(b0)
 {
     float4x4 viewProjection;
@@ -30,7 +31,7 @@ struct VertexOut
     float2 tex : TEXCOORD;
 };
 
-VertexOut main(VertexIn input)
+VertexOut vs_main(VertexIn input)
 {
     // unpack the vertex position
     float3 unpacked = float3(unpack_s16(input.position.x), unpack_s16(input.position.y), unpack_s16(input.position.z)) * scale;
@@ -41,4 +42,13 @@ VertexOut main(VertexIn input)
     output.tex = float2(unpack_s16(input.uv.x), unpack_s16(input.uv.y));
 
     return output;
+}
+
+// @gyp_compile(ps_5_0, ps_main)
+Texture2D Diffuse : register(t0);
+SamplerState Sampler : register(s0);
+
+float4 ps_main(VertexOut input) : SV_TARGET
+{
+    return Diffuse.Sample(Sampler, input.tex);
 }

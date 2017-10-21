@@ -32,3 +32,5 @@ out/
 *.pyc
 config.gypi
 config.mk
+
+src/shaders/compiled

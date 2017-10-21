@@ -45,5 +45,6 @@ public:
     glm::vec2 GetPosition() const;
     glm::vec2 GetCenterPoint() const;
 
-    bool HasFocus() { return (GetForegroundWindow() == m_Hwnd); }
+    const HWND& GetHwnd() const { return m_Hwnd; }
+    bool HasFocus() const { return (GetForegroundWindow() == m_Hwnd); }
 };

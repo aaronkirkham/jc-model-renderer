@@ -17,13 +17,16 @@
 // Credits to gibbed for most of the archive format stuff
 // http://gib.me
 
+extern ExportedEntity* g_CurrentLoadedArchive;
+extern fs::path g_JC3Directory;
+
 FileLoader::FileLoader()
 {
     m_LoadingDictionary = true;
     m_FileList = std::make_unique<DirectoryList>();
 
     std::thread load([this] {
-        std::ifstream file(fs::current_path() / "assets/dictionary.json");
+        std::ifstream file(fs::current_path() / "assets" / "dictionary.json");
         if (file.fail()) {
             throw std::runtime_error("FileLoader::FileLoader - Failed to read file list dictionary");
         }
@@ -268,26 +271,76 @@ void FileLoader::ReadCompressedTexture(const fs::path& filename, std::vector<uin
     stream.close();
 }
 
-void FileLoader::CacheLoadedArchive(StreamArchive_t* archive)
-{
-    if (std::find(m_LoadedArchives.begin(), m_LoadedArchives.end(), archive) == m_LoadedArchives.end()) {
-        m_LoadedArchives.emplace_back(archive);
-    }
-}
+#include <queue>
 
-void FileLoader::RemoveLoadedArchive(StreamArchive_t* archive)
+void FileLoader::ReadRuntimeContainer(const std::vector<uint8_t>& buffer)
 {
-    if (std::find(m_LoadedArchives.begin(), m_LoadedArchives.end(), archive) != m_LoadedArchives.end()) {
-        m_LoadedArchives.erase(std::remove(m_LoadedArchives.begin(), m_LoadedArchives.end(), archive), m_LoadedArchives.end());
+    std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
+
+    // read the runtimer container header
+    JustCause3::RuntimeContainer::Header header;
+    stream.read((char *)&header, sizeof(header));
+
+    // ensure the header magic is correct
+    if (strncmp(header.m_Magic, "RTPC", 4) != 0) {
+        throw std::runtime_error("Invalid file header. Input file probably isn't a RuntimeContainer file.");
+    }
+
+    DEBUG_LOG("RuntimeContainer v" << header.m_Version);
+
+    // read the root node
+    JustCause3::RuntimeContainer::Node rootNode;
+    stream.read((char *)&rootNode, sizeof(rootNode));
+
+    DEBUG_LOG(" - m_NameHash: " << rootNode.m_NameHash);
+    DEBUG_LOG(" - m_PropertyCount: " << rootNode.m_PropertyCount);
+    DEBUG_LOG(" - m_InstanceCount: " << rootNode.m_InstanceCount);
+    DEBUG_LOG(" - m_DataOffset: " << rootNode.m_DataOffset);
+
+    std::queue<JustCause3::RuntimeContainer::Node> instanceQueue;
+    std::queue<JustCause3::RuntimeContainer::Property> propertyQueue;
+
+    instanceQueue.push(rootNode);
+
+    while (!instanceQueue.empty()) {
+        auto& item = instanceQueue.front();
+        stream.seekg(item.m_DataOffset);
+
+        DEBUG_LOG("  - Node m_NameHash: " << item.m_NameHash);
+        DEBUG_LOG("  -- m_PropertyCount: " << item.m_PropertyCount);
+        DEBUG_LOG("  -- m_InstanceCount: " << item.m_InstanceCount);
+        DEBUG_LOG("  -- m_DataOffset: " << item.m_DataOffset);
+
+#if 0
+        for (uint16_t i = 0; i < item.m_PropertyCount; ++i) {
+            JustCause3::RuntimeContainer::Property prop;
+            stream.read((char *)&prop, sizeof(prop));
+
+            DEBUG_LOG("  - Property m_NameHash: " << prop.m_NameHash);
+        }
+#endif
+
+        stream.seekg(item.m_DataOffset + (sizeof(JustCause3::RuntimeContainer::Property) * item.m_PropertyCount));
+
+        for (uint16_t i = 0; i < item.m_InstanceCount; ++i) {
+            JustCause3::RuntimeContainer::Node node;
+            stream.read((char *)&node, sizeof(node));
+
+            instanceQueue.push(node);
+        }
+
+        instanceQueue.pop();
     }
 }
 
 std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveFromFile(const fs::path& file)
 {
-    for (auto& archive : m_LoadedArchives) {
-        for (auto& entry : archive->m_Files) {
-            if (entry.m_Filename == file) {
-                return { archive, entry };
+    if (g_CurrentLoadedArchive) {
+        auto streamArchive = g_CurrentLoadedArchive->GetStreamArchive();
+
+        for (auto& entry : streamArchive->m_Files) {
+            if (entry.m_Filename == file || entry.m_Filename.find(file.string()) != std::string::npos) {
+                return { streamArchive, entry };
             }
         }
     }
@@ -295,12 +348,18 @@ std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveF
     return { nullptr, StreamArchiveEntry_t{} };
 }
 
-void FileLoader::ReadFileFromArchive(const std::string& archive, const std::string& filename, uint32_t namehash)
+void FileLoader::ReadFileFromArchive(const std::string& archive, uint32_t namehash, ReadFromArchiveCallback callback)
 {
-    std::thread load([this, archive, filename, namehash] {
-        fs::path jc3_dir = "D:/Steam/steamapps/common/Just Cause 3";
-        fs::path tab_file = jc3_dir / "archives_win64" / (archive + ".tab");
-        fs::path arc_file = jc3_dir / "archives_win64" / (archive + ".arc");
+    std::thread load([this, archive, namehash, callback] {
+        fs::path tab_file = g_JC3Directory / "archives_win64" / (archive + ".tab");
+        fs::path arc_file = g_JC3Directory / "archives_win64" / (archive + ".arc");
+
+        DEBUG_LOG(tab_file);
+        DEBUG_LOG(arc_file);
+
+        if (!fs::exists(tab_file) || !fs::exists(arc_file)) {
+            throw std::runtime_error("FileLoader::ReadFileFromArchive - arc/tab is missing!");
+        }
 
         // read the archive table
         JustCause3::ArchiveTable::VfsArchive archiveTable;
@@ -332,54 +391,18 @@ void FileLoader::ReadFileFromArchive(const std::string& archive, const std::stri
             std::vector<uint8_t> data;
             data.resize(size);
             stream.read((char *)data.data(), size);
+            stream.close();
 
             DEBUG_LOG("finished reading data from file.");
 
-            // TODO: a proper handler for this stuff
-            if (filename.find(".ee") != std::string::npos ||
-                filename.find(".bl") != std::string::npos ||
-                filename.find(".nl") != std::string::npos) {
-                new ExportedEntity(filename, data);
-            }
-            else if (filename.find(".rbm") != std::string::npos) {
-                new RenderBlockModel(filename, data);
-            }
-
-            stream.close();
+            callback(true, std::move(data));
+        }
+        else {
+            callback(false, {});
         }
     });
 
     load.detach();
-}
-
-std::string FileLoader::GetFileName(uint32_t hash)
-{
-    auto filenamehash = std::to_string(hash);
-    auto val = m_FileListDictionary[filenamehash];
-
-    if (!val.is_string()) {
-        return "Unknown File - " + filenamehash;
-    }
-
-    return val.get<std::string>();
-}
-
-std::string FileLoader::GetArchiveName(const std::string& filename)
-{
-    for (auto it = m_FileListDictionary.begin(); it != m_FileListDictionary.end(); ++it)
-    {
-        auto archive = it.key();
-        auto data = it.value();
-        for (auto it2 = data.begin(); it2 != data.end(); ++it2)
-        {
-            auto value = it2.value().get<std::string>();
-            if (value == filename) {
-                return archive;
-            }
-        }
-    }
-
-    return "(Unknown Archive)";
 }
 
 void FileLoader::LocateFileInDictionary(const std::string& filename, DictionaryLookupCallback callback)

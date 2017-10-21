@@ -3,13 +3,6 @@
 #include <d3d11.h>
 #include <cstdint>
 #include <vector>
-#include <bitset>
-
-enum ERasterStateBits
-{
-    BLENDING_ENABLED = 0,
-
-};
 
 struct RenderContext_t
 {

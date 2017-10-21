@@ -12,8 +12,8 @@ struct Vertex2D
 DebugRenderer::DebugRenderer()
 {
     m_VertexBuffer = Renderer::Get()->CreateVertexBuffer(30, sizeof(Vertex2D));
-    m_VertexShader = ShaderManager::Get()->GetVertexShader("default2d");
-    m_PixelShader = ShaderManager::Get()->GetPixelShader("default2d");
+    m_VertexShader = ShaderManager::Get()->GetVertexShader("DebugRenderer");
+    m_PixelShader = ShaderManager::Get()->GetPixelShader("DebugRenderer");
 
     // TODO: compress colour
     D3D11_INPUT_ELEMENT_DESC layout[] = {

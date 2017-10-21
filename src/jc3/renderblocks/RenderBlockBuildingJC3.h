@@ -4,16 +4,16 @@
 #include <jc3/renderblocks/IRenderBlock.h>
 
 #pragma pack(push, 1)
-struct GeneralJC3Attributes
+struct BuildingJC3Attributes
 {
-    char pad[0x34];
+    char pad[0x68];
     JustCause3::Vertex::SPackedAttribute packed;
-    uint32_t flags;
+    char pad2[0x1C];
 };
 
 namespace JustCause3::RenderBlocks
 {
-    struct GeneralJC3
+    struct BuildingJC3
     {
         uint8_t version;
         GeneralJC3Attributes attributes;
@@ -21,24 +21,20 @@ namespace JustCause3::RenderBlocks
 };
 #pragma pack(pop)
 
-class RenderBlockGeneralJC3 : public IRenderBlock
+class RenderBlockBuildingJC3 : public IRenderBlock
 {
 private:
-    JustCause3::RenderBlocks::GeneralJC3 m_Block;
+    JustCause3::RenderBlocks::BuildingJC3 m_Block;
     VertexBuffer_t* m_VertexBufferData = nullptr;
-    SamplerState_t* m_SamplerStateNormalMap = nullptr;
 
 public:
-    RenderBlockGeneralJC3() = default;
-    virtual ~RenderBlockGeneralJC3()
+    RenderBlockBuildingJC3() = default;
+    virtual ~RenderBlockBuildingJC3()
     {
-        OutputDebugStringA("~RenderBlockGeneralJC3\n");
-
-        Renderer::Get()->DestroySamplerState(m_SamplerStateNormalMap);
         Renderer::Get()->DestroyBuffer(m_VertexBufferData);
     }
 
-    virtual const char* GetTypeName() override final { return "RenderBlockGeneralJC3"; }
+    virtual const char* GetTypeName() override final { return "RenderBlockBuildingJC3"; }
 
     virtual void Create() override final
     {
@@ -57,22 +53,6 @@ public:
 
         // create the vertex declaration
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get());
-
-        // create the sampler states
-        {
-            SamplerStateCreationParams_t params;
-            params.m_AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.m_AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.m_AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.m_MinMip = 0.0f;
-            params.m_MaxMip = 13.0f;
-
-            m_SamplerState = Renderer::Get()->CreateSamplerState(params);
-            m_SamplerStateNormalMap = Renderer::Get()->CreateSamplerState(params);
-        }
-
-        assert(m_SamplerState);
-        assert(m_SamplerStateNormalMap);
     }
 
     virtual void Read(fs::path& filename, std::istream& stream) override final
@@ -87,22 +67,13 @@ public:
         // read the materials
         ReadMaterials(filename, stream);
 
-        // do we have a normal map loaded?
-        // TODO: REMOVE THIS ONCE WE CAN LOAD GENERIC SHARED RESOURCES FROM OTHER ARCHIVES
-        for (auto& texture : m_Textures) {
-            auto filename = texture->GetPath().filename().string();
-            if (filename.find("_nrm") != std::string::npos) {
-                m_Constants.hasNormalMap = TRUE;
-            }
-        }
-
         // read the vertex buffers
         if (m_Block.attributes.packed.format == 1) {
             ReadVertexBuffer<JustCause3::Vertex::PackedVertexPosition>(stream, &m_Vertices);
             ReadVertexBuffer<JustCause3::Vertex::GeneralShortPacked>(stream, &m_VertexBufferData);
         }
         else {
-            // TODO
+            //ReadVertexBuffer<JustCause3::Vertex::Unpacked>(stream, &m_Vertices);
         }
 
         // read index buffer
@@ -118,8 +89,5 @@ public:
         // set the 2nd vertex buffers
         uint32_t offset = 0;
         context->m_DeviceContext->IASetVertexBuffers(1, 1, &m_VertexBufferData->m_Buffer, &m_VertexBufferData->m_ElementStride, &offset);
-
-        // set the normal map sampler
-        context->m_DeviceContext->PSSetSamplers(1, 1, &m_SamplerStateNormalMap->m_SamplerState);
     }
 };

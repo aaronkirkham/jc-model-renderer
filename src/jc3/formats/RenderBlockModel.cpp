@@ -5,14 +5,23 @@
 #include <graphics/Renderer.h>
 #include <graphics/Camera.h>
 #include <graphics/DebugRenderer.h>
+#include <jc3/formats/ExportedEntity.h>
 
 static std::vector<RenderBlockModel*> g_Models;
 static std::recursive_mutex g_ModelsMutex;
+extern bool g_DrawBoundingBoxes;
+extern bool g_DrawDebugInfo;
+extern ExportedEntity* g_CurrentLoadedArchive;
 
 void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 {
     std::lock_guard<std::recursive_mutex> _lk{ g_ModelsMutex };
     g_Models.emplace_back(this);
+
+    // if we have a current loaded archive, link the current RBM to it so we can unload it after
+    if (g_CurrentLoadedArchive) {
+        g_CurrentLoadedArchive->LinkRenderBlockModel(this);
+    }
 
     static std::once_flag once_;
     std::call_once(once_, [&] {
@@ -23,36 +32,40 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
             }
 
             // debug model info
-            ImGui::Begin("Model Stats", nullptr, ImVec2(0, 0), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs));
-            {
-                std::size_t vertices = 0;
-                std::size_t indices = 0;
-                std::size_t triangles = 0;
+            if (g_DrawDebugInfo) {
+                ImGui::Begin("Model Stats", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
+                {
+                    ImGui::SetWindowPos(ImVec2(10, 20));
 
-                for (auto& model : g_Models) {
-                    for (auto& block : model->GetRenderBlocks()) {
-                        auto index_count = block->GetIndexBuffer()->m_ElementCount;
+                    std::size_t vertices = 0;
+                    std::size_t indices = 0;
+                    std::size_t triangles = 0;
 
-                        vertices += block->GetVertexBuffer()->m_ElementCount;
-                        indices += index_count;
-                        triangles += (index_count / 3);
+                    for (auto& model : g_Models) {
+                        for (auto& block : model->GetRenderBlocks()) {
+                            auto index_count = block->GetIndexBuffer()->m_ElementCount;
+
+                            vertices += block->GetVertexBuffer()->m_ElementCount;
+                            indices += index_count;
+                            triangles += (index_count / 3);
+                        }
+                    }
+
+                    ImGui::Text("Models: %d, Vertices: %d, Indices: %d, Triangles: %d, Textures: %d", g_Models.size(), vertices, indices, triangles, TextureManager::Get()->GetCacheSize());
+
+                    for (auto& model : g_Models) {
+                        size_t block_index = 0;
+
+                        ImGui::Text("%s", model->GetPath().filename().string().c_str());
+
+                        for (auto& block : model->GetRenderBlocks()) {
+                            ImGui::Text("\t%d: %s", block_index, block->GetTypeName());
+                            block_index++;
+                        }
                     }
                 }
-
-                ImGui::Text("Models: %d, Vertices: %d, Indices: %d, Triangles: %d, Textures: %d", g_Models.size(), vertices, indices, triangles, TextureManager::Get()->GetCacheSize());
-
-                for (auto& model : g_Models) {
-                    size_t block_index = 0;
-
-                    ImGui::Text("%s", model->GetPath().filename().string().c_str());
-
-                    for (auto& block : model->GetRenderBlocks()) {
-                        ImGui::Text("\t%d: %s", block_index, block->GetTypeName());
-                        block_index++;
-                    }
-                }
+                ImGui::End();
             }
-            ImGui::End();
         });
     });
 
@@ -75,7 +88,7 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
     m_BoundingBoxMax = header.m_BoundingBoxMax;
 
     // read all the render blocks
-    for (uint32_t i = 0; i < header.m_NumberOfBlocks; i++)
+    for (uint32_t i = 0; i < header.m_NumberOfBlocks; ++i)
     {
         uint32_t hash;
         stream.read((char *)&hash, sizeof(hash));
@@ -138,6 +151,11 @@ RenderBlockModel::RenderBlockModel(const fs::path& filename, const std::vector<u
 
 RenderBlockModel::~RenderBlockModel()
 {
+    DEBUG_LOG("RenderBlockModel::~RenderBlockModel");
+
+    std::lock_guard<std::recursive_mutex> _lk{ g_ModelsMutex };
+    g_Models.erase(std::remove(g_Models.begin(), g_Models.end(), this), g_Models.end());
+
     for (auto& renderBlock : m_RenderBlocks) {
         delete renderBlock;
     }
@@ -170,6 +188,7 @@ void RenderBlockModel::Draw(RenderContext_t* context)
         Renderer::Get()->SetVertexShaderConstants(m_MeshConstants, 1, constants);
     }
 
+    // draw all render blocks
     for (auto& renderBlock : m_RenderBlocks) {
         Renderer::Get()->SetDefaultRenderStates();
 
@@ -177,13 +196,11 @@ void RenderBlockModel::Draw(RenderContext_t* context)
         renderBlock->Draw(context);
     }
 
-#if 1
-    glm::vec3 screen;
-    if (Camera::Get()->WorldToScreen(m_Position, &screen)) {
+    // draw bounding boxes
+    if (g_DrawBoundingBoxes) {
         auto _min = m_BoundingBoxMin + m_Position;
         auto _max = m_BoundingBoxMax + m_Position;
 
         DebugRenderer::Get()->DrawBBox(_min, _max, { 1, 0, 0, 1 });
     }
-#endif
 }

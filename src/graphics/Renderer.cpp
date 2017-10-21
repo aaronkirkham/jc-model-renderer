@@ -266,7 +266,12 @@ void Renderer::CreateDevice(const HWND& hwnd, const glm::vec2& size)
     desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
     desc.Flags = 0;
 
-    auto result = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_DEBUG, nullptr, 0, D3D11_SDK_VERSION, &desc, &m_SwapChain, &m_Device, nullptr, &m_DeviceContext);
+    UINT deviceFlags = 0;
+#ifdef DEBUG
+    deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+
+    auto result = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, deviceFlags, nullptr, 0, D3D11_SDK_VERSION, &desc, &m_SwapChain, &m_Device, nullptr, &m_DeviceContext);
     assert(SUCCEEDED(result));
 }
 

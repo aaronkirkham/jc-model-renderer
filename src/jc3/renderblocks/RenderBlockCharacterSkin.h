@@ -11,15 +11,12 @@ struct CharacterSkinAttributes
     char pad[0x30];
 };
 
-namespace JustCause3
+namespace JustCause3::RenderBlocks
 {
-    namespace RenderBlocks
+    struct CharacterSkin
     {
-        struct CharacterSkin
-        {
-            uint8_t version;
-            CharacterSkinAttributes attributes;
-        };
+        uint8_t version;
+        CharacterSkinAttributes attributes;
     };
 };
 #pragma pack(pop)
@@ -28,7 +25,6 @@ class RenderBlockCharacterSkin : public IRenderBlock
 {
 private:
     JustCause3::RenderBlocks::CharacterSkin m_Block;
-    VertexDeclaration_t* m_VertexDeclaration = nullptr;
 
 public:
     RenderBlockCharacterSkin() = default;
@@ -50,6 +46,18 @@ public:
 
         // create the vertex declaration
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 2, m_VertexShader.get());
+
+        // create the sampler states
+        {
+            SamplerStateCreationParams_t params;
+            params.m_AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.m_AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.m_AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.m_MinMip = 12.0f;
+            params.m_MaxMip = 13.0f;
+
+            m_SamplerState = Renderer::Get()->CreateSamplerState(params);
+        }
     }
 
     virtual void Read(fs::path& filename, std::istream& stream) override final
@@ -79,37 +87,13 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
-        // enable the vertex and pixel shaders
-        context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
-        context->m_DeviceContext->VSSetShader(m_VertexShader->m_Shader, nullptr, 0);
-        context->m_DeviceContext->PSSetShader(m_PixelShader->m_Shader, nullptr, 0);
+        IRenderBlock::Setup(context);
 
         Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
-
-        // enable textures
-        for (uint32_t i = 0; i < m_Textures.size(); ++i) {
-            auto texture = m_Textures[i];
-            if (texture && texture->IsLoaded()) {
-                texture->Use(i);
-            }
-        }
-
-        // set the 1st vertex buffers
-        uint32_t offset = 0;
-        context->m_DeviceContext->IASetVertexBuffers(0, 1, &m_Vertices->m_Buffer, &m_Vertices->m_ElementStride, &offset);
     }
 
     virtual void Draw(RenderContext_t* context) override final
     {
-        IRenderBlock::Draw(context);
-
-        context->m_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-        if (m_Indices) {
-            Renderer::Get()->DrawIndexed(0, m_Indices->m_ElementCount, m_Indices);
-        }
-        else {
-            Renderer::Get()->Draw(0, m_Vertices->m_ElementCount / 3);
-        }
+        DrawSkinBatches(context);
     }
 };

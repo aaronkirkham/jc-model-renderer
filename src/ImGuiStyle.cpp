@@ -1,9 +1,11 @@
 #include <imgui.h>
+#include <fonts/fontawesome.h>
 
 // https://gist.github.com/ongamex/4ee36fb23d6c527939d0f4ba72144d29
 void SetupImGuiStyle()
 {
-    ImGuiStyle& style = ImGui::GetStyle();
+    auto& io = ImGui::GetIO();
+    auto& style = ImGui::GetStyle();
 
     style.ChildWindowRounding = 3.f;
     style.GrabRounding = 0.f;
@@ -57,4 +59,12 @@ void SetupImGuiStyle()
     style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
     style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.32f, 0.52f, 0.65f, 1.00f);
     style.Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(0.20f, 0.20f, 0.20f, 0.50f);
+
+    // add default font
+    io.Fonts->AddFontDefault();
+
+    // merge in icons from Font Awesome
+    static const ImWchar icons_ranges[] = { 0xf000, 0xf2e0, 0 };
+    ImFontConfig icons_config; icons_config.MergeMode = true; icons_config.PixelSnapH = true;
+    io.Fonts->AddFontFromMemoryCompressedTTF(fontawesome_compressed_data, fontawesome_compressed_size, 12.0f, &icons_config, icons_ranges);
 }

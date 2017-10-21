@@ -5,12 +5,6 @@
 
 #include <streambuf>
 
-std::string getexepath()
-{
-    char result[MAX_PATH];
-    return std::string(result, GetModuleFileName(NULL, result, MAX_PATH));
-}
-
 std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string& file)
 {
     auto filename = (file + ".vs");

@@ -7,7 +7,8 @@
 #include <examples/directx11_example/imgui_impl_dx11.h>
 
 #define test_hresult(hr) if (FAILED(hr)) { return false; }
-#define safe_release(obj) if (obj) { obj->Release(); obj = 0; }
+#define safe_delete(ptr) if (ptr) { delete ptr; ptr = nullptr; }
+#define safe_release(obj) if (obj) { obj->Release(); obj = nullptr; }
 
 struct RenderEvents
 {
