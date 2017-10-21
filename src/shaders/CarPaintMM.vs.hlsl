@@ -31,8 +31,7 @@ struct VertexOut
     float2 tex : TEXCOORD;
 };
 
-// @gyp_compile(vs_5_0, vs_main)
-VertexOut vs_main(VertexIn input)
+VertexOut main(VertexIn input)
 {
     VertexOut output;
     output.position = mul(worldMatrix, float4(input.position, 1));
@@ -40,13 +39,4 @@ VertexOut vs_main(VertexIn input)
     output.tex = input.uv0;
 
     return output;
-}
-
-// @gyp_compile(ps_5_0, ps_main)
-Texture2D Diffuse : register(t0);
-SamplerState Sampler : register(s0);
-
-float4 ps_main(VertexOut input) : SV_TARGET
-{
-    return Diffuse.Sample(Sampler, input.tex);
 }

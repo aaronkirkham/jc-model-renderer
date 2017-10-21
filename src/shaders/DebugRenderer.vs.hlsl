@@ -17,8 +17,7 @@ struct VertexOut
     float4 colour : COLOR;
 };
 
-// @gyp_compile(vs_5_0, vs_main)
-VertexOut vs_main(VertexIn input)
+VertexOut main(VertexIn input)
 {
     VertexOut output;
 
@@ -34,10 +33,4 @@ VertexOut vs_main(VertexIn input)
     output.colour = input.colour;
 
     return output;
-}
-
-// @gyp_compile(ps_5_0, ps_main)
-float4 ps_main(VertexOut input) : SV_TARGET
-{
-    return input.colour;
 }

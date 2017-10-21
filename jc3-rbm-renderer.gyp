@@ -2,12 +2,10 @@
 	'target_defaults': {
 		'conditions': [
 			['OS == "win"', {
-				'include_dirs': [
-					'src/shaders/compiled',
-				],
 				'rules': [{
 					'variables': {
-						'output_file': 'src/shaders/compiled/<(RULE_INPUT_ROOT)_hlsl_compiled.h',
+						'inc_file': 'src/shaders/compiled/shaders.hpp',
+						'output_file': 'src/shaders/compiled/<(RULE_INPUT_ROOT)_hlsl_compiled.hpp',
 					},
 					'rule_name': 'compile_hlsl',
 					'extension': 'hlsl',
@@ -17,11 +15,12 @@
 					'action': [
 						'python',
 						'tools/compile_hlsl.py',
-						'--shader_compiler_tool', 'C:/Program Files (x86)/Windows Kits/10/bin/x64/fxc.exe',
-						'--output_file', '<(output_file)',
-						'--input_hlsl_file', '<(RULE_INPUT_PATH)',
+						'--fxc', 'C:/Program Files (x86)/Windows Kits/10/bin/x64/fxc.exe',
+						'--input', '<(RULE_INPUT_PATH)',
+						'--output', '<(output_file)',
+						'--inc' ,'<(inc_file)',
 					],
-					'message': 'Generating shaders from <(RULE_INPUT_PATH)...',
+					'message': 'Generating shader from <(RULE_INPUT_PATH)',
 					'process_outputs_as_sources': 0,
 				}],
 			}],
@@ -69,10 +68,7 @@
 		'sources': [
 			'<!@pymod_do_main(glob-files src/**/*.cpp)',
 			'<!@pymod_do_main(glob-files src/**/*.h)',
-			'src/shaders/DebugRenderer.hlsl',
-			'src/shaders/CarPaintMM.hlsl',
-			'src/shaders/Character.hlsl',
-			'src/shaders/GeneralJC3.hlsl',
+			'<!@pymod_do_main(glob-files src/shaders/**/*.hlsl)',
 		],
 	},
 	]

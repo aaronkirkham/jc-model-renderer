@@ -41,8 +41,8 @@ public:
     virtual void Create() override final
     {
         // load shaders
-        m_VertexShader = ShaderManager::Get()->GetVertexShader("CarPaintMM");
-        m_PixelShader = ShaderManager::Get()->GetPixelShader("CarPaintMM");
+        m_VertexShader = GET_VERTEX_SHADER(car_paint_mm);
+        m_PixelShader = GET_PIXEL_SHADER(car_paint_mm);
 
         // create the element input desc
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {

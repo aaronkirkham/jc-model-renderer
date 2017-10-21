@@ -35,8 +35,8 @@ public:
     virtual void Create() override final
     {
         // load shaders
-        m_VertexShader = ShaderManager::Get()->GetVertexShader("Character");
-        m_PixelShader = ShaderManager::Get()->GetPixelShader("Character");
+        m_VertexShader = GET_VERTEX_SHADER(character);
+        m_PixelShader = GET_PIXEL_SHADER(character);
 
         // create the element input desc
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {

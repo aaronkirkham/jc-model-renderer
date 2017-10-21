@@ -43,8 +43,8 @@ public:
     virtual void Create() override final
     {
         // load shaders
-        m_VertexShader = ShaderManager::Get()->GetVertexShader("GeneralJC3");
-        m_PixelShader = ShaderManager::Get()->GetPixelShader("GeneralJC3");
+        m_VertexShader = GET_VERTEX_SHADER(general_jc3);
+        m_PixelShader = GET_PIXEL_SHADER(general_jc3);
 
         // create the element input desc
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
