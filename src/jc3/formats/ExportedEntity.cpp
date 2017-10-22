@@ -47,15 +47,7 @@ void ExportedEntity::Initialise()
 {
     g_CurrentLoadedArchive = this;
     m_FileList = std::make_unique<DirectoryList>();
-
-    for (auto& file : m_StreamArchive->m_Files) {
-        if (file.m_Filename.find(".rbm") != std::string::npos) {
-        //    file.m_Filename.find(".ee") != std::string::npos ||
-        //    file.m_Filename.find(".bl") != std::string::npos ||
-        //    file.m_Filename.find(".nl") != std::string::npos)
-            m_FileList->Add(file.m_Filename);
-        }
-    }
+    m_FileList->Parse(m_StreamArchive, { ".rbm" });
 }
 
 void ExportedEntity::LinkRenderBlockModel(RenderBlockModel* rbm)

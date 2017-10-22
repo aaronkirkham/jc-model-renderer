@@ -6,6 +6,7 @@
 #include <graphics/Camera.h>
 #include <graphics/DebugRenderer.h>
 #include <jc3/formats/ExportedEntity.h>
+#include <fonts/fontawesome_icons.h>
 
 static std::vector<RenderBlockModel*> g_Models;
 static std::recursive_mutex g_ModelsMutex;
@@ -24,6 +25,7 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
     }
 
     static std::once_flag once_;
+    static IRenderBlock* renderBlockViewTextures_ = nullptr;
     std::call_once(once_, [&] {
         Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
             std::lock_guard<std::recursive_mutex> _lk{ g_ModelsMutex };
@@ -33,7 +35,7 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 
             // debug model info
             if (g_DrawDebugInfo) {
-                ImGui::Begin("Model Stats", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
+                ImGui::Begin("Model Stats", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings));
                 {
                     ImGui::SetWindowPos(ImVec2(10, 20));
 
@@ -60,11 +62,58 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 
                         for (auto& block : model->GetRenderBlocks()) {
                             ImGui::Text("\t%d: %s", block_index, block->GetTypeName());
+
+                            if (!block->GetTextures().empty()) {
+                                ImGui::SameLine();
+
+                                std::stringstream ss;
+                                ss << "textures##" << block_index;
+
+                                ImGui::PushID(ss.str().c_str());
+                                if (ImGui::Button("View Textures")) {
+                                    renderBlockViewTextures_ = block;
+                                }
+                                ImGui::PopID();
+                            }
+
                             block_index++;
                         }
                     }
                 }
                 ImGui::End();
+
+                if (renderBlockViewTextures_) {
+                    static bool open = true;
+                    ImGui::Begin(ICON_FA_PICTURE_O " Textures", &open, ImVec2(400, 200), 1.0f, (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings));
+                    {
+                        ImGui::Columns(3, 0, false);
+
+                        for (auto& texture : renderBlockViewTextures_->GetTextures()) {
+                            auto window_size = Window::Get()->GetSize();
+                            auto aspect_ratio = (window_size.x / window_size.y);
+
+                            ImGui::Text(texture->GetPath().filename().string().c_str());
+
+                            ImGui::BeginGroup();
+                            {
+                                auto width = ImGui::GetWindowWidth() / ImGui::GetColumnsCount();
+                                ImGui::Image(texture->GetSRV(), ImVec2(width, width / aspect_ratio));
+                            }
+                            ImGui::EndGroup();
+
+                            ImGui::NextColumn();
+                        }
+
+                        ImGui::Columns();
+                    }
+                    ImGui::End();
+
+                    // close the window
+                    if (!open) {
+                        renderBlockViewTextures_ = nullptr;
+                        open = true;
+                    }
+                }
             }
         });
     });

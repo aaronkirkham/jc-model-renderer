@@ -18,7 +18,6 @@ class FileLoader : public Singleton<FileLoader>
 private:
     std::unique_ptr<DirectoryList> m_FileList = nullptr;
     json m_FileListDictionary;
-    bool m_LoadingDictionary = false;
 
     StreamArchive_t* ParseStreamArchive(std::istream& stream);
     std::vector<uint8_t> DecompressArchiveFromStream(std::istream& stream);
@@ -48,6 +47,5 @@ public:
 
     void LocateFileInDictionary(const std::string& filename, DictionaryLookupCallback callback);
 
-    bool IsLoadingDictionary() const { return m_LoadingDictionary; }
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
 };

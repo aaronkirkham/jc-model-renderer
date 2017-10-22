@@ -12,8 +12,6 @@
 
 #include <zlib.h>
 
-// SARC file extensions: .ee, .bl, .nl
-
 // Credits to gibbed for most of the archive format stuff
 // http://gib.me
 
@@ -22,40 +20,18 @@ extern fs::path g_JC3Directory;
 
 FileLoader::FileLoader()
 {
-    m_LoadingDictionary = true;
     m_FileList = std::make_unique<DirectoryList>();
 
     std::thread load([this] {
-        std::ifstream file(fs::current_path() / "assets" / "dictionary.json");
+        std::ifstream file(fs::current_path() / "dictionary.json");
         if (file.fail()) {
-            throw std::runtime_error("FileLoader::FileLoader - Failed to read file list dictionary");
+            throw std::runtime_error("FileLoader - Failed to read file list dictionary");
         }
 
         m_FileListDictionary = json::parse(file);
         file.close();
 
-        // parse
-        for (auto it = m_FileListDictionary.begin(); it != m_FileListDictionary.end(); ++it)
-        {
-            auto data = it.value();
-            for (auto it2 = data.begin(); it2 != data.end(); ++it2)
-            {
-                auto value = it2.value();
-                if (value.is_string())
-                {
-                    auto valueStr = value.get<std::string>();
-                    if (valueStr.find(".rbm") != std::string::npos ||
-                        valueStr.find(".ee") != std::string::npos || 
-                        valueStr.find(".bl") != std::string::npos ||
-                        valueStr.find(".nl") != std::string::npos)
-                    {
-                        m_FileList->Add(valueStr);
-                    }
-                }
-            }
-        }
-
-        m_LoadingDictionary = false;
+        m_FileList->Parse(&m_FileListDictionary, { ".rbm", ".ee", ".bl", ".nl" });
     });
 
     load.detach();
@@ -408,10 +384,6 @@ void FileLoader::ReadFileFromArchive(const std::string& archive, uint32_t nameha
 void FileLoader::LocateFileInDictionary(const std::string& filename, DictionaryLookupCallback callback)
 {
     std::thread lookup([this, filename, callback] {
-        while (m_LoadingDictionary) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-
         for (auto it = m_FileListDictionary.begin(); it != m_FileListDictionary.end(); ++it) {
             auto archive = it.key();
             auto data = it.value();

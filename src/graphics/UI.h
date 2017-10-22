@@ -23,4 +23,6 @@ public:
     virtual UIEvents& Events() { return m_UIEvents; }
 
     void Render();
+
+    void RenderSpinner(const std::string& str);
 };

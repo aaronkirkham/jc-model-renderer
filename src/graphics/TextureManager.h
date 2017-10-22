@@ -20,6 +20,9 @@ public:
 
     bool IsLoaded() { return (m_Texture != nullptr && m_SRV != nullptr); }
     const fs::path& GetPath() { return m_Filename; }
+
+    ID3D11Resource* GetResource() { return m_Texture; }
+    ID3D11ShaderResourceView* GetSRV() { return m_SRV; }
 };
 
 class TextureManager : public Singleton<TextureManager>

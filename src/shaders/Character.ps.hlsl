@@ -5,6 +5,8 @@ struct PixelIn
 };
 
 Texture2D Diffuse : register(t0);
+Texture2D Normal : register(t1);
+
 SamplerState Sampler : register(s0);
 
 float4 main(PixelIn input) : SV_TARGET

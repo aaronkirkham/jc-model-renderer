@@ -12,6 +12,7 @@
 extern bool g_DrawBoundingBoxes;
 extern bool g_DrawDebugInfo;
 extern ExportedEntity* g_CurrentLoadedArchive;
+static bool g_ShowAllArchiveContents = false;
 
 void UI::Render()
 {
@@ -96,12 +97,12 @@ void RenderDirectoryList(json* current, bool open_folders = false)
     }
     else {
         if (current->is_string()) {
-            ImGui::TextWrapped("I FORGOT WHAT THIS IS :(");
+            __debugbreak();
         }
         else {
             for (auto& leaf : *current) {
                 auto filename = leaf.get<std::string>();
-                auto is_archive = filename.find(".rbm") == std::string::npos;
+                auto is_archive = (filename.find(".ee") != std::string::npos || filename.find(".bl") != std::string::npos || filename.find(".nl") != std::string::npos);
 
                 ImGui::TreeNodeEx(filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen), "%s %s", is_archive ? ICON_FA_FILE_ARCHIVE_O : ICON_FA_FILE_O, filename.c_str());
 
@@ -112,6 +113,20 @@ void RenderDirectoryList(json* current, bool open_folders = false)
                 if (ImGui::IsItemClicked()) {
                     UI::Get()->Events().FileTreeItemSelected(filename);
                 }
+
+                ImGui::PushID(filename.c_str());
+                if (ImGui::BeginPopupContextItem("Context Menu"))
+                {
+                    std::stringstream ss;
+                    ss << ICON_FA_FLOPPY_O << " Save as...";
+
+                    static bool selected = false;
+
+                    ImGui::Selectable(ss.str().c_str(), &selected);
+
+                    ImGui::EndPopup();
+                }
+                ImGui::PopID();
             }
         }
     }
@@ -135,29 +150,42 @@ void UI::RenderFileTreeView()
 
         // should we render the root entity explorer?
         if (!g_CurrentLoadedArchive) {
-            if (!FileLoader::Get()->IsLoadingDictionary())
-            {
-                RenderDirectoryList(FileLoader::Get()->GetDirectoryList()->GetStructure());
-            }
-            else
-            {
-                ImRotateStart();
-                ImGui::Text(ICON_FA_SPINNER);
-                ImRotateEnd(-0.005f * GetTickCount());
-
-                ImGui::SameLine();
-                ImGui::Text("Loading archive dictionary...");
-            }
+            RenderDirectoryList(FileLoader::Get()->GetDirectoryList()->GetStructure());
         }
         else {
+            if (ImGui::Checkbox("Show All Archive Contents", &g_ShowAllArchiveContents)) {
+                std::vector<std::string> only_include;
+                if (!g_ShowAllArchiveContents) {
+                    only_include.emplace_back(".rbm");
+                }
+
+                g_CurrentLoadedArchive->GetDirectoryList()->Parse(g_CurrentLoadedArchive->GetStreamArchive(), only_include);
+            }
+
             // unload the archive
             if (ImGui::Button("Go Back")) {
+                g_ShowAllArchiveContents = false;
+
+                // TODO: something better here...
                 delete g_CurrentLoadedArchive;
             }
-            else {
+
+            ImGui::Separator();
+
+            if (g_CurrentLoadedArchive) {
                 RenderDirectoryList(g_CurrentLoadedArchive->GetDirectoryList()->GetStructure(), false);
             }
         }
     }
     ImGui::End();
+}
+
+void UI::RenderSpinner(const std::string& str)
+{
+    ImRotateStart();
+    ImGui::Text(ICON_FA_SPINNER);
+    ImRotateEnd(-0.005f * GetTickCount());
+
+    ImGui::SameLine();
+    ImGui::Text(str.c_str());
 }

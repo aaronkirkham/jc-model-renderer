@@ -100,6 +100,7 @@ public:
 
     virtual VertexBuffer_t* GetVertexBuffer() { return m_Vertices; }
     virtual IndexBuffer_t* GetIndexBuffer() { return m_Indices; }
+    virtual const std::vector<std::shared_ptr<Texture>>& GetTextures() { return m_Textures; }
 
     template <typename T>
     void ReadVertexBuffer(std::istream& stream, VertexBuffer_t** outBuffer)

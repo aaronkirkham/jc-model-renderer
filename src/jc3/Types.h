@@ -74,6 +74,12 @@ namespace JustCause3
             int16_t v1;
         };
 
+        struct UnpackedUV
+        {
+            float u;
+            float v;
+        };
+
         struct UnpackedNormals
         {
             float u0;
