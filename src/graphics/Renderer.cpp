@@ -103,6 +103,7 @@ void Renderer::Shutdown()
     safe_release(m_BlendState);
     safe_release(m_RasterizerState);
     safe_release(m_SamplerState);
+    safe_release(m_DepthTexture);
     safe_release(m_DeviceContext);
     safe_release(m_Device);
     safe_release(m_SwapChain);

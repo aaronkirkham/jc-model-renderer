@@ -3,7 +3,7 @@
 #include <graphics/ShaderManager.h>
 #include <jc3/Types.h>
 
-struct Vertex2D
+struct Vertex3D
 {
     glm::vec3 pos;
     glm::vec4 colour;
@@ -11,7 +11,7 @@ struct Vertex2D
 
 DebugRenderer::DebugRenderer()
 {
-    m_VertexBuffer = Renderer::Get()->CreateVertexBuffer(30, sizeof(Vertex2D));
+    m_VertexBuffer = Renderer::Get()->CreateVertexBuffer(30, sizeof(Vertex3D));
     m_VertexShader = GET_VERTEX_SHADER(debug_renderer);
     m_PixelShader = GET_PIXEL_SHADER(debug_renderer);
 
@@ -38,7 +38,7 @@ void DebugRenderer::DrawLine(const glm::vec3& from, const glm::vec3& to, const g
 {
     auto context = Renderer::Get()->GetDeviceContext();
 
-    Vertex2D vertices[] = {
+    Vertex3D vertices[] = {
         { from, colour },
         { to, colour },
     };

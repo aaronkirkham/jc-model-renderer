@@ -107,15 +107,14 @@ bool Window::Frame()
 
 void Window::Run()
 {
-    bool running = true;
-    while (running)
+    while (m_Running)
     {
         // handle messages
         MSG msg{};
         while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE) > 0)
         {
             if (msg.message == WM_QUIT) {
-                running = false;
+                m_Running = false;
             }
 
             // if the window has focus, pass input to the input handler
@@ -130,6 +129,8 @@ void Window::Run()
         // update the window
         Frame();
     }
+
+    Shutdown();
 }
 
 glm::vec2 Window::GetSize() const

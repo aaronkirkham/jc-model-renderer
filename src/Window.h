@@ -24,6 +24,7 @@ class Window : public Singleton<Window>
 private:
     WindowEvents m_WindowEvents;
 
+    bool m_Running = true;
     HINSTANCE m_Instance = nullptr;
     HWND m_Hwnd = nullptr;
 

@@ -59,6 +59,7 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 
                     ImGui::Text("Models: %d, Vertices: %d, Indices: %d, Triangles: %d, Textures: %d", g_Models.size(), vertices, indices, triangles, TextureManager::Get()->GetCacheSize());
 
+                    size_t model_index = 0;
                     for (auto& model : g_Models) {
                         size_t block_index = 0;
 
@@ -71,7 +72,7 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
                                 ImGui::SameLine();
 
                                 std::stringstream ss;
-                                ss << "textures##" << block_index;
+                                ss << model_index << "-textures-" << block_index;
 
                                 ImGui::PushID(ss.str().c_str());
                                 if (ImGui::Button("View Textures")) {
@@ -82,6 +83,8 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 
                             block_index++;
                         }
+
+                        model_index++;
                     }
                 }
                 ImGui::End();
