@@ -37,6 +37,30 @@ FileLoader::FileLoader()
     load.detach();
 }
 
+void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback)
+{
+    std::thread t([this, filename, callback] {
+        // try and load from any current loaded archive
+        if (g_CurrentLoadedArchive) {
+            auto [archive, entry] = GetStreamArchiveFromFile(filename);
+            if (archive && entry.m_Offset != 0) {
+                auto data = archive->ReadEntryFromArchive(entry);
+                return callback(true, data);
+            }
+        }
+
+        // try and load the file from an .arc file
+        auto [archive_name, namehash] = LocateFileInDictionary(filename);
+        if (!archive_name.empty()) {
+            return ReadFileFromArchive(archive_name, namehash, callback);
+        }
+
+        callback(false, {});
+    });
+
+    t.detach();
+}
+
 void FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::ArchiveTable::VfsArchive* output)
 {
     std::ifstream file(filename, std::ios::binary);
@@ -324,7 +348,7 @@ std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveF
     return { nullptr, StreamArchiveEntry_t{} };
 }
 
-void FileLoader::ReadFileFromArchive(const std::string& archive, uint32_t namehash, ReadFromArchiveCallback callback)
+void FileLoader::ReadFileFromArchive(const std::string& archive, uint32_t namehash, ReadFileCallback callback)
 {
     std::thread load([this, archive, namehash, callback] {
         fs::path tab_file = g_JC3Directory / "archives_win64" / (archive + ".tab");
@@ -381,33 +405,34 @@ void FileLoader::ReadFileFromArchive(const std::string& archive, uint32_t nameha
     load.detach();
 }
 
-void FileLoader::LocateFileInDictionary(const std::string& filename, DictionaryLookupCallback callback)
+std::tuple<std::string, uint32_t> FileLoader::LocateFileInDictionary(const fs::path& filename)
 {
-    std::thread lookup([this, filename, callback] {
-        for (auto it = m_FileListDictionary.begin(); it != m_FileListDictionary.end(); ++it) {
-            auto archive = it.key();
-            auto data = it.value();
+    // ergh, fs::path uses backslashes which is bad for us, is there a way
+    // to stop that or should we switch back to strings?
+    std::string _filename = filename.string();
+    std::replace(_filename.begin(), _filename.end(), '\\', '/');
 
-            for (auto it2 = data.begin(); it2 != data.end(); ++it2) {
-                auto key = it2.key();
-                auto value = it2.value();
+    for (auto it = m_FileListDictionary.begin(); it != m_FileListDictionary.end(); ++it) {
+        auto archive = it.key();
+        auto data = it.value();
 
-                if (value.is_string()) {
-                    auto valueStr = value.get<std::string>();
-                    if (valueStr.find(filename) != std::string::npos) {
-                        DEBUG_LOG("LocateFileInDictionary - Found '" << valueStr << "' (" << key << ") in archive '" << archive << "'");
+        for (auto it2 = data.begin(); it2 != data.end(); ++it2) {
+            auto key = it2.key();
+            auto value = it2.value();
 
-                        auto namehash = static_cast<uint32_t>(std::stoul(key, nullptr, 0));
-                        return callback(true, archive, namehash, valueStr);
-                    }
+            if (value.is_string()) {
+                auto valueStr = value.get<std::string>();
+                if (valueStr.find(_filename) != std::string::npos) {
+                    DEBUG_LOG("LocateFileInDictionary - Found '" << valueStr << "' (" << key << ") in archive '" << archive << "'");
+
+                    auto namehash = static_cast<uint32_t>(std::stoul(key, nullptr, 0));
+                    return { archive, namehash };
                 }
             }
         }
+    }
 
-        return callback(false, "", 0, filename);
-    });
-
-    lookup.detach();
+    return { "", 0 };
 }
 
 void FileLoader::ParseCompressedTexture(std::istream& stream, uint64_t size, std::vector<uint8_t>* output)
@@ -444,18 +469,41 @@ void FileLoader::ParseCompressedTexture(std::istream& stream, uint64_t size, std
         header.flags = (0x1007 | 0x20000);
         header.width = width;
         header.height = height;
-        header.pitchOrLinearSize = 0;
         header.depth = depth;
         header.mipMapCount = mipCount;
         header.ddspf = TextureManager::GetPixelFormat(texture.m_Format);
         header.caps = (8 | 0x1000);
-        header.caps2 = 0;
 
         // ugly things
         output->resize(sizeof(uint32_t) + sizeof(header) + block_size);
         memcpy(&output->front(), (char *)&DDS_MAGIC, sizeof(uint32_t));
         memcpy(&output->front() + sizeof(uint32_t), (char *)&header, sizeof(header));
         memcpy(&output->front() + sizeof(uint32_t) + sizeof(header), block, block_size);
+
+        delete[] block;
+    }
+    // lol - probably hmddsc file (raw data without headers?)
+    else {
+        stream.seekg(0, std::ios::beg);
+
+        DDS_HEADER header;
+        ZeroMemory(&header, sizeof(header));
+        header.size = 124;
+        header.flags = (0x1007 | 0x20000);
+        header.width = 512;
+        header.height = 512;
+        header.depth = 1;
+        header.mipMapCount = 0;
+        header.ddspf = TextureManager::GetPixelFormat(DXGI_FORMAT_BC1_UNORM);
+        header.caps = (8 | 0x1000);
+
+        auto block = new char[size + 1];
+        stream.read(block, size);
+
+        output->resize(sizeof(uint32_t) + sizeof(header) + size);
+        memcpy(&output->front(), (char *)&DDS_MAGIC, sizeof(uint32_t));
+        memcpy(&output->front() + sizeof(uint32_t), (char *)&header, sizeof(header));
+        memcpy(&output->front() + sizeof(uint32_t) + sizeof(header), block, size);
 
         delete[] block;
     }

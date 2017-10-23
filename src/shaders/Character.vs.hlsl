@@ -15,7 +15,6 @@ cbuffer MeshConstant : register(b1)
 cbuffer ModelConstants : register(b2)
 {
     float scale;
-    float2 uvExtent;
 }
 
 struct VertexIn

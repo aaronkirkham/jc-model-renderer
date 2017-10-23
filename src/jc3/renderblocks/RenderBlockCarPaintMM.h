@@ -16,7 +16,6 @@ namespace JustCause3::RenderBlocks
     {
         uint8_t version;
         CarPaintMMAttributes attributes;
-        char pad[0x13C];
     };
 };
 #pragma pack(pop)
@@ -24,9 +23,16 @@ namespace JustCause3::RenderBlocks
 class RenderBlockCarPaintMM : public IRenderBlock
 {
 private:
+    struct CarPaintMMConstants
+    {
+        BOOL m_HasLayeredUVs = FALSE;
+        char pad[12];
+    } m_Constants;
+
     JustCause3::RenderBlocks::CarPaintMM m_Block;
     VertexBuffer_t* m_VertexBufferData = nullptr;
     VertexBuffer_t* m_VertexBufferUVData = nullptr;
+    ConstantBuffer_t* m_ConstantBuffer = nullptr;
 
 public:
     RenderBlockCarPaintMM() = default;
@@ -34,6 +40,7 @@ public:
     {
         Renderer::Get()->DestroyBuffer(m_VertexBufferData);
         Renderer::Get()->DestroyBuffer(m_VertexBufferUVData);
+        Renderer::Get()->DestroyBuffer(m_ConstantBuffer);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockCarPaintMM"; }
@@ -56,12 +63,25 @@ public:
 
         // create the vertex declaration
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get());
+
+        // create the constant buffer
+        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants);
+
+        // create the sampler states
+        {
+            SamplerStateCreationParams_t params;
+            m_SamplerState = Renderer::Get()->CreateSamplerState(params);
+        }
     }
 
     virtual void Read(fs::path& filename, std::istream& stream) override final
     {
         // read the block header
         stream.read((char *)&m_Block, sizeof(m_Block));
+
+        // read material params
+        char unk[316];
+        stream.read((char *)&unk, 316);
 
         // read some constant buffer data
         char unknown[76];
@@ -114,6 +134,15 @@ public:
     {
         IRenderBlock::Setup(context);
 
+        // do we have layered uvs?
+        if (m_Block.attributes.flags & 0x20) {
+            m_Constants.m_HasLayeredUVs = TRUE;
+        }
+
+        // set the constant buffers
+        Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
+
         // (~(this->m_Attributes.m_Flags >> 6) & 2 | 1)
         //Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 
@@ -124,6 +153,16 @@ public:
         // set the 3rd vertex buffers
         if (m_VertexBufferUVData) {
             context->m_DeviceContext->IASetVertexBuffers(2, 1, &m_VertexBufferUVData->m_Buffer, &m_VertexBufferUVData->m_ElementStride, &offset);
+        }
+    }
+
+    virtual void Draw(RenderContext_t* context) override final
+    {
+        if (m_Block.attributes.flags & 0x2000) {
+            IRenderBlock::DrawSkinBatches(context);
+        }
+        else {
+            IRenderBlock::Draw(context);
         }
     }
 };

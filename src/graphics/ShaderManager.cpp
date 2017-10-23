@@ -44,6 +44,11 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
     auto filename = (name + ".vs");
     auto key = fnv_1_32::hash(filename.c_str(), filename.length());
 
+    auto it = m_VertexShaders.find(key);
+    if (it != std::end(m_VertexShaders)) {
+        return it->second;
+    }
+
     // copy the buffer
     std::vector<uint8_t> data;
     data.resize(size);
@@ -107,6 +112,11 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
 {
     auto filename = (name + ".ps");
     auto key = fnv_1_32::hash(filename.c_str(), filename.length());
+
+    auto it = m_PixelShaders.find(key);
+    if (it != std::end(m_PixelShaders)) {
+        return it->second;
+    }
 
     // copy the buffer
     std::vector<uint8_t> data;

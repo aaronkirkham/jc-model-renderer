@@ -103,40 +103,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         UI::Get()->Events().FileTreeItemSelected.connect([](const std::string& filename) {
             DEBUG_LOG("look for " << filename);
 
-            // try find the file in our loaded archives first
-            auto [archive, entry] = FileLoader::Get()->GetStreamArchiveFromFile(filename);
-            if (archive && entry.m_Offset != 0) {
-                auto data = archive->ReadEntryFromArchive(entry);
-                new RenderBlockModel(filename, data);
-
-                DEBUG_LOG("Found " << filename << " in already loaded stream archive");
-
-                return true;
-            }
-
-            FileLoader::Get()->LocateFileInDictionary(filename, [](bool success, std::string archive, uint32_t namehash, std::string filename) {
+            FileLoader::Get()->ReadFile(filename, [filename](bool success, std::vector<uint8_t> data) {
                 if (success) {
-                    DEBUG_LOG(archive);
-                    DEBUG_LOG(namehash << " " << filename);
+                    if (filename.find(".rbm") != std::string::npos) {
+                        new RenderBlockModel(filename, data);
+                    }
+                    else if (filename.find(".ee") != std::string::npos || filename.find(".bl") != std::string::npos || filename.find(".nl") != std::string::npos) {
+                        new ExportedEntity(filename, data);
+                    }
 
-                    FileLoader::Get()->ReadFileFromArchive(archive, namehash, [filename](bool success, std::vector<uint8_t> data) {
-                        if (success) {
-                            DEBUG_LOG("Read from archive finished.");
-
-                            // TODO: a proper handler for this stuff
-                            if (filename.find(".ee") != std::string::npos ||
-                                filename.find(".bl") != std::string::npos ||
-                                filename.find(".nl") != std::string::npos) {
-                                new ExportedEntity(filename, data);
-                            }
-                            else if (filename.find(".rbm") != std::string::npos) {
-                                new RenderBlockModel(filename, data);
-                            }
-                        }
-                    });
+                    DEBUG_LOG(filename);
                 }
                 else {
-                    DEBUG_LOG("[WARNING] FileTreeItemSelected -> LocateFileInDictionary - Can't find " << filename << " in dictionary");
+                    DEBUG_LOG("[ERROR] can't find '" << filename << "'.");
                 }
             });
 

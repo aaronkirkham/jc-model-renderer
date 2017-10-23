@@ -14,6 +14,8 @@ extern bool g_DrawBoundingBoxes;
 extern bool g_DrawDebugInfo;
 extern ExportedEntity* g_CurrentLoadedArchive;
 
+static auto color = glm::vec4{ 1, 1, 1, 1 };
+
 void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 {
     std::lock_guard<std::recursive_mutex> _lk{ g_ModelsMutex };
@@ -38,6 +40,8 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
                 ImGui::Begin("Model Stats", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings));
                 {
                     ImGui::SetWindowPos(ImVec2(10, 20));
+
+                    //ImGui::ColorPicker4("texture_col", (float*)&color, (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoSmallPreview | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_Float));
 
                     std::size_t vertices = 0;
                     std::size_t indices = 0;
@@ -232,9 +236,11 @@ void RenderBlockModel::Draw(RenderContext_t* context)
         MeshConstants constants;
         constants.worldMatrix = m_WorldMatrix;
         constants.worldViewInverseTranspose = glm::transpose(glm::inverse(worldView));
-        constants.colour = glm::vec4{ 1, 1, 1, 1 };
+        //constants.colour = glm::vec4{ 1, 1, 1, 1 };
+        constants.colour = color;
 
         Renderer::Get()->SetVertexShaderConstants(m_MeshConstants, 1, constants);
+        Renderer::Get()->SetPixelShaderConstants(m_MeshConstants, 1, constants);
     }
 
     // draw all render blocks

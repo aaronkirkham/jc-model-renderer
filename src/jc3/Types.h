@@ -114,6 +114,14 @@ namespace JustCause3
             float dt;
         };
 
+        struct VertexUnknown
+        {
+            float x;
+            float y;
+            float z;
+            float w;
+        };
+
         namespace RenderBlockCharacter
         {
             struct PackedCharacterPos4Bones1UVs

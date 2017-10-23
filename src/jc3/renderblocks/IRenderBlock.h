@@ -9,16 +9,8 @@
 class IRenderBlock
 {
 protected:
-    struct ModelConstants
-    {
-        float scale = 1.0f;
-        glm::vec2 uvExtent = { 0, 0 };
-        BOOL hasNormalMap = FALSE;
-    } m_Constants;
-
     VertexBuffer_t* m_Vertices = nullptr;
     IndexBuffer_t* m_Indices = nullptr;
-    ConstantBuffer_t* m_ConstantBuffer = nullptr;
     std::shared_ptr<VertexShader_t> m_VertexShader = nullptr;
     std::shared_ptr<PixelShader_t> m_PixelShader = nullptr;
     VertexDeclaration_t* m_VertexDeclaration = nullptr;
@@ -29,11 +21,7 @@ protected:
     std::vector<JustCause3::CSkinBatch> m_SkinBatches;
 
 public:
-    IRenderBlock()
-    {
-        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants);
-    }
-
+    IRenderBlock() = default;
     virtual ~IRenderBlock()
     {
         OutputDebugStringA("~IRenderBlock\n");
@@ -43,7 +31,6 @@ public:
 
         Renderer::Get()->DestroyBuffer(m_Vertices);
         Renderer::Get()->DestroyBuffer(m_Indices);
-        Renderer::Get()->DestroyBuffer(m_ConstantBuffer);
         Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
         Renderer::Get()->DestroySamplerState(m_SamplerState);
     }
@@ -79,10 +66,6 @@ public:
         if (m_SamplerState) {
             context->m_DeviceContext->PSSetSamplers(0, 1, &m_SamplerState->m_SamplerState);
         }
-
-        // set the constant buffers
-        Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
-        Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
 
         // set the topology
         context->m_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -152,7 +135,7 @@ public:
 
             // load the material
             auto texture = TextureManager::Get()->GetTexture(buffer);
-            if (texture && texture->IsLoaded()) {
+            if (texture) {
                 m_Textures.emplace_back(texture);
             }
 
@@ -161,9 +144,6 @@ public:
 
         uint32_t unknown[4];
         stream.read((char *)&unknown, sizeof(unknown));
-
-        // flush the texture cache
-        TextureManager::Get()->Flush();
     }
 
     void ReadSkinBatch(std::istream& stream)

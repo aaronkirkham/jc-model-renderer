@@ -24,14 +24,22 @@ namespace JustCause3::RenderBlocks
 class RenderBlockBuildingJC3 : public IRenderBlock
 {
 private:
+    struct BuildingJC3Constants
+    {
+        float m_Scale = 1.0f;
+        glm::vec2 m_UVExtent = { 0, 0 };
+    } m_Constants;
+
     JustCause3::RenderBlocks::BuildingJC3 m_Block;
     VertexBuffer_t* m_VertexBufferData = nullptr;
+    ConstantBuffer_t* m_ConstantBuffer = nullptr;
 
 public:
     RenderBlockBuildingJC3() = default;
     virtual ~RenderBlockBuildingJC3()
     {
         Renderer::Get()->DestroyBuffer(m_VertexBufferData);
+        Renderer::Get()->DestroyBuffer(m_ConstantBuffer);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockBuildingJC3"; }
@@ -53,6 +61,9 @@ public:
 
         // create the vertex declaration
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get());
+
+        // create the constant buffer
+        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants);
     }
 
     virtual void Read(fs::path& filename, std::istream& stream) override final
@@ -61,8 +72,8 @@ public:
         stream.read((char *)&m_Block, sizeof(m_Block));
 
         // set vertex shader constants
-        m_Constants.scale = m_Block.attributes.packed.scale;
-        m_Constants.uvExtent = m_Block.attributes.packed.uv0Extent;
+        m_Constants.m_Scale = m_Block.attributes.packed.scale;
+        m_Constants.m_UVExtent = m_Block.attributes.packed.uv0Extent;
 
         // read the materials
         ReadMaterials(filename, stream);
@@ -83,6 +94,10 @@ public:
     virtual void Setup(RenderContext_t* context) override final
     {
         IRenderBlock::Setup(context);
+
+        // set the constant buffers
+        Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
 
         Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 

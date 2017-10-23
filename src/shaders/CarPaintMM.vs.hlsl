@@ -12,12 +12,6 @@ cbuffer MeshConstant : register(b1)
     float4 colour;
 }
 
-cbuffer ModelConstants : register(b2)
-{
-    float scale;
-    float2 uvExtent;
-}
-
 struct VertexIn
 {
     float3 position : POSITION0;

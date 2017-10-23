@@ -24,8 +24,16 @@ namespace JustCause3::RenderBlocks
 class RenderBlockGeneralJC3 : public IRenderBlock
 {
 private:
+    struct GeneralJC3Constants
+    {
+        float m_Scale = 1.0f;
+        glm::vec2 m_UVExtent = { 0, 0 };
+        BOOL m_HasNormalMap = FALSE;
+    } m_Constants;
+
     JustCause3::RenderBlocks::GeneralJC3 m_Block;
     VertexBuffer_t* m_VertexBufferData = nullptr;
+    ConstantBuffer_t* m_ConstantBuffer = nullptr;
     SamplerState_t* m_SamplerStateNormalMap = nullptr;
 
 public:
@@ -34,8 +42,9 @@ public:
     {
         OutputDebugStringA("~RenderBlockGeneralJC3\n");
 
-        Renderer::Get()->DestroySamplerState(m_SamplerStateNormalMap);
         Renderer::Get()->DestroyBuffer(m_VertexBufferData);
+        Renderer::Get()->DestroyBuffer(m_ConstantBuffer);
+        Renderer::Get()->DestroySamplerState(m_SamplerStateNormalMap);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockGeneralJC3"; }
@@ -57,6 +66,9 @@ public:
 
         // create the vertex declaration
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get());
+
+        // create the constant buffer
+        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants);
 
         // create the sampler states
         {
@@ -81,8 +93,8 @@ public:
         stream.read((char *)&m_Block, sizeof(m_Block));
 
         // set vertex shader constants
-        m_Constants.scale = m_Block.attributes.packed.scale;
-        m_Constants.uvExtent = m_Block.attributes.packed.uv0Extent;
+        m_Constants.m_Scale = m_Block.attributes.packed.scale;
+        m_Constants.m_UVExtent = m_Block.attributes.packed.uv0Extent;
 
         // read the materials
         ReadMaterials(filename, stream);
@@ -92,7 +104,7 @@ public:
         for (auto& texture : m_Textures) {
             auto filename = texture->GetPath().filename().string();
             if (filename.find("_nrm") != std::string::npos) {
-                m_Constants.hasNormalMap = TRUE;
+                m_Constants.m_HasNormalMap = TRUE;
             }
         }
 
@@ -112,6 +124,10 @@ public:
     virtual void Setup(RenderContext_t* context) override final
     {
         IRenderBlock::Setup(context);
+
+        // set the constant buffers
+        Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
 
         Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 

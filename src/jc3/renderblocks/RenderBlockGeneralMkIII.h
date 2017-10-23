@@ -26,14 +26,22 @@ namespace JustCause3::RenderBlocks
 class RenderBlockGeneralMkIII : public IRenderBlock
 {
 private:
+    struct GeneralMkIIIConstants
+    {
+        float m_Scale = 1.0f;
+        glm::vec2 m_UVExtent = { 0, 0 };
+    } m_Constants;
+
     JustCause3::RenderBlocks::GeneralMkIII m_Block;
     VertexBuffer_t* m_VertexBufferData = nullptr;
+    ConstantBuffer_t* m_ConstantBuffer = nullptr;
 
 public:
     RenderBlockGeneralMkIII() = default;
     virtual ~RenderBlockGeneralMkIII()
     {
         Renderer::Get()->DestroyBuffer(m_VertexBufferData);
+        Renderer::Get()->DestroyBuffer(m_ConstantBuffer);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockGeneralMkIII"; }
@@ -55,6 +63,15 @@ public:
 
         // create the vertex declaration
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get());
+
+        // create the constant buffer
+        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants);
+
+        // create the sampler states
+        {
+            SamplerStateCreationParams_t params;
+            m_SamplerState = Renderer::Get()->CreateSamplerState(params);
+        }
     }
 
     virtual void Read(fs::path& filename, std::istream& stream) override final
@@ -63,8 +80,8 @@ public:
         stream.read((char *)&m_Block, sizeof(m_Block));
 
         // set vertex shader constants
-        m_Constants.scale = m_Block.attributes.packed.scale;
-        m_Constants.uvExtent = m_Block.attributes.packed.uv0Extent;
+        m_Constants.m_Scale = m_Block.attributes.packed.scale;
+        m_Constants.m_UVExtent = m_Block.attributes.packed.uv0Extent;
 
         // read some constant buffer data
         char unknown[280];
@@ -75,8 +92,7 @@ public:
 
         // read the vertex buffers
         if (m_Block.attributes.flags & 0x20) {
-            // read something that is 16 bytes
-            __debugbreak();
+            ReadVertexBuffer<JustCause3::Vertex::VertexUnknown>(stream, &m_Vertices);
         }
         else {
             ReadVertexBuffer<JustCause3::Vertex::PackedVertexPosition>(stream, &m_Vertices);
@@ -97,6 +113,10 @@ public:
     virtual void Setup(RenderContext_t* context) override final
     {
         IRenderBlock::Setup(context);
+
+        // set the constant buffers
+        Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
 
         Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 

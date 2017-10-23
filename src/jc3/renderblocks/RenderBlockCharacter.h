@@ -24,11 +24,21 @@ namespace JustCause3::RenderBlocks
 class RenderBlockCharacter : public IRenderBlock
 {
 private:
+    struct CharacterConstants
+    {
+        float m_Scale = 1.0f;
+        char pad[12];
+    } m_Constants;
+
     JustCause3::RenderBlocks::Character m_Block;
+    ConstantBuffer_t* m_ConstantBuffer = nullptr;
 
 public:
     RenderBlockCharacter() = default;
-    virtual ~RenderBlockCharacter() = default;
+    virtual ~RenderBlockCharacter()
+    {
+        Renderer::Get()->DestroyBuffer(m_ConstantBuffer);
+    }
 
     virtual const char* GetTypeName() override final { return "RenderBlockCharacter"; }
 
@@ -46,6 +56,9 @@ public:
 
         // create the vertex declaration
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 2, m_VertexShader.get());
+
+        // create the constant buffer
+        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants);
 
         // create the sampler states
         {
@@ -66,7 +79,7 @@ public:
         stream.read((char *)&m_Block, sizeof(m_Block));
 
         // set vertex shader constants
-        m_Constants.scale = m_Block.attributes.scale;
+        m_Constants.m_Scale = m_Block.attributes.scale;
 
         // read the materials
         ReadMaterials(filename, stream);
@@ -88,6 +101,10 @@ public:
     virtual void Setup(RenderContext_t* context) override final
     {
         IRenderBlock::Setup(context);
+
+        // set the constant buffers
+        Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
 
         Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
     }

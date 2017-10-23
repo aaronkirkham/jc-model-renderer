@@ -7,49 +7,40 @@
 Texture::Texture(const fs::path& filename)
     : m_Filename(filename)
 {
-    std::vector<uint8_t> buffer;
+    FileLoader::Get()->ReadFile(m_Filename, [this](bool success, std::vector<uint8_t> data) {
+        if (success) {
+            std::vector<uint8_t> buffer;
+            if (m_Filename.extension() == ".ddsc") {
+                FileLoader::Get()->ReadCompressedTexture(data, std::numeric_limits<uint64_t>::max(), &buffer);
+            }
+            else {
+                buffer = std::move(data);
+            }
 
-    auto [archive, entry] = FileLoader::Get()->GetStreamArchiveFromFile(m_Filename);
-    if (archive) {
-        DEBUG_LOG("found texture " << filename.string() << " in archive " << archive->m_Filename.string());
-
-        auto data = archive->ReadEntryFromArchive(entry);
-
-        // is the texture compressed?
-        if (m_Filename.extension() == ".ddsc") {
-            FileLoader::Get()->ReadCompressedTexture(data, entry.m_Size, &buffer);
+            LoadFromBuffer(buffer);
         }
+        // failed, let's look for a HMDDSC file.
         else {
-            buffer = std::move(data);
-        }
-    }
-    // TODO: need to also use the dictionary lookup stuff, we might need to read it straight from an .arc file!
-    // texture is not in any current loaded archive, let's try read it from disk
-    else {
-        if (!fs::exists(m_Filename)) {
-            DEBUG_LOG("Texture::LoadFromFile - Failed to read input file. (" << m_Filename.c_str() << ")");
-            return;
-        }
+            DEBUG_LOG("[ERROR] can't find texture " << m_Filename.string() << " :(");
 
-        std::ifstream stream(m_Filename, std::ios::binary);
-        if (stream.fail()) {
-            DEBUG_LOG("Texture::LoadFromFile - Failed to read input file. (" << m_Filename.c_str() << ")");
-            return;
+            if (m_Filename.extension() == ".ddsc") {
+                auto new_filename = m_Filename.replace_extension(".hmddsc");
+                DEBUG_LOG("looking for " << new_filename.string());
+
+                FileLoader::Get()->ReadFile(new_filename, [this](bool success, std::vector<uint8_t> data) {
+                    if (success) {
+                        std::vector<uint8_t> buffer;
+                        FileLoader::Get()->ReadCompressedTexture(data, std::numeric_limits<uint64_t>::max(), &buffer);
+
+                        LoadFromBuffer(buffer);
+                    }
+                    else {
+                        DEBUG_LOG("[ERROR 2] can't find HMDDSC texture " << m_Filename.string() << " :(:(");
+                    }
+                });
+            }
         }
-
-        std::vector<uint8_t> input_buffer = { std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>() };
-
-        // is the texture compressed?
-        if (m_Filename.extension() == ".ddsc") {
-            FileLoader::Get()->ReadCompressedTexture(input_buffer, std::numeric_limits<uint64_t>::max(), &buffer);
-        }
-        else {
-            buffer = std::move(input_buffer);
-        }
-    }
-
-
-    LoadFromBuffer(buffer);
+    });
 }
 
 Texture::~Texture()
@@ -62,7 +53,7 @@ Texture::~Texture()
 
 bool Texture::LoadFromBuffer(const std::vector<uint8_t>& buffer)
 {
-    if (buffer.size() == 0) {
+    if (buffer.empty()) {
         return false;
     }
 

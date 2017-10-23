@@ -166,8 +166,11 @@ void UI::RenderFileTreeView()
             if (ImGui::Button("Go Back")) {
                 g_ShowAllArchiveContents = false;
 
-                // TODO: something better here...
+                // TODO: make this a generic function
+                // we need to also unload any loaded RBM's if we're viewing single models
+                // which are not created through an archive.
                 delete g_CurrentLoadedArchive;
+                TextureManager::Get()->Flush();
             }
 
             ImGui::Separator();

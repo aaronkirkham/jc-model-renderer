@@ -10,8 +10,7 @@
 
 #include <functional>
 
-using DictionaryLookupCallback = std::function<void(bool, std::string, uint32_t, std::string)>;
-using ReadFromArchiveCallback = std::function<void(bool, std::vector<uint8_t>)>;
+using ReadFileCallback = std::function<void(bool, std::vector<uint8_t>)>;
 
 class FileLoader : public Singleton<FileLoader>
 {
@@ -27,9 +26,11 @@ public:
     FileLoader();
     virtual ~FileLoader() = default;
 
+    void ReadFile(const fs::path& filename, ReadFileCallback callback);
+
     // archives
     void ReadArchiveTable(const std::string& filename, JustCause3::ArchiveTable::VfsArchive* output);
-    void ReadFileFromArchive(const std::string& archive, uint32_t namehash, ReadFromArchiveCallback callback);
+    void ReadFileFromArchive(const std::string& archive, uint32_t namehash, ReadFileCallback callback);
 
     // stream archive
     StreamArchive_t* ReadStreamArchive(const std::vector<uint8_t>& buffer);
@@ -45,7 +46,7 @@ public:
     // stream archive caching
     std::tuple<StreamArchive_t*, StreamArchiveEntry_t> GetStreamArchiveFromFile(const fs::path& file);
 
-    void LocateFileInDictionary(const std::string& filename, DictionaryLookupCallback callback);
+    std::tuple<std::string, uint32_t> LocateFileInDictionary(const fs::path& filename);
 
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
 };
