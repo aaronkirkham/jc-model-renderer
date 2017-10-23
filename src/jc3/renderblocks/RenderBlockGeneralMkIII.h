@@ -30,6 +30,7 @@ private:
     {
         float m_Scale = 1.0f;
         glm::vec2 m_UVExtent = { 0, 0 };
+        char pad[4];
     } m_Constants;
 
     JustCause3::RenderBlocks::GeneralMkIII m_Block;
