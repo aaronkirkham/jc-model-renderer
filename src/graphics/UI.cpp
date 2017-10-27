@@ -48,6 +48,28 @@ void UI::Render()
 
             ImGui::EndMenu();
         }
+
+        if (ImGui::BeginMenu("Archive", (g_CurrentLoadedArchive != nullptr)))
+        {
+            static bool show_all_archvie_contents = false;
+            if (ImGui::Checkbox("Show All Contents", &show_all_archvie_contents)) {
+                std::vector<std::string> only_include;
+                if (!show_all_archvie_contents) {
+                    only_include.emplace_back(".rbm");
+                }
+
+                g_CurrentLoadedArchive->GetDirectoryList()->Parse(g_CurrentLoadedArchive->GetStreamArchive(), only_include);
+            }
+
+            ImGui::MenuItem("Export To...");
+
+            if (ImGui::MenuItem("Close")) {
+                delete g_CurrentLoadedArchive;
+                TextureManager::Get()->Flush();
+            }
+
+            ImGui::EndMenu();
+        }
         
         ImGui::EndMainMenuBar();
     }
@@ -153,31 +175,7 @@ void UI::RenderFileTreeView()
             RenderDirectoryList(FileLoader::Get()->GetDirectoryList()->GetStructure());
         }
         else {
-            if (ImGui::Checkbox("Show All Archive Contents", &g_ShowAllArchiveContents)) {
-                std::vector<std::string> only_include;
-                if (!g_ShowAllArchiveContents) {
-                    only_include.emplace_back(".rbm");
-                }
-
-                g_CurrentLoadedArchive->GetDirectoryList()->Parse(g_CurrentLoadedArchive->GetStreamArchive(), only_include);
-            }
-
-            // unload the archive
-            if (ImGui::Button("Go Back")) {
-                g_ShowAllArchiveContents = false;
-
-                // TODO: make this a generic function
-                // we need to also unload any loaded RBM's if we're viewing single models
-                // which are not created through an archive.
-                delete g_CurrentLoadedArchive;
-                TextureManager::Get()->Flush();
-            }
-
-            ImGui::Separator();
-
-            if (g_CurrentLoadedArchive) {
-                RenderDirectoryList(g_CurrentLoadedArchive->GetDirectoryList()->GetStructure(), false);
-            }
+            RenderDirectoryList(g_CurrentLoadedArchive->GetDirectoryList()->GetStructure(), false);
         }
     }
     ImGui::End();
