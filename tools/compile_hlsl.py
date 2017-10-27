@@ -21,20 +21,9 @@ def CompileMultipleHLSLShadersToOneHeaderFile(fxc_compiler_path, source_hlsl_fil
 	if not '.vs' in base_filename and not '.ps' in base_filename and not '.gs' in base_filename:
 		return
 		
-	# is this the vertex shader?
-	if '.vs' in base_filename:
-		shader_model = 'vs_5_0'
-		output_name = 'vs_main'
-	
-	# is this the fragment shader?
-	if '.ps' in base_filename:
-		shader_model = 'ps_5_0'
-		output_name = 'ps_main'
-		
-	# is this the geometry shader?
-	if '.gs' in base_filename:
-		shader_model = 'gs_5_0'
-		output_name = 'gs_main'
+	file_type = base_filename[1:]
+	shader_model = '%s_5_0' % file_type
+	output_name = '%s_main' % file_type
 	
 	# setup the compiler options
 	command = [fxc_compiler_path,
