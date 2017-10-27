@@ -18,9 +18,6 @@ public:
     ShaderManager() = default;
     virtual ~ShaderManager() = default;
 
-    std::shared_ptr<VertexShader_t> GetVertexShader(const std::string& file);
     std::shared_ptr<VertexShader_t> GetVertexShader(const std::string& name, const void* buffer, uint64_t size);
-
-    std::shared_ptr<PixelShader_t> GetPixelShader(const std::string& file);
     std::shared_ptr<PixelShader_t> GetPixelShader(const std::string& name, const void* buffer, uint64_t size);
 };

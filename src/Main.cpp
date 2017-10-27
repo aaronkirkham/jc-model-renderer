@@ -13,7 +13,7 @@
 
 #include <shlobj.h>
 
-// normal: 32512.4961
+// normal: 56523.6641
 // colour: 262143.984
 
 extern fs::path g_JC3Directory = "";
@@ -84,6 +84,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
             th.detach();
         }
 
+#ifdef DEBUG
         Input::Get()->Events().KeyUp.connect([](uint32_t key) {
             if (key == VK_F1) {
                 // "editor/entities/jc_vehicles/01_land/v0012_car_autostraad_atv/v0012_car_autostraad_atv_civilian_01.ee"
@@ -98,7 +99,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     }
                 });
             }
+            else if (key == VK_F2) {
+                fs::path filename = "v1400_boat_mugello_spyspeedboat_civilian_01.ee";
+                FileLoader::Get()->ReadFile(filename, [filename](bool success, std::vector<uint8_t> data) {
+                    auto ee = new ExportedEntity(filename, data);
+
+#if 0
+                    auto [archive, entry] = FileLoader::Get()->GetStreamArchiveFromFile("spyspeedboat_interior_lod1.rbm");
+                    if (archive && entry.m_Offset != 0) {
+                        auto rbm_data = archive->ReadEntryFromArchive(entry);
+                        new RenderBlockModel(filename, rbm_data);
+                    }
+#endif
+                });
+            }
         });
+#endif
 
         UI::Get()->Events().FileTreeItemSelected.connect([](const std::string& filename) {
             DEBUG_LOG("look for " << filename);

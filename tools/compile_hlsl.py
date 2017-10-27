@@ -14,22 +14,34 @@ def CompileMultipleHLSLShadersToOneHeaderFile(fxc_compiler_path, source_hlsl_fil
 	
 	file_name_only = os.path.basename(source_hlsl_file)
 	base_filename, _ = os.path.splitext(file_name_only)
-	is_vertex_shader = True
+	shader_model = ''
+	output_name = ''
 	
 	# skip this file if we don't know the type
-	if not '.ps' in base_filename and not '.vs' in base_filename:
+	if not '.vs' in base_filename and not '.ps' in base_filename and not '.gs' in base_filename:
 		return
+		
+	# is this the vertex shader?
+	if '.vs' in base_filename:
+		shader_model = 'vs_5_0'
+		output_name = 'vs_main'
 	
 	# is this the fragment shader?
 	if '.ps' in base_filename:
-		is_vertex_shader = False
+		shader_model = 'ps_5_0'
+		output_name = 'ps_main'
+		
+	# is this the geometry shader?
+	if '.gs' in base_filename:
+		shader_model = 'gs_5_0'
+		output_name = 'gs_main'
 	
 	# setup the compiler options
 	command = [fxc_compiler_path,
 		source_hlsl_file,
 		'/E', 'main',
-		'/T', 'vs_5_0' if is_vertex_shader else 'ps_5_0',
-		'/Vn', 'vs_main' if is_vertex_shader else 'ps_main',
+		'/T',  shader_model,
+		'/Vn', output_name,
 		'/Fh', output_file,
 		'/O3'
 	]

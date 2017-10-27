@@ -7,10 +7,15 @@ float3 unpack_vec3(float value, bool is_colour)
 {
     float3 result = float3(0, 0, 0);
 
-    if (is_colour) {
+    if (!is_colour) {
         result.x = value;
         result.y = value / 256.0f;
         result.z = value / 65536.0f;
+    }
+    else {
+        result.x = value;
+        result.y = value / 64;
+        result.z = value / 4096;
     }
 
     result.x -= floor(result.x);

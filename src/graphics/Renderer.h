@@ -17,9 +17,10 @@ struct RenderEvents
 
 struct LightConstants
 {
+    glm::vec3 position;
+    glm::vec3 direction;
     glm::vec4 diffuseColour;
-    glm::vec3 lightDirection;
-    float padding;
+    char padding[8];
 };
 
 class Renderer : public Singleton<Renderer>

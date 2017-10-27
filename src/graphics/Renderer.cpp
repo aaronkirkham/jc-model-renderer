@@ -118,7 +118,7 @@ bool Renderer::Render()
 
     // begin scene
     {
-        static const float colour[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+        static const float colour[4] = { 0.15f, 0.15f, 0.15f, 1.0f };
 
         m_DeviceContext->ClearRenderTargetView(m_RenderTargetView, colour);
         m_DeviceContext->ClearDepthStencilView(m_DepthStencilView, (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL), 1.0f, 0);
@@ -127,9 +127,12 @@ bool Renderer::Render()
     // lighting
     {
         LightConstants constants;
+        constants.position = Camera::Get()->GetPosition();//glm::vec3(0, 1, 0);
+        constants.direction = glm::vec3();
         constants.diffuseColour = glm::vec4(1, 1, 1, 1);
-        constants.lightDirection = glm::vec3(0, 0, 1);
-        constants.padding = 0.0f;
+        //constants.lightDirection = glm::vec3(0.25f, -2.5f, -1.0f);
+        //constants.lightDirection = glm::vec3(0, 0, -1.0f);
+        //constants.padding = 0.0f;
 
         SetPixelShaderConstants(m_LightBuffers, 0, constants);
     }
