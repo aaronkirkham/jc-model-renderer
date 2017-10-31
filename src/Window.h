@@ -42,6 +42,8 @@ public:
     bool Frame();
     void Run();
 
+    int32_t ShowMessageBox(const std::string& message, uint32_t type = MB_ICONERROR | MB_OK);
+
     glm::vec2 GetSize() const;
     glm::vec2 GetPosition() const;
     glm::vec2 GetCenterPoint() const;

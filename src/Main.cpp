@@ -58,30 +58,29 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
     if (Window::Get()->Initialise(hInstance)) {
         // do we need to select the install directory manually?
         if (g_JC3Directory.empty() || !fs::exists(g_JC3Directory)) {
-            std::thread th([] {
-                TCHAR szDir[MAX_PATH];
+            TCHAR szDir[MAX_PATH];
 
-                BROWSEINFO bi;
-                ZeroMemory(&bi, sizeof(bi));
+            BROWSEINFO bi;
+            ZeroMemory(&bi, sizeof(bi));
 
-                bi.hwndOwner = Window::Get()->GetHwnd();
-                bi.pidlRoot = nullptr;
-                bi.pszDisplayName = szDir;
-                bi.lpszTitle = "Please select your Just Cause 3 folder.";
-                bi.ulFlags = BIF_RETURNONLYFSDIRS;
-                bi.lpfn = nullptr;
+            bi.hwndOwner = Window::Get()->GetHwnd();
+            bi.pidlRoot = nullptr;
+            bi.pszDisplayName = szDir;
+            bi.lpszTitle = "Please select your Just Cause 3 folder.";
+            bi.ulFlags = BIF_RETURNONLYFSDIRS;
+            bi.lpfn = nullptr;
 
-                LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
-                if (pidl) {
-                    SHGetPathFromIDList(pidl, szDir);
-                    g_JC3Directory = szDir;
+            LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
+            if (pidl) {
+                SHGetPathFromIDList(pidl, szDir);
+                g_JC3Directory = szDir;
 
-                    DEBUG_LOG("selected: " << g_JC3Directory);
-                    Settings::Get()->SetValue("jc3_directory", g_JC3Directory.string());
-                }
-            });
-
-            th.detach();
+                DEBUG_LOG("selected: " << g_JC3Directory);
+                Settings::Get()->SetValue("jc3_directory", g_JC3Directory.string());
+            }
+            else {
+                Window::Get()->ShowMessageBox("Unable to find Just Cause 3 root directory.\n\nSome features will be disabled.");
+            }
         }
 
 #ifdef DEBUG

@@ -23,15 +23,26 @@ FileLoader::FileLoader()
     m_FileList = std::make_unique<DirectoryList>();
 
     std::thread load([this] {
-        std::ifstream file(fs::current_path() / "dictionary.json");
-        if (file.fail()) {
-            throw std::runtime_error("FileLoader - Failed to read file list dictionary");
+        fs::path dictionary = fs::current_path() / "dictionary.json";
+
+        try {
+            if (!fs::exists(dictionary)) {
+                throw std::runtime_error("FileLoader - Failed to read file list dictionary");
+            }
+
+            std::ifstream file(dictionary);
+            if (file.fail()) {
+                throw std::runtime_error("FileLoader - Failed to read file list dictionary");
+            }
+
+            m_FileListDictionary = json::parse(file);
+            file.close();
+
+            m_FileList->Parse(&m_FileListDictionary, { ".rbm", ".ee", ".bl", ".nl" });
         }
-
-        m_FileListDictionary = json::parse(file);
-        file.close();
-
-        m_FileList->Parse(&m_FileListDictionary, { ".rbm", ".ee", ".bl", ".nl" });
+        catch (...) {
+            Window::Get()->ShowMessageBox("Failed to read/parse file list dictionary.\n\nSome features will be disabled.");
+        }
     });
 
     load.detach();

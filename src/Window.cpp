@@ -133,6 +133,11 @@ void Window::Run()
     Shutdown();
 }
 
+int32_t Window::ShowMessageBox(const std::string& message, uint32_t type)
+{
+    return MessageBox(m_Hwnd, message.c_str(), g_WindowName, type);
+}
+
 glm::vec2 Window::GetSize() const
 {
     RECT rect{};
