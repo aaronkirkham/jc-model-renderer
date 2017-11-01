@@ -126,7 +126,7 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
     });
 
     // read the model header
-    JustCause3::RBM header;
+    JustCause3::RBMHeader header;
     stream.read((char *)&header, sizeof(header));
 
     // ensure the header magic is correct

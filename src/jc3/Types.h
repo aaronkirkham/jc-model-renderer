@@ -288,7 +288,7 @@ namespace JustCause3
         std::vector<uint8_t> m_BlockData;
     };
 
-    struct RBM
+    struct RBMHeader
     {
         uint32_t m_MagicLength;
         uint8_t m_Magic[5];
