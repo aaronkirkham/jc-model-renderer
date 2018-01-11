@@ -5,7 +5,7 @@
 
 #include <sstream>
 
-extern LRESULT ImGui_ImplDX11_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
 {
     static bool m_IsResizing = false;
@@ -20,8 +20,7 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPA
         }
     }
 
-    if (ImGui_ImplDX11_WndProcHandler(hwnd, message, wParam, lParam))
-    {
+    if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam)) {
         return 1;
     }
 
