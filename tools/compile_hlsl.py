@@ -23,8 +23,6 @@ def CompileMultipleHLSLShadersToOneHeaderFile(fxc_compiler_path, source_hlsl_fil
 	
 	# skip this file if we don't know the type
 	if not file_type == 'vs' and not file_type == 'ps' and not file_type == 'gs':
-		print 'Unknown shader type passed to compiler.'
-		print the_extension
 		return
 		
 	shader_model = '%s_5_0' % file_type
