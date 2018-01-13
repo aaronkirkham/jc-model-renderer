@@ -5,27 +5,21 @@
 #include <graphics/Renderer.h>
 #include <graphics/Camera.h>
 #include <graphics/DebugRenderer.h>
-#include <jc3/formats/ExportedEntity.h>
+#include <jc3/formats/AvalancheArchive.h>
 #include <fonts/fontawesome_icons.h>
+#include <Input.h>
+#include <imgui.h>
 
 static std::vector<RenderBlockModel*> g_Models;
 static std::recursive_mutex g_ModelsMutex;
 extern bool g_DrawBoundingBoxes;
 extern bool g_DrawDebugInfo;
-extern ExportedEntity* g_CurrentLoadedArchive;
+extern AvalancheArchive* g_CurrentLoadedArchive;
 
-static auto color = glm::vec4{ 1, 1, 1, 1 };
+static auto g_RenderBlockColour = glm::vec4{ 1, 1, 1, 1 };
 
-void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
+bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 {
-    std::lock_guard<std::recursive_mutex> _lk{ g_ModelsMutex };
-    g_Models.emplace_back(this);
-
-    // if we have a current loaded archive, link the current RBM to it so we can unload it after
-    if (g_CurrentLoadedArchive) {
-        g_CurrentLoadedArchive->LinkRenderBlockModel(this);
-    }
-
     static std::once_flag once_;
     static IRenderBlock* renderBlockViewTextures_ = nullptr;
     std::call_once(once_, [&] {
@@ -67,6 +61,9 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 
                         for (auto& block : model->GetRenderBlocks()) {
                             ImGui::Text("\t%d: %s", block_index, block->GetTypeName());
+
+                            const auto is_hovered = ImGui::IsItemHovered();
+                            model->SetRenderBlockColour(block, is_hovered ? glm::vec4{ 1, 0, 0, 0.3 } : g_RenderBlockColour);
 
                             if (!block->GetTextures().empty()) {
                                 ImGui::SameLine();
@@ -125,13 +122,19 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
         });
     });
 
+    bool parse_success = true;
+
     // read the model header
     JustCause3::RBMHeader header;
     stream.read((char *)&header, sizeof(header));
 
     // ensure the header magic is correct
     if (strncmp((char *)&header.m_Magic, "RBMDL", 5) != 0) {
-        throw std::runtime_error("Invalid file header. Input file probably isn't a RenderBlockModel file.");
+        m_ReadBlocksError = "Invalid file header. Input file probably isn't a RenderBlockModel file.";
+        DEBUG_LOG("[ERROR] " << m_ReadBlocksError);
+
+        parse_success = false;
+        goto end;
     }
 
     DEBUG_LOG("RenderBlockModel v" << header.m_VersionMajor << "." << header.m_VersionMinor << "." << header.m_VersionRevision);
@@ -159,21 +162,43 @@ void RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 
             // did we read the block correctly?
             if (checksum != 0x89ABCDEF) {
-                DEBUG_LOG("[ERROR] Failed to read render block.");
-                throw std::runtime_error("Failed to read render block.");
+                m_ReadBlocksError = "Failed to read Render Block.";
+                DEBUG_LOG("[ERROR] " << m_ReadBlocksError);
+
+                parse_success = false;
+                break;
             }
 
             m_RenderBlocks.emplace_back(renderBlock);
         }
         else {
-            // TODO: error message to the user!
-            DEBUG_LOG("[ERROR] Unknown Render Block hash " << hash << "!");
+            std::stringstream ss;
+            ss << "Unknown Render Block type ";
+            ss << "0x" << std::uppercase << std::setw(4) << std::hex << hash << ".";
+            m_ReadBlocksError = ss.str();
+
+            DEBUG_LOG("[ERROR] " << m_ReadBlocksError);
+
+            parse_success = false;
             break;
         }
     }
+
+end:
+    if (parse_success) {
+        std::lock_guard<std::recursive_mutex> _lk{ g_ModelsMutex };
+        g_Models.emplace_back(this);
+
+        // if we have a current loaded archive, link the current RBM to it so we can unload it after
+        if (g_CurrentLoadedArchive) {
+            g_CurrentLoadedArchive->LinkRenderBlockModel(this);
+        }
+    }
+
+    return parse_success;
 }
 
-RenderBlockModel::RenderBlockModel(const fs::path& file)
+/*RenderBlockModel::RenderBlockModel(const fs::path& file)
     : m_File(file)
 {
     // make sure this is an rbm file
@@ -191,18 +216,15 @@ RenderBlockModel::RenderBlockModel(const fs::path& file)
     MeshConstants constants;
     m_MeshConstants = Renderer::Get()->CreateConstantBuffer(constants);
 
-    ParseRenderBlockModel(stream);
-}
+    //ParseRenderBlockModel(stream);
+}*/
 
-RenderBlockModel::RenderBlockModel(const fs::path& filename, const std::vector<uint8_t>& buffer)
+RenderBlockModel::RenderBlockModel(const fs::path& filename)
     : m_File(filename)
 {
     // create the mesh constant buffer
     MeshConstants constants;
     m_MeshConstants = Renderer::Get()->CreateConstantBuffer(constants);
-
-    std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
-    ParseRenderBlockModel(stream);
 }
 
 RenderBlockModel::~RenderBlockModel()
@@ -219,6 +241,17 @@ RenderBlockModel::~RenderBlockModel()
     Renderer::Get()->DestroyBuffer(m_MeshConstants);
 }
 
+void RenderBlockModel::FileReadCallback(const fs::path& filename, const std::vector<uint8_t>& data)
+{
+    std::istringstream stream(std::string{ (char*)data.data(), data.size() });
+
+    auto rbm = new RenderBlockModel(filename);
+    if (!rbm->ParseRenderBlockModel(stream)) {
+        Window::Get()->ShowMessageBox(rbm->GetError());
+        delete rbm;
+    }
+}
+
 void RenderBlockModel::Draw(RenderContext_t* context)
 {
     //m_Rotation.z += 0.015f;
@@ -232,33 +265,58 @@ void RenderBlockModel::Draw(RenderContext_t* context)
         m_WorldMatrix = glm::rotate(m_WorldMatrix, m_Rotation.z, glm::vec3{ 0.0f, 1.0f, 0.0f });
     }
 
-    // update mesh matrix
-    {
-        auto worldView = m_WorldMatrix * Camera::Get()->GetViewMatrix();
-
-        MeshConstants constants;
-        constants.worldMatrix = m_WorldMatrix;
-        constants.worldViewInverseTranspose = glm::transpose(glm::inverse(worldView));
-        //constants.colour = glm::vec4{ 1, 1, 1, 1 };
-        constants.colour = color;
-
-        Renderer::Get()->SetVertexShaderConstants(m_MeshConstants, 1, constants);
-        Renderer::Get()->SetPixelShaderConstants(m_MeshConstants, 1, constants);
-    }
+    // update mesh constants
+    MeshConstants constants;
+    constants.worldMatrix = m_WorldMatrix;
+    constants.worldViewInverseTranspose = glm::transpose(glm::inverse(m_WorldMatrix * Camera::Get()->GetViewMatrix()));
 
     // draw all render blocks
     for (auto& renderBlock : m_RenderBlocks) {
         Renderer::Get()->SetDefaultRenderStates();
 
+        constants.colour = GetRenderBlockColour(renderBlock);
+
+        Renderer::Get()->SetVertexShaderConstants(m_MeshConstants, 1, constants);
+        Renderer::Get()->SetPixelShaderConstants(m_MeshConstants, 1, constants);
+
         renderBlock->Setup(context);
         renderBlock->Draw(context);
     }
+
+    // draw filename
+    static auto white = glm::vec4{ 1, 1, 1, 0.6 };
+    DebugRenderer::Get()->DrawText(GetFileName(), m_Position, white, true);
 
     // draw bounding boxes
     if (g_DrawBoundingBoxes) {
         auto _min = m_BoundingBoxMin + m_Position;
         auto _max = m_BoundingBoxMax + m_Position;
 
-        DebugRenderer::Get()->DrawBBox(_min, _max, { 1, 0, 0, 1 });
+        static auto red = glm::vec4{ 1, 0, 0, 1 };
+        static auto green = glm::vec4{ 0, 1, 0, 1 };
+
+        bool is_hover = false;
+        DebugRenderer::Get()->DrawBBox(_min, _max, is_hover ? green : red);
     }
+}
+
+void RenderBlockModel::SetRenderBlockColour(IRenderBlock* block, const glm::vec4& colour)
+{
+    auto it = m_RenderBlockColours.find(block);
+    if (it != std::end(m_RenderBlockColours)) {
+        (*it).second = colour;
+        return;
+    }
+
+    m_RenderBlockColours[block] = colour;
+}
+
+const glm::vec4& RenderBlockModel::GetRenderBlockColour(IRenderBlock* block) const
+{
+    auto it = m_RenderBlockColours.find(block);
+    if (it == std::end(m_RenderBlockColours)) {
+        return g_RenderBlockColour;
+    }
+
+    return (*it).second;
 }

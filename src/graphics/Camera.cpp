@@ -3,16 +3,17 @@
 #include <Window.h>
 #include <Input.h>
 
-constexpr float g_MouseSensitivity = 0.0025f;
-constexpr float g_MovementSensitivity = 0.05f;
-constexpr float g_MouseScrollSensitivity = 0.01f;
+static constexpr auto g_MouseSensitivity = 0.0025f;
+static constexpr auto g_MovementSensitivity = 0.05f;
+static constexpr auto g_MouseScrollSensitivity = 0.01f;
 
 Camera::Camera()
 {
-    auto window = Window::Get();
-    auto windowSize = window->GetSize();
+    const auto window = Window::Get();
+    const auto window_size = window->GetSize();
 
-    m_Projection = glm::perspectiveFovLH(glm::radians(m_FOV), windowSize.x, windowSize.y, m_NearClip, m_FarClip);
+    m_Projection = glm::perspectiveFovLH(glm::radians(m_FOV), window_size.x, window_size.y, m_NearClip, m_FarClip);
+    m_Viewport = glm::vec4{ 0, 0, window_size.x, window_size.y };
 
     // create the frame constant buffers
     FrameConstants constants;
@@ -25,6 +26,7 @@ Camera::Camera()
     window->Events().WindowResized.connect([&](const glm::vec2& size) {
         if (size.x != 0 && size.y != 0) {
             m_Projection = glm::perspectiveFovLH(glm::radians(m_FOV), size.x, size.y, m_NearClip, m_FarClip);
+            m_Viewport = glm::vec4{ 0, 0, size.x, size.y };
         }
     });
 
@@ -100,24 +102,36 @@ void Camera::Update()
     }
 }
 
+void Camera::ResetToDefault()
+{
+    m_Position = glm::vec3(0, 3, -10);
+    m_Rotation = glm::vec3(0, 0, 0);
+}
+
 bool Camera::WorldToScreen(const glm::vec3& world, glm::vec3* screen)
 {
-    auto viewProjection = (m_Projection * m_View);
-    float z = viewProjection[0][3] * world.x + viewProjection[1][3] * world.y + viewProjection[2][3] * world.z + viewProjection[3][3];
+    const auto view_projection = (m_Projection * m_View);
+    float z = view_projection[0][3] * world.x + view_projection[1][3] * world.y + view_projection[2][3] * world.z + view_projection[3][3];
 
     if (z < 0.1f) {
         *screen = glm::vec3{ 0, 0, z };
         return false;
     }
 
-    float x = viewProjection[0][0] * world.x + viewProjection[1][0] * world.y + viewProjection[2][0] * world.z + viewProjection[3][0];
-    float y = viewProjection[0][1] * world.x + viewProjection[1][1] * world.y + viewProjection[2][1] * world.z + viewProjection[3][1];
+    float x = view_projection[0][0] * world.x + view_projection[1][0] * world.y + view_projection[2][0] * world.z + view_projection[3][0];
+    float y = view_projection[0][1] * world.x + view_projection[1][1] * world.y + view_projection[2][1] * world.z + view_projection[3][1];
 
-    auto size = Window::Get()->GetSize();
+    const auto window_size = Window::Get()->GetSize();
 
-    float halfWidth = (size.x * 0.5f);
-    float halfHeight = (size.y * 0.5f);
+    float halfWidth = (window_size.x * 0.5f);
+    float halfHeight = (window_size.y * 0.5f);
 
     *screen = glm::vec3{ (halfWidth + halfWidth * x / z), (halfHeight - halfHeight * y / z), z };
     return true;
+}
+
+bool Camera::ScreenToWorld(const glm::vec3& screen, glm::vec3* world)
+{
+    *world = glm::unProject(screen, m_View, m_Projection, m_Viewport);
+    return false;
 }

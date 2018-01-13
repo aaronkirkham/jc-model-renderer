@@ -5,7 +5,7 @@
 
 struct UIEvents
 {
-    ksignals::Event<void(const std::string& filename)> FileTreeItemSelected;
+    ksignals::Event<void(const fs::path& filename)> FileTreeItemSelected;
 };
 
 class UI : public Singleton<UI>

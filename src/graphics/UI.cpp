@@ -4,14 +4,15 @@
 #include <jc3/FileLoader.h>
 #include <fonts/fontawesome_icons.h>
 #include <graphics/imgui/imgui_rotate.h>
+#include <graphics/Camera.h>
 
 #include <imgui.h>
 #include <json.hpp>
-#include <jc3/formats/ExportedEntity.h>
+#include <jc3/formats/AvalancheArchive.h>
 
 extern bool g_DrawBoundingBoxes;
 extern bool g_DrawDebugInfo;
-extern ExportedEntity* g_CurrentLoadedArchive;
+extern AvalancheArchive* g_CurrentLoadedArchive;
 static bool g_ShowAllArchiveContents = false;
 
 void UI::Render()
@@ -44,6 +45,15 @@ void UI::Render()
 
             if (ImGui::Checkbox("Debug Info", &g_DrawDebugInfo)) {
                 Settings::Get()->SetValue("draw_debug_info", g_DrawDebugInfo);
+            }
+
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Camera"))
+        {
+            if (ImGui::MenuItem("Reset")) {
+                Camera::Get()->ResetToDefault();
             }
 
             ImGui::EndMenu();

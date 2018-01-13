@@ -1,3 +1,10 @@
+cbuffer MeshConstant : register(b1)
+{
+    float4x4 worldMatrix;
+    float4x4 worldViewInverseTranspose;
+    float4 colour;
+}
+
 struct PixelIn
 {
     float4 position : SV_POSITION;
@@ -11,5 +18,5 @@ SamplerState Sampler : register(s0);
 
 float4 main(PixelIn input) : SV_TARGET
 {
-    return Diffuse.Sample(Sampler, input.tex);
+    return Diffuse.Sample(Sampler, input.tex) * colour;
 }

@@ -1,8 +1,11 @@
 #include <Input.h>
 #include <Window.h>
 #include <graphics/Renderer.h>
+#include <graphics/Camera.h>
 
 #include <windowsx.h>
+
+#include <graphics/DebugRenderer.h>
 
 Input::~Input()
 {
@@ -10,10 +13,20 @@ Input::~Input()
 
 void Input::Initialise()
 {
+#ifdef DEBUG
+    Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
+        glm::vec3 window_center = glm::vec3(Window::Get()->GetCenterPoint(), 1);
+        glm::vec3 window_center_world;
+        Camera::Get()->ScreenToWorld(window_center, &window_center_world);
+
+        DebugRenderer::Get()->DrawLine(window_center_world, m_MouseWorldPosition, { 1, 0, 0, 1 });
+    });
+#endif
 }
 
 bool Input::HandleMessage(MSG* event)
 {
+    const auto window_size = Window::Get()->GetSize();
     auto& imgIO = ImGui::GetIO();
 
     // don't capture mouse input if imgui wants it
@@ -31,7 +44,7 @@ bool Input::HandleMessage(MSG* event)
         return false;
     }
 
-    auto key = static_cast<uint32_t>(event->wParam);
+    const auto key = static_cast<uint32_t>(event->wParam);
 
     if (event->message == WM_KEYDOWN)
     {
@@ -65,6 +78,7 @@ bool Input::HandleMessage(MSG* event)
         }
 
         m_LastClickPosition = position;
+        Camera::Get()->ScreenToWorld({ position.x, window_size.y - position.y, 1 }, &m_LastClickWorldPosition);
     }
     else if (event->message == WM_MOUSEMOVE)
     {
@@ -72,6 +86,7 @@ bool Input::HandleMessage(MSG* event)
         m_InputEvents.MouseMove((m_MousePosition - position));
 
         m_MousePosition = position;
+        Camera::Get()->ScreenToWorld({ position.x, window_size.y - position.y, 1 }, &m_MouseWorldPosition);
     }
     else if (event->message == WM_MOUSEWHEEL)
     {

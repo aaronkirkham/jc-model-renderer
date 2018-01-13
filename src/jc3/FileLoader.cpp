@@ -3,19 +3,20 @@
 #include <graphics/DDSTextureLoader.h>
 #include <graphics/TextureManager.h>
 #include <Window.h>
+#include <graphics/UI.h>
 
 #include <thread>
 #include <istream>
 
 #include <jc3/formats/RenderBlockModel.h>
-#include <jc3/formats/ExportedEntity.h>
+#include <jc3/formats/AvalancheArchive.h>
 
 #include <zlib.h>
 
 // Credits to gibbed for most of the archive format stuff
 // http://gib.me
 
-extern ExportedEntity* g_CurrentLoadedArchive;
+extern AvalancheArchive* g_CurrentLoadedArchive;
 extern fs::path g_JC3Directory;
 
 FileLoader::FileLoader()
@@ -46,6 +47,24 @@ FileLoader::FileLoader()
     });
 
     load.detach();
+
+    // trigger the file type callbacks
+    UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& filename) {
+        ReadFile(filename, [&, filename](bool success, std::vector<uint8_t> data) {
+            if (success) {
+                for (const auto& fn : m_FileTypeCallbacks[filename.extension().string()]) {
+                    fn(filename, data);
+                }
+            }
+            else {
+                std::stringstream error;
+                error << "Can't find " << filename << ".";
+                Window::Get()->ShowMessageBox(error.str());
+
+                DEBUG_LOG("[ERROR] " << error.str());
+            }
+        });
+    });
 }
 
 void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback)
@@ -55,7 +74,7 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback)
         if (g_CurrentLoadedArchive) {
             auto [archive, entry] = GetStreamArchiveFromFile(filename);
             if (archive && entry.m_Offset != 0) {
-                auto data = archive->ReadEntryFromArchive(entry);
+                auto data = archive->GetEntryFromArchive(entry);
                 return callback(true, data);
             }
         }
@@ -517,5 +536,17 @@ void FileLoader::ParseCompressedTexture(std::istream& stream, uint64_t size, std
         memcpy(&output->front() + sizeof(uint32_t) + sizeof(header), block, size);
 
         delete[] block;
+    }
+}
+
+void FileLoader::RegisterCallback(const std::string& filetype, FileTypeCallback fn)
+{
+    m_FileTypeCallbacks[filetype].emplace_back(fn);
+}
+
+void FileLoader::RegisterCallback(const std::vector<std::string>& filetypes, FileTypeCallback fn)
+{
+    for (const auto& filetype : filetypes) {
+        m_FileTypeCallbacks[filetype].emplace_back(fn);
     }
 }

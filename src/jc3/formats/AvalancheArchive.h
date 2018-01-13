@@ -5,7 +5,7 @@
 #include <jc3/formats/StreamArchive.h>
 
 class RenderBlockModel;
-class ExportedEntity
+class AvalancheArchive
 {
 private:
     fs::path m_File = "";
@@ -17,9 +17,11 @@ private:
     void Initialise();
 
 public:
-    ExportedEntity(const fs::path& file);
-    ExportedEntity(const fs::path& filename, const std::vector<uint8_t>& buffer);
-    virtual ~ExportedEntity();
+    AvalancheArchive(const fs::path& file);
+    AvalancheArchive(const fs::path& filename, const std::vector<uint8_t>& buffer);
+    virtual ~AvalancheArchive();
+
+    static void FileReadCallback(const fs::path& filename, const std::vector<uint8_t>& data);
 
     void LinkRenderBlockModel(RenderBlockModel* rbm);
 

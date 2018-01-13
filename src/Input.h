@@ -19,7 +19,9 @@ private:
     InputEvents m_InputEvents;
     std::array<bool, 255> m_KeyboardState = { false };
     glm::vec2 m_MousePosition;
+    glm::vec3 m_MouseWorldPosition;
     glm::vec2 m_LastClickPosition;
+    glm::vec3 m_LastClickWorldPosition;
     bool m_IsMouseDown = false;
 
 public:
@@ -35,5 +37,7 @@ public:
     bool IsKeyPressed(uint8_t key) { return m_KeyboardState[key]; }
 
     const glm::vec2& GetMousePosition() { return m_MousePosition; }
+    const glm::vec3& GetMouseWorldPosition() { return m_MouseWorldPosition; }
     const glm::vec2& GetLastClickPosition() { return m_LastClickPosition; }
+    const glm::vec3& GetLastClickWorldPosition() { return m_LastClickWorldPosition; }
 };

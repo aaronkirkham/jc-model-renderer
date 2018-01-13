@@ -3,77 +3,78 @@
 #include <graphics/ShaderManager.h>
 #include <jc3/Types.h>
 
-struct Vertex3D
+#include <graphics/Camera.h>
+#include <Window.h>
+#include <Input.h>
+
+static ImVec2 worldToPos(const glm::vec3& worldPos)
 {
-    glm::vec3 pos;
-    glm::vec4 colour;
-};
+    glm::vec3 screen;
+    Camera::Get()->WorldToScreen(worldPos, &screen);
 
-DebugRenderer::DebugRenderer()
-{
-    m_VertexBuffer = Renderer::Get()->CreateVertexBuffer(30, sizeof(Vertex3D));
-    m_VertexShader = GET_VERTEX_SHADER(debug_renderer);
-    m_PixelShader = GET_PIXEL_SHADER(debug_renderer);
-
-    // TODO: compress colour
-    D3D11_INPUT_ELEMENT_DESC layout[] = {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
-    };
-
-    m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(layout, 2, m_VertexShader.get());
+    return ImVec2{ screen.x, screen.y };
 }
 
-DebugRenderer::~DebugRenderer()
+void DebugRenderer::Begin(RenderContext_t* context)
 {
-    Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
-    Renderer::Get()->DestroyBuffer(m_VertexBuffer);
-}
+    ImGuiIO& io = ImGui::GetIO();
 
-void DebugRenderer::Render(RenderContext_t* context)
-{
+    const ImU32 flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus;
+    ImGui::SetNextWindowSize(io.DisplaySize);
+
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
+    ImGui::Begin("Debug Renderer", NULL, flags);
+
+    m_DrawList = ImGui::GetWindowDrawList();
+
+    ImGui::End();
+    ImGui::PopStyleColor();
 }
 
 void DebugRenderer::DrawLine(const glm::vec3& from, const glm::vec3& to, const glm::vec4& colour)
 {
-    auto context = Renderer::Get()->GetDeviceContext();
-
-    Vertex3D vertices[] = {
-        { from, colour },
-        { to, colour },
-    };
-
-    Renderer::Get()->MapBuffer(m_VertexBuffer->m_Buffer, vertices);
-
-    context->IASetInputLayout(m_VertexDeclaration->m_Layout);
-    context->VSSetShader(m_VertexShader->m_Shader, nullptr, 0);
-    context->PSSetShader(m_PixelShader->m_Shader, nullptr, 0);
-
-    uint32_t offset = 0;
-    context->IASetVertexBuffers(0, 1, &m_VertexBuffer->m_Buffer, &m_VertexBuffer->m_ElementStride, &offset);
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP);
-
-    context->Draw(2, 0);
+    m_DrawList->AddLine(worldToPos(from), worldToPos(to), ImColor(colour.x, colour.y, colour.z, colour.a));
 }
 
 void DebugRenderer::DrawBBox(const glm::vec3& min, const glm::vec3& max, const glm::vec4& colour)
 {
     glm::vec3 bb[2] = { min, max };
-    glm::vec3 points[8];
+    ImVec2 points[8];
 
     // calculate all the points
     for (int i = 0; i < 8; i++)
     {
-        points[i].x = bb[(i ^ (i >> 1)) & 1].x;
-        points[i].y = bb[(i >> 1) & 1].y;
-        points[i].z = bb[(i >> 2) & 1].z;
+        points[i] = worldToPos({ bb[(i ^ (i >> 1)) & 1].x, bb[(i >> 1) & 1].y, bb[(i >> 2) & 1].z });
     }
+
+    const auto im_color = ImColor(colour.x, colour.y, colour.z, colour.a);
 
     // draw the lines
     for (int i = 0; i < 4; ++i)
     {
-        DrawLine(points[i], points[(i + 1) & 3], colour);
-        DrawLine(points[4 + i], points[4 + ((i + 1) & 3)], colour);
-        DrawLine(points[i], points[4 + i], colour);
+        m_DrawList->AddLine(points[i], points[(i + 1) & 3], im_color);
+        m_DrawList->AddLine(points[4 + i], points[4 + ((i + 1) & 3)], im_color);
+        m_DrawList->AddLine(points[i], points[4 + i], im_color);
     }
+}
+
+void DebugRenderer::DrawText(const std::string& text, const glm::vec3& position, const glm::vec4& colour, bool center)
+{
+    if (center) {
+        const auto text_size = ImGui::CalcTextSize(text.c_str());
+
+        auto screen_pos = worldToPos(position);
+        screen_pos.x -= (text_size.x / 2);
+        screen_pos.y -= (text_size.y / 2);
+
+        m_DrawList->AddText(screen_pos, ImColor(colour.x, colour.y, colour.z, colour.a), text.c_str());
+    }
+    else {
+        m_DrawList->AddText(worldToPos(position), ImColor(colour.x, colour.y, colour.z, colour.a), text.c_str());
+    }
+}
+
+void DebugRenderer::DrawText(const std::stringstream& text, const glm::vec3& position, const glm::vec4& colour, bool center)
+{
+    DrawText(text.str(), position, colour, center);
 }

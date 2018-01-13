@@ -4,30 +4,25 @@
 #include <singleton.h>
 #include <graphics/Types.h>
 
+struct ImDrawList;
 class DebugRenderer : public Singleton<DebugRenderer>
 {
 private:
-    VertexBuffer_t* m_VertexBuffer = nullptr;
-    VertexDeclaration_t* m_VertexDeclaration = nullptr;
-    std::shared_ptr<VertexShader_t> m_VertexShader = nullptr;
-    std::shared_ptr<PixelShader_t> m_PixelShader = nullptr;
+    ImDrawList* m_DrawList = nullptr;
 
 public:
-    DebugRenderer();
-    virtual ~DebugRenderer();
+    DebugRenderer() = default;
+    virtual ~DebugRenderer() = default;
 
-    void Render(RenderContext_t* context);
-
-#if 0
-    void DrawLine(const glm::vec2& from, const glm::vec2& to, const glm::vec4& colour);
-    void DrawLine(const glm::vec2& from, const glm::vec2& to, const glm::vec4& from_colour, const glm::vec4& to_colour);
-
-    void DrawRect(const glm::vec2& topleft, const glm::vec2& bottomright, const glm::vec4& colour);
-
-    void DrawFilledRect(const glm::vec2& topleft, const glm::vec2& bottomright, const glm::vec4& colour);
-#endif
+    void Begin(RenderContext_t* context);
 
     void DrawLine(const glm::vec3& from, const glm::vec3& to, const glm::vec4& colour);
-
     void DrawBBox(const glm::vec3& min, const glm::vec3& max, const glm::vec4& colour);
+
+#ifdef DrawText
+#undef DrawText
+#endif
+
+    void DrawText(const std::string& text, const glm::vec3& position, const glm::vec4& colour, bool center = false);
+    void DrawText(const std::stringstream& text, const glm::vec3& position, const glm::vec4& colour, bool center = false);
 };

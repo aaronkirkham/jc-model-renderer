@@ -25,19 +25,36 @@ struct VertexIn
 struct VertexOut
 {
     float4 position : SV_POSITION;
-    float2 tex : TEXCOORD0;
-    float2 tex2 : TEXCOORD1;
-    float2 tex3 : TEXCOORD2;
+    float2 uv0 : TEXCOORD0;
+    float2 uv1 : TEXCOORD1;
+    float2 uv2 : TEXCOORD2;
+    float3 normal : NORMAL0;
+    float3 tangent : TANGENT0;
+    float3 binormal : BINORMAL0;
+    float4 worldPosition : TEXCOORD3;
 };
 
 VertexOut main(VertexIn input)
 {
     VertexOut output;
-    output.position = mul(worldMatrix, float4(input.position, 1));
-    output.position = mul(viewProjection, output.position);
-    output.tex = input.uv0;
-    output.tex2 = input.uv1;
-    output.tex3 = input.uv2;
+
+    float4 worldPosition = mul(worldMatrix, float4(input.position, 1));
+
+    output.worldPosition = worldPosition;
+    output.position = mul(viewProjection, worldPosition);
+
+    output.uv0 = input.uv0;
+    output.uv1 = input.uv1;
+    output.uv2 = input.uv2;
+
+    float3 normal = unpack_vec3(input.normal, false);
+    output.normal = mul(normal, (float3x3)worldMatrix);
+
+    float3 tangent = unpack_vec3(input.tangent, false);
+    output.tangent = mul(tangent, (float3x3)worldMatrix);
+
+    float3 binormal = cross(normal, tangent);
+    output.binormal = mul(binormal, (float3x3)worldMatrix);
 
     return output;
 }

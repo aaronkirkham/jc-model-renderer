@@ -137,15 +137,15 @@ bool Renderer::Render()
         SetPixelShaderConstants(m_LightBuffers, 0, constants);
     }
 
+    // Begin the 2d renderer
+    DebugRenderer::Get()->Begin(&m_RenderContext);
+
     // update the camera
     Camera::Get()->Update();
 
     m_RenderEvents.RenderFrame(&m_RenderContext);
 
     SetDepthEnabled(false);
-
-    // Render 2D
-    DebugRenderer::Get()->Render(&m_RenderContext);
 
     // Render UI
     UI::Get()->Render();
@@ -332,9 +332,8 @@ void Renderer::CreateBlendState()
     D3D11_BLEND_DESC blendDesc;
     ZeroMemory(&blendDesc, sizeof(blendDesc));
 
-    D3D11_RENDER_TARGET_BLEND_DESC renderTargetBlendDesc;
+    /*D3D11_RENDER_TARGET_BLEND_DESC renderTargetBlendDesc;
     ZeroMemory(&renderTargetBlendDesc, sizeof(renderTargetBlendDesc));
-
     renderTargetBlendDesc.BlendEnable = true;
     renderTargetBlendDesc.SrcBlend = D3D11_BLEND_SRC_COLOR;
     renderTargetBlendDesc.DestBlend = D3D11_BLEND_BLEND_FACTOR;
@@ -342,11 +341,19 @@ void Renderer::CreateBlendState()
     renderTargetBlendDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
     renderTargetBlendDesc.DestBlendAlpha = D3D11_BLEND_ZERO;
     renderTargetBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_ADD;
-    renderTargetBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    renderTargetBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;*/
 
     blendDesc.AlphaToCoverageEnable = false;
-    blendDesc.RenderTarget[0] = renderTargetBlendDesc;
+    blendDesc.RenderTarget[0].BlendEnable = TRUE;
+    blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+    blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 
+    
     auto result = m_Device->CreateBlendState(&blendDesc, &m_BlendState);
     assert(SUCCEEDED(result));
 }

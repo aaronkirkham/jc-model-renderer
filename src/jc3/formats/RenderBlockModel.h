@@ -4,12 +4,14 @@
 #include <jc3/renderblocks/IRenderBlock.h>
 
 #include <mutex>
+#include <unordered_map>
 
 class RenderBlockModel
 {
 private:
     std::vector<IRenderBlock*> m_RenderBlocks;
     fs::path m_File = "";
+    std::string m_ReadBlocksError = "";
 
     glm::vec3 m_Position = { 0, 0, 0 };
     glm::vec3 m_Rotation = { 0, 0, 0 };
@@ -19,9 +21,9 @@ private:
     glm::vec3 m_BoundingBoxMin;
     glm::vec3 m_BoundingBoxMax;
 
-    ConstantBuffer_t* m_MeshConstants = nullptr;
+    std::unordered_map<IRenderBlock*, glm::vec4> m_RenderBlockColours;
 
-    void ParseRenderBlockModel(std::istream& stream);
+    ConstantBuffer_t* m_MeshConstants = nullptr;
 
 public:
     struct MeshConstants
@@ -31,16 +33,20 @@ public:
         glm::vec4 colour;
     };
 
-    RenderBlockModel(const fs::path& file);
-    RenderBlockModel(const fs::path& filename, const std::vector<uint8_t>& buffer);
+    //RenderBlockModel(const fs::path& file);
+    RenderBlockModel(const fs::path& filename);
     virtual ~RenderBlockModel();
+
+    static void FileReadCallback(const fs::path& filename, const std::vector<uint8_t>& data);
+
+    bool ParseRenderBlockModel(std::istream& stream);
 
     void Draw(RenderContext_t* context);
 
     const std::vector<IRenderBlock*>& GetRenderBlocks() { return m_RenderBlocks; }
 
-    const std::string& GetFileName() { return m_File.filename().string(); }
-    const std::string& GetFilePath() { return m_File.parent_path().string(); }
+    std::string GetFileName() { return m_File.filename().string(); }
+    std::string GetFilePath() { return m_File.parent_path().string(); }
     const fs::path& GetPath() { return m_File; }
 
     void SetPosition(const glm::vec3& position) { m_Position = position; }
@@ -52,5 +58,10 @@ public:
     void SetScale(const glm::vec3& scale) { m_Scale = scale; }
     const glm::vec3& GetScale() const { return m_Scale; }
 
+    void SetRenderBlockColour(IRenderBlock* block, const glm::vec4& colour);
+    const glm::vec4& GetRenderBlockColour(IRenderBlock* block) const;
+
     std::tuple<glm::vec3, glm::vec3> GetBoundingBox() { return { m_BoundingBoxMin, m_BoundingBoxMax }; }
+
+    const std::string& GetError() const { return m_ReadBlocksError; }
 };

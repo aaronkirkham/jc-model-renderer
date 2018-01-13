@@ -9,7 +9,7 @@
 
 #include <jc3/FileLoader.h>
 #include <jc3/formats/RenderBlockModel.h>
-#include <jc3/formats/ExportedEntity.h>
+#include <jc3/formats/AvalancheArchive.h>
 
 #include <shlobj.h>
 
@@ -89,11 +89,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 // "editor/entities/jc_vehicles/01_land/v0012_car_autostraad_atv/v0012_car_autostraad_atv_civilian_01.ee"
 
                 FileLoader::Get()->ReadFileFromArchive("game35", 0x6DC24513, [](bool success, std::vector<uint8_t> data) {
-                    auto ee = new ExportedEntity("v0012_car_autostraad_atv_civilian_01.ee", data);
+                    auto ee = new AvalancheArchive("v0012_car_autostraad_atv_civilian_01.ee", data);
 
                     auto [archive, entry] = FileLoader::Get()->GetStreamArchiveFromFile("v0012_car_autostraad_atv_civilian_01.epe");
                     if (archive && entry.m_Offset != 0) {
-                        auto epe_data = archive->ReadEntryFromArchive(entry);
+                        auto epe_data = archive->GetEntryFromArchive(entry);
                         FileLoader::Get()->ReadRuntimeContainer(epe_data);
                     }
                 });
@@ -101,12 +101,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
             else if (key == VK_F2) {
                 fs::path filename = "v1400_boat_mugello_spyspeedboat_civilian_01.ee";
                 FileLoader::Get()->ReadFile(filename, [filename](bool success, std::vector<uint8_t> data) {
-                    auto ee = new ExportedEntity(filename, data);
+                    auto ee = new AvalancheArchive(filename, data);
 
 #if 0
                     auto [archive, entry] = FileLoader::Get()->GetStreamArchiveFromFile("spyspeedboat_interior_lod1.rbm");
                     if (archive && entry.m_Offset != 0) {
-                        auto rbm_data = archive->ReadEntryFromArchive(entry);
+                        auto rbm_data = archive->GetEntryFromArchive(entry);
                         new RenderBlockModel(filename, rbm_data);
                     }
 #endif
@@ -115,27 +115,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         });
 #endif
 
-        UI::Get()->Events().FileTreeItemSelected.connect([](const std::string& filename) {
-            DEBUG_LOG("look for " << filename);
-
-            FileLoader::Get()->ReadFile(filename, [filename](bool success, std::vector<uint8_t> data) {
-                if (success) {
-                    if (filename.find(".rbm") != std::string::npos) {
-                        new RenderBlockModel(filename, data);
-                    }
-                    else if (filename.find(".ee") != std::string::npos || filename.find(".bl") != std::string::npos || filename.find(".nl") != std::string::npos) {
-                        new ExportedEntity(filename, data);
-                    }
-
-                    DEBUG_LOG(filename);
-                }
-                else {
-                    DEBUG_LOG("[ERROR] can't find '" << filename << "'.");
-                }
-            });
-
-            return true;
-        });
+        // Register file type callbacks now
+        FileLoader::Get()->RegisterCallback(".rbm", RenderBlockModel::FileReadCallback);
+        FileLoader::Get()->RegisterCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::FileReadCallback);
     
         Window::Get()->Run();
     }

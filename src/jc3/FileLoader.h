@@ -11,12 +11,15 @@
 #include <functional>
 
 using ReadFileCallback = std::function<void(bool, std::vector<uint8_t>)>;
+using FileTypeCallback = std::function<void(const fs::path& filename, const std::vector<uint8_t>& data)>;
 
 class FileLoader : public Singleton<FileLoader>
 {
 private:
     std::unique_ptr<DirectoryList> m_FileList = nullptr;
     json m_FileListDictionary;
+
+    std::unordered_map<std::string, std::vector<FileTypeCallback>> m_FileTypeCallbacks;
 
     StreamArchive_t* ParseStreamArchive(std::istream& stream);
     std::vector<uint8_t> DecompressArchiveFromStream(std::istream& stream);
@@ -49,4 +52,8 @@ public:
     std::tuple<std::string, uint32_t> LocateFileInDictionary(const fs::path& filename);
 
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
+
+    // file read callbacks
+    void RegisterCallback(const std::string& filetype, FileTypeCallback fn);
+    void RegisterCallback(const std::vector<std::string>& filetypes, FileTypeCallback fn);
 };

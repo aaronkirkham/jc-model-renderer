@@ -156,5 +156,5 @@ glm::vec2 Window::GetPosition() const
 glm::vec2 Window::GetCenterPoint() const
 {
     auto size = GetSize();
-    return GetPosition() + glm::vec2{ size.x / 2, size.y / 2 };
+    return glm::vec2{ size.x / 2, size.y / 2 };
 }
