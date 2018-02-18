@@ -10,8 +10,11 @@
 #include <jc3/FileLoader.h>
 #include <jc3/formats/RenderBlockModel.h>
 #include <jc3/formats/AvalancheArchive.h>
+#include <jc3/formats/RuntimeContainer.h>
 
 #include <shlobj.h>
+
+#include <import_export/wavefront_obj.h>
 
 // normal: 56523.6641
 // colour: 262143.984
@@ -19,6 +22,7 @@
 extern fs::path g_JC3Directory = "";
 extern bool g_DrawBoundingBoxes = true;
 extern bool g_DrawDebugInfo = true;
+extern AvalancheArchive* g_CurrentLoadedArchive;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine, int32_t iCmdShow)
 {
@@ -58,58 +62,59 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
     if (Window::Get()->Initialise(hInstance)) {
         // do we need to select the install directory manually?
         if (g_JC3Directory.empty() || !fs::exists(g_JC3Directory)) {
-            TCHAR szDir[MAX_PATH];
-
-            BROWSEINFO bi;
-            ZeroMemory(&bi, sizeof(bi));
-
-            bi.hwndOwner = Window::Get()->GetHwnd();
-            bi.pidlRoot = nullptr;
-            bi.pszDisplayName = szDir;
-            bi.lpszTitle = "Please select your Just Cause 3 folder.";
-            bi.ulFlags = BIF_RETURNONLYFSDIRS;
-            bi.lpfn = nullptr;
-
-            LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
-            if (pidl) {
-                SHGetPathFromIDList(pidl, szDir);
-                g_JC3Directory = szDir;
-
-                DEBUG_LOG("selected: " << g_JC3Directory);
-                Settings::Get()->SetValue("jc3_directory", g_JC3Directory.string());
-            }
-            else {
+            // ask the user to select their jc3 directory, we can't find it!
+            Window::Get()->ShowFolderSelection("Please select your Just Cause 3 folder.", [&](const std::string& selected) {
+                Settings::Get()->SetValue("jc3_directory", selected);
+                g_JC3Directory = selected;
+            }, [] {
                 Window::Get()->ShowMessageBox("Unable to find Just Cause 3 root directory.\n\nSome features will be disabled.");
-            }
+            });
         }
 
 #ifdef DEBUG
         Input::Get()->Events().KeyUp.connect([](uint32_t key) {
             if (key == VK_F1) {
                 // "editor/entities/jc_vehicles/01_land/v0012_car_autostraad_atv/v0012_car_autostraad_atv_civilian_01.ee"
-
-                FileLoader::Get()->ReadFileFromArchive("game35", 0x6DC24513, [](bool success, std::vector<uint8_t> data) {
+                FileLoader::Get()->ReadFileFromArchive("game35", 0x6DC24513, [](bool success, FileBuffer data) {
                     auto ee = new AvalancheArchive("v0012_car_autostraad_atv_civilian_01.ee", data);
 
                     auto [archive, entry] = FileLoader::Get()->GetStreamArchiveFromFile("v0012_car_autostraad_atv_civilian_01.epe");
                     if (archive && entry.m_Offset != 0) {
                         auto epe_data = archive->GetEntryFromArchive(entry);
-                        FileLoader::Get()->ReadRuntimeContainer(epe_data);
+                        auto runtime_container = FileLoader::Get()->ReadRuntimeContainer(epe_data);
+
+                        if (runtime_container) {
+                            auto props = runtime_container->GetContainer(0xE9146D12);
+
+                            // TODO: getting this property doesn't seem to work.
+                            // looks like the first child container overwrites it???
+                            auto body_name = props->GetProperty(0xD31AB684)->GetValue();
+                            DEBUG_LOG(std::any_cast<std::string>(body_name));
+ 
+                            for (auto& children : props->GetContainers()) {
+                                auto child_name = children->GetProperty(0xD31AB684)->GetValue();
+                                DEBUG_LOG(std::any_cast<std::string>(child_name));
+                            }
+                        }
                     }
                 });
             }
             else if (key == VK_F2) {
                 fs::path filename = "v1400_boat_mugello_spyspeedboat_civilian_01.ee";
-                FileLoader::Get()->ReadFile(filename, [filename](bool success, std::vector<uint8_t> data) {
+                FileLoader::Get()->ReadFile(filename, [filename](bool success, FileBuffer data) {
                     auto ee = new AvalancheArchive(filename, data);
 
-#if 0
                     auto [archive, entry] = FileLoader::Get()->GetStreamArchiveFromFile("spyspeedboat_interior_lod1.rbm");
                     if (archive && entry.m_Offset != 0) {
                         auto rbm_data = archive->GetEntryFromArchive(entry);
-                        new RenderBlockModel(filename, rbm_data);
+                        std::istringstream stream(std::string{ (char*)rbm_data.data(), rbm_data.size() });
+
+                        auto rbm = new RenderBlockModel(filename);
+                        rbm->ParseRenderBlockModel(stream);
+
+                        auto obj_exporter = new Wavefront_Obj;
+                        obj_exporter->Export(rbm);
                     }
-#endif
                 });
             }
         });
@@ -118,7 +123,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         // Register file type callbacks now
         FileLoader::Get()->RegisterCallback(".rbm", RenderBlockModel::FileReadCallback);
         FileLoader::Get()->RegisterCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::FileReadCallback);
-    
+
         Window::Get()->Run();
     }
 

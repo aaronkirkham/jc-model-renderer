@@ -42,11 +42,12 @@ public:
     bool Frame();
     void Run();
 
-    int32_t ShowMessageBox(const std::string& message, uint32_t type = MB_ICONERROR | MB_OK);
-
     glm::vec2 GetSize() const;
     glm::vec2 GetPosition() const;
     glm::vec2 GetCenterPoint() const;
+
+    int32_t ShowMessageBox(const std::string& message, uint32_t type = MB_ICONERROR | MB_OK);
+    void ShowFolderSelection(const std::string& title, std::function<void(const std::string&)> fn_selected, std::function<void()> fn_cancelled = {});
 
     const HWND& GetHwnd() const { return m_Hwnd; }
     bool HasFocus() const { return (GetForegroundWindow() == m_Hwnd); }

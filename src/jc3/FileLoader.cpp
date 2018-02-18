@@ -7,9 +7,11 @@
 
 #include <thread>
 #include <istream>
+#include <queue>
 
 #include <jc3/formats/RenderBlockModel.h>
 #include <jc3/formats/AvalancheArchive.h>
+#include <jc3/formats/RuntimeContainer.h>
 
 #include <zlib.h>
 
@@ -50,7 +52,7 @@ FileLoader::FileLoader()
 
     // trigger the file type callbacks
     UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& filename) {
-        ReadFile(filename, [&, filename](bool success, std::vector<uint8_t> data) {
+        ReadFile(filename, [&, filename](bool success, FileBuffer data) {
             if (success) {
                 for (const auto& fn : m_FileTypeCallbacks[filename.extension().string()]) {
                     fn(filename, data);
@@ -163,9 +165,9 @@ StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
     return result;
 }
 
-std::vector<uint8_t> FileLoader::DecompressArchiveFromStream(std::istream& stream)
+FileBuffer FileLoader::DecompressArchiveFromStream(std::istream& stream)
 {
-    std::vector<uint8_t> bytes;
+    FileBuffer bytes;
 
     // read the archive header
     JustCause3::AvalancheArchiveHeader header;
@@ -211,7 +213,7 @@ std::vector<uint8_t> FileLoader::DecompressArchiveFromStream(std::istream& strea
         chunk.m_DataOffset = static_cast<uint64_t>(stream.tellg());
 
         // read the block data
-        std::vector<uint8_t> data;
+        FileBuffer data;
         data.resize(blockSize);
         stream.read((char *)data.data(), blockSize);
 
@@ -220,7 +222,7 @@ std::vector<uint8_t> FileLoader::DecompressArchiveFromStream(std::istream& strea
             uLong compressed_size = (uLong)header.m_BlockSize;
             uLong decompressed_size = (uLong)chunk.m_UncompressedSize;
 
-            std::vector<uint8_t> result;
+            FileBuffer result;
             result.resize(chunk.m_UncompressedSize);
             auto res = uncompress(result.data(), &decompressed_size, data.data(), compressed_size);
 
@@ -236,7 +238,7 @@ std::vector<uint8_t> FileLoader::DecompressArchiveFromStream(std::istream& strea
     return bytes;
 }
 
-StreamArchive_t* FileLoader::ReadStreamArchive(const std::vector<uint8_t>& data)
+StreamArchive_t* FileLoader::ReadStreamArchive(const FileBuffer& data)
 {
     // TODO: need to read the header, check if the archive is compressed,
     // then just back to the start of the stream!
@@ -278,13 +280,13 @@ StreamArchive_t* FileLoader::ReadStreamArchive(const fs::path& filename)
     return result;
 }
 
-void FileLoader::ReadCompressedTexture(const std::vector<uint8_t>& buffer, uint64_t size, std::vector<uint8_t>* output)
+void FileLoader::ReadCompressedTexture(const FileBuffer& buffer, uint64_t size, FileBuffer* output)
 {
     std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
     ParseCompressedTexture(stream, size, output);
 }
 
-void FileLoader::ReadCompressedTexture(const fs::path& filename, std::vector<uint8_t>* output)
+void FileLoader::ReadCompressedTexture(const fs::path& filename, FileBuffer* output)
 {
     if (!fs::exists(filename)) {
         DEBUG_LOG("FileLoader::ReadCompressedTexture - can't find input file '" << filename.string().c_str() << "'");
@@ -301,9 +303,17 @@ void FileLoader::ReadCompressedTexture(const fs::path& filename, std::vector<uin
     stream.close();
 }
 
-#include <queue>
+template <typename T>
+inline T ALIGN_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
+{
+    if ((value % alignment) != 0) {
+        return (value + (alignment - (value % alignment)));
+    }
 
-void FileLoader::ReadRuntimeContainer(const std::vector<uint8_t>& buffer)
+    return value;
+}
+
+RuntimeContainer* FileLoader::ReadRuntimeContainer(const FileBuffer& buffer)
 {
     std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
 
@@ -316,51 +326,215 @@ void FileLoader::ReadRuntimeContainer(const std::vector<uint8_t>& buffer)
         throw std::runtime_error("Invalid file header. Input file probably isn't a RuntimeContainer file.");
     }
 
-    DEBUG_LOG("RuntimeContainer v" << header.m_Version);
+    DEBUG_LOG("RuntimePropertyContainer v" << header.m_Version);
 
     // read the root node
     JustCause3::RuntimeContainer::Node rootNode;
     stream.read((char *)&rootNode, sizeof(rootNode));
 
-    DEBUG_LOG(" - m_NameHash: " << rootNode.m_NameHash);
-    DEBUG_LOG(" - m_PropertyCount: " << rootNode.m_PropertyCount);
-    DEBUG_LOG(" - m_InstanceCount: " << rootNode.m_InstanceCount);
-    DEBUG_LOG(" - m_DataOffset: " << rootNode.m_DataOffset);
+    // create the root container
+    auto root_container = new RuntimeContainer{ rootNode.m_NameHash };
 
-    std::queue<JustCause3::RuntimeContainer::Node> instanceQueue;
-    std::queue<JustCause3::RuntimeContainer::Property> propertyQueue;
+    std::queue<std::tuple<RuntimeContainer*, JustCause3::RuntimeContainer::Node>> instanceQueue;
+    std::queue<std::tuple<RuntimeContainerProperty*, JustCause3::RuntimeContainer::Property>> propertyQueue;
 
-    instanceQueue.push(rootNode);
+    instanceQueue.push({ root_container, rootNode });
 
     while (!instanceQueue.empty()) {
-        auto& item = instanceQueue.front();
+        const auto&[current_container, item] = instanceQueue.front();
+
         stream.seekg(item.m_DataOffset);
 
-        DEBUG_LOG("  - Node m_NameHash: " << item.m_NameHash);
-        DEBUG_LOG("  -- m_PropertyCount: " << item.m_PropertyCount);
-        DEBUG_LOG("  -- m_InstanceCount: " << item.m_InstanceCount);
-        DEBUG_LOG("  -- m_DataOffset: " << item.m_DataOffset);
-
 #if 0
+        DEBUG_LOG(" ====== NODE ======");
+        DEBUG_LOG("  - m_NameHash: 0x" << std::setw(4) << std::hex << item.m_NameHash << " (" << DebugNameHash(item.m_NameHash) << ")");
+        DEBUG_LOG("  - m_PropertyCount: " << item.m_PropertyCount);
+        DEBUG_LOG("  - m_InstanceCount: " << item.m_InstanceCount << " (queue: " << instanceQueue.size() << ")");
+        DEBUG_LOG("  - m_DataOffset: " << item.m_DataOffset << " (current: " << stream.tellg() << ")");
+#endif
+
+        // read all the node properties
+#if 0
+        DEBUG_LOG("   > PROPERTIES");
+#endif
         for (uint16_t i = 0; i < item.m_PropertyCount; ++i) {
             JustCause3::RuntimeContainer::Property prop;
             stream.read((char *)&prop, sizeof(prop));
 
-            DEBUG_LOG("  - Property m_NameHash: " << prop.m_NameHash);
-        }
+            if (current_container) {
+                auto container_property = new RuntimeContainerProperty{ prop.m_NameHash, prop.m_Type };
+                current_container->AddProperty(container_property);
+
+                propertyQueue.push({ container_property, prop });
+            }
+
+#if 0
+            DEBUG_LOG("    - m_NameHash: 0x" << std::setw(4) << std::hex << prop.m_NameHash << " (" << DebugNameHash(prop.m_NameHash) << ")" << ", m_Type: " << RuntimeContainerProperty::GetTypeName(prop.m_Type));
 #endif
+        }
 
-        stream.seekg(item.m_DataOffset + (sizeof(JustCause3::RuntimeContainer::Property) * item.m_PropertyCount));
+        // seek to our current pos with 4-byte alignment
+        stream.seekg(ALIGN_TO_BOUNDARY(stream.tellg()));
 
+        // read all the node instances
+#if 0
+        DEBUG_LOG("   > NODES");
+#endif
         for (uint16_t i = 0; i < item.m_InstanceCount; ++i) {
             JustCause3::RuntimeContainer::Node node;
             stream.read((char *)&node, sizeof(node));
 
-            instanceQueue.push(node);
+            auto next_container = new RuntimeContainer{ node.m_NameHash };
+            if (current_container) {
+                current_container->AddContainer(next_container);
+            }
+
+#if 0
+            DEBUG_LOG("    - m_NameHash: 0x" << std::setw(4) << std::hex << node.m_NameHash << " (" << DebugNameHash(node.m_NameHash) << ")");
+            DEBUG_LOG("    - m_DataOffset: " << node.m_DataOffset);
+            DEBUG_LOG("    -----------------------");
+#endif
+
+            instanceQueue.push({ next_container, node });
         }
 
         instanceQueue.pop();
     }
+
+    // TODO: refactor this
+
+    // grab all the property values
+    while (!propertyQueue.empty()) {
+        const auto&[current_property, prop] = propertyQueue.front();
+
+        // read each type
+        const auto& type = current_property->GetType();
+        switch (type) {
+        // integer
+        case RTPC_TYPE_INTEGER: {
+            current_property->SetValue(static_cast<int32_t>(prop.m_Data));
+            break;
+        }
+
+        // float
+        case RTPC_TYPE_FLOAT: {
+            current_property->SetValue(static_cast<float>(prop.m_Data));
+            break;
+        }
+
+        // string
+        case RTPC_TYPE_STRING: {
+            stream.seekg(prop.m_Data);
+
+            std::string buffer;
+            std::getline(stream, buffer, '\0');
+
+            current_property->SetValue(buffer);
+            break;
+        }
+
+        // vec2, vec3, vec4, mat4x4
+        case RTPC_TYPE_VEC2:
+        case RTPC_TYPE_VEC3:
+        case RTPC_TYPE_VEC4:
+        case RTPC_TYPE_MAT4X4: {
+            stream.seekg(prop.m_Data);
+
+            if (type == RTPC_TYPE_VEC2) {
+                glm::vec2 result;
+                stream.read((char *)&result, sizeof(result));
+                current_property->SetValue(result);
+            }
+            else if (type == RTPC_TYPE_VEC3) {
+                glm::vec3 result;
+                stream.read((char *)&result, sizeof(result));
+                current_property->SetValue(result);
+            }
+            else if (type == RTPC_TYPE_VEC4) {
+                glm::vec4 result;
+                stream.read((char *)&result, sizeof(result));
+                current_property->SetValue(result);
+            }
+            else if (type == RTPC_TYPE_MAT4X4) {
+                glm::mat4x4 result;
+                stream.read((char *)&result, sizeof(result));
+                current_property->SetValue(result);
+            }
+
+            break;
+        }
+
+        // lists
+        case RTPC_TYPE_LIST_INTEGERS:
+        case RTPC_TYPE_LIST_FLOATS:
+        case RTPC_TYPE_LIST_BYTES: {
+            stream.seekg(prop.m_Data);
+
+            int32_t count;
+            stream.read((char *)&count, sizeof(count));
+
+            if (type == RTPC_TYPE_LIST_INTEGERS) {
+                std::vector<int32_t> result;
+                result.resize(count);
+                stream.read((char *)result.data(), (count * sizeof(int32_t)));
+
+                current_property->SetValue(result);
+            }
+            else if (type == RTPC_TYPE_LIST_FLOATS) {
+                std::vector<float> result;
+                result.resize(count);
+                stream.read((char *)result.data(), (count * sizeof(float)));
+
+                current_property->SetValue(result);
+            }
+            else if (type == RTPC_TYPE_LIST_BYTES) {
+                std::vector<uint8_t> result;
+                result.resize(count);
+                stream.read((char *)result.data(), count);
+
+                current_property->SetValue(result);
+            }
+
+            break;
+        }
+
+        // objectid
+        case RTPC_TYPE_OBJECT_ID: {
+            stream.seekg(prop.m_Data);
+
+            uint32_t key, value;
+            stream.read((char *)&key, sizeof(key));
+            stream.read((char *)&value, sizeof(value));
+
+            current_property->SetValue(std::make_pair(key, value));
+            break;
+        }
+
+        // events
+        case RTPC_TYPE_EVENTS: {
+            stream.seekg(prop.m_Data);
+
+            int32_t count;
+            stream.read((char *)&count, sizeof(count));
+
+            std::vector<std::pair<uint32_t, uint32_t>> result;
+            result.resize(count);
+
+            for (int32_t i = 0; i < count; ++i) {
+                uint32_t key, value;
+                stream.read((char *)&key, sizeof(key));
+                stream.read((char *)&value, sizeof(value));
+
+                result.emplace_back(std::make_pair(key, value));
+            }
+            break;
+        }
+        }
+
+        propertyQueue.pop();
+    }
+
+    return root_container;
 }
 
 std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveFromFile(const fs::path& file)
@@ -418,7 +592,7 @@ void FileLoader::ReadFileFromArchive(const std::string& archive, uint32_t nameha
             std::ifstream stream(arc_file, std::ios::binary);
             stream.seekg(offset);
 
-            std::vector<uint8_t> data;
+            FileBuffer data;
             data.resize(size);
             stream.read((char *)data.data(), size);
             stream.close();
@@ -465,7 +639,7 @@ std::tuple<std::string, uint32_t> FileLoader::LocateFileInDictionary(const fs::p
     return { "", 0 };
 }
 
-void FileLoader::ParseCompressedTexture(std::istream& stream, uint64_t size, std::vector<uint8_t>* output)
+void FileLoader::ParseCompressedTexture(std::istream& stream, uint64_t size, FileBuffer* output)
 {
     // figure out the file size if we need to
     if (size == std::numeric_limits<uint64_t>::max()) {

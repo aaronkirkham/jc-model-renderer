@@ -15,7 +15,7 @@ public:
     Texture(const fs::path& filename);
     virtual ~Texture();
 
-    bool LoadFromBuffer(const std::vector<uint8_t>& buffer);
+    bool LoadFromBuffer(const FileBuffer& buffer);
     void Use(uint32_t slot);
 
     bool IsLoaded() { return (m_Texture != nullptr && m_SRV != nullptr); }

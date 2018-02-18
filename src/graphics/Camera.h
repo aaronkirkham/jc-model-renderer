@@ -34,8 +34,8 @@ public:
     void Update();
     void ResetToDefault();
 
-    bool WorldToScreen(const glm::vec3& world, glm::vec3* screen);
-    bool ScreenToWorld(const glm::vec3& screen, glm::vec3* world);
+    void WorldToScreen(const glm::vec3& world, glm::vec3* screen);
+    void ScreenToWorld(const glm::vec3& screen, glm::vec3* world);
 
     const glm::vec3& GetPosition() const { return m_Position; }
     const glm::vec3& GetRotation() const { return m_Rotation; }

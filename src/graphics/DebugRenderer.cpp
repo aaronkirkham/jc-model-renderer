@@ -12,7 +12,7 @@ static ImVec2 worldToPos(const glm::vec3& worldPos)
     glm::vec3 screen;
     Camera::Get()->WorldToScreen(worldPos, &screen);
 
-    return ImVec2{ screen.x, screen.y };
+    return { screen.x, screen.y };
 }
 
 void DebugRenderer::Begin(RenderContext_t* context)

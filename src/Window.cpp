@@ -4,6 +4,7 @@
 #include <examples/directx11_example/imgui_impl_dx11.h>
 
 #include <sstream>
+#include <shlobj.h>
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
@@ -132,11 +133,6 @@ void Window::Run()
     Shutdown();
 }
 
-int32_t Window::ShowMessageBox(const std::string& message, uint32_t type)
-{
-    return MessageBox(m_Hwnd, message.c_str(), g_WindowName, type);
-}
-
 glm::vec2 Window::GetSize() const
 {
     RECT rect{};
@@ -157,4 +153,33 @@ glm::vec2 Window::GetCenterPoint() const
 {
     auto size = GetSize();
     return glm::vec2{ size.x / 2, size.y / 2 };
+}
+
+int32_t Window::ShowMessageBox(const std::string& message, uint32_t type)
+{
+    return MessageBox(m_Hwnd, message.c_str(), g_WindowName, type);
+}
+
+void Window::ShowFolderSelection(const std::string& title, std::function<void(const std::string&)> fn_selected, std::function<void()> fn_cancelled)
+{
+    TCHAR path[MAX_PATH];
+
+    BROWSEINFO browse_info;
+    ZeroMemory(&browse_info, sizeof(BROWSEINFO));
+
+    browse_info.hwndOwner = m_Hwnd;
+    browse_info.pidlRoot = nullptr;
+    browse_info.pszDisplayName = path;
+    browse_info.lpszTitle = title.c_str();
+    browse_info.ulFlags = BIF_RETURNONLYFSDIRS;
+    browse_info.lpfn = nullptr;
+
+    LPITEMIDLIST pidl = SHBrowseForFolder(&browse_info);
+    if (pidl) {
+        SHGetPathFromIDList(pidl, path);
+        fn_selected(path);
+    }
+    else if (fn_cancelled) {
+        fn_cancelled();
+    }
 }

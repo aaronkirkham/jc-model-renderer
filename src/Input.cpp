@@ -13,7 +13,7 @@ Input::~Input()
 
 void Input::Initialise()
 {
-#ifdef DEBUG
+#ifndef DEBUG
     Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
         glm::vec3 window_center = glm::vec3(Window::Get()->GetCenterPoint(), 1);
         glm::vec3 window_center_world;
@@ -26,7 +26,6 @@ void Input::Initialise()
 
 bool Input::HandleMessage(MSG* event)
 {
-    const auto window_size = Window::Get()->GetSize();
     auto& imgIO = ImGui::GetIO();
 
     // don't capture mouse input if imgui wants it
@@ -78,7 +77,7 @@ bool Input::HandleMessage(MSG* event)
         }
 
         m_LastClickPosition = position;
-        Camera::Get()->ScreenToWorld({ position.x, window_size.y - position.y, 1 }, &m_LastClickWorldPosition);
+        Camera::Get()->ScreenToWorld({ position.x, position.y, 1 }, &m_LastClickWorldPosition);
     }
     else if (event->message == WM_MOUSEMOVE)
     {
@@ -86,7 +85,7 @@ bool Input::HandleMessage(MSG* event)
         m_InputEvents.MouseMove((m_MousePosition - position));
 
         m_MousePosition = position;
-        Camera::Get()->ScreenToWorld({ position.x, window_size.y - position.y, 1 }, &m_MouseWorldPosition);
+        Camera::Get()->ScreenToWorld(glm::vec3{ position.x, position.y, 1 }, &m_MouseWorldPosition);
     }
     else if (event->message == WM_MOUSEWHEEL)
     {

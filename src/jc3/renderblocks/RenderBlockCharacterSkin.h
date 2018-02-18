@@ -88,14 +88,14 @@ public:
         // TODO: need to implement the different vertex types depending on the flags above (GetStride).
         // The stride should be the size of the struct we read from.
         {
-            ReadVertexBuffer<JustCause3::Vertex::RenderBlockCharacterSkin::PackedCharacterSkinPos4Bones1UVs>(stream, &m_Vertices);
+            ReadVertexBuffer<JustCause3::Vertex::RenderBlockCharacterSkin::PackedCharacterSkinPos4Bones1UVs>(stream, &m_VertexBuffer);
         }
 
         // read skin batch
         ReadSkinBatch(stream);
 
         // read index buffer
-        ReadIndexBuffer(stream, &m_Indices);
+        ReadIndexBuffer(stream, &m_IndexBuffer);
     }
 
     virtual void Setup(RenderContext_t* context) override final

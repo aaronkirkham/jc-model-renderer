@@ -37,7 +37,7 @@ public:
     RenderBlockModel(const fs::path& filename);
     virtual ~RenderBlockModel();
 
-    static void FileReadCallback(const fs::path& filename, const std::vector<uint8_t>& data);
+    static void FileReadCallback(const fs::path& filename, const FileBuffer& data);
 
     bool ParseRenderBlockModel(std::istream& stream);
 

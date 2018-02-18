@@ -108,30 +108,18 @@ void Camera::ResetToDefault()
     m_Rotation = glm::vec3(0, 0, 0);
 }
 
-bool Camera::WorldToScreen(const glm::vec3& world, glm::vec3* screen)
+void Camera::WorldToScreen(const glm::vec3& world, glm::vec3* screen)
 {
-    const auto view_projection = (m_Projection * m_View);
-    float z = view_projection[0][3] * world.x + view_projection[1][3] * world.y + view_projection[2][3] * world.z + view_projection[3][3];
+    *screen = glm::project(world, m_View, m_Projection, m_Viewport);
 
-    if (z < 0.1f) {
-        *screen = glm::vec3{ 0, 0, z };
-        return false;
-    }
-
-    float x = view_projection[0][0] * world.x + view_projection[1][0] * world.y + view_projection[2][0] * world.z + view_projection[3][0];
-    float y = view_projection[0][1] * world.x + view_projection[1][1] * world.y + view_projection[2][1] * world.z + view_projection[3][1];
-
+    // glm uses the bottom of the window, so we need to take that into account
     const auto window_size = Window::Get()->GetSize();
-
-    float halfWidth = (window_size.x * 0.5f);
-    float halfHeight = (window_size.y * 0.5f);
-
-    *screen = glm::vec3{ (halfWidth + halfWidth * x / z), (halfHeight - halfHeight * y / z), z };
-    return true;
+    screen->y = (window_size.y - screen->y);
 }
 
-bool Camera::ScreenToWorld(const glm::vec3& screen, glm::vec3* world)
+void Camera::ScreenToWorld(const glm::vec3& screen, glm::vec3* world)
 {
-    *world = glm::unProject(screen, m_View, m_Projection, m_Viewport);
-    return false;
+    // glm uses the bottom of the window, so we need to take that into account
+    const auto window_size = Window::Get()->GetSize();
+    *world = glm::unProject({ screen.x, window_size.y - screen.y, screen.z }, m_View, m_Projection, m_Viewport);
 }

@@ -7,9 +7,9 @@
 Texture::Texture(const fs::path& filename)
     : m_Filename(filename)
 {
-    FileLoader::Get()->ReadFile(m_Filename, [this](bool success, std::vector<uint8_t> data) {
+    FileLoader::Get()->ReadFile(m_Filename, [this](bool success, FileBuffer data) {
         if (success) {
-            std::vector<uint8_t> buffer;
+            FileBuffer buffer;
             if (m_Filename.extension() == ".ddsc") {
                 FileLoader::Get()->ReadCompressedTexture(data, std::numeric_limits<uint64_t>::max(), &buffer);
             }
@@ -27,9 +27,9 @@ Texture::Texture(const fs::path& filename)
                 auto new_filename = m_Filename.replace_extension(".hmddsc");
                 DEBUG_LOG("looking for " << new_filename.string());
 
-                FileLoader::Get()->ReadFile(new_filename, [this](bool success, std::vector<uint8_t> data) {
+                FileLoader::Get()->ReadFile(new_filename, [this](bool success, FileBuffer data) {
                     if (success) {
-                        std::vector<uint8_t> buffer;
+                        FileBuffer buffer;
                         FileLoader::Get()->ReadCompressedTexture(data, std::numeric_limits<uint64_t>::max(), &buffer);
 
                         LoadFromBuffer(buffer);
@@ -51,7 +51,7 @@ Texture::~Texture()
     safe_release(m_Texture);
 }
 
-bool Texture::LoadFromBuffer(const std::vector<uint8_t>& buffer)
+bool Texture::LoadFromBuffer(const FileBuffer& buffer)
 {
     if (buffer.empty()) {
         return false;

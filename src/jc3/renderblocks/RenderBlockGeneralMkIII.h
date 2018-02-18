@@ -93,10 +93,10 @@ public:
 
         // read the vertex buffers
         if (m_Block.attributes.flags & 0x20) {
-            ReadVertexBuffer<JustCause3::Vertex::VertexUnknown>(stream, &m_Vertices);
+            ReadVertexBuffer<JustCause3::Vertex::VertexUnknown>(stream, &m_VertexBuffer);
         }
         else {
-            ReadVertexBuffer<JustCause3::Vertex::PackedVertexPosition>(stream, &m_Vertices);
+            ReadVertexBuffer<JustCause3::Vertex::PackedVertexPosition>(stream, &m_VertexBuffer);
         }
 
         // read the vertex buffer data
@@ -108,7 +108,7 @@ public:
         }
 
         // read index buffer
-        ReadIndexBuffer(stream, &m_Indices);
+        ReadIndexBuffer(stream, &m_IndexBuffer);
     }
 
     virtual void Setup(RenderContext_t* context) override final

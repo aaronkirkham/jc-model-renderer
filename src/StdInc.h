@@ -22,3 +22,4 @@
 
 namespace fs = std::experimental::filesystem;
 using json = nlohmann::json;
+using FileBuffer = std::vector<uint8_t>;

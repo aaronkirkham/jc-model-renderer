@@ -14,6 +14,7 @@ extern bool g_DrawBoundingBoxes;
 extern bool g_DrawDebugInfo;
 extern AvalancheArchive* g_CurrentLoadedArchive;
 static bool g_ShowAllArchiveContents = false;
+extern bool g_ShowModelLabels = true;
 
 void UI::Render()
 {
@@ -47,6 +48,10 @@ void UI::Render()
                 Settings::Get()->SetValue("draw_debug_info", g_DrawDebugInfo);
             }
 
+            if (ImGui::Checkbox("Show Model Labels", &g_ShowModelLabels)) {
+                Settings::Get()->SetValue("show_model_labels", g_ShowModelLabels);
+            }
+
             ImGui::EndMenu();
         }
 
@@ -71,7 +76,13 @@ void UI::Render()
                 g_CurrentLoadedArchive->GetDirectoryList()->Parse(g_CurrentLoadedArchive->GetStreamArchive(), only_include);
             }
 
-            ImGui::MenuItem("Export To...");
+            if (ImGui::MenuItem("Export To...")) {
+                Window::Get()->ShowFolderSelection("Select a folder to export the archive to.", [](const std::string& selected) {
+                    if (g_CurrentLoadedArchive) {
+                        g_CurrentLoadedArchive->ExportArchive(selected);
+                    }
+                });
+            }
 
             if (ImGui::MenuItem("Close")) {
                 delete g_CurrentLoadedArchive;

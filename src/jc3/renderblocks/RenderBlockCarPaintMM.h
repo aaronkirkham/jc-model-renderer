@@ -104,18 +104,18 @@ public:
 
         // read the vertex buffers
         if (_bittest((const long *)&m_Block.attributes.flags, 13)) {
-            ReadVertexBuffer<JustCause3::Vertex::UnpackedVertexWithNormal1>(stream, &m_Vertices);
+            ReadVertexBuffer<JustCause3::Vertex::UnpackedVertexWithNormal1>(stream, &m_VertexBuffer);
             ReadVertexBuffer<JustCause3::Vertex::UnpackedNormals>(stream, &m_VertexBufferData);
             ReadSkinBatch(stream);
             //__debugbreak();
         }
         else if (_bittest((const long *)&m_Block.attributes.flags, 12)) {
-            ReadVertexBuffer<JustCause3::Vertex::VertexDeformPos>(stream, &m_Vertices);
+            ReadVertexBuffer<JustCause3::Vertex::VertexDeformPos>(stream, &m_VertexBuffer);
             ReadVertexBuffer<JustCause3::Vertex::VertexDeformNormal2>(stream, &m_VertexBufferData);
             //__debugbreak();
         }
         else {
-            ReadVertexBuffer<JustCause3::Vertex::UnpackedVertexPosition>(stream, &m_Vertices);
+            ReadVertexBuffer<JustCause3::Vertex::UnpackedVertexPosition>(stream, &m_VertexBuffer);
             ReadVertexBuffer<JustCause3::Vertex::UnpackedNormals>(stream, &m_VertexBufferData);
             //__debugbreak();
         }
@@ -127,7 +127,7 @@ public:
         }
 
         // read index buffer
-        ReadIndexBuffer(stream, &m_Indices);
+        ReadIndexBuffer(stream, &m_IndexBuffer);
     }
 
     virtual void Setup(RenderContext_t* context) override final

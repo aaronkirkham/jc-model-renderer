@@ -23,7 +23,7 @@ AvalancheArchive::AvalancheArchive(const fs::path& file)
     Initialise();
 }
 
-AvalancheArchive::AvalancheArchive(const fs::path& filename, const std::vector<uint8_t>& buffer)
+AvalancheArchive::AvalancheArchive(const fs::path& filename, const FileBuffer& buffer)
     : m_File(filename)
 {
     // read the stream archive
@@ -45,7 +45,7 @@ AvalancheArchive::~AvalancheArchive()
     safe_delete(m_StreamArchive);
 }
 
-void AvalancheArchive::FileReadCallback(const fs::path& filename, const std::vector<uint8_t>& data)
+void AvalancheArchive::FileReadCallback(const fs::path& filename, const FileBuffer& data)
 {
     // NOTE: will be deleted from g_CurrentLoadedArchive when the archive is closed
     new AvalancheArchive(filename, data);
@@ -62,4 +62,40 @@ void AvalancheArchive::LinkRenderBlockModel(RenderBlockModel* rbm)
 {
     std::lock_guard<std::recursive_mutex> _lk{ m_LinkedRenderBlockModelsMutex };
     m_LinkedRenderBlockModels.emplace_back(rbm);
+}
+
+void AvalancheArchive::ExportArchive(const fs::path& directory)
+{
+    auto path = directory / m_File.stem();
+    DEBUG_LOG("AvalancheArchive::ExportArchive - Exporting archive to " << path << "...");
+
+    // create the directory if we need to
+    if (!fs::exists(path)) {
+        fs::create_directory(path);
+    }
+
+    // export all the files from the archive
+    for (const auto& archiveEntry : m_StreamArchive->m_Files) {
+        const auto file_path = path / archiveEntry.m_Filename;
+
+        // create the directories for the file
+        fs::create_directories(file_path.parent_path());
+
+        // ensure the file is valid
+        if (archiveEntry.m_Offset != 0) {
+            // get the file contents from the archive buffer
+            auto buffer = m_StreamArchive->GetEntryFromArchive(archiveEntry);
+
+            // write the file
+            std::ofstream file(file_path, std::ios::binary);
+
+            if (file.fail()) {
+                DEBUG_LOG("[ERROR] AvalancheArchive::ExportArchive - Failed to open " << file_path.string());
+                continue;
+            }
+
+            file.write((char *)&buffer.front(), buffer.size());
+            file.close();
+        }
+    }
 }

@@ -31,14 +31,14 @@ struct ConstantBuffer_t : IBuffer_t {};
 struct VertexShader_t
 {
     ID3D11VertexShader* m_Shader = nullptr;
-    std::vector<uint8_t> m_Code;
+    FileBuffer m_Code;
     uint64_t m_Size = 0;
 };
 
 struct PixelShader_t
 {
     ID3D11PixelShader* m_Shader = nullptr;
-    std::vector<uint8_t> m_Code;
+    FileBuffer m_Code;
     uint64_t m_Size = 0;
 };
 

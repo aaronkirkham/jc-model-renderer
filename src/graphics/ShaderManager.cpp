@@ -16,7 +16,7 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
     }
 
     // copy the buffer
-    std::vector<uint8_t> data;
+    FileBuffer data;
     data.resize(size);
     memcpy(data.data(), buffer, size);
 
@@ -51,7 +51,7 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
     }
 
     // copy the buffer
-    std::vector<uint8_t> data;
+    FileBuffer data;
     data.resize(size);
     memcpy(data.data(), buffer, size);
 

@@ -18,12 +18,13 @@ private:
 
 public:
     AvalancheArchive(const fs::path& file);
-    AvalancheArchive(const fs::path& filename, const std::vector<uint8_t>& buffer);
+    AvalancheArchive(const fs::path& filename, const FileBuffer& buffer);
     virtual ~AvalancheArchive();
 
-    static void FileReadCallback(const fs::path& filename, const std::vector<uint8_t>& data);
+    static void FileReadCallback(const fs::path& filename, const FileBuffer& data);
 
     void LinkRenderBlockModel(RenderBlockModel* rbm);
+    void ExportArchive(const fs::path& directory);
 
     StreamArchive_t* GetStreamArchive() { return m_StreamArchive; }
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }

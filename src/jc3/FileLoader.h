@@ -10,9 +10,10 @@
 
 #include <functional>
 
-using ReadFileCallback = std::function<void(bool, std::vector<uint8_t>)>;
-using FileTypeCallback = std::function<void(const fs::path& filename, const std::vector<uint8_t>& data)>;
+using ReadFileCallback = std::function<void(bool, FileBuffer)>;
+using FileTypeCallback = std::function<void(const fs::path& filename, const FileBuffer& data)>;
 
+class RuntimeContainer;
 class FileLoader : public Singleton<FileLoader>
 {
 private:
@@ -22,8 +23,8 @@ private:
     std::unordered_map<std::string, std::vector<FileTypeCallback>> m_FileTypeCallbacks;
 
     StreamArchive_t* ParseStreamArchive(std::istream& stream);
-    std::vector<uint8_t> DecompressArchiveFromStream(std::istream& stream);
-    void ParseCompressedTexture(std::istream& stream, uint64_t size, std::vector<uint8_t>* output);
+    FileBuffer DecompressArchiveFromStream(std::istream& stream);
+    void ParseCompressedTexture(std::istream& stream, uint64_t size, FileBuffer* output);
 
 public:
     FileLoader();
@@ -36,15 +37,15 @@ public:
     void ReadFileFromArchive(const std::string& archive, uint32_t namehash, ReadFileCallback callback);
 
     // stream archive
-    StreamArchive_t* ReadStreamArchive(const std::vector<uint8_t>& buffer);
+    StreamArchive_t* ReadStreamArchive(const FileBuffer& buffer);
     StreamArchive_t* ReadStreamArchive(const fs::path& filename);
 
     // textures
-    void ReadCompressedTexture(const std::vector<uint8_t>& buffer, uint64_t size, std::vector<uint8_t>* output);
-    void ReadCompressedTexture(const fs::path& filename, std::vector<uint8_t>* output);
+    void ReadCompressedTexture(const FileBuffer& buffer, uint64_t size, FileBuffer* output);
+    void ReadCompressedTexture(const fs::path& filename, FileBuffer* output);
 
     // runtime containers
-    void ReadRuntimeContainer(const std::vector<uint8_t>& buffer);
+    RuntimeContainer* ReadRuntimeContainer(const FileBuffer& buffer);
 
     // stream archive caching
     std::tuple<StreamArchive_t*, StreamArchiveEntry_t> GetStreamArchiveFromFile(const fs::path& file);

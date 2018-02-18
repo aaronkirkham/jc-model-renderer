@@ -15,6 +15,7 @@ static std::recursive_mutex g_ModelsMutex;
 extern bool g_DrawBoundingBoxes;
 extern bool g_DrawDebugInfo;
 extern AvalancheArchive* g_CurrentLoadedArchive;
+extern bool g_ShowModelLabels;
 
 static auto g_RenderBlockColour = glm::vec4{ 1, 1, 1, 1 };
 
@@ -241,7 +242,7 @@ RenderBlockModel::~RenderBlockModel()
     Renderer::Get()->DestroyBuffer(m_MeshConstants);
 }
 
-void RenderBlockModel::FileReadCallback(const fs::path& filename, const std::vector<uint8_t>& data)
+void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuffer& data)
 {
     std::istringstream stream(std::string{ (char*)data.data(), data.size() });
 
@@ -283,9 +284,11 @@ void RenderBlockModel::Draw(RenderContext_t* context)
         renderBlock->Draw(context);
     }
 
-    // draw filename
-    static auto white = glm::vec4{ 1, 1, 1, 0.6 };
-    DebugRenderer::Get()->DrawText(GetFileName(), m_Position, white, true);
+    // draw filename label
+    if (g_ShowModelLabels) {
+        static auto white = glm::vec4{ 1, 1, 1, 0.6 };
+        DebugRenderer::Get()->DrawText(GetFileName(), m_Position, white, true);
+    }
 
     // draw bounding boxes
     if (g_DrawBoundingBoxes) {

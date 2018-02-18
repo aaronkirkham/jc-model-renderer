@@ -329,7 +329,7 @@ namespace JustCause3
         struct Property
         {
             uint32_t m_NameHash;
-            uint8_t m_Data[4];
+            uint32_t m_Data;
             uint8_t m_Type;
         };
     };
