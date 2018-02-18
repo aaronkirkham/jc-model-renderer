@@ -1,5 +1,6 @@
 #include <imgui.h>
 #include <fonts/fontawesome.h>
+#include <fonts/roboto_medium.h>
 
 // https://gist.github.com/ongamex/4ee36fb23d6c527939d0f4ba72144d29
 void SetupImGuiStyle()
@@ -58,7 +59,8 @@ void SetupImGuiStyle()
     style.Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(0.20f, 0.20f, 0.20f, 0.50f);
 
     // add default font
-    io.Fonts->AddFontDefault();
+    //io.Fonts->AddFontDefault();
+    io.Fonts->AddFontFromMemoryCompressedBase85TTF(roboto_medium_compressed_data, 15.0f);
 
     // merge in icons from Font Awesome
     static const ImWchar icons_ranges[] = { 0xf000, 0xf2e0, 0 };

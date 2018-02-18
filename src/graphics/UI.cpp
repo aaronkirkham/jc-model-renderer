@@ -10,6 +10,8 @@
 #include <json.hpp>
 #include <jc3/formats/AvalancheArchive.h>
 
+#include <import_export/ImportExportManager.h>
+
 extern bool g_DrawBoundingBoxes;
 extern bool g_DrawDebugInfo;
 extern AvalancheArchive* g_CurrentLoadedArchive;
@@ -18,15 +20,36 @@ extern bool g_ShowModelLabels = true;
 
 void UI::Render()
 {
-    bool open_settings_modal = false;
-
     if (ImGui::BeginMainMenuBar())
     {
         m_MainMenuBarHeight = ImGui::GetWindowHeight();
 
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem("Exit")) {
+            const auto& importers = ImportExportManager::Get()->GetImporters();
+            const auto& exporters = ImportExportManager::Get()->GetExporters();
+
+            if (ImGui::BeginMenu(ICON_FA_PLUS_CIRCLE "  Import", (importers.size() > 0))) {
+                for (const auto& importer : importers) {
+                    if (ImGui::MenuItem(importer->GetName(), importer->GetExtension())) {
+                    }
+                }
+
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu(ICON_FA_MINUS_CIRCLE "  Export", (exporters.size() > 0))) {
+                for (const auto& exporter : exporters) {
+                    if (ImGui::MenuItem(exporter->GetName(), exporter->GetExtension())) {
+                    }
+                }
+
+                ImGui::EndMenu();
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit", "Ctrl + Q")) {
                 TerminateProcess(GetCurrentProcess(), 0);
             }
 
@@ -125,7 +148,7 @@ void RenderDirectoryList(json* current, bool open_folders = false)
                 auto id = ImGui::GetID(current_key.c_str());
                 auto is_open = ImGui::GetStateStorage()->GetInt(id, flags & ImGuiTreeNodeFlags_DefaultOpen);
                  
-                if (ImGui::TreeNodeEx(current_key.c_str(), flags, "%s %s", is_open ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER, current_key.c_str())) {
+                if (ImGui::TreeNodeEx(current_key.c_str(), flags, "%s  %s", is_open ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER, current_key.c_str())) {
                     auto next = &current->operator[](current_key);
                     RenderDirectoryList(next, open_folders);
 
@@ -160,12 +183,8 @@ void RenderDirectoryList(json* current, bool open_folders = false)
                 ImGui::PushID(filename.c_str());
                 if (ImGui::BeginPopupContextItem("Context Menu"))
                 {
-                    std::stringstream ss;
-                    ss << ICON_FA_FLOPPY_O << " Save as...";
-
                     static bool selected = false;
-
-                    ImGui::Selectable(ss.str().c_str(), &selected);
+                    ImGui::Selectable(ICON_FA_FLOPPY_O "  Save as...", &selected);
 
                     ImGui::EndPopup();
                 }
@@ -179,7 +198,7 @@ void UI::RenderFileTreeView()
 {
     std::stringstream title;
     if (g_CurrentLoadedArchive) {
-        title << ICON_FA_FOLDER_OPEN << " " << g_CurrentLoadedArchive->GetStreamArchive()->m_Filename.filename().string().c_str();
+        title << ICON_FA_FOLDER_OPEN << "  " << g_CurrentLoadedArchive->GetStreamArchive()->m_Filename.filename().string().c_str();
     }
     else {
         title << "Entity Explorer";

@@ -8,6 +8,10 @@ public:
     Wavefront_Obj() = default;
     virtual ~Wavefront_Obj() = default;
 
+    ImportExportType GetType() override final { return IE_TYPE_EXPORTER; }
+    const char* GetName() override final { return "Wavefront"; }
+    const char* GetExtension() override final { return ".obj"; }
+
     void Export(RenderBlockModel* rbm) override final
     {
         DEBUG_LOG("Wavefront_Obj::Export");

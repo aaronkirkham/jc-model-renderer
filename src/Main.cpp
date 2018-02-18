@@ -12,6 +12,7 @@
 #include <jc3/formats/AvalancheArchive.h>
 #include <jc3/formats/RuntimeContainer.h>
 
+#include <import_export/ImportExportManager.h>
 #include <import_export/wavefront_obj.h>
 
 // normal: 56523.6641
@@ -121,6 +122,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         // Register file type callbacks now
         FileLoader::Get()->RegisterCallback(".rbm", RenderBlockModel::FileReadCallback);
         FileLoader::Get()->RegisterCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::FileReadCallback);
+
+#if 0
+        // Register importers and exporters
+        ImportExportManager::Get()->Register(new Wavefront_Obj);
+#endif
 
         Window::Get()->Run();
     }
