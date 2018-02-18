@@ -12,8 +12,6 @@
 #include <jc3/formats/AvalancheArchive.h>
 #include <jc3/formats/RuntimeContainer.h>
 
-#include <shlobj.h>
-
 #include <import_export/wavefront_obj.h>
 
 // normal: 56523.6641
