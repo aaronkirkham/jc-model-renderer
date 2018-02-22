@@ -161,8 +161,6 @@ bool FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::Archi
 
 StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
 {
-    StreamArchive_t* result = new StreamArchive_t;
-
     JustCause3::StreamArchive::SARCHeader header;
     stream.read((char *)&header, sizeof(header));
 
@@ -171,6 +169,8 @@ StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
         DEBUG_LOG("FileLoader::ParseStreamArchive - Invalid header magic. Input file probably isn't a StreamArchive file.");
         return nullptr;
     }
+
+    StreamArchive_t* result = new StreamArchive_t;
 
     auto start_pos = stream.tellg();
     while (true) {
@@ -322,12 +322,13 @@ StreamArchive_t* FileLoader::ReadStreamArchive(const fs::path& filename) noexcep
         std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
         auto result = ParseStreamArchive(stream);
         if (result) {
+            result->m_Filename = filename;
             result->m_SARCBytes = std::move(buffer);
             return result;
         }
     }
 
-    return nullptr;;
+    return nullptr;
 }
 
 bool FileLoader::ReadCompressedTexture(const FileBuffer& buffer, uint64_t size, FileBuffer* output) noexcept

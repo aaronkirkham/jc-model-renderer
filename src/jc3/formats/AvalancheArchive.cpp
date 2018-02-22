@@ -18,7 +18,6 @@ AvalancheArchive::AvalancheArchive(const fs::path& file, bool skip_init)
 
     // read the stream archive
     m_StreamArchive = FileLoader::Get()->ReadStreamArchive(file);
-    m_StreamArchive->m_Filename = file;
 
     if (!skip_init) {
         Initialise();
@@ -30,7 +29,9 @@ AvalancheArchive::AvalancheArchive(const fs::path& filename, const FileBuffer& b
 {
     // read the stream archive
     m_StreamArchive = FileLoader::Get()->ReadStreamArchive(buffer);
-    m_StreamArchive->m_Filename = filename;
+    if (m_StreamArchive) {
+        m_StreamArchive->m_Filename = filename;
+    }
 
     if (!skip_init) {
         Initialise();
