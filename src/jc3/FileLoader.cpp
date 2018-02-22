@@ -24,8 +24,9 @@ extern fs::path g_JC3Directory;
 FileLoader::FileLoader()
 {
     m_FileList = std::make_unique<DirectoryList>();
+    const auto status_text_id = UI::Get()->PushStatusText("Loading dictionary...");
 
-    std::thread load([this] {
+    std::thread load([this, status_text_id] {
         fs::path dictionary = fs::current_path() / "dictionary.json";
 
         try {
@@ -46,9 +47,13 @@ FileLoader::FileLoader()
         catch (...) {
             Window::Get()->ShowMessageBox("Failed to read/parse file list dictionary.\n\nSome features will be disabled.");
         }
+
+        UI::Get()->PopStatusText(status_text_id);
     });
 
     load.detach();
+
+    // TODO: move the events to a better location?
 
     // trigger the file type callbacks
     UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& filename) {
@@ -60,51 +65,81 @@ FileLoader::FileLoader()
             }
             else {
                 std::stringstream error;
-                error << "Can't find " << filename << ".";
+                error << "Failed to load \"" << filename << "\"." << std::endl << std::endl;
+                error << "Make sure you have selected the correct Just Cause 3 directory.";
                 Window::Get()->ShowMessageBox(error.str());
 
-                DEBUG_LOG("[ERROR] " << error.str());
+                DEBUG_LOG("[ERROR] Failed to load \"" << filename << "\".");
             }
+        });
+    });
+
+    UI::Get()->Events().ExportArchiveRequest.connect([&](const fs::path& filename) {
+        Window::Get()->ShowFolderSelection("Select a folder to export the archive to.", [&, filename](const std::string& selected) {
+            // is the current loaded archive what we're trying to export?
+            if (g_CurrentLoadedArchive && g_CurrentLoadedArchive->GetFileName() == filename) {
+                g_CurrentLoadedArchive->Export(selected);
+                return;
+            }
+
+            FileLoader::Get()->ReadFile(filename, [&, filename, selected](bool success, FileBuffer data) {
+                if (success) {
+                    auto archive = new AvalancheArchive(filename, data, true);
+                    archive->Export(selected, [archive] { delete archive; });
+                }
+            });
         });
     });
 }
 
-void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback)
+void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback) noexcept
 {
-    std::thread t([this, filename, callback] {
+    std::stringstream status_text;
+    status_text << "Reading \"" << filename << "\"...";
+    const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
+
+    std::thread t([this, filename, callback, status_text_id] {
+        bool success = false;
+        FileBuffer data;
+
         // try and load from any current loaded archive
         if (g_CurrentLoadedArchive) {
             auto [archive, entry] = GetStreamArchiveFromFile(filename);
             if (archive && entry.m_Offset != 0) {
-                auto data = archive->GetEntryFromArchive(entry);
-                return callback(true, data);
+                success = true;
+                data = archive->GetEntryFromArchive(entry);
             }
         }
 
-        // try and load the file from an .arc file
-        auto [archive_name, namehash] = LocateFileInDictionary(filename);
-        if (!archive_name.empty()) {
-            return ReadFileFromArchive(archive_name, namehash, callback);
+        // if we couldn't find the file in the current loaded archive, let's look in the dictionary
+        if (!success) {
+            auto [archive_name, namehash] = LocateFileInDictionary(filename);
+            if (!archive_name.empty()) {
+                success = ReadFileFromArchive(archive_name, namehash, &data);
+            }
         }
 
-        callback(false, {});
+        UI::Get()->PopStatusText(status_text_id);
+        return callback(success, data);
     });
 
     t.detach();
 }
 
-void FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::ArchiveTable::VfsArchive* output)
+bool FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept
 {
     std::ifstream file(filename, std::ios::binary);
     if (file.fail()) {
-        throw std::runtime_error("FileLoader::ReadArchiveTable - Failed to read input file.");
+        DEBUG_LOG("FileLoader::ReadArchiveTable - Failed to open stream");
+        return false;
     }
 
     JustCause3::ArchiveTable::TabFileHeader header;
     file.read((char *)&header, sizeof(header));
 
     if (header.magic != 0x424154) {
-        throw std::runtime_error("FileLoader::ReadArchiveTable - File isn't a .tab file.");
+        DEBUG_LOG("FileLoader::ReadArchiveTable - Invalid header magic. Input file probably isn't a TAB file.");
+        return false;
     }
 
     output->index = 0;
@@ -121,6 +156,7 @@ void FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::Archi
     DEBUG_LOG("FileLoader::ReadArchiveTable - " << output->entries.size() << " files in archive");
 
     file.close();
+    return true;
 }
 
 StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
@@ -132,7 +168,8 @@ StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
 
     // ensure the header magic is correct
     if (strncmp(header.m_Magic, "SARC", 4) != 0) {
-        throw std::runtime_error("Invalid file header. Input file probably isn't a StreamArchive file.");
+        DEBUG_LOG("FileLoader::ParseStreamArchive - Invalid header magic. Input file probably isn't a StreamArchive file.");
+        return nullptr;
     }
 
     auto start_pos = stream.tellg();
@@ -152,8 +189,6 @@ StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
         stream.read((char *)&entry.m_Offset, sizeof(entry.m_Offset));
         stream.read((char *)&entry.m_Size, sizeof(entry.m_Size));
 
-        //DEBUG_LOG("StreamArchiveEntry - m_Filename='" << entry.m_Filename.c_str() << "', m_Offset=" << entry.m_Offset << ", m_Size=" << entry.m_Size);
-
         result->m_Files.emplace_back(entry);
 
         auto current_pos = stream.tellg();
@@ -165,24 +200,23 @@ StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
     return result;
 }
 
-FileBuffer FileLoader::DecompressArchiveFromStream(std::istream& stream)
+bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept
 {
-    FileBuffer bytes;
-
     // read the archive header
     JustCause3::AvalancheArchiveHeader header;
     stream.read((char *)&header, sizeof(header));
 
     // ensure the header magic is correct
     if (strncmp(header.m_Magic, "AAF", 4) != 0) {
-        throw std::runtime_error("Invalid file header. Input file probably isn't an AvalancheArchiveFormat file.");
+        DEBUG_LOG("FileLoader::DecompressArchiveFromStream - Invalid header magic. Input probably isn't an AvalancheArchiveFormat file.");
+        return false;
     }
 
     DEBUG_LOG("AvalancheArchiveFormat v" << header.m_Version);
     DEBUG_LOG(" - m_BlockCount=" << header.m_BlockCount);
     DEBUG_LOG(" - m_TotalUncompressedSize=" << header.m_TotalUncompressedSize);
 
-    bytes.reserve(header.m_TotalUncompressedSize);
+    output->reserve(header.m_TotalUncompressedSize);
 
     // read all the blocks
     for (uint32_t i = 0; i < header.m_BlockCount; ++i) {
@@ -206,7 +240,10 @@ FileBuffer FileLoader::DecompressArchiveFromStream(std::istream& stream)
 
         // 'EWAM' magic
         if (blockMagic != 0x4D415745) {
-            throw std::runtime_error("Invalid chunk!");
+            output->shrink_to_fit();
+
+            DEBUG_LOG("FileLoader::DecompressArchiveFromStream - Invalid chunk magic.");
+            return false;
         }
 
         // set the chunk offset
@@ -229,78 +266,93 @@ FileBuffer FileLoader::DecompressArchiveFromStream(std::istream& stream)
             assert(res == Z_OK);
             assert(decompressed_size == chunk.m_UncompressedSize);
 
-            bytes.insert(bytes.end(), result.begin(), result.end());
+            output->insert(output->end(), result.begin(), result.end());
         }
 
         stream.seekg((uint64_t)base_position + blockSize);
     }
 
-    return bytes;
+    return true;
 }
 
-StreamArchive_t* FileLoader::ReadStreamArchive(const FileBuffer& data)
+StreamArchive_t* FileLoader::ReadStreamArchive(const FileBuffer& data) noexcept
 {
     // TODO: need to read the header, check if the archive is compressed,
     // then just back to the start of the stream!
 
     // decompress the archive data
-    std::istringstream stream(std::string{ (char*)data.data(), data.size() });
-    auto m_SARCBytes = DecompressArchiveFromStream(stream);
+    std::istringstream compressed_buffer(std::string{ (char*)data.data(), data.size() });
 
-    // parse the stream archive
-    std::istringstream stream2(std::string{ (char*)m_SARCBytes.data(), m_SARCBytes.size() });
-    auto result = ParseStreamArchive(stream2);
-
-    result->m_SARCBytes = std::move(m_SARCBytes);
-    return result;
-}
-
-StreamArchive_t* FileLoader::ReadStreamArchive(const fs::path& filename)
-{
-    if (!fs::exists(filename)) {
-        throw std::runtime_error("FileLoader::ReadStreamArchive - Input file doesn't exist.");
+    // decompress the archive data
+    FileBuffer buffer;
+    if (DecompressArchiveFromStream(compressed_buffer, &buffer)) {
+        // parse the stream archive
+        std::istringstream stream(std::string{ (char *)buffer.data(), buffer.size() });
+        auto archive = ParseStreamArchive(stream);
+        if (archive) {
+            archive->m_SARCBytes = std::move(buffer);
+            return archive;
+        }
     }
 
-    std::ifstream stream(filename, std::ios::binary);
-    if (stream.fail()) {
-        throw std::runtime_error("FileLoader::ReadStreamArchive - Failed to read input file.");
+    return nullptr;
+}
+
+StreamArchive_t* FileLoader::ReadStreamArchive(const fs::path& filename) noexcept
+{
+    if (!fs::exists(filename)) {
+        DEBUG_LOG("FileLoader::ReadStreamArchive - Input file doesn't exist");
+        return nullptr;
+    }
+
+    std::ifstream compressed_buffer(filename, std::ios::binary);
+    if (compressed_buffer.fail()) {
+        DEBUG_LOG("FileLoader::ReadStreamArchive - Failed to open stream")
+        return nullptr;
     }
 
     // TODO: need to read the header, check if the archive is compressed,
     // then just back to the start of the stream!
 
-    auto m_SARCBytes = DecompressArchiveFromStream(stream);
-    stream.close();
+    FileBuffer buffer;
+    if (DecompressArchiveFromStream(compressed_buffer, &buffer)) {
+        compressed_buffer.close();
 
-    // parse the stream archive
-    std::istringstream stream2(std::string{ (char*)m_SARCBytes.data(), m_SARCBytes.size() });
-    auto result = ParseStreamArchive(stream2);
+        // parse the stream archive
+        std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
+        auto result = ParseStreamArchive(stream);
+        if (result) {
+            result->m_SARCBytes = std::move(buffer);
+            return result;
+        }
+    }
 
-    result->m_SARCBytes = std::move(m_SARCBytes);
-    return result;
+    return nullptr;;
 }
 
-void FileLoader::ReadCompressedTexture(const FileBuffer& buffer, uint64_t size, FileBuffer* output)
+bool FileLoader::ReadCompressedTexture(const FileBuffer& buffer, uint64_t size, FileBuffer* output) noexcept
 {
     std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
     ParseCompressedTexture(stream, size, output);
+    return true;
 }
 
-void FileLoader::ReadCompressedTexture(const fs::path& filename, FileBuffer* output)
+bool FileLoader::ReadCompressedTexture(const fs::path& filename, FileBuffer* output) noexcept
 {
     if (!fs::exists(filename)) {
-        DEBUG_LOG("FileLoader::ReadCompressedTexture - can't find input file '" << filename.string().c_str() << "'");
-        return;
+        DEBUG_LOG("FileLoader::ReadCompressedTexture - Input file doesn't exist");
+        return false;
     }
 
     std::ifstream stream(filename, std::ios::binary);
     if (stream.fail()) {
-        DEBUG_LOG("FileLoader::ReadCompressedTexture - can't find input file '" << filename.string().c_str() << "'");
-        return;
+        DEBUG_LOG("FileLoader::ReadCompressedTexture - Failed to open stream");
+        return false;
     }
 
     ParseCompressedTexture(stream, std::numeric_limits<uint64_t>::max(), output);
     stream.close();
+    return true;
 }
 
 template <typename T>
@@ -313,7 +365,7 @@ inline T ALIGN_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
     return value;
 }
 
-RuntimeContainer* FileLoader::ReadRuntimeContainer(const FileBuffer& buffer)
+RuntimeContainer* FileLoader::ReadRuntimeContainer(const FileBuffer& buffer) noexcept
 {
     std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
 
@@ -323,7 +375,8 @@ RuntimeContainer* FileLoader::ReadRuntimeContainer(const FileBuffer& buffer)
 
     // ensure the header magic is correct
     if (strncmp(header.m_Magic, "RTPC", 4) != 0) {
-        throw std::runtime_error("Invalid file header. Input file probably isn't a RuntimeContainer file.");
+        DEBUG_LOG("FileLoader::ReadRuntimeContainer - Invalid header magic. Input probably isn't a RuntimeContainer file.");
+        return nullptr;
     }
 
     DEBUG_LOG("RuntimePropertyContainer v" << header.m_Version);
@@ -537,7 +590,7 @@ RuntimeContainer* FileLoader::ReadRuntimeContainer(const FileBuffer& buffer)
     return root_container;
 }
 
-std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveFromFile(const fs::path& file)
+std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveFromFile(const fs::path& file) noexcept
 {
     if (g_CurrentLoadedArchive) {
         auto streamArchive = g_CurrentLoadedArchive->GetStreamArchive();
@@ -552,26 +605,26 @@ std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveF
     return { nullptr, StreamArchiveEntry_t{} };
 }
 
-void FileLoader::ReadFileFromArchive(const std::string& archive, uint32_t namehash, ReadFileCallback callback)
+bool FileLoader::ReadFileFromArchive(const std::string& archive, uint32_t namehash, FileBuffer* output) noexcept
 {
-    std::thread load([this, archive, namehash, callback] {
-        fs::path tab_file = g_JC3Directory / "archives_win64" / (archive + ".tab");
-        fs::path arc_file = g_JC3Directory / "archives_win64" / (archive + ".arc");
+    fs::path tab_file = g_JC3Directory / "archives_win64" / (archive + ".tab");
+    fs::path arc_file = g_JC3Directory / "archives_win64" / (archive + ".arc");
 
-        DEBUG_LOG(tab_file);
-        DEBUG_LOG(arc_file);
+    DEBUG_LOG(tab_file);
+    DEBUG_LOG(arc_file);
 
-        if (!fs::exists(tab_file) || !fs::exists(arc_file)) {
-            throw std::runtime_error("FileLoader::ReadFileFromArchive - arc/tab is missing!");
-        }
+    if (!fs::exists(tab_file) || !fs::exists(arc_file)) {
+        DEBUG_LOG("FileLoader::ReadFileFromArchive - Can't find .arc/.tab file");
+        return false;
+    }
 
-        // read the archive table
-        JustCause3::ArchiveTable::VfsArchive archiveTable;
-        ReadArchiveTable(tab_file.string(), &archiveTable);
+    bool found = false;
 
+    // read the archive table
+    JustCause3::ArchiveTable::VfsArchive archiveTable;
+    if (ReadArchiveTable(tab_file.string(), &archiveTable)) {
         uint64_t offset = 0;
         uint64_t size = 0;
-        bool found = false;
 
         // locate the data for the file
         for (auto& entry : archiveTable.entries) {
@@ -585,31 +638,29 @@ void FileLoader::ReadFileFromArchive(const std::string& archive, uint32_t nameha
             }
         }
 
-        assert(found);
-
         // did we find what we're looking for?
         if (found) {
             std::ifstream stream(arc_file, std::ios::binary);
             stream.seekg(offset);
 
-            FileBuffer data;
-            data.resize(size);
-            stream.read((char *)data.data(), size);
+            output->resize(size);
+            stream.read((char *)output->data(), size);
             stream.close();
 
             DEBUG_LOG("finished reading data from file.");
-
-            callback(true, std::move(data));
         }
-        else {
-            callback(false, {});
-        }
-    });
+    }
 
-    load.detach();
+#ifdef DEBUG
+    if (!found) {
+        __debugbreak();
+    }
+#endif
+
+    return found;
 }
 
-std::tuple<std::string, uint32_t> FileLoader::LocateFileInDictionary(const fs::path& filename)
+std::tuple<std::string, uint32_t> FileLoader::LocateFileInDictionary(const fs::path& filename) noexcept
 {
     // ergh, fs::path uses backslashes which is bad for us, is there a way
     // to stop that or should we switch back to strings?

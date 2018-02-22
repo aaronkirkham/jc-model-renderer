@@ -12,14 +12,19 @@
 
 #include <import_export/ImportExportManager.h>
 
+#include <atomic>
+
 extern bool g_DrawBoundingBoxes;
 extern bool g_DrawDebugInfo;
 extern AvalancheArchive* g_CurrentLoadedArchive;
 static bool g_ShowAllArchiveContents = false;
 extern bool g_ShowModelLabels = true;
+extern fs::path g_JC3Directory;
 
 void UI::Render()
 {
+    const auto& window_size = Window::Get()->GetSize();
+
     if (ImGui::BeginMainMenuBar())
     {
         m_MainMenuBarHeight = ImGui::GetWindowHeight();
@@ -48,6 +53,9 @@ void UI::Render()
             }
 
             ImGui::Separator();
+
+            if (ImGui::MenuItem(ICON_FA_FOLDER "  Set JC3 path")) {
+            }
 
             if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit", "Ctrl + Q")) {
                 TerminateProcess(GetCurrentProcess(), 0);
@@ -100,11 +108,7 @@ void UI::Render()
             }
 
             if (ImGui::MenuItem("Export To...")) {
-                Window::Get()->ShowFolderSelection("Select a folder to export the archive to.", [](const std::string& selected) {
-                    if (g_CurrentLoadedArchive) {
-                        g_CurrentLoadedArchive->ExportArchive(selected);
-                    }
-                });
+                UI::Get()->Events().ExportArchiveRequest(g_CurrentLoadedArchive->GetFileName());
             }
 
             if (ImGui::MenuItem("Close")) {
@@ -121,18 +125,38 @@ void UI::Render()
     // Stats
     ImGui::Begin("Stats", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
     {
-        auto windowSize = Window::Get()->GetSize();
-
-        ImGui::SetWindowPos(ImVec2(10, windowSize.y - 40));
-        ImGui::Text("%.01f FPS (%.02f ms) (%.0f x %.0f)", ImGui::GetIO().Framerate, (1000.0f / ImGui::GetIO().Framerate), windowSize.x, windowSize.y);
+        ImGui::SetCursorPos(ImVec2(20, window_size.y - 35));
+        ImGui::Text("%.01f fps (%.02f ms) (%.0f x %.0f)", ImGui::GetIO().Framerate, (1000.0f / ImGui::GetIO().Framerate), window_size.x, window_size.y);
     }
     ImGui::End();
 
+    // Status
+    ImGui::Begin("Status", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
+    {
+        static auto item_spacing = 24.0f;
+        uint32_t current_index = 0;
+
+        // render all status texts
+        for (const auto& status : m_StatusTexts) {
+            const auto& text_size = ImGui::CalcTextSize(status.second.c_str());
+
+            ImGui::SetCursorPos(ImVec2(window_size.x - text_size.x - 440, window_size.y - 35 - (item_spacing * current_index)));
+            RenderSpinner(status.second);
+
+            ++current_index;
+        }
+    }
+    ImGui::End();
+    
     RenderFileTreeView();
 }
 
 void RenderDirectoryList(json* current, bool open_folders = false)
 {
+    if (!current) {
+        return;
+    }
+
     if (current->is_object()) {
         for (auto it = current->begin(); it != current->end(); ++it) {
             auto current_key = it.key();
@@ -163,7 +187,9 @@ void RenderDirectoryList(json* current, bool open_folders = false)
     }
     else {
         if (current->is_string()) {
+#ifdef DEBUG
             __debugbreak();
+#endif
         }
         else {
             for (auto& leaf : *current) {
@@ -172,19 +198,34 @@ void RenderDirectoryList(json* current, bool open_folders = false)
 
                 ImGui::TreeNodeEx(filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen), "%s %s", is_archive ? ICON_FA_FILE_ARCHIVE_O : ICON_FA_FILE_O, filename.c_str());
 
+                // tooltips
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip(filename.c_str());
                 }
 
+                // fire file selected events
                 if (ImGui::IsItemClicked()) {
                     UI::Get()->Events().FileTreeItemSelected(filename);
                 }
 
+                // context menu
                 ImGui::PushID(filename.c_str());
                 if (ImGui::BeginPopupContextItem("Context Menu"))
                 {
-                    static bool selected = false;
-                    ImGui::Selectable(ICON_FA_FLOPPY_O "  Save as...", &selected);
+                    // save file
+                    if (ImGui::Selectable(ICON_FA_FLOPPY_O "  Save file...")) {
+                        UI::Get()->Events().SaveFileRequest(filename);
+                    }
+
+                    if (is_archive) {
+                        // export archive
+                        if (ImGui::Selectable(ICON_FA_FOLDER_O "  Export archive...")) {
+                            UI::Get()->Events().ExportArchiveRequest(filename);
+                        }
+                    }
+
+                    // TODO: look at the file extension and also check if we have any importers / exporters that
+                    // can do something with this file and add them to another menu
 
                     ImGui::EndPopup();
                 }
@@ -201,7 +242,7 @@ void UI::RenderFileTreeView()
         title << ICON_FA_FOLDER_OPEN << "  " << g_CurrentLoadedArchive->GetStreamArchive()->m_Filename.filename().string().c_str();
     }
     else {
-        title << "Entity Explorer";
+        title << "File Explorer";
     }
 
     ImGui::Begin(title.str().c_str(), nullptr, ImVec2(), 1.0f, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings));
@@ -229,4 +270,18 @@ void UI::RenderSpinner(const std::string& str)
 
     ImGui::SameLine();
     ImGui::Text(str.c_str());
+}
+
+uint64_t UI::PushStatusText(const std::string& str)
+{
+    static std::atomic_uint64_t unique_ids = { 0 };
+    auto id = ++unique_ids;
+
+    m_StatusTexts[id] = std::move(str);
+    return id;
+}
+
+void UI::PopStatusText(uint64_t id)
+{
+    m_StatusTexts.erase(id);
 }

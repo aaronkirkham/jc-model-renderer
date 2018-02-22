@@ -23,7 +23,7 @@ void DebugRenderer::Begin(RenderContext_t* context)
     ImGui::SetNextWindowSize(io.DisplaySize);
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
-    ImGui::Begin("Debug Renderer", NULL, flags);
+    ImGui::Begin("Debug Renderer", nullptr, flags);
 
     m_DrawList = ImGui::GetWindowDrawList();
 

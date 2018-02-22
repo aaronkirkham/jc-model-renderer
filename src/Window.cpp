@@ -128,6 +128,12 @@ void Window::Run()
 
         // update the window
         Frame();
+
+        // if the window is minimized, sleep for a bit
+        if (IsIconic(m_Hwnd)) {
+            // TODO: check if we're doing any work, importing/exporting anything and then sleep for less time
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
     }
 
     Shutdown();

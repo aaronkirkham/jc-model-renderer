@@ -17,15 +17,17 @@ private:
     void Initialise();
 
 public:
-    AvalancheArchive(const fs::path& file);
-    AvalancheArchive(const fs::path& filename, const FileBuffer& buffer);
+    AvalancheArchive(const fs::path& file, bool skip_init = false);
+    AvalancheArchive(const fs::path& filename, const FileBuffer& buffer, bool skip_init = false);
     virtual ~AvalancheArchive();
 
     static void FileReadCallback(const fs::path& filename, const FileBuffer& data);
 
     void LinkRenderBlockModel(RenderBlockModel* rbm);
-    void ExportArchive(const fs::path& directory);
+    void Export(const fs::path& directory, std::function<void()> callback = {});
 
     StreamArchive_t* GetStreamArchive() { return m_StreamArchive; }
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
+
+    const fs::path& GetFileName() { return m_File; }
 };

@@ -44,6 +44,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
     DEBUG_LOG("JC3 Directory: " << g_JC3Directory);
 
+    // TODO: Validate the jc3 directory, make sure we can see some common stuff like JustCause3.exe / archives_win64 folder.
+
     // is the directory invalid?
     if (g_JC3Directory.empty() || !fs::exists(g_JC3Directory)) {
         // try find the install directory via the steam install folder
@@ -70,7 +72,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
             });
         }
 
-#ifdef DEBUG
+#if 0
         Input::Get()->Events().KeyUp.connect([](uint32_t key) {
             if (key == VK_F1) {
                 // "editor/entities/jc_vehicles/01_land/v0012_car_autostraad_atv/v0012_car_autostraad_atv_civilian_01.ee"
