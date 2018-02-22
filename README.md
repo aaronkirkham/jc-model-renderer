@@ -3,7 +3,7 @@ A small application to preview Just Cause 3's Render Block Model files without t
 
 Currently you are unable to replace any models and repack the archives. This is a feature that will be added soon&trade;.
 
-<p align="center"><img src="https://kirkh.am/jc3-rbm-renderer/window.png" alt="Just Cause 3 Render Block Model Renderer Main Window" title="Render Block Model Renderer - Main Window"></p>
+<p align="center"><img src="https://kirkh.am/jc3-rbm-renderer/window2.png" alt="Just Cause 3 Render Block Model Renderer Main Window" title="Render Block Model Renderer - Main Window"></p>
 
 ### Build Requirements
 If you want to compile the code yourself for any reason, here are a few things you'll need.
