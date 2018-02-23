@@ -18,10 +18,6 @@ public:
 
     void Export(const fs::path& filename, const std::any& input, const fs::path& to, ImportExportFinishedCallback callback) override final
     {
-        // TODO: if we already clicked export, there's a chance we don't need to re-do all this as the texture is already available in the
-        // texture manager (see above) need to do some work to the ExportFileRequest handler so we can check if we already have a loaded file
-        // before reading new stuff
-
         auto path = to / filename.stem(); path += ".dds";
         auto& buffer = std::any_cast<FileBuffer>(input);
 
