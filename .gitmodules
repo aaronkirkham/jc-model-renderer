@@ -16,3 +16,6 @@
 [submodule "tools/gyp"]
 	path = tools/gyp
 	url = https://github.com/bnoordhuis/gyp.git
+[submodule "vendor/httplib"]
+	path = vendor/httplib
+	url = https://github.com/yhirose/cpp-httplib.git

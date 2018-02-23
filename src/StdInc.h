@@ -20,6 +20,10 @@
 #include <ksignals.h>
 #include <json.hpp>
 
+#ifndef DEBUG
+static constexpr int32_t current_version[3] = { 1, 0, 0 };
+#endif
+
 namespace fs = std::experimental::filesystem;
 using json = nlohmann::json;
 using FileBuffer = std::vector<uint8_t>;

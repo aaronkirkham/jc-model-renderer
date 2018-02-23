@@ -1,10 +1,10 @@
 #include <jc3/formats/RenderBlockModel.h>
 #include <jc3/RenderBlockFactory.h>
 #include <Window.h>
-#include <jc3/RenderBlockFactory.h>
 #include <graphics/Renderer.h>
 #include <graphics/Camera.h>
 #include <graphics/DebugRenderer.h>
+#include <graphics/UI.h>
 #include <jc3/formats/AvalancheArchive.h>
 #include <fonts/fontawesome_icons.h>
 #include <Input.h>
@@ -89,7 +89,7 @@ bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 
                 if (renderBlockViewTextures_) {
                     static bool open = true;
-                    ImGui::Begin(ICON_FA_PICTURE_O " Textures", &open, ImVec2(400, 200), 1.0f, (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings));
+                    ImGui::Begin(ICON_FA_PICTURE_O "  Textures", &open, ImVec2(400, 200), 1.0f, (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings));
                     {
                         ImGui::Columns(3, 0, false);
 
@@ -103,6 +103,11 @@ bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
                             {
                                 auto width = ImGui::GetWindowWidth() / ImGui::GetColumnsCount();
                                 ImGui::Image(texture->GetSRV(), ImVec2(width, width / aspect_ratio));
+
+                                // render context menu
+                                // NOTE: some columns might contain the same textures, to fix ImGui going crazy
+                                // because our PushID is the same, add the column index for uniqueness
+                                UI::Get()->RenderContextMenu(texture->GetPath(), ImGui::GetColumnIndex());
                             }
                             ImGui::EndGroup();
 

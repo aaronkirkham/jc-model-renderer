@@ -10,6 +10,7 @@ private:
     ID3D11Resource* m_Texture = nullptr;
     ID3D11ShaderResourceView* m_SRV = nullptr;
     fs::path m_Filename = "";
+    FileBuffer m_Buffer;
 
 public:
     Texture(const fs::path& filename);
@@ -23,6 +24,8 @@ public:
 
     ID3D11Resource* GetResource() { return m_Texture; }
     ID3D11ShaderResourceView* GetSRV() { return m_SRV; }
+
+    const FileBuffer& GetBuffer() { return m_Buffer; }
 };
 
 class TextureManager : public Singleton<TextureManager>
@@ -35,7 +38,7 @@ public:
     TextureManager() = default;
     virtual ~TextureManager() = default;
 
-    std::shared_ptr<Texture> GetTexture(const fs::path& filename);
+    std::shared_ptr<Texture> GetTexture(const fs::path& filename, bool create_if_not_exists = true);
     void Flush();
 
     static DDS_PIXELFORMAT GetPixelFormat(DXGI_FORMAT format);

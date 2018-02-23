@@ -13,6 +13,8 @@
 #include <jc3/formats/AvalancheArchive.h>
 #include <jc3/formats/RuntimeContainer.h>
 
+#include <import_export/ImportExportManager.h>
+
 #include <zlib.h>
 
 // Credits to gibbed for most of the archive format stuff
@@ -26,7 +28,7 @@ FileLoader::FileLoader()
     m_FileList = std::make_unique<DirectoryList>();
     const auto status_text_id = UI::Get()->PushStatusText("Loading dictionary...");
 
-    std::thread load([this, status_text_id] {
+    std::thread([this, status_text_id] {
         fs::path dictionary = fs::current_path() / "dictionary.json";
 
         try {
@@ -49,9 +51,7 @@ FileLoader::FileLoader()
         }
 
         UI::Get()->PopStatusText(status_text_id);
-    });
-
-    load.detach();
+    }).detach();
 
     // TODO: move the events to a better location?
 
@@ -74,20 +74,55 @@ FileLoader::FileLoader()
         });
     });
 
-    UI::Get()->Events().ExportArchiveRequest.connect([&](const fs::path& filename) {
-        Window::Get()->ShowFolderSelection("Select a folder to export the archive to.", [&, filename](const std::string& selected) {
-            // is the current loaded archive what we're trying to export?
-            if (g_CurrentLoadedArchive && g_CurrentLoadedArchive->GetFileName() == filename) {
-                g_CurrentLoadedArchive->Export(selected);
-                return;
+    // save file
+    UI::Get()->Events().SaveFileRequest.connect([&](const fs::path& filename) {
+        Window::Get()->ShowFolderSelection("Select a folder to save the file to.", [&, filename](const std::string& selected) {
+            DEBUG_LOG("SaveFileRequest - want to save file '" << filename << "' to '" << selected << "'");
+        });
+    });
+
+    // export file
+    UI::Get()->Events().ExportFileRequest.connect([&](const fs::path& filename, IImportExporter* exporter) {
+        Window::Get()->ShowFolderSelection("Select a folder to export the file to.", [&, filename, exporter](const std::string& selected) {
+            DEBUG_LOG("ExportFileRequest - want to export file '" << filename << "' to '" << selected << "'");
+
+            auto use = exporter;
+            if (!exporter) {
+                DEBUG_LOG("ExportFileRequest - Finding a suitable exporter for '" << filename << "'...");
+
+                const auto& exporters = ImportExportManager::Get()->GetExportersForExtension(filename.extension().string());
+                if (exporters.size() > 0) {
+                    DEBUG_LOG("ExportFileRequest - Using exporter '" << exporters.at(0)->GetName() << "'");
+
+                    use = exporters.at(0);
+                }
             }
 
-            FileLoader::Get()->ReadFile(filename, [&, filename, selected](bool success, FileBuffer data) {
-                if (success) {
-                    auto archive = new AvalancheArchive(filename, data, true);
-                    archive->Export(selected, [archive] { delete archive; });
-                }
-            });
+            // if we have a valid exporter, read the file and export it
+            if (use) {
+                std::stringstream status_text;
+                status_text << "Exporting \"" << filename << "\"...";
+                const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
+
+                FileLoader::Get()->ReadFile(filename, [&, filename, selected, use, status_text_id](bool success, FileBuffer data) {
+                    DEBUG_LOG("ExportFileRequest - Finished reading file, exporting now...");
+
+                    if (success) {
+                        use->Export(filename, data, selected, [status_text_id] {
+                            UI::Get()->PopStatusText(status_text_id);
+                        });
+                    }
+                    else {
+                        UI::Get()->PopStatusText(status_text_id);
+
+                        std::stringstream error;
+                        error << "Failed to export \"" << filename.filename() << "\".";
+                        Window::Get()->ShowMessageBox(error.str());
+
+                        DEBUG_LOG("[ERROR] " << error.str());
+                    }
+                });
+            }
         });
     });
 }
@@ -98,32 +133,42 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback) n
     status_text << "Reading \"" << filename << "\"...";
     const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
 
-    std::thread t([this, filename, callback, status_text_id] {
-        bool success = false;
-        FileBuffer data;
+    // are we looking for a texture?
+    if (filename.extension() == ".dds" || filename.extension() == ".ddsc" || filename.extension() == ".hmddsc") {
+        auto texture = TextureManager::Get()->GetTexture(filename, false);
 
-        // try and load from any current loaded archive
-        if (g_CurrentLoadedArchive) {
-            auto [archive, entry] = GetStreamArchiveFromFile(filename);
-            if (archive && entry.m_Offset != 0) {
-                success = true;
-                data = archive->GetEntryFromArchive(entry);
-            }
+        // is the texture loaded?
+        if (texture && texture->GetResource()) {
+            UI::Get()->PopStatusText(status_text_id);
+            return callback(true, texture->GetBuffer());
         }
+    }
 
-        // if we couldn't find the file in the current loaded archive, let's look in the dictionary
-        if (!success) {
-            auto [archive_name, namehash] = LocateFileInDictionary(filename);
-            if (!archive_name.empty()) {
-                success = ReadFileFromArchive(archive_name, namehash, &data);
+    // check any loaded archives for the file
+    if (g_CurrentLoadedArchive) {
+        const auto& [archive, entry] = GetStreamArchiveFromFile(filename);
+        if (archive && entry.m_Offset != 0) {
+            auto buffer = archive->GetEntryFromArchive(entry);
+
+            UI::Get()->PopStatusText(status_text_id);
+            return callback(true, std::move(buffer));
+        }
+    }
+
+    // finally, lets read it directory from the arc file
+    std::thread([this, filename, callback, status_text_id] {
+        const auto& [archive_name, namehash] = LocateFileInDictionary(filename);
+        if (!archive_name.empty()) {
+            FileBuffer buffer;
+            if (ReadFileFromArchive(archive_name, namehash, &buffer)) {
+                UI::Get()->PopStatusText(status_text_id);
+                return callback(true, std::move(buffer));
             }
         }
 
         UI::Get()->PopStatusText(status_text_id);
-        return callback(success, data);
-    });
-
-    t.detach();
+        return callback(false, {});
+    }).detach();
 }
 
 bool FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept
@@ -232,11 +277,13 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
         stream.read((char *)&blockSize, sizeof(blockSize));
         stream.read((char *)&blockMagic, sizeof(blockMagic));
 
+#if 0
         DEBUG_LOG(" ==== Block #" << i << " ====");
         DEBUG_LOG(" - Compressed Size: " << chunk.m_CompressedSize);
         DEBUG_LOG(" - Uncompressed Size: " << chunk.m_UncompressedSize);
         DEBUG_LOG(" - Size: " << blockSize);
         DEBUG_LOG(" - Magic: " << std::string((char *)&blockMagic, 4));
+#endif
 
         // 'EWAM' magic
         if (blockMagic != 0x4D415745) {
@@ -647,8 +694,6 @@ bool FileLoader::ReadFileFromArchive(const std::string& archive, uint32_t nameha
             output->resize(size);
             stream.read((char *)output->data(), size);
             stream.close();
-
-            DEBUG_LOG("finished reading data from file.");
         }
     }
 

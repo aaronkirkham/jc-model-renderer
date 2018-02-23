@@ -2,6 +2,9 @@
 
 #include "IImportExporter.h"
 
+namespace import_export
+{
+
 class Wavefront_Obj : public IImportExporter
 {
 public:
@@ -10,10 +13,12 @@ public:
 
     ImportExportType GetType() override final { return IE_TYPE_EXPORTER; }
     const char* GetName() override final { return "Wavefront"; }
-    const char* GetExtension() override final { return ".obj"; }
+    std::vector<const char*> GetInputExtensions() override final { return { ".rbm" }; }
+    const char* GetOutputExtension() override final { return ".obj"; }
 
-    void Export(RenderBlockModel* rbm) override final
+    void Export(const fs::path& filename, const std::any& input, const fs::path& to, ImportExportFinishedCallback callback) override final
     {
+#if 0
         DEBUG_LOG("Wavefront_Obj::Export");
 
         const auto block = rbm->GetRenderBlocks()[0];
@@ -32,5 +37,8 @@ public:
         }*/
 
         stream.close();
+#endif
     }
+};
+
 };

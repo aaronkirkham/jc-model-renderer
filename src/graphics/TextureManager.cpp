@@ -27,12 +27,14 @@ Texture::Texture(const fs::path& filename)
                 auto new_filename = m_Filename.replace_extension(".hmddsc");
                 DEBUG_LOG("looking for " << new_filename.string());
 
+                // try read the hmddsc file
                 FileLoader::Get()->ReadFile(new_filename, [this](bool success, FileBuffer data) {
                     if (success) {
+                        // try read the compressed texture buffer
                         FileBuffer buffer;
-                        FileLoader::Get()->ReadCompressedTexture(data, std::numeric_limits<uint64_t>::max(), &buffer);
-
-                        LoadFromBuffer(buffer);
+                        if (FileLoader::Get()->ReadCompressedTexture(data, std::numeric_limits<uint64_t>::max(), &buffer)) {
+                            LoadFromBuffer(buffer);
+                        }
                     }
                     else {
                         DEBUG_LOG("[ERROR 2] can't find HMDDSC texture " << m_Filename.string() << " :(:(");
@@ -60,15 +62,19 @@ bool Texture::LoadFromBuffer(const FileBuffer& buffer)
     safe_release(m_SRV);
     safe_release(m_Texture);
 
+    // create the dds texture resources
     auto result = DirectX::CreateDDSTextureFromMemory(Renderer::Get()->GetDevice(), buffer.data(), buffer.size(), &m_Texture, &m_SRV);
     //assert(SUCCEEDED(result));
+
+    // store the buffer
+    m_Buffer = std::move(buffer);
 
     if (FAILED(result)) {
         DEBUG_LOG("[ERROR] Failed to create texture '" << m_Filename.filename().string().c_str() << "'.");
         return false;
     }
 
-    DEBUG_LOG("Texture::Create '" << m_Filename.filename().string().c_str() << "', m_Texture=" << m_Texture << ", SRV=" << m_SRV);
+    DEBUG_LOG("Texture::Create - '" << m_Filename.filename().string().c_str() << "', m_Texture=" << m_Texture << ", SRV=" << m_SRV);
 
     return SUCCEEDED(result);
 }
@@ -79,24 +85,29 @@ void Texture::Use(uint32_t slot)
     Renderer::Get()->GetDeviceContext()->PSSetShaderResources(slot, 1, &m_SRV);
 }
 
-std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename)
+std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, bool create_if_not_exists)
 {
     auto name = filename.filename().string();
     auto key = fnv_1_32::hash(name.c_str(), name.length());
 
-    if (std::find(std::begin(m_LastUsedTextures), std::end(m_LastUsedTextures), key) == std::end(m_LastUsedTextures)) {
+    if (std::find(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key) == m_LastUsedTextures.end()) {
         m_LastUsedTextures.emplace_back(key);
     }
 
     // if we have already cached this texture, use that
     auto it = m_Textures.find(key);
-    if (it != std::end(m_Textures)) {
-        DEBUG_LOG("INFO: Using cached texture '" << name.c_str() << "' (refcount: " << it->second.use_count() << ")");
+    if (it != m_Textures.end()) {
+        DEBUG_LOG("TextureManager::GetTexture - Using cached texture '" << name.c_str() << "' (refcount: " << it->second.use_count() << ")");
         return it->second;
     }
 
-    m_Textures[key] = std::make_shared<Texture>(filename);
-    return m_Textures[key];
+    // do we want to create the texture?
+    if (create_if_not_exists) {
+        m_Textures[key] = std::make_shared<Texture>(filename);
+        return m_Textures[key];
+    }
+
+    return nullptr;
 }
 
 void TextureManager::Flush()
@@ -105,7 +116,7 @@ void TextureManager::Flush()
         auto texture = *it;
 
         auto texture_it = m_Textures.find(texture);
-        if (texture_it != std::end(m_Textures) && texture_it->second.use_count() == 1) {
+        if (texture_it != m_Textures.end() && texture_it->second.use_count() == 1) {
             m_Textures.erase(texture);
             it = m_LastUsedTextures.erase(it);
         }

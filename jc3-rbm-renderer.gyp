@@ -35,7 +35,8 @@
 			'zlib.gyp:zlib',
 		],
 		'defines': [
-			'WIN32_LEAN_AND_MEAN'
+			'WIN32_LEAN_AND_MEAN',
+			'CPPHTTPLIB_ZLIB_SUPPORT',
 		],
 		'msvs_configuration_attributes': {
 			'CharacterSet': '0',
@@ -43,6 +44,7 @@
 		'msvs_settings': {
 			'VCCLCompilerTool': {
 				'AdditionalOptions': ['/std:c++latest'],
+				'DisableSpecificWarnings': ['4244', '4267'],
 			},
 			'VCLinkerTool': {
 				'SubSystem': '2',
@@ -63,7 +65,8 @@
 			'src',
 			'vendor/ksignals',
 			'vendor/json/src',
-			'vendor/glm/glm'
+			'vendor/glm/glm',
+			'vendor/httplib/',
 		],
 		'sources': [
 			'<!@pymod_do_main(glob-files src/**/*.cpp)',

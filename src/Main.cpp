@@ -5,7 +5,10 @@
 #include <graphics/UI.h>
 
 #include <vector>
+#include <shellapi.h>
+
 #include <json.hpp>
+#include <httplib.h>
 
 #include <jc3/FileLoader.h>
 #include <jc3/formats/RenderBlockModel.h>
@@ -14,6 +17,8 @@
 
 #include <import_export/ImportExportManager.h>
 #include <import_export/wavefront_obj.h>
+#include <import_export/DDSC.h>
+#include <import_export/AvalancheArchive.h>
 
 // normal: 56523.6641
 // colour: 262143.984
@@ -72,6 +77,35 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
             });
         }
 
+#ifndef DEBUG
+        // check for any updates
+        std::thread([] {
+            try {
+                httplib::Client client("kirkh.am");
+                auto res = client.get("/jc3-rbm-renderer/latest.json");
+                if (res && res->status == 200) {
+                    auto data = json::parse(res->body);
+                    auto version_str = data["version"].get<std::string>();
+
+                    int32_t latest_version[3] = { 0 };
+                    std::sscanf(version_str.c_str(), "%d.%d.%d", &latest_version[0], &latest_version[1], &latest_version[2]);
+
+                    if (std::lexicographical_compare(current_version, current_version + 3, latest_version, latest_version + 3)) {
+                        std::stringstream msg;
+                        msg << "A new version (" << version_str << ") is available for download." << std::endl << std::endl;
+                        msg << "Do you want to go to the release page on GitHub?";
+
+                        if (Window::Get()->ShowMessageBox(msg.str(), MB_ICONQUESTION | MB_YESNO) == IDYES) {
+                            ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc3-rbm-renderer/releases/latest", nullptr, nullptr, SW_SHOWNORMAL);
+                        }
+                    }
+                }
+            }
+            catch (...) {
+            }
+        }).detach();
+#endif
+
 #if 0
         Input::Get()->Events().KeyUp.connect([](uint32_t key) {
             if (key == VK_F1) {
@@ -125,11 +159,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterCallback(".rbm", RenderBlockModel::FileReadCallback);
         FileLoader::Get()->RegisterCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::FileReadCallback);
 
-#if 0
         // Register importers and exporters
-        ImportExportManager::Get()->Register(new Wavefront_Obj);
-#endif
+        ImportExportManager::Get()->Register(new import_export::Wavefront_Obj);
+        ImportExportManager::Get()->Register(new import_export::DDSC);
+        ImportExportManager::Get()->Register(new import_export::AvalancheArchive);
 
+        // run!
         Window::Get()->Run();
     }
 

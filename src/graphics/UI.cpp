@@ -31,12 +31,12 @@ void UI::Render()
 
         if (ImGui::BeginMenu("File"))
         {
-            const auto& importers = ImportExportManager::Get()->GetImporters();
+            /*const auto& importers = ImportExportManager::Get()->GetImporters();
             const auto& exporters = ImportExportManager::Get()->GetExporters();
 
             if (ImGui::BeginMenu(ICON_FA_PLUS_CIRCLE "  Import", (importers.size() > 0))) {
                 for (const auto& importer : importers) {
-                    if (ImGui::MenuItem(importer->GetName(), importer->GetExtension())) {
+                    if (ImGui::MenuItem(importer->GetName(), importer->GetOutputExtension())) {
                     }
                 }
 
@@ -45,19 +45,20 @@ void UI::Render()
 
             if (ImGui::BeginMenu(ICON_FA_MINUS_CIRCLE "  Export", (exporters.size() > 0))) {
                 for (const auto& exporter : exporters) {
-                    if (ImGui::MenuItem(exporter->GetName(), exporter->GetExtension())) {
+                    if (ImGui::MenuItem(exporter->GetName(), exporter->GetOutputExtension())) {
                     }
                 }
 
                 ImGui::EndMenu();
             }
 
-            ImGui::Separator();
+            ImGui::Separator();*/
 
-            if (ImGui::MenuItem(ICON_FA_FOLDER "  Set JC3 path")) {
+            if (ImGui::MenuItem(ICON_FA_FOLDER "  Select JC3 path")) {
             }
 
-            if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit", "Ctrl + Q")) {
+            if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit")) {
+                // TODO: change me
                 TerminateProcess(GetCurrentProcess(), 0);
             }
 
@@ -107,9 +108,11 @@ void UI::Render()
                 g_CurrentLoadedArchive->GetDirectoryList()->Parse(g_CurrentLoadedArchive->GetStreamArchive(), only_include);
             }
 
+#if 0
             if (ImGui::MenuItem("Export To...")) {
-                UI::Get()->Events().ExportArchiveRequest(g_CurrentLoadedArchive->GetFileName());
+                UI::Get()->Events().ExportFileRequest(g_CurrentLoadedArchive->GetFileName(), nullptr);
             }
+#endif
 
             if (ImGui::MenuItem("Close")) {
                 delete g_CurrentLoadedArchive;
@@ -135,6 +138,8 @@ void UI::Render()
     {
         static auto item_spacing = 24.0f;
         uint32_t current_index = 0;
+
+        std::lock_guard<std::recursive_mutex> _lk{ m_StatusTextsMutex };
 
         // render all status texts
         for (const auto& status : m_StatusTexts) {
@@ -209,27 +214,7 @@ void RenderDirectoryList(json* current, bool open_folders = false)
                 }
 
                 // context menu
-                ImGui::PushID(filename.c_str());
-                if (ImGui::BeginPopupContextItem("Context Menu"))
-                {
-                    // save file
-                    if (ImGui::Selectable(ICON_FA_FLOPPY_O "  Save file...")) {
-                        UI::Get()->Events().SaveFileRequest(filename);
-                    }
-
-                    if (is_archive) {
-                        // export archive
-                        if (ImGui::Selectable(ICON_FA_FOLDER_O "  Export archive...")) {
-                            UI::Get()->Events().ExportArchiveRequest(filename);
-                        }
-                    }
-
-                    // TODO: look at the file extension and also check if we have any importers / exporters that
-                    // can do something with this file and add them to another menu
-
-                    ImGui::EndPopup();
-                }
-                ImGui::PopID();
+                UI::Get()->RenderContextMenu(filename);
             }
         }
     }
@@ -255,7 +240,7 @@ void UI::RenderFileTreeView()
         if (!g_CurrentLoadedArchive) {
             RenderDirectoryList(FileLoader::Get()->GetDirectoryList()->GetStructure());
         }
-        else {
+        else if (g_CurrentLoadedArchive->GetDirectoryList()) {
             RenderDirectoryList(g_CurrentLoadedArchive->GetDirectoryList()->GetStructure(), false);
         }
     }
@@ -272,16 +257,51 @@ void UI::RenderSpinner(const std::string& str)
     ImGui::Text(str.c_str());
 }
 
+void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra)
+{
+    std::stringstream unique_id;
+    unique_id << "context-menu-" << filename << "-" << unique_id_extra;
+
+    ImGui::PushID(unique_id.str().c_str());
+
+    if (ImGui::BeginPopupContextItem("Context Menu")) {
+        // general save file
+        if (ImGui::Selectable(ICON_FA_FLOPPY_O "  Save file...")) {
+            UI::Get()->Events().SaveFileRequest(filename);
+        }
+
+        // exporters
+        const auto& exporters = ImportExportManager::Get()->GetExportersForExtension(filename.extension().string());
+        if (exporters.size() > 0) {
+            if (ImGui::BeginMenu(ICON_FA_MINUS_CIRCLE "  Export", (exporters.size() > 0))) {
+                for (const auto& exporter : exporters) {
+                    if (ImGui::MenuItem(exporter->GetName(), exporter->GetOutputExtension())) {
+                        UI::Get()->Events().ExportFileRequest(filename, exporter);
+                    }
+                }
+
+                ImGui::EndMenu();
+            }
+        }
+
+        ImGui::EndPopup();
+    }
+
+    ImGui::PopID();
+}
+
 uint64_t UI::PushStatusText(const std::string& str)
 {
     static std::atomic_uint64_t unique_ids = { 0 };
     auto id = ++unique_ids;
 
+    std::lock_guard<std::recursive_mutex> _lk{ m_StatusTextsMutex };
     m_StatusTexts[id] = std::move(str);
     return id;
 }
 
 void UI::PopStatusText(uint64_t id)
 {
+    std::lock_guard<std::recursive_mutex> _lk{ m_StatusTextsMutex };
     m_StatusTexts.erase(id);
 }
