@@ -10,26 +10,29 @@
 #include <Input.h>
 #include <imgui.h>
 
-static std::vector<RenderBlockModel*> g_Models;
-static std::recursive_mutex g_ModelsMutex;
+#include <jc3/ModelManager.h>
+
 extern bool g_DrawBoundingBoxes;
-extern bool g_DrawDebugInfo;
-extern AvalancheArchive* g_CurrentLoadedArchive;
 extern bool g_ShowModelLabels;
 
+extern AvalancheArchive* g_CurrentLoadedArchive;
 static auto g_RenderBlockColour = glm::vec4{ 1, 1, 1, 1 };
 
 bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 {
+#if 0
     static std::once_flag once_;
     static IRenderBlock* renderBlockViewTextures_ = nullptr;
     std::call_once(once_, [&] {
         Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
             std::lock_guard<std::recursive_mutex> _lk{ g_ModelsMutex };
             for (auto& model : g_Models) {
-                model->Draw(context);
+                if (model) {
+                    model->Draw(context);
+                }
             }
 
+#if 0
             // debug model info
             if (g_DrawDebugInfo) {
                 ImGui::Begin("Model Stats", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings));
@@ -37,22 +40,6 @@ bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
                     ImGui::SetWindowPos(ImVec2(10, 20));
 
                     //ImGui::ColorPicker4("texture_col", (float*)&color, (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoSmallPreview | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_Float));
-
-                    std::size_t vertices = 0;
-                    std::size_t indices = 0;
-                    std::size_t triangles = 0;
-
-                    for (auto& model : g_Models) {
-                        for (auto& block : model->GetRenderBlocks()) {
-                            auto index_count = block->GetIndexBuffer()->m_ElementCount;
-
-                            vertices += block->GetVertexBuffer()->m_ElementCount;
-                            indices += index_count;
-                            triangles += (index_count / 3);
-                        }
-                    }
-
-                    ImGui::Text("Models: %d, Vertices: %d, Indices: %d, Triangles: %d, Textures: %d", g_Models.size(), vertices, indices, triangles, TextureManager::Get()->GetCacheSize());
 
                     size_t model_index = 0;
                     for (auto& model : g_Models) {
@@ -125,8 +112,10 @@ bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
                     }
                 }
             }
+#endif
         });
     });
+#endif
 
     bool parse_success = true;
 
@@ -192,13 +181,7 @@ bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 
 end:
     if (parse_success) {
-        std::lock_guard<std::recursive_mutex> _lk{ g_ModelsMutex };
-        g_Models.emplace_back(this);
-
-        // if we have a current loaded archive, link the current RBM to it so we can unload it after
-        if (g_CurrentLoadedArchive) {
-            g_CurrentLoadedArchive->LinkRenderBlockModel(this);
-        }
+        ModelManager::Get()->AddModel(this, g_CurrentLoadedArchive);
     }
 
     return parse_success;
@@ -237,11 +220,10 @@ RenderBlockModel::~RenderBlockModel()
 {
     DEBUG_LOG("RenderBlockModel::~RenderBlockModel");
 
-    std::lock_guard<std::recursive_mutex> _lk{ g_ModelsMutex };
-    g_Models.erase(std::remove(g_Models.begin(), g_Models.end(), this), g_Models.end());
+    ModelManager::Get()->RemoveModel(this, g_CurrentLoadedArchive);
 
-    for (auto& renderBlock : m_RenderBlocks) {
-        delete renderBlock;
+    for (auto& render_block : m_RenderBlocks) {
+        safe_delete(render_block);
     }
 
     Renderer::Get()->DestroyBuffer(m_MeshConstants);
@@ -254,7 +236,7 @@ void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuff
     auto rbm = new RenderBlockModel(filename);
     if (!rbm->ParseRenderBlockModel(stream)) {
         Window::Get()->ShowMessageBox(rbm->GetError());
-        delete rbm;
+        safe_delete(rbm);
     }
 }
 

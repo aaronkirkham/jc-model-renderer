@@ -78,9 +78,6 @@ public:
         // read the block header
         stream.read((char *)&m_Block, sizeof(m_Block));
 
-        // set vertex shader constants
-        m_Constants.m_Scale = m_Block.attributes.scale;
-
         // read the materials
         ReadMaterials(filename, stream);
 
@@ -102,6 +99,9 @@ public:
     {
         IRenderBlock::Setup(context);
 
+        // set shader constants
+        m_Constants.m_Scale = m_Block.attributes.scale;
+
         // set the constant buffers
         Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
         Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
@@ -112,5 +112,10 @@ public:
     virtual void Draw(RenderContext_t* context) override final
     {
         DrawSkinBatches(context);
+    }
+
+    virtual void DrawUI() override final
+    {
+        ImGui::SliderFloat("Scale", &m_Block.attributes.scale, 0.1f, 10.0f);
     }
 };

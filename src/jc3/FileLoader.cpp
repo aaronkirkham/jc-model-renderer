@@ -57,21 +57,30 @@ FileLoader::FileLoader()
 
     // trigger the file type callbacks
     UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& filename) {
-        ReadFile(filename, [&, filename](bool success, FileBuffer data) {
-            if (success) {
-                for (const auto& fn : m_FileTypeCallbacks[filename.extension().string()]) {
-                    fn(filename, data);
+        // do we have a registered callback for this file type?
+        if (m_FileTypeCallbacks.find(filename.extension().string()) != m_FileTypeCallbacks.end()) {
+            ReadFile(filename, [&, filename](bool success, FileBuffer data) {
+                if (success) {
+                    for (const auto& fn : m_FileTypeCallbacks[filename.extension().string()]) {
+                        fn(filename, data);
+                    }
                 }
-            }
-            else {
-                std::stringstream error;
-                error << "Failed to load \"" << filename << "\"." << std::endl << std::endl;
-                error << "Make sure you have selected the correct Just Cause 3 directory.";
-                Window::Get()->ShowMessageBox(error.str());
+                else {
+                    std::stringstream error;
+                    error << "Failed to load \"" << filename << "\"." << std::endl << std::endl;
+                    error << "Make sure you have selected the correct Just Cause 3 directory.";
+                    Window::Get()->ShowMessageBox(error.str());
 
-                DEBUG_LOG("[ERROR] Failed to load \"" << filename << "\".");
-            }
-        });
+                    DEBUG_LOG("[ERROR] Failed to load \"" << filename << "\".");
+                }
+            });
+        }
+        else {
+            std::stringstream info;
+            info << "I don't know how to read the \"" << filename.extension() << "\" extension." << std::endl << std::endl;
+            info << "Want to help? Check out our GitHub page for information on how to contribute.";
+            Window::Get()->ShowMessageBox(info.str(), MB_ICONASTERISK);
+        }
     });
 
     // save file

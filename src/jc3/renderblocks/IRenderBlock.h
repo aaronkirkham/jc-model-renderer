@@ -178,4 +178,6 @@ public:
             Renderer::Get()->DrawIndexed(batch.offset, batch.size, m_IndexBuffer);
         }
     }
+
+    virtual void DrawUI() = 0;
 };

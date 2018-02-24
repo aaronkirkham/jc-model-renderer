@@ -106,7 +106,7 @@ public:
         assert(SUCCEEDED(result));
 
         if (FAILED(result)) {
-            delete buffer;
+            safe_delete(buffer);
             return nullptr;
         }
 

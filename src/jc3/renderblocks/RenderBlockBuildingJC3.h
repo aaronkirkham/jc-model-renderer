@@ -106,4 +106,9 @@ public:
         uint32_t offset = 0;
         context->m_DeviceContext->IASetVertexBuffers(1, 1, &m_VertexBufferData->m_Buffer, &m_VertexBufferData->m_ElementStride, &offset);
     }
+
+    virtual void DrawUI() override final
+    {
+        ImGui::Text("hello");
+    }
 };

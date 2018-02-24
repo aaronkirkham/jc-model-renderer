@@ -412,7 +412,7 @@ VertexBuffer_t* Renderer::CreateVertexBuffer(uint32_t count, uint32_t stride)
     assert(SUCCEEDED(result));
 
     if (FAILED(result)) {
-        delete buffer;
+        safe_delete(buffer);
         return nullptr;
     }
 
@@ -442,7 +442,7 @@ VertexBuffer_t* Renderer::CreateVertexBuffer(const void* data, uint32_t count, u
     assert(SUCCEEDED(result));
 
     if (FAILED(result)) {
-        delete buffer;
+        safe_delete(buffer);
         return nullptr;
     }
 
@@ -472,7 +472,7 @@ IndexBuffer_t* Renderer::CreateIndexBuffer(const void* data, uint32_t count, D3D
     assert(SUCCEEDED(result));
 
     if (FAILED(result)) {
-        delete buffer;
+        safe_delete(buffer);
         return nullptr;
     }
 
@@ -486,9 +486,7 @@ void Renderer::DestroyBuffer(IBuffer_t* buffer)
     if (buffer) {
         safe_release(buffer->m_SRV);
         safe_release(buffer->m_Buffer);
-
-        delete buffer;
-        buffer = nullptr;
+        safe_delete(buffer);
     }
 }
 
@@ -506,9 +504,7 @@ void Renderer::DestroyVertexDeclaration(VertexDeclaration_t* declaration)
 {
     if (declaration) {
         safe_release(declaration->m_Layout);
-
-        delete declaration;
-        declaration = nullptr;
+        safe_delete(declaration);
     }
 }
 
@@ -537,7 +533,7 @@ SamplerState_t* Renderer::CreateSamplerState(const SamplerStateCreationParams_t&
     assert(SUCCEEDED(result));
 
     if (FAILED(result)) {
-        delete sampler;
+        safe_delete(sampler);
         return nullptr;
     }
 
@@ -548,8 +544,6 @@ void Renderer::DestroySamplerState(SamplerState_t* sampler)
 {
     if (sampler) {
         safe_release(sampler->m_SamplerState);
-
-        delete sampler;
-        sampler = nullptr;
+        safe_delete(sampler);
     }
 }

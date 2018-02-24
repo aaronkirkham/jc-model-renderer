@@ -20,13 +20,47 @@
 #include <import_export/DDSC.h>
 #include <import_export/AvalancheArchive.h>
 
+#include <jc3/ModelManager.h>
+
 // normal: 56523.6641
 // colour: 262143.984
 
 extern fs::path g_JC3Directory = "";
 extern bool g_DrawBoundingBoxes = true;
-extern bool g_DrawDebugInfo = true;
+extern bool g_ShowModelLabels = true;
 extern AvalancheArchive* g_CurrentLoadedArchive;
+
+void CheckForUpdates(bool show_no_update_messagebox)
+{
+    std::thread([show_no_update_messagebox] {
+        try {
+            httplib::Client client("kirkh.am");
+            auto res = client.get("/jc3-rbm-renderer/latest.json");
+            if (res && res->status == 200) {
+                auto data = json::parse(res->body);
+                auto version_str = data["version"].get<std::string>();
+
+                int32_t latest_version[3] = { 0 };
+                std::sscanf(version_str.c_str(), "%d.%d.%d", &latest_version[0], &latest_version[1], &latest_version[2]);
+
+                if (std::lexicographical_compare(current_version, current_version + 3, latest_version, latest_version + 3)) {
+                    std::stringstream msg;
+                    msg << "A new version (" << version_str << ") is available for download." << std::endl << std::endl;
+                    msg << "Do you want to go to the release page on GitHub?";
+
+                    if (Window::Get()->ShowMessageBox(msg.str(), MB_ICONQUESTION | MB_YESNO) == IDYES) {
+                        ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc3-rbm-renderer/releases/latest", nullptr, nullptr, SW_SHOWNORMAL);
+                    }
+                }
+                else if (show_no_update_messagebox) {
+                    Window::Get()->ShowMessageBox("You have the latest version!", MB_ICONINFORMATION);
+                }
+            }
+        }
+        catch (...) {
+        }
+    }).detach();
+}
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine, int32_t iCmdShow)
 {
@@ -45,7 +79,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
     g_JC3Directory = Settings::Get()->GetValue<std::string>("jc3_directory");
     g_DrawBoundingBoxes = Settings::Get()->GetValue<bool>("draw_bounding_boxes", true);
-    g_DrawDebugInfo = Settings::Get()->GetValue<bool>("draw_debug_info", true);
+    g_ShowModelLabels = Settings::Get()->GetValue<bool>("show_model_labels", true);
 
     DEBUG_LOG("JC3 Directory: " << g_JC3Directory);
 
@@ -79,31 +113,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
 #ifndef DEBUG
         // check for any updates
-        std::thread([] {
-            try {
-                httplib::Client client("kirkh.am");
-                auto res = client.get("/jc3-rbm-renderer/latest.json");
-                if (res && res->status == 200) {
-                    auto data = json::parse(res->body);
-                    auto version_str = data["version"].get<std::string>();
-
-                    int32_t latest_version[3] = { 0 };
-                    std::sscanf(version_str.c_str(), "%d.%d.%d", &latest_version[0], &latest_version[1], &latest_version[2]);
-
-                    if (std::lexicographical_compare(current_version, current_version + 3, latest_version, latest_version + 3)) {
-                        std::stringstream msg;
-                        msg << "A new version (" << version_str << ") is available for download." << std::endl << std::endl;
-                        msg << "Do you want to go to the release page on GitHub?";
-
-                        if (Window::Get()->ShowMessageBox(msg.str(), MB_ICONQUESTION | MB_YESNO) == IDYES) {
-                            ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc3-rbm-renderer/releases/latest", nullptr, nullptr, SW_SHOWNORMAL);
-                        }
-                    }
-                }
-            }
-            catch (...) {
-            }
-        }).detach();
+        CheckForUpdates();
 #endif
 
 #if 0
@@ -154,6 +164,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
             }
         });
 #endif
+
+        ModelManager::Get();
 
         // Register file type callbacks now
         FileLoader::Get()->RegisterCallback(".rbm", RenderBlockModel::FileReadCallback);

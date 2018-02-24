@@ -138,4 +138,9 @@ public:
         // set the normal map sampler
         context->m_DeviceContext->PSSetSamplers(1, 1, &m_SamplerStateNormalMap->m_SamplerState);
     }
+
+    virtual void DrawUI() override final
+    {
+        ImGui::Text("hello");
+    }
 };

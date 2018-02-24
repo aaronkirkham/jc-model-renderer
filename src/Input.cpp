@@ -52,9 +52,9 @@ bool Input::HandleMessage(MSG* event)
     }
     else if (event->message == WM_KEYUP)
     {
-        if (key == VK_ESCAPE) {
+        /*if (key == VK_ESCAPE) {
             TerminateProcess(GetCurrentProcess(), 0);
-        }
+        }*/
 
         m_KeyboardState[key] = false;
         m_InputEvents.KeyUp(key);
