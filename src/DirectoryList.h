@@ -46,24 +46,26 @@ public:
     }
 
     void Parse(nlohmann::json* structure, const std::vector<std::string>& include_only = {}) {
-        m_Structure.clear();
+        if (structure) {
+            m_Structure.clear();
 
-        for (auto it = structure->begin(); it != structure->end(); ++it) {
-            auto data = it.value();
-            for (auto it2 = data.begin(); it2 != data.end(); ++it2) {
-                auto value = it2.value();
-                if (value.is_string()) {
-                    auto valueStr = value.get<std::string>();
+            for (auto it = structure->begin(); it != structure->end(); ++it) {
+                auto data = it.value();
+                for (auto it2 = data.begin(); it2 != data.end(); ++it2) {
+                    auto value = it2.value();
+                    if (value.is_string()) {
+                        auto valueStr = value.get<std::string>();
 
-                    if (!include_only.empty()) {
-                        for (auto& extension : include_only) {
-                            if (valueStr.find(extension) != std::string::npos) {
-                                split(valueStr, m_Structure);
+                        if (!include_only.empty()) {
+                            for (auto& extension : include_only) {
+                                if (valueStr.find(extension) != std::string::npos) {
+                                    split(valueStr, m_Structure);
+                                }
                             }
                         }
-                    }
-                    else {
-                        split(valueStr, m_Structure);
+                        else {
+                            split(valueStr, m_Structure);
+                        }
                     }
                 }
             }
@@ -71,18 +73,20 @@ public:
     }
 
     void Parse(StreamArchive_t* archive, const std::vector<std::string>& include_only = {}) {
-        m_Structure.clear();
+        if (archive) {
+            m_Structure.clear();
 
-        for (auto& file : archive->m_Files) {
-            if (!include_only.empty()) {
-                for (auto& extension : include_only) {
-                    if (file.m_Filename.find(extension) != std::string::npos) {
-                        split(file.m_Filename, m_Structure);
+            for (auto& file : archive->m_Files) {
+                if (!include_only.empty()) {
+                    for (auto& extension : include_only) {
+                        if (file.m_Filename.find(extension) != std::string::npos) {
+                            split(file.m_Filename, m_Structure);
+                        }
                     }
                 }
-            }
-            else {
-                split(file.m_Filename, m_Structure);
+                else {
+                    split(file.m_Filename, m_Structure);
+                }
             }
         }
     }
