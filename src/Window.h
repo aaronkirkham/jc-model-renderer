@@ -17,6 +17,7 @@ static constexpr auto g_WindowName = "Engine";
 struct WindowEvents
 {
     ksignals::Event<void(const glm::vec2& size)> WindowResized;
+    ksignals::Event<void(const fs::path& filename)> FileDropped;
 };
 
 class Window : public Singleton<Window>

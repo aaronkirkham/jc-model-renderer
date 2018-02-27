@@ -5,6 +5,7 @@
 
 #include <sstream>
 #include <shlobj.h>
+#include <shellapi.h>
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
@@ -36,6 +37,16 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPA
         // Disable ALT application menu
         if ((wParam & 0xfff0) == SC_KEYMENU) {
             return 0;
+        }
+    }
+    else if (message == WM_DROPFILES)
+    {
+        const auto drop = reinterpret_cast<HDROP>(wParam);
+
+        char file[MAX_PATH];
+        if (DragQueryFile(drop, 0, file, MAX_PATH) != 0) {
+            Window::Get()->Events().FileDropped(file);
+            DragFinish(drop);
         }
     }
     else if (message == WM_DESTROY || message == WM_CLOSE)
@@ -79,6 +90,8 @@ bool Window::Initialise(const HINSTANCE& instance)
     SetForegroundWindow(m_Hwnd);
     SetFocus(m_Hwnd);
     ShowCursor(true);
+
+    DragAcceptFiles(m_Hwnd, true);
 
     Input::Get()->Initialise();
 
