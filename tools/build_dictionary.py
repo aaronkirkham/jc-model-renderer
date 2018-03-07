@@ -9,11 +9,12 @@
 # point to the just cause 3 project files directory
 # https://justcause3mods.com/mods/modified-gibbeds-tools/
 
+import sys
 import os
 import json
 import lookup3
 
-OUT_PATH = "%s" % ("../assets/" if os.getcwd().find('tools') != -1 else "assets/")
+OUT_PATH = "%s/assets/" % os.path.dirname(os.path.dirname(os.path.realpath(sys.argv[0])))
 GIBBED_PATH = "C:/Users/aaron/Downloads/Modified-Gibbeds-Tools/bin/projects/Just Cause 3/files"
 DICTIONARY = {}
 
