@@ -10,11 +10,10 @@
 # https://justcause3mods.com/mods/modified-gibbeds-tools/
 
 import os
-import re
 import json
 import lookup3
 
-OUT_PATH = "../assets"
+OUT_PATH = "%s" % ("../assets/" if os.getcwd().find('tools') != -1 else "assets/")
 GIBBED_PATH = "C:/Users/aaron/Downloads/Modified-Gibbeds-Tools/bin/projects/Just Cause 3/files"
 DICTIONARY = {}
 
