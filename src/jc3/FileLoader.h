@@ -34,7 +34,7 @@ public:
 
     // archives
     bool ReadArchiveTable(const std::string& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept;
-    bool ReadFileFromArchive(const std::string& archive, uint32_t namehash, FileBuffer* output) noexcept;
+    bool ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash, FileBuffer* output) noexcept;
 
     // stream archive
     StreamArchive_t* ReadStreamArchive(const FileBuffer& buffer) noexcept;
@@ -50,7 +50,7 @@ public:
     // stream archive caching
     std::tuple<StreamArchive_t*, StreamArchiveEntry_t> GetStreamArchiveFromFile(const fs::path& file) noexcept;
 
-    std::tuple<std::string, uint32_t> LocateFileInDictionary(const fs::path& filename) noexcept;
+    std::tuple<std::string, std::string, uint32_t> LocateFileInDictionary(const fs::path& filename) noexcept;
 
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
 

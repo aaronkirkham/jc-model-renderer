@@ -77,7 +77,7 @@ def cc_macros():
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
   except OSError:
-    print '''jc3-handling-editor configure error: No acceptable C compiler found!
+    print '''jc3-rbm-renderer configure error: No acceptable C compiler found!
 
         Please make sure you have a C compiler installed on your system and/or
         consider adjusting the CC environment variable if you installed

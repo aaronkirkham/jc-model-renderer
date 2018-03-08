@@ -20,6 +20,11 @@ DICTIONARY = {}
 
 print ("Building filelist dictionary...")
 
+# gibbed stuff is missing!
+if not os.path.isdir(GIBBED_PATH):
+  print("ERROR - Unable to find Gibbed Tools filelist! (Path: '%s')" % GIBBED_PATH)
+  sys.exit()
+
 # read the current filelist item, hash the filename and append it to the dictionary
 def read_filelist(filename):
   FILE_BASE_NAME = os.path.splitext(os.path.basename(filename))[0]
@@ -41,7 +46,7 @@ for directory in os.listdir(GIBBED_PATH):
   DIR_ABS_PATH = os.path.join(GIBBED_PATH, directory)
 
   ###### TEMP ######
-  if directory != "patch_win64":
+  if directory != "archives_win64":
     continue
 
   DICTIONARY[directory] = {}
@@ -52,10 +57,16 @@ for directory in os.listdir(GIBBED_PATH):
     for filename in os.listdir(DIR_ABS_PATH):
       FILE_ABS_PATH = os.path.join(DIR_ABS_PATH, filename)
 
-      # TODO: Ignore weird files which just seem to be duplicates
+      # ignore weird files which just seem to be duplicates
+      if filename == "game.filelist" or filename == "patch.filelist":
+        continue
 
       # read the filelist into the dictionary
       DICTIONARY[directory].update(read_filelist(FILE_ABS_PATH))
+
+# create the output directory if we need to
+if not os.path.isdir(OUT_PATH):
+  os.makedirs(OUT_PATH)
 
 # write the output
 OUTPUT_FILE = os.path.join(OUT_PATH, "dictionary.json")

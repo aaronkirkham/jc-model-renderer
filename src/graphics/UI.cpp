@@ -129,6 +129,8 @@ void UI::Render()
     {
         ImGui::SetWindowSize({ 400, 400 });
 
+        static int32_t current_version[3] = { VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION };
+
         ImGui::Text("Just Cause 3 Render Block Model (.rbm) Renderer");
         ImGui::Text("Version %d.%d.%d", current_version[0], current_version[1], current_version[2]);
         ImGui::Text("https://github.com/aaronkirkham/jc3-rbm-renderer");

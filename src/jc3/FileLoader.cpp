@@ -29,21 +29,19 @@ FileLoader::FileLoader()
     const auto status_text_id = UI::Get()->PushStatusText("Loading dictionary...");
 
     std::thread([this, status_text_id] {
-        fs::path dictionary = fs::current_path() / "dictionary.json";
-
         try {
-            if (!fs::exists(dictionary)) {
-                throw std::runtime_error("FileLoader - Failed to read file list dictionary");
+            const auto handle = GetModuleHandle(nullptr);
+            const auto rc = FindResource(handle, MAKEINTRESOURCE(128), MAKEINTRESOURCE(256));
+            if (rc == nullptr) {
+                throw std::runtime_error("FileLoader - Failed to find dictionary resource");
             }
 
-            std::ifstream file(dictionary);
-            if (file.fail()) {
-                throw std::runtime_error("FileLoader - Failed to read file list dictionary");
+            const auto data = LoadResource(handle, rc);
+            if (data == nullptr) {
+                throw std::runtime_error("FileLoader - Failed to load dictionary resource");
             }
 
-            m_FileListDictionary = json::parse(file);
-            file.close();
-
+            m_FileListDictionary = json::parse(static_cast<const char*>(LockResource(data)));
             m_FileList->Parse(&m_FileListDictionary, { ".rbm", ".ee", ".bl", ".nl" });
         }
         catch (...) {
@@ -166,10 +164,10 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback) n
 
     // finally, lets read it directory from the arc file
     std::thread([this, filename, callback, status_text_id] {
-        const auto& [archive_name, namehash] = LocateFileInDictionary(filename);
-        if (!archive_name.empty()) {
+        const auto& [directory_name, archive_name, namehash] = LocateFileInDictionary(filename);
+        if (!directory_name.empty()) {
             FileBuffer buffer;
-            if (ReadFileFromArchive(archive_name, namehash, &buffer)) {
+            if (ReadFileFromArchive(directory_name, archive_name, namehash, &buffer)) {
                 UI::Get()->PopStatusText(status_text_id);
                 return callback(true, std::move(buffer));
             }
@@ -662,10 +660,10 @@ std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveF
     return { nullptr, StreamArchiveEntry_t{} };
 }
 
-bool FileLoader::ReadFileFromArchive(const std::string& archive, uint32_t namehash, FileBuffer* output) noexcept
+bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash, FileBuffer* output) noexcept
 {
-    fs::path tab_file = g_JC3Directory / "archives_win64" / (archive + ".tab");
-    fs::path arc_file = g_JC3Directory / "archives_win64" / (archive + ".arc");
+    fs::path tab_file = g_JC3Directory / directory / (archive + ".tab");
+    fs::path arc_file = g_JC3Directory / directory / (archive + ".arc");
 
     DEBUG_LOG(tab_file);
     DEBUG_LOG(arc_file);
@@ -715,34 +713,43 @@ bool FileLoader::ReadFileFromArchive(const std::string& archive, uint32_t nameha
     return found;
 }
 
-std::tuple<std::string, uint32_t> FileLoader::LocateFileInDictionary(const fs::path& filename) noexcept
+std::tuple<std::string, std::string, uint32_t> FileLoader::LocateFileInDictionary(const fs::path& filename) noexcept
 {
     // ergh, fs::path uses backslashes which is bad for us, is there a way
     // to stop that or should we switch back to strings?
     std::string _filename = filename.string();
     std::replace(_filename.begin(), _filename.end(), '\\', '/');
 
+    // iterate all the root objects
     for (auto it = m_FileListDictionary.begin(); it != m_FileListDictionary.end(); ++it) {
-        auto archive = it.key();
-        auto data = it.value();
+        const auto& directory_name = it.key();
+        const auto& directory_obj = it.value();
 
-        for (auto it2 = data.begin(); it2 != data.end(); ++it2) {
-            auto key = it2.key();
-            auto value = it2.value();
+        // iterate the files in the archive object
+        for (auto it2 = directory_obj.begin(); it2 != directory_obj.end(); ++it2) {
+            const auto& archive_name = it2.key();
+            const auto& archive_obj = it2.value();
 
-            if (value.is_string()) {
-                auto valueStr = value.get<std::string>();
-                if (valueStr.find(_filename) != std::string::npos) {
-                    DEBUG_LOG("LocateFileInDictionary - Found '" << valueStr << "' (" << key << ") in archive '" << archive << "'");
+            // iterate the data in the files object
+            for (auto it3 = archive_obj.begin(); it3 != archive_obj.end(); ++it3) {
+                const auto& key = it3.key();
+                const auto& value = it3.value();
 
-                    auto namehash = static_cast<uint32_t>(std::stoul(key, nullptr, 0));
-                    return { archive, namehash };
+                if (value.is_string()) {
+                    const auto& value_str = value.get<std::string>();
+                    if (value_str.find(_filename) != std::string::npos) {
+                        DEBUG_LOG("LocateFileInDictionary - Found '" << value_str << "' (" << key << ") in '/" << directory_name << "/" << archive_name << "'");
+
+                        auto namehash = static_cast<uint32_t>(std::stoul(key, nullptr, 16));
+                        return { directory_name, archive_name, namehash };
+                    }
                 }
             }
         }
     }
 
-    return { "", 0 };
+    DEBUG_LOG("[ERROR] LocateFileInDictionary - Can't find '" << filename << "'");
+    return { "", "", 0 };
 }
 
 void FileLoader::ParseCompressedTexture(std::istream& stream, uint64_t size, FileBuffer* output)

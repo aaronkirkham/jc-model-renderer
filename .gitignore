@@ -34,3 +34,4 @@ config.gypi
 config.mk
 
 src/shaders/compiled
+src/assets.aps

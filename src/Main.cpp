@@ -32,6 +32,8 @@ extern AvalancheArchive* g_CurrentLoadedArchive;
 
 void CheckForUpdates(bool show_no_update_messagebox)
 {
+    static int32_t current_version[3] = { VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION };
+
     std::thread([show_no_update_messagebox] {
         try {
             httplib::Client client("kirkh.am");

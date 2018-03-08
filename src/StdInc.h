@@ -20,7 +20,8 @@
 #include <ksignals.h>
 #include <json.hpp>
 
-static constexpr int32_t current_version[3] = { 1, 0, 0 };
+#include <version.h>
+
 void CheckForUpdates(bool show_no_update_messagebox = false);
 
 namespace fs = std::experimental::filesystem;
