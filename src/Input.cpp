@@ -13,7 +13,7 @@ Input::~Input()
 
 void Input::Initialise()
 {
-#ifndef DEBUG
+#if 0
     Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
         glm::vec3 window_center = glm::vec3(Window::Get()->GetCenterPoint(), 1);
         glm::vec3 window_center_world;

@@ -327,10 +327,59 @@ void UI::RenderFileTreeView()
 
                         // render the current render block info
                         if (ImGui::TreeNodeEx(unique_block_id.str().c_str(), 0, "%s  %s", ICON_FA_COG, render_block->GetTypeName())) {
+                            ImGui::Text("Attributes");
+
                             // draw render block ui
                             render_block->DrawUI();
 
-                            if (ImGui::Button("View Textures")) {
+                            ImGui::Text("Textures");
+
+                            // draw render block textures
+                            const auto& textures = render_block->GetTextures();
+                            if (!textures.empty()) {
+                                ImGui::Columns(3, 0, false);
+
+                                for (const auto& texture : textures) {
+                                    const auto is_loaded = texture->IsLoaded();
+
+                                    auto window_size = Window::Get()->GetSize();
+                                    auto aspect_ratio = (window_size.x / window_size.y);
+
+                                    auto width = ImGui::GetWindowWidth() / ImGui::GetColumnsCount();
+                                    auto texture_size = ImVec2(width, (width / aspect_ratio));
+
+                                    // draw the texture shader resource
+                                    if (is_loaded) {
+                                        ImGui::Image(texture->GetSRV(), texture_size);
+                                    }
+                                    // if we have no texture loaded, draw a filled rect so there's no ugly space
+                                    else {
+                                        const auto window = ImGui::GetCurrentWindow();
+                                        const auto bb = ImRect{ window->DC.CursorPos, window->DC.CursorPos + texture_size };
+                                        static auto colour = ImGui::GetColorU32(ImGuiCol_FrameBg);
+
+                                        ImGui::ItemSize(bb);
+                                        if (!ImGui::ItemAdd(bb, 0))
+                                            continue;
+
+                                        auto draw_list = ImGui::GetWindowDrawList();
+                                        draw_list->AddRectFilled(bb.Min, bb.Max, colour);
+                                    }
+
+                                    // tooltip
+                                    if (ImGui::IsItemHovered()) {
+                                        ImGui::SetTooltip(texture->GetPath().filename().string().c_str());
+                                    }
+
+                                    // context menu
+                                    if (is_loaded) {
+                                        RenderContextMenu(texture->GetPath(), ImGui::GetColumnIndex());
+                                    }
+
+                                    ImGui::NextColumn();
+                                }
+
+                                ImGui::Columns();
                             }
 
                             // if this isn't the last render block, draw a separator

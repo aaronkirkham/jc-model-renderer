@@ -167,6 +167,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         });
 #endif
 
+        // Init the model manager early to setup render events
         ModelManager::Get();
 
         // Register file type callbacks now
