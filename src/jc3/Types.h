@@ -304,9 +304,9 @@ namespace JustCause3
     struct CSkinBatch
     {
         char pad[8];
-        int32_t batchSize;
-        int32_t size;
-        int32_t offset;
+        int32_t m_BatchSize;
+        int32_t m_Size;
+        int32_t m_Offset;
         char pad2[4];
     };
 

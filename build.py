@@ -128,7 +128,7 @@ def RunMake(configuration, builddir=""):
     if builddir:
       env['builddir'] = builddir
     
-    var = execute(["make","-C", "out", "-j" + str(multiprocessing.cpu_count())], env)
+    var = execute(["make", "-C", "out", "-j" + str(multiprocessing.cpu_count())], env)
     return var
 
 if _platform == "win32":

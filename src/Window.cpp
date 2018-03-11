@@ -128,6 +128,7 @@ void Window::Run()
         {
             if (msg.message == WM_QUIT) {
                 m_Running = false;
+                goto shutdown;
             }
 
             // if the window has focus, pass input to the input handler
@@ -149,6 +150,7 @@ void Window::Run()
         }
     }
 
+shutdown:
     Shutdown();
 }
 

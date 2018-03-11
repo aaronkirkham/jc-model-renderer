@@ -87,7 +87,7 @@ public:
         assert(m_SamplerStateNormalMap);
     }
 
-    virtual void Read(fs::path& filename, std::istream& stream) override final
+    virtual void Read(std::istream& stream) override final
     {
         // read the block header
         stream.read((char *)&m_Block, sizeof(m_Block));
@@ -97,12 +97,12 @@ public:
         m_Constants.m_UVExtent = m_Block.attributes.packed.uv0Extent;
 
         // read the materials
-        ReadMaterials(filename, stream);
+        ReadMaterials(stream);
 
         // do we have a normal map loaded?
         // TODO: REMOVE THIS ONCE WE CAN LOAD GENERIC SHARED RESOURCES FROM OTHER ARCHIVES
         for (auto& texture : m_Textures) {
-            auto filename = texture->GetPath().filename().string();
+            auto& filename = texture->GetPath().filename().string();
             if (filename.find("_nrm") != std::string::npos) {
                 m_Constants.m_HasNormalMap = TRUE;
             }

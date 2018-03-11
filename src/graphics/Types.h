@@ -30,6 +30,11 @@ struct ConstantBuffer_t : IBuffer_t {};
 
 struct VertexShader_t
 {
+    virtual ~VertexShader_t() {
+        m_Shader->Release();
+        m_Shader = nullptr;
+    }
+
     ID3D11VertexShader* m_Shader = nullptr;
     FileBuffer m_Code;
     uint64_t m_Size = 0;
@@ -37,6 +42,11 @@ struct VertexShader_t
 
 struct PixelShader_t
 {
+    virtual ~PixelShader_t() {
+        m_Shader->Release();
+        m_Shader = nullptr;
+    }
+
     ID3D11PixelShader* m_Shader = nullptr;
     FileBuffer m_Code;
     uint64_t m_Size = 0;

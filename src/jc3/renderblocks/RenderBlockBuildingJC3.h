@@ -67,7 +67,7 @@ public:
         m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants);
     }
 
-    virtual void Read(fs::path& filename, std::istream& stream) override final
+    virtual void Read(std::istream& stream) override final
     {
         // read the block header
         stream.read((char *)&m_Block, sizeof(m_Block));
@@ -77,7 +77,7 @@ public:
         m_Constants.m_UVExtent = m_Block.attributes.packed.uv0Extent;
 
         // read the materials
-        ReadMaterials(filename, stream);
+        ReadMaterials(stream);
 
         // read the vertex buffers
         if (m_Block.attributes.packed.format == 1) {

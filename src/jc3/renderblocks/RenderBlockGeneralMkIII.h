@@ -75,7 +75,7 @@ public:
         }
     }
 
-    virtual void Read(fs::path& filename, std::istream& stream) override final
+    virtual void Read(std::istream& stream) override final
     {
         // read the block header
         stream.read((char *)&m_Block, sizeof(m_Block));
@@ -89,7 +89,7 @@ public:
         stream.read((char *)&unknown, 280);
 
         // read the materials
-        ReadMaterials(filename, stream);
+        ReadMaterials(stream);
 
         // read the vertex buffers
         if (m_Block.attributes.flags & 0x20) {

@@ -46,7 +46,7 @@ public:
     virtual const std::vector<uint16_t>& GetIndices() { return m_Indices; }
 
     virtual void Create() = 0;
-    virtual void Read(fs::path& filename, std::istream& file) = 0;
+    virtual void Read(std::istream& file) = 0;
 
     virtual void Setup(RenderContext_t* context)
     {
@@ -116,7 +116,7 @@ public:
         *outBuffer = Renderer::Get()->CreateIndexBuffer(m_Indices.data(), count);
     }
 
-    void ReadMaterials(fs::path& filename, std::istream& stream)
+    void ReadMaterials(std::istream& stream)
     {
         uint32_t count;
         stream.read((char *)&count, sizeof(count));
@@ -131,19 +131,17 @@ public:
                 continue;
             }
 
-            auto buffer = new char[length + 1];
-            stream.read(buffer, length);
-            buffer[length] = '\0';
+            auto filename = std::unique_ptr<char[]>(new char[length + 1]);
+            stream.read(filename.get(), length);
+            filename[length] = '\0';
 
-            m_Materials.emplace_back(buffer);
+            m_Materials.emplace_back(filename.get());
 
             // load the material
-            auto texture = TextureManager::Get()->GetTexture(buffer);
+            auto& texture = TextureManager::Get()->GetTexture(filename.get());
             if (texture) {
                 m_Textures.emplace_back(texture);
             }
-
-            delete[] buffer;
         }
 
         uint32_t unknown[4];
@@ -159,11 +157,11 @@ public:
         for (uint32_t i = 0; i < count; ++i) {
             JustCause3::CSkinBatch batch;
 
-            stream.read((char *)&batch.size, sizeof(batch.size));
-            stream.read((char *)&batch.offset, sizeof(batch.offset));
-            stream.read((char *)&batch.batchSize, sizeof(batch.batchSize));
+            stream.read((char *)&batch.m_Size, sizeof(batch.m_Size));
+            stream.read((char *)&batch.m_Offset, sizeof(batch.m_Offset));
+            stream.read((char *)&batch.m_BatchSize, sizeof(batch.m_BatchSize));
 
-            for (int32_t n = 0; n < batch.batchSize; ++n) {
+            for (int32_t n = 0; n < batch.m_BatchSize; ++n) {
                 int16_t unknown;
                 stream.read((char *)&unknown, sizeof(unknown));
             }
@@ -175,7 +173,7 @@ public:
     void DrawSkinBatches(RenderContext_t* context)
     {
         for (auto& batch : m_SkinBatches) {
-            Renderer::Get()->DrawIndexed(batch.offset, batch.size, m_IndexBuffer);
+            Renderer::Get()->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
         }
     }
 

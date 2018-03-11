@@ -6,9 +6,19 @@
 #include <Window.h>
 #include <graphics/Renderer.h>
 
+#include <jc3/formats/RenderBlockModel.h>
+#include <jc3/formats/AvalancheArchive.h>
+
+struct ModelManagerEvents
+{
+    ksignals::Event<void()> EmptyModels;
+};
+
 class ModelManager : public Singleton<ModelManager>
 {
 private:
+    ModelManagerEvents m_ModelManagerEvents;
+
     std::recursive_mutex m_ModelsMutex;
     std::vector<RenderBlockModel*> m_Models;
     std::vector<RenderBlockModel*> m_ArchiveModels;
@@ -50,6 +60,11 @@ public:
 
     virtual ~ModelManager()
     {
+        Shutdown();
+    }
+
+    void Shutdown()
+    {
         for (auto& model : m_Models) {
             safe_delete(model);
         }
@@ -57,6 +72,8 @@ public:
         m_Models.empty();
         m_ArchiveModels.empty();
     }
+
+    virtual ModelManagerEvents& Events() { return m_ModelManagerEvents; }
 
     void AddModel(RenderBlockModel* model, AvalancheArchive* archive = nullptr)
     {
@@ -78,6 +95,10 @@ public:
         }
 
         m_Models.erase(std::remove(m_Models.begin(), m_Models.end(), model), m_Models.end());
+
+        if (m_Models.empty()) {
+            m_ModelManagerEvents.EmptyModels();
+        }
     }
 
     std::vector<RenderBlockModel*> GetModels()

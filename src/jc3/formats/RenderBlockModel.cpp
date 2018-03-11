@@ -150,7 +150,7 @@ bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
         auto renderBlock = RenderBlockFactory::CreateRenderBlock(hash);
         if (renderBlock) {
             renderBlock->Create();
-            renderBlock->Read(m_File, stream);
+            renderBlock->Read(stream);
 
             uint32_t checksum;
             stream.read((char *)&checksum, sizeof(checksum));
