@@ -1,3 +1,4 @@
+dlc/sky_fortress/sky_fortress.dlcinstallinfo
 dlc/sky_fortress/profile/online.stringlookup
 dlc/sky_fortress/global/revolution.revolutionc
 dlc/sky_fortress/global/revolution.stringlookup

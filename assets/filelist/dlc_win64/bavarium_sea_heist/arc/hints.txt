@@ -1,3 +1,6 @@
+dlc/bavarium_sea_heist/bavarium_sea_heist.dlcinstallinfo
+dlc/bavarium_sea_heist/bavarium_sea_heist_real.dlcinstallinfo
+dlc/bavarium_sea_heist/bavarium_sea_heist_world.bin
 dlc/bavarium_sea_heist/profile/online.stringlookup
 dlc/bavarium_sea_heist/global/revolution.revolutionc
 dlc/bavarium_sea_heist/global/revolution.stringlookup

@@ -10,6 +10,9 @@ dlc/mech_land_assault/editor/entities/jc_vehicles/03_sea/v1202_boat_capstone_cor
 dlc/mech_land_assault/editor/entities/jc_vehicles/03_sea/v1602_boat_urga_transport/v1602_boat_urga_transport_blackhand_01.ee
 dlc/mech_land_assault/editor/entities/jc_vehicles/03_sea/v1704_boat_na_lightpatrol/v1704_boat_na_lightpatrol_blackhand_01.ee
 
+dlc/mech_land_assault/mech_land_assault.dlcinstallinfo
+dlc/mech_land_assault/mech_land_assault_real.dlcinstallinfo
+dlc/mech_land_assault/mech_land_assault_world.bin
 dlc/mech_land_assault/profile/online.stringlookup
 dlc/mech_land_assault/global/revolution.revolutionc
 dlc/mech_land_assault/global/revolution.stringlookup

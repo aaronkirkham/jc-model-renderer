@@ -1,0 +1,2 @@
+dlc/skin_flame/skin_flame.dlcinstallinfo
+dlc/skin_flame/skin_flame_world.bin

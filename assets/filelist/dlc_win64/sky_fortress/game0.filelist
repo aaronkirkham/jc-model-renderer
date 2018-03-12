@@ -1,4 +1,4 @@
-; 33/129 (0%)
+; 34/129 (0%)
 dlc/sky_fortress/sky_fortress_world.bin
 dlc/sky_fortress/global/global_mission_unlocks.bl
 dlc/sky_fortress/global/global_sound_dlc1.bl
@@ -28,6 +28,7 @@ dlc/sky_fortress/editor/entities/jc_weapons/05_stationary/w504_sam_eden_fdc/w504
 dlc/sky_fortress/editor/entities/jc_weapons/05_stationary/w505_sam_eden_heavycontroldrone/w505_sam_eden_heavycontroldrone.ee
 dlc/sky_fortress/editor/entities/jc_weapons/05_stationary/w505_sam_eden_heavycontroldrone/w505_sam_eden_heavycontroldrone_boss.ee
 dlc/sky_fortress/editor/entities/jc_weapons/05_stationary/w505_sam_eden_heavycontroldrone/w505_sam_eden_heavycontroldrone_norockets.ee
+dlc/sky_fortress/sky_fortress.dlcinstallinfo
 dlc/sky_fortress/settings/spawn_aircraft_defs.bin
 dlc/sky_fortress/settings/spawn_combatant_defs.bin
 dlc/sky_fortress/settings/spawn_prop_defs.bin
