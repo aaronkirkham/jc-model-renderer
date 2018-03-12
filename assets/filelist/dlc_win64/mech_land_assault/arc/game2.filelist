@@ -1,0 +1,14 @@
+; 13/4960 (0%)
+dlc/mech_land_assault/global/revolution.stringlookup
+dlc/mech_land_assault/missions/missions.stringlookup
+dlc/mech_land_assault/profile/online.stringlookup
+dlc/mech_land_assault/global/revolution.revolutionc
+dlc/mech_land_assault/global/collection.collectionc
+dlc/mech_land_assault/missions/missions.missionsc
+dlc/mech_land_assault/missions/restartpoints.restartpointsc
+dlc/mech_land_assault/profile/item.onlinec
+dlc/mech_land_assault/profile/task.onlinec
+dlc/mech_land_assault/profile/taskgroup.onlinec
+dlc/mech_land_assault/profile/upgrade.onlinec
+dlc/mech_land_assault/sound/fmod_banks/dlc_02.bank
+dlc/mech_land_assault/sound/fmod_banks/dlc_02_music.bank

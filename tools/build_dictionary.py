@@ -5,25 +5,17 @@
 # python setup.py build
 # python setup.py install
 
-# (2) download gibbed tools and update the GIBBED_PATH variable to
-# point to the just cause 3 project files directory
-# https://justcause3mods.com/mods/modified-gibbeds-tools/
-
 import sys
 import os
 import json
 import lookup3
 
-OUT_PATH = "%s/assets/" % os.path.dirname(os.path.dirname(os.path.realpath(sys.argv[0])))
-GIBBED_PATH = "C:/Users/aaron/Downloads/Modified-Gibbeds-Tools/bin/projects/Just Cause 3/files"
+ROOT = os.path.dirname(os.path.dirname(os.path.realpath(sys.argv[0])))
+OUT_PATH = "%s\\assets\\" % ROOT
+FILELIST_PATH = "%s\\assets\\filelist" % ROOT
 DICTIONARY = {}
 
 print ("Building filelist dictionary...")
-
-# gibbed stuff is missing!
-if not os.path.isdir(GIBBED_PATH):
-  print("ERROR - Unable to find Gibbed Tools filelist! (Path: '%s')" % GIBBED_PATH)
-  sys.exit()
 
 # read the current filelist item, hash the filename and append it to the dictionary
 def read_filelist(filename):
@@ -41,15 +33,9 @@ def read_filelist(filename):
 
   return filelist_dict
 
-# loop over all the things in the gibbed directory
-for directory in os.listdir(GIBBED_PATH):
-  DIR_ABS_PATH = os.path.join(GIBBED_PATH, directory)
-
-  ###### TEMP ######
-  if directory != "archives_win64":
-    continue
-
-  DICTIONARY[directory] = {}
+# loop over all the things in the filelist directory
+for directory in os.listdir(FILELIST_PATH):
+  DIR_ABS_PATH = os.path.join(FILELIST_PATH, directory)
 
   # skip any files
   if os.path.isdir(DIR_ABS_PATH):
@@ -57,12 +43,35 @@ for directory in os.listdir(GIBBED_PATH):
     for filename in os.listdir(DIR_ABS_PATH):
       FILE_ABS_PATH = os.path.join(DIR_ABS_PATH, filename)
 
-      # ignore weird files which just seem to be duplicates
-      if filename == "game.filelist" or filename == "patch.filelist":
-        continue
+      # is the current file a directory? (dlc_win64)
+      if os.path.isdir(FILE_ABS_PATH):
+        # fix weird directories which have an extra archive
+        if filename == "bavarium_sea_heist" or filename == "mech_land_assault" or filename == "v0805_sportmech" or filename == "w901_scorpiongun":
+          filename += "\\arc"
+          FILE_ABS_PATH = os.path.join(DIR_ABS_PATH, filename)
 
-      # read the filelist into the dictionary
-      DICTIONARY[directory].update(read_filelist(FILE_ABS_PATH))
+        # update the directory
+        key = "%s/%s" % (directory, filename.replace("\\", "/"))
+
+        if not key in DICTIONARY:
+          DICTIONARY[key] = {}
+
+        # list all the files in the child directory
+        for filename_ in os.listdir(FILE_ABS_PATH):
+          # skip the hints file
+          if filename_ == "hints.txt":
+            continue
+
+          NEW_FILE_ABS_PATH = os.path.join(FILE_ABS_PATH, filename_)
+          DICTIONARY[key].update(read_filelist(NEW_FILE_ABS_PATH))
+      else:
+        if filename == "hints.txt":
+            continue
+
+        if not directory in DICTIONARY:
+          DICTIONARY[directory] = {}
+
+        DICTIONARY[directory].update(read_filelist(FILE_ABS_PATH))
 
 # create the output directory if we need to
 if not os.path.isdir(OUT_PATH):

@@ -326,13 +326,13 @@ void UI::RenderFileTreeView()
                         unique_block_id << render_block_index << "-" << render_block->GetTypeName();
 
                         // render the current render block info
-                        if (ImGui::TreeNodeEx(unique_block_id.str().c_str(), 0, "%s  %s", ICON_FA_COG, render_block->GetTypeName())) {
-                            ImGui::Text("Attributes");
+                        if (ImGui::TreeNodeEx(unique_block_id.str().c_str(), 0, render_block->GetTypeName())) {
+                            ImGui::Text(ICON_FA_COGS "  Attributes");
 
                             // draw render block ui
                             render_block->DrawUI();
 
-                            ImGui::Text("Textures");
+                            ImGui::Text(ICON_FA_PICTURE_O "  Textures");
 
                             // draw render block textures
                             const auto& textures = render_block->GetTextures();
@@ -348,23 +348,22 @@ void UI::RenderFileTreeView()
                                     auto width = ImGui::GetWindowWidth() / ImGui::GetColumnsCount();
                                     auto texture_size = ImVec2(width, (width / aspect_ratio));
 
-                                    // draw the texture shader resource
+                                    // draw the texture name
                                     if (is_loaded) {
-                                        ImGui::Image(texture->GetSRV(), texture_size);
+                                        ImGui::Text(texture->GetPath().filename().string().c_str());
                                     }
-                                    // if we have no texture loaded, draw a filled rect so there's no ugly space
                                     else {
-                                        const auto window = ImGui::GetCurrentWindow();
-                                        const auto bb = ImRect{ window->DC.CursorPos, window->DC.CursorPos + texture_size };
-                                        static auto colour = ImGui::GetColorU32(ImGuiCol_FrameBg);
-
-                                        ImGui::ItemSize(bb);
-                                        if (!ImGui::ItemAdd(bb, 0))
-                                            continue;
-
-                                        auto draw_list = ImGui::GetWindowDrawList();
-                                        draw_list->AddRectFilled(bb.Min, bb.Max, colour);
+                                        static auto red = ImGui::GetColorU32({ 1, 0, 0, 1 });
+                                        ImGui::PushStyleColor(ImGuiCol_Text, red);
+                                        ImGui::Text(texture->GetPath().filename().string().c_str());
+                                        ImGui::PopStyleColor();
                                     }
+
+                                    ImGui::BeginGroup();
+
+                                    // draw the texture image
+                                    auto srv = is_loaded ? texture->GetSRV() : TextureManager::Get()->GetMissingTexture()->GetSRV();
+                                    ImGui::Image(srv, texture_size);
 
                                     // tooltip
                                     if (ImGui::IsItemHovered()) {
@@ -375,6 +374,8 @@ void UI::RenderFileTreeView()
                                     if (is_loaded) {
                                         RenderContextMenu(texture->GetPath(), ImGui::GetColumnIndex());
                                     }
+
+                                    ImGui::EndGroup();
 
                                     ImGui::NextColumn();
                                 }

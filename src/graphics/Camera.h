@@ -31,6 +31,8 @@ public:
     Camera();
     virtual ~Camera();
 
+    void Shutdown();
+
     void Update();
     void ResetToDefault();
 

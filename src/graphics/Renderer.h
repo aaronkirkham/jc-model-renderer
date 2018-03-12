@@ -41,6 +41,10 @@ private:
     ID3D11SamplerState* m_SamplerState = nullptr;
     ID3D11BlendState* m_BlendState = nullptr;
 
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+    ID3D11Debug* m_DeviceDebugger = nullptr;
+#endif
+
     ID3D11Texture2D* CreateTexture2D(const glm::vec2& size, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, uint32_t bindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE);
 
     void CreateDevice(const HWND& hwnd, const glm::vec2& size);
@@ -104,6 +108,10 @@ public:
 
         auto result = m_Device->CreateBuffer(&desc, &resourceData, &buffer->m_Buffer);
         assert(SUCCEEDED(result));
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+        D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, "Renderer::CreateConstantBuffer");
+#endif
 
         if (FAILED(result)) {
             safe_delete(buffer);

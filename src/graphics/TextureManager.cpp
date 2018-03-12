@@ -21,11 +21,8 @@ Texture::Texture(const fs::path& filename)
         }
         // failed, let's look for a HMDDSC file.
         else {
-            DEBUG_LOG("[ERROR] can't find texture " << m_Filename.string() << " :(");
-
             if (m_Filename.extension() == ".ddsc") {
                 auto new_filename = m_Filename.replace_extension(".hmddsc");
-                DEBUG_LOG("looking for " << new_filename.string());
 
                 // try read the hmddsc file
                 FileLoader::Get()->ReadFile(new_filename, [this](bool success, FileBuffer data) {
@@ -35,9 +32,6 @@ Texture::Texture(const fs::path& filename)
                         if (FileLoader::Get()->ReadCompressedTexture(data, std::numeric_limits<uint64_t>::max(), &buffer)) {
                             LoadFromBuffer(buffer);
                         }
-                    }
-                    else {
-                        DEBUG_LOG("[ERROR 2] can't find HMDDSC texture " << m_Filename.string() << " :(:(");
                     }
                 });
             }
@@ -70,13 +64,35 @@ bool Texture::LoadFromBuffer(const FileBuffer& buffer)
     m_Buffer = std::move(buffer);
 
     if (FAILED(result)) {
-        DEBUG_LOG("[ERROR] Failed to create texture '" << m_Filename.filename().string().c_str() << "'.");
+        DEBUG_LOG("[ERROR] Failed to create texture '" << m_Filename.filename().string() << "'.");
         return false;
     }
 
-    DEBUG_LOG("Texture::Create - '" << m_Filename.filename().string().c_str() << "', m_Texture=" << m_Texture << ", SRV=" << m_SRV);
+    DEBUG_LOG("Texture::Create - '" << m_Filename.filename().string() << "', m_Texture=" << m_Texture << ", SRV=" << m_SRV);
 
     return SUCCEEDED(result);
+}
+
+bool Texture::LoadFromFile(const fs::path& filename)
+{
+    std::ifstream stream(filename.c_str(), std::ios::binary | std::ios::ate);
+    if (stream.fail()) {
+        DEBUG_LOG("[ERROR] Failed to create texture from file '" << filename.filename().string() << "'.");
+        return false;
+    }
+
+    const auto length = stream.tellg();
+    stream.seekg(0, std::ios::beg);
+
+    FileBuffer buffer;
+    buffer.resize(length);
+    stream.read((char *)buffer.data(), length);
+
+    DEBUG_LOG("Texture::LoadFromFile - Read " << length << " bytes from " << filename.filename().string());
+
+    auto result = LoadFromBuffer(buffer);
+    stream.close();
+    return result;
 }
 
 void Texture::Use(uint32_t slot)
@@ -85,7 +101,20 @@ void Texture::Use(uint32_t slot)
     Renderer::Get()->GetDeviceContext()->PSSetShaderResources(slot, 1, &m_SRV);
 }
 
-std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, bool create_if_not_exists)
+TextureManager::TextureManager()
+{
+    m_MissingTexture = std::make_unique<Texture>();
+    m_MissingTexture->LoadFromFile("E:/jc3-rbm-renderer/assets/missing-texture.dds");
+}
+
+void TextureManager::Shutdown()
+{
+    m_Textures.clear();
+    m_LastUsedTextures.clear();
+    m_MissingTexture = nullptr;
+}
+
+const std::shared_ptr<Texture>& TextureManager::GetTexture(const fs::path& filename, bool create_if_not_exists)
 {
     auto name = filename.filename().string();
     auto key = fnv_1_32::hash(name.c_str(), name.length());
@@ -104,10 +133,9 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, bo
     // do we want to create the texture?
     if (create_if_not_exists) {
         m_Textures[key] = std::make_shared<Texture>(filename);
-        return m_Textures[key];
     }
 
-    return nullptr;
+    return m_Textures[key];
 }
 
 void TextureManager::Flush()
@@ -124,6 +152,12 @@ void TextureManager::Flush()
             ++it;
         }
     }
+}
+
+void TextureManager::Empty()
+{
+    m_Textures.clear();
+    m_LastUsedTextures.clear();
 }
 
 DDS_PIXELFORMAT TextureManager::GetPixelFormat(DXGI_FORMAT format)

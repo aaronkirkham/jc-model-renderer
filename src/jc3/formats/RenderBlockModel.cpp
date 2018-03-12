@@ -167,6 +167,7 @@ bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
             m_RenderBlocks.emplace_back(renderBlock);
         }
         else {
+#if 0
             std::stringstream ss;
             ss << "Unknown Render Block type ";
             ss << "0x" << std::uppercase << std::setw(4) << std::hex << hash << ".";
@@ -176,6 +177,7 @@ bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 
             parse_success = false;
             break;
+#endif
         }
     }
 

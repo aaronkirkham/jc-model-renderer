@@ -8,10 +8,10 @@ void SetupImGuiStyle()
     auto& io = ImGui::GetIO();
     auto& style = ImGui::GetStyle();
 
-    style.GrabRounding = 0.f;
-    style.WindowRounding = 0.f;
-    style.ScrollbarRounding = 3.f;
-    style.FrameRounding = 3.f;
+    style.GrabRounding = 0.0f;
+    style.WindowRounding = 0.0f;
+    style.ScrollbarRounding = 3.0f;
+    style.FrameRounding = 3.0f;
     style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
     style.ItemSpacing.y = 6.0f;
 

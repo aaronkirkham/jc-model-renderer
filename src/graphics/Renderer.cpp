@@ -1,8 +1,12 @@
 #include <graphics/Renderer.h>
 #include <graphics/ShaderManager.h>
+#include <graphics/TextureManager.h>
 #include <graphics/UI.h>
 #include <graphics/Camera.h>
 #include <graphics/DebugRenderer.h>
+
+#include <jc3/ModelManager.h>
+
 #include <Window.h>
 
 void SetupImGuiStyle();
@@ -55,6 +59,10 @@ ID3D11Texture2D* Renderer::CreateTexture2D(const glm::vec2& size, DXGI_FORMAT fo
     auto result = m_Device->CreateTexture2D(&textureDesc, nullptr, &texture);
     assert(SUCCEEDED(result));
 
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+    D3D_SET_OBJECT_NAME_A(texture, "Renderer::CreateTexture2D");
+#endif
+
     return texture;
 }
 
@@ -70,8 +78,8 @@ bool Renderer::Initialise(const HWND& hwnd)
 
     // setup lighting
     {
-        LightConstants constants;
-        m_LightBuffers = CreateConstantBuffer(constants);
+        //LightConstants constants;
+        //m_LightBuffers = CreateConstantBuffer(constants);
     }
 
     // initialise imgui
@@ -88,6 +96,11 @@ bool Renderer::Initialise(const HWND& hwnd)
 
 void Renderer::Shutdown()
 {
+    TextureManager::Get()->Shutdown();
+    ShaderManager::Get()->Shutdown();
+    Camera::Get()->Shutdown();
+    ModelManager::Get()->Shutdown();
+
     if (m_SwapChain) {
         m_SwapChain->SetFullscreenState(false, nullptr);
     }
@@ -101,12 +114,16 @@ void Renderer::Shutdown()
     DestroyDepthStencil();
 
     safe_release(m_BlendState);
-    safe_release(m_RasterizerState);
     safe_release(m_SamplerState);
-    safe_release(m_DepthTexture);
+    safe_release(m_RasterizerState);
+    safe_release(m_SwapChain);
     safe_release(m_DeviceContext);
     safe_release(m_Device);
-    safe_release(m_SwapChain);
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+    m_DeviceDebugger->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+    safe_release(m_DeviceDebugger);
+#endif
 }
 
 bool Renderer::Render()
@@ -134,7 +151,7 @@ bool Renderer::Render()
         //constants.lightDirection = glm::vec3(0, 0, -1.0f);
         //constants.padding = 0.0f;
 
-        SetPixelShaderConstants(m_LightBuffers, 0, constants);
+        // SetPixelShaderConstants(m_LightBuffers, 0, constants);
     }
 
     // Begin the 2d renderer
@@ -226,14 +243,18 @@ void Renderer::SetCullMode(D3D11_CULL_MODE mode)
 void Renderer::CreateRenderTarget(const glm::vec2& size)
 {
     // create render target back buffer
-    ID3D11Texture2D* backBuffer = nullptr;
-    auto result = m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer));
+    ID3D11Texture2D* back_buffer = nullptr;
+    auto result = m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back_buffer));
     assert(SUCCEEDED(result));
 
-    result = m_Device->CreateRenderTargetView(backBuffer, nullptr, &m_RenderTargetView);
+    result = m_Device->CreateRenderTargetView(back_buffer, nullptr, &m_RenderTargetView);
     assert(SUCCEEDED(result));
 
-    backBuffer->Release();
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+    D3D_SET_OBJECT_NAME_A(m_RenderTargetView, "Renderer::CreateRenderTarget");
+#endif
+
+    safe_release(back_buffer);
     m_DeviceContext->OMSetRenderTargets(1, &m_RenderTargetView, m_DepthStencilView);
 
     // create the viewport
@@ -277,6 +298,11 @@ void Renderer::CreateDevice(const HWND& hwnd, const glm::vec2& size)
 
     auto result = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, deviceFlags, nullptr, 0, D3D11_SDK_VERSION, &desc, &m_SwapChain, &m_Device, nullptr, &m_DeviceContext);
     assert(SUCCEEDED(result));
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+    result = m_Device->QueryInterface(__uuidof(ID3D11Debug), reinterpret_cast<void**>(&m_DeviceDebugger));
+    assert(SUCCEEDED(result));
+#endif
 }
 
 void Renderer::CreateDepthStencil(const glm::vec2& size)
@@ -301,11 +327,19 @@ void Renderer::CreateDepthStencil(const glm::vec2& size)
         auto result = m_Device->CreateDepthStencilState(&depthStencilDesc, &m_DepthStencilEnabledState);
         assert(SUCCEEDED(result));
 
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+        D3D_SET_OBJECT_NAME_A(m_DepthStencilEnabledState, "Renderer::CreateDepthStencil - m_DepthStencilEnabledState");
+#endif
+
         depthStencilDesc.DepthEnable = false;
         depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 
         result = m_Device->CreateDepthStencilState(&depthStencilDesc, &m_DepthStencilDisabledState);
         assert(SUCCEEDED(result));
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+        D3D_SET_OBJECT_NAME_A(m_DepthStencilDisabledState, "Renderer::CreateDepthStencil - m_DepthStencilDisabledState");
+#endif
 
         // enable depth
         SetDepthEnabled(true);
@@ -324,6 +358,10 @@ void Renderer::CreateDepthStencil(const glm::vec2& size)
 
         auto result = m_Device->CreateDepthStencilView(m_DepthTexture, &depthStencilViewDesc, &m_DepthStencilView);
         assert(SUCCEEDED(result));
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+        D3D_SET_OBJECT_NAME_A(m_DepthStencilDisabledState, "Renderer::CreateDepthStencil - m_DepthTexture");
+#endif
     }
 }
 
@@ -356,6 +394,10 @@ void Renderer::CreateBlendState()
     
     auto result = m_Device->CreateBlendState(&blendDesc, &m_BlendState);
     assert(SUCCEEDED(result));
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+    D3D_SET_OBJECT_NAME_A(m_BlendState, "Renderer::CreateBlendState");
+#endif
 }
 
 void Renderer::CreateRasterizerState()
@@ -372,6 +414,10 @@ void Renderer::CreateRasterizerState()
 
         auto result = m_Device->CreateRasterizerState(&rasterDesc, &m_RasterizerState);
         assert(SUCCEEDED(result));
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+        D3D_SET_OBJECT_NAME_A(m_RasterizerState, "Renderer::CreateRasterizerState");
+#endif
 
         m_DeviceContext->RSSetState(m_RasterizerState);
 
@@ -392,6 +438,7 @@ void Renderer::DestroyDepthStencil()
     safe_release(m_DepthStencilEnabledState);
     safe_release(m_DepthStencilDisabledState);
     safe_release(m_DepthStencilView);
+    safe_release(m_DepthTexture);
 }
 
 VertexBuffer_t* Renderer::CreateVertexBuffer(uint32_t count, uint32_t stride)
@@ -410,6 +457,10 @@ VertexBuffer_t* Renderer::CreateVertexBuffer(uint32_t count, uint32_t stride)
 
     auto result = m_Device->CreateBuffer(&desc, nullptr, &buffer->m_Buffer);
     assert(SUCCEEDED(result));
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+    D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, "Renderer::CreateVertexBuffer");
+#endif
 
     if (FAILED(result)) {
         safe_delete(buffer);
@@ -441,6 +492,10 @@ VertexBuffer_t* Renderer::CreateVertexBuffer(const void* data, uint32_t count, u
     auto result = m_Device->CreateBuffer(&desc, &resourceData, &buffer->m_Buffer);
     assert(SUCCEEDED(result));
 
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+    D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, "Renderer::CreateVertexBuffer");
+#endif
+
     if (FAILED(result)) {
         safe_delete(buffer);
         return nullptr;
@@ -471,6 +526,10 @@ IndexBuffer_t* Renderer::CreateIndexBuffer(const void* data, uint32_t count, D3D
     auto result = m_Device->CreateBuffer(&desc, &resourceData, &buffer->m_Buffer);
     assert(SUCCEEDED(result));
 
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+    D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, "Renderer::CreateIndexBuffer");
+#endif
+
     if (FAILED(result)) {
         safe_delete(buffer);
         return nullptr;
@@ -496,6 +555,10 @@ VertexDeclaration_t* Renderer::CreateVertexDeclaration(const D3D11_INPUT_ELEMENT
 
     auto result = m_Device->CreateInputLayout(layout, count, m_Shader->m_Code.data(), m_Shader->m_Size, &declaration->m_Layout);
     assert(SUCCEEDED(result));
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+    D3D_SET_OBJECT_NAME_A(declaration->m_Layout, "Renderer::CreateVertexDeclaration");
+#endif
 
     return declaration;
 }
@@ -531,6 +594,10 @@ SamplerState_t* Renderer::CreateSamplerState(const SamplerStateCreationParams_t&
 
     auto result = m_Device->CreateSamplerState(&samplerDesc, &sampler->m_SamplerState);
     assert(SUCCEEDED(result));
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+    D3D_SET_OBJECT_NAME_A(sampler->m_SamplerState, "Renderer::CreateSamplerState");
+#endif
 
     if (FAILED(result)) {
         safe_delete(sampler);

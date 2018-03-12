@@ -16,12 +16,15 @@
 #include <import_export/ImportExportManager.h>
 
 #include <zlib.h>
+#include <fnv1.h>
 
 // Credits to gibbed for most of the archive format stuff
 // http://gib.me
 
 extern AvalancheArchive* g_CurrentLoadedArchive;
 extern fs::path g_JC3Directory;
+
+static uint64_t g_ArchiveLoadCount = 0;
 
 FileLoader::FileLoader()
 {
@@ -41,11 +44,25 @@ FileLoader::FileLoader()
                 throw std::runtime_error("FileLoader - Failed to load dictionary resource");
             }
 
-            m_FileListDictionary = json::parse(static_cast<const char*>(LockResource(data)));
+            // TODO: something with the load resource stuff is breaking this.
+            // this is ugly but works for now
+            auto str = static_cast<const char*>(LockResource(data));
+            auto l = SizeofResource(handle, rc);
+            std::vector<uint8_t> d;
+            d.resize(l);
+            std::memcpy((char *)d.data(), str, l);
+
+            m_FileListDictionary = json::parse(d);
             m_FileList->Parse(&m_FileListDictionary, { ".rbm", ".ee", ".bl", ".nl" });
         }
-        catch (...) {
-            Window::Get()->ShowMessageBox("Failed to read/parse file list dictionary.\n\nSome features will be disabled.");
+        catch (const std::exception& e) {
+            DEBUG_LOG(e.what());
+
+            std::stringstream error;
+            error << "Failed to read/parse file list dictionary.\n\nSome features will be disabled." << std::endl << std::endl;
+            error << e.what();
+
+            Window::Get()->ShowMessageBox(error.str());
         }
 
         UI::Get()->PopStatusText(status_text_id);
@@ -142,7 +159,7 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback) n
 
     // are we looking for a texture?
     if (filename.extension() == ".dds" || filename.extension() == ".ddsc" || filename.extension() == ".hmddsc") {
-        auto texture = TextureManager::Get()->GetTexture(filename, false);
+        auto& texture = TextureManager::Get()->GetTexture(filename, false);
 
         // is the texture loaded?
         if (texture && texture->GetResource()) {
@@ -180,14 +197,14 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback) n
 
 bool FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept
 {
-    std::ifstream file(filename, std::ios::binary);
-    if (file.fail()) {
+    std::ifstream stream(filename, std::ios::binary);
+    if (stream.fail()) {
         DEBUG_LOG("FileLoader::ReadArchiveTable - Failed to open stream");
         return false;
     }
 
     JustCause3::ArchiveTable::TabFileHeader header;
-    file.read((char *)&header, sizeof(header));
+    stream.read((char *)&header, sizeof(header));
 
     if (header.magic != 0x424154) {
         DEBUG_LOG("FileLoader::ReadArchiveTable - Invalid header magic. Input file probably isn't a TAB file.");
@@ -197,17 +214,23 @@ bool FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::Archi
     output->index = 0;
     output->version = 2;
 
-    while (!file.eof())
+    while (!stream.eof())
     {
         JustCause3::ArchiveTable::VfsTabEntry entry;
-        file.read((char *)&entry, sizeof(entry));
+        stream.read((char *)&entry, sizeof(entry));
+
+        // prevent the entry added 2 times when we get to the null character at the end
+        // failbit will be set because the stream can only read 1 more byte
+        if (stream.fail()) {
+            break;
+        }
 
         output->entries.emplace_back(entry);
     }
 
     DEBUG_LOG("FileLoader::ReadArchiveTable - " << output->entries.size() << " files in archive");
 
-    file.close();
+    stream.close();
     return true;
 }
 
@@ -231,12 +254,11 @@ StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
         uint32_t length;
         stream.read((char *)&length, sizeof(length));
 
-        auto buffer = new char[length + 1];
-        stream.read(buffer, length);
-        buffer[length] = '\0';
+        auto filename = std::unique_ptr<char[]>(new char[length + 1]);
+        stream.read(filename.get(), length);
+        filename[length] = '\0';
 
-        entry.m_Filename = buffer;
-        delete[] buffer;
+        entry.m_Filename = filename.get();
 
         stream.read((char *)&entry.m_Offset, sizeof(entry.m_Offset));
         stream.read((char *)&entry.m_Size, sizeof(entry.m_Size));
@@ -665,15 +687,16 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
     fs::path tab_file = g_JC3Directory / directory / (archive + ".tab");
     fs::path arc_file = g_JC3Directory / directory / (archive + ".arc");
 
+    const auto arc_hash = fnv_1_32::hash(arc_file.string().c_str(), arc_file.string().length());
+
     DEBUG_LOG(tab_file);
     DEBUG_LOG(arc_file);
 
+    // ensure the arc/tab file exists
     if (!fs::exists(tab_file) || !fs::exists(arc_file)) {
         DEBUG_LOG("FileLoader::ReadFileFromArchive - Can't find .arc/.tab file");
         return false;
     }
-
-    bool found = false;
 
     // read the archive table
     JustCause3::ArchiveTable::VfsArchive archiveTable;
@@ -682,35 +705,37 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
         uint64_t size = 0;
 
         // locate the data for the file
-        for (auto& entry : archiveTable.entries) {
+        for (const auto& entry : archiveTable.entries) {
             if (entry.hash == namehash) {
-                offset = entry.offset;
-                size = entry.size;
-                found = true;
+                DEBUG_LOG("FileLoader::ReadFileFromArchive - Found file in archive at " << entry.offset << " (size: " << entry.size << " bytes)");
 
-                DEBUG_LOG("FileLoader::ReadFileFromArchive - Found file in archive at " << offset << " (size: " << size << " bytes)");
-                break;
+                // open the file stream
+                std::ifstream stream(arc_file, std::ios::binary | std::ios::ate);
+                if (stream.fail()) {
+                    DEBUG_LOG("[ERROR] FileLoader::ReadFileFromArchive - Failed to open stream");
+                    return false;
+                }
+
+                g_ArchiveLoadCount++;
+                DEBUG_LOG("[PERF] Archive load count: " << g_ArchiveLoadCount);
+
+                // TODO: caching
+
+                stream.seekg(entry.offset);
+                output->resize(entry.size);
+
+                stream.read((char *)output->data(), entry.size);
+                stream.close();
+
+                return true;
             }
-        }
-
-        // did we find what we're looking for?
-        if (found) {
-            std::ifstream stream(arc_file, std::ios::binary);
-            stream.seekg(offset);
-
-            output->resize(size);
-            stream.read((char *)output->data(), size);
-            stream.close();
         }
     }
 
 #ifdef DEBUG
-    if (!found) {
-        __debugbreak();
-    }
+    __debugbreak();
 #endif
-
-    return found;
+    return false;
 }
 
 std::tuple<std::string, std::string, uint32_t> FileLoader::LocateFileInDictionary(const fs::path& filename) noexcept
@@ -738,7 +763,7 @@ std::tuple<std::string, std::string, uint32_t> FileLoader::LocateFileInDictionar
                 if (value.is_string()) {
                     const auto& value_str = value.get<std::string>();
                     if (value_str.find(_filename) != std::string::npos) {
-                        DEBUG_LOG("LocateFileInDictionary - Found '" << value_str << "' (" << key << ") in '/" << directory_name << "/" << archive_name << "'");
+                        DEBUG_LOG("FileLoader::LocateFileInDictionary - Found '" << value_str << "' (" << key << ") in '/" << directory_name << "/" << archive_name << "'");
 
                         auto namehash = static_cast<uint32_t>(std::stoul(key, nullptr, 16));
                         return { directory_name, archive_name, namehash };
@@ -748,7 +773,7 @@ std::tuple<std::string, std::string, uint32_t> FileLoader::LocateFileInDictionar
         }
     }
 
-    DEBUG_LOG("[ERROR] LocateFileInDictionary - Can't find '" << filename << "'");
+    DEBUG_LOG("[ERROR] FileLoader::LocateFileInDictionary - Can't find '" << filename << "'");
     return { "", "", 0 };
 }
 
