@@ -219,7 +219,7 @@ bool FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::Archi
         JustCause3::ArchiveTable::VfsTabEntry entry;
         stream.read((char *)&entry, sizeof(entry));
 
-        // prevent the entry added 2 times when we get to the null character at the end
+        // prevent the entry being added 2 times when we get to the null character at the end
         // failbit will be set because the stream can only read 1 more byte
         if (stream.fail()) {
             break;
