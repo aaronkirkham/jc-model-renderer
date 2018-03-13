@@ -151,7 +151,9 @@ void UI::Render()
     }
 
     // Scene rendering
-    // TODO
+    // TODO: once ImGui has support for viewports/tabs/docking some of the UI will change a bit
+    // https://github.com/ocornut/imgui/issues/1542
+    // https://github.com/ocornut/imgui/issues/261
 
     // Stats
     ImGui::Begin("Stats", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
@@ -382,11 +384,6 @@ void UI::RenderFileTreeView()
 
                                 ImGui::Columns();
                             }
-
-                            // if this isn't the last render block, draw a separator
-                            /*if (render_block_index != (render_blocks.size() - 1)) {
-                                ImGui::Separator();
-                            }*/
 
                             ImGui::TreePop();
                         }
