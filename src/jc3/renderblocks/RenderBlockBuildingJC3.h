@@ -69,6 +69,8 @@ public:
 
     virtual void Read(std::istream& stream) override final
     {
+        using namespace JustCause3::Vertex;
+
         // read the block header
         stream.read((char *)&m_Block, sizeof(m_Block));
 
@@ -81,11 +83,26 @@ public:
 
         // read the vertex buffers
         if (m_Block.attributes.packed.format == 1) {
-            ReadVertexBuffer<JustCause3::Vertex::PackedVertexPosition>(stream, &m_VertexBuffer);
-            ReadVertexBuffer<JustCause3::Vertex::GeneralShortPacked>(stream, &m_VertexBufferData);
+            std::vector<PackedVertexPosition> vertices;
+            ReadVertexBuffer<PackedVertexPosition>(stream, &m_VertexBuffer);
+
+            for (const auto& vertex : vertices) {
+                m_Vertices.emplace_back(unpack(vertex.x));
+                m_Vertices.emplace_back(unpack(vertex.y));
+                m_Vertices.emplace_back(unpack(vertex.z));
+            }
+
+            std::vector<GeneralShortPacked> vertices_data;
+            ReadVertexBuffer<GeneralShortPacked>(stream, &m_VertexBufferData);
+
+            for (const auto& data : vertices_data) {
+                m_UVs.emplace_back(unpack(data.u0));
+                m_UVs.emplace_back(unpack(data.v0));
+            }
         }
         else {
-            //ReadVertexBuffer<JustCause3::Vertex::Unpacked>(stream, &m_Vertices);
+            //ReadVertexBuffer<Unpacked>(stream, &m_Vertices);
+            __debugbreak();
         }
 
         // read index buffer

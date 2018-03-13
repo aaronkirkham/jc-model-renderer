@@ -75,6 +75,9 @@ public:
 
     virtual void Read(std::istream& stream) override final
     {
+        using namespace JustCause3::Vertex;
+        using namespace JustCause3::Vertex::RenderBlockCharacter;
+
         // read the block header
         stream.read((char *)&m_Block, sizeof(m_Block));
 
@@ -85,7 +88,16 @@ public:
         // TODO: need to implement the different vertex types depending on the flags above (GetStride).
         // The stride should be the size of the struct we read from.
         {
-            ReadVertexBuffer<JustCause3::Vertex::RenderBlockCharacter::PackedCharacterPos4Bones1UVs>(stream, &m_VertexBuffer);
+            std::vector<PackedCharacterPos4Bones1UVs> vertices;
+            ReadVertexBuffer<PackedCharacterPos4Bones1UVs>(stream, &m_VertexBuffer, &vertices);
+
+            for (const auto& vertex : vertices) {
+                m_Vertices.emplace_back(unpack(vertex.x));
+                m_Vertices.emplace_back(unpack(vertex.y));
+                m_Vertices.emplace_back(unpack(vertex.z));
+                m_UVs.emplace_back(unpack(vertex.u0));
+                m_UVs.emplace_back(unpack(vertex.v0));
+            }
         }
 
         // read skin batch

@@ -76,6 +76,8 @@ public:
 
     virtual void Read(std::istream& stream) override final
     {
+        using namespace JustCause3::Vertex;
+
         // read the block header
         stream.read((char *)&m_Block, sizeof(m_Block));
 
@@ -104,26 +106,44 @@ public:
 
         // read the vertex buffers
         if (_bittest((const long *)&m_Block.attributes.flags, 13)) {
-            ReadVertexBuffer<JustCause3::Vertex::UnpackedVertexWithNormal1>(stream, &m_VertexBuffer);
-            ReadVertexBuffer<JustCause3::Vertex::UnpackedNormals>(stream, &m_VertexBufferData);
+            ReadVertexBuffer<UnpackedVertexWithNormal1>(stream, &m_VertexBuffer);
+            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData);
             ReadSkinBatch(stream);
-            //__debugbreak();
+            __debugbreak();
         }
         else if (_bittest((const long *)&m_Block.attributes.flags, 12)) {
-            ReadVertexBuffer<JustCause3::Vertex::VertexDeformPos>(stream, &m_VertexBuffer);
-            ReadVertexBuffer<JustCause3::Vertex::VertexDeformNormal2>(stream, &m_VertexBufferData);
-            //__debugbreak();
+            ReadVertexBuffer<VertexDeformPos>(stream, &m_VertexBuffer);
+            ReadVertexBuffer<VertexDeformNormal2>(stream, &m_VertexBufferData);
+            __debugbreak();
         }
         else {
-            ReadVertexBuffer<JustCause3::Vertex::UnpackedVertexPosition>(stream, &m_VertexBuffer);
-            ReadVertexBuffer<JustCause3::Vertex::UnpackedNormals>(stream, &m_VertexBufferData);
-            //__debugbreak();
+            std::vector<UnpackedVertexPosition> vertices;
+            ReadVertexBuffer<UnpackedVertexPosition>(stream, &m_VertexBuffer);
+
+            for (const auto& vertex : vertices) {
+                m_Vertices.emplace_back(vertex.x);
+                m_Vertices.emplace_back(vertex.y);
+                m_Vertices.emplace_back(vertex.z);
+            }
+
+            std::vector<UnpackedNormals> vertices_data;
+            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData);
+
+            for (const auto& data : vertices_data) {
+                m_UVs.emplace_back(data.u0);
+                m_UVs.emplace_back(data.v0);
+            }
         }
 
         // read the layered uv data if needed
         if (m_Block.attributes.flags & 0x60) {
-            ReadVertexBuffer<JustCause3::Vertex::UnpackedUV>(stream, &m_VertexBufferUVData);
-            //__debugbreak();
+            std::vector<UnpackedUV> uvs;
+            ReadVertexBuffer<UnpackedUV>(stream, &m_VertexBufferUVData, &uvs);
+            
+            for (const auto& uv : uvs) {
+                m_UVs.emplace_back(uv.u);
+                m_UVs.emplace_back(uv.v);
+            }
         }
 
         // read index buffer

@@ -20,7 +20,10 @@ protected:
     std::vector<std::shared_ptr<Texture>> m_Textures;
     std::vector<JustCause3::CSkinBatch> m_SkinBatches;
 
+    // used by the exporter stuff, vertices are unpacked by the renders blocks
+    std::vector<float> m_Vertices;
     std::vector<uint16_t> m_Indices;
+    std::vector<float> m_UVs;
 
 public:
     IRenderBlock() = default;
@@ -42,8 +45,9 @@ public:
     virtual VertexBuffer_t* GetVertexBuffer() { return m_VertexBuffer; }
     virtual IndexBuffer_t* GetIndexBuffer() { return m_IndexBuffer; }
     virtual const std::vector<std::shared_ptr<Texture>>& GetTextures() { return m_Textures; }
-    //virtual const std::vector<uint8_t>& GetVertices() = 0;
+    virtual const std::vector<float>& GetVertices() { return m_Vertices; }
     virtual const std::vector<uint16_t>& GetIndices() { return m_Indices; }
+    virtual const std::vector<float>& GetUVs() { return m_UVs; }
 
     virtual void Create() = 0;
     virtual void Read(std::istream& file) = 0;
@@ -91,18 +95,21 @@ public:
     }
 
     template <typename T>
-    void ReadVertexBuffer(std::istream& stream, VertexBuffer_t** outBuffer)
+    void ReadVertexBuffer(std::istream& stream, VertexBuffer_t** outBuffer, std::vector<T>* outVertices = nullptr)
     {
         auto stride = static_cast<uint32_t>(sizeof(T));
 
         uint32_t count;
         stream.read((char *)&count, sizeof(count));
 
-        std::vector<T> vertices;
+        /*std::vector<T> vertices;
         vertices.resize(count);
-        stream.read((char *)vertices.data(), (count * stride));
+        stream.read((char *)vertices.data(), (count * stride));*/
 
-        *outBuffer = Renderer::Get()->CreateVertexBuffer(vertices.data(), count, stride);
+        outVertices->resize(count);
+        stream.read((char *)outVertices->data(), (count * stride));
+
+        *outBuffer = Renderer::Get()->CreateVertexBuffer(outVertices->data(), count, stride);
     }
 
     void ReadIndexBuffer(std::istream& stream, IndexBuffer_t** outBuffer)
