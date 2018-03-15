@@ -69,8 +69,8 @@ public:
             safe_delete(model);
         }
 
-        m_Models.empty();
-        m_ArchiveModels.empty();
+        m_Models.clear();
+        m_ArchiveModels.clear();
     }
 
     virtual ModelManagerEvents& Events() { return m_ModelManagerEvents; }
