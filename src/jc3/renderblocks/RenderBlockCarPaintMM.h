@@ -106,14 +106,45 @@ public:
 
         // read the vertex buffers
         if (_bittest((const long *)&m_Block.attributes.flags, 13)) {
-            ReadVertexBuffer<UnpackedVertexWithNormal1>(stream, &m_VertexBuffer);
-            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData);
+            std::vector<UnpackedVertexWithNormal1> vertices;
+            ReadVertexBuffer<UnpackedVertexWithNormal1>(stream, &m_VertexBuffer, &vertices);
+
+            for (const auto& vertex : vertices) {
+                m_Vertices.emplace_back(vertex.x);
+                m_Vertices.emplace_back(vertex.y);
+                m_Vertices.emplace_back(vertex.z);
+            }
+
+            std::vector<UnpackedNormals> vertices_data;
+            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData, &vertices_data);
+
+            for (const auto& data : vertices_data) {
+                m_UVs.emplace_back(data.u0);
+                m_UVs.emplace_back(data.v0);
+            }
+
             ReadSkinBatch(stream);
+
             __debugbreak();
         }
         else if (_bittest((const long *)&m_Block.attributes.flags, 12)) {
-            ReadVertexBuffer<VertexDeformPos>(stream, &m_VertexBuffer);
-            ReadVertexBuffer<VertexDeformNormal2>(stream, &m_VertexBufferData);
+            std::vector<VertexDeformPos> vertices;
+            ReadVertexBuffer<VertexDeformPos>(stream, &m_VertexBuffer, &vertices);
+
+            for (const auto& vertex : vertices) {
+                m_Vertices.emplace_back(vertex.x);
+                m_Vertices.emplace_back(vertex.y);
+                m_Vertices.emplace_back(vertex.z);
+            }
+
+            std::vector<VertexDeformNormal2> vertices_data;
+            ReadVertexBuffer<VertexDeformNormal2>(stream, &m_VertexBufferData, &vertices_data);
+
+            for (const auto& data : vertices_data) {
+                m_UVs.emplace_back(data.u0);
+                m_UVs.emplace_back(data.v0);
+            }
+
             __debugbreak();
         }
         else {
