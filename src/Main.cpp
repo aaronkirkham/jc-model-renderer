@@ -167,17 +167,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         });
 #endif
 
-        // Init the model manager early to setup render events
-        ModelManager::Get();
+        // empty the texture manager once all models are unloaded
+        ModelManager::Get()->Events().EmptyModels.connect([] {
+            TextureManager::Get()->Empty();
+        });
 
-        // Register file type callbacks now
+        // register file type callbacks now
         FileLoader::Get()->RegisterCallback(".rbm", RenderBlockModel::FileReadCallback);
         FileLoader::Get()->RegisterCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::FileReadCallback);
 
-        // Register importers and exporters
+        // register importers and exporters
         ImportExportManager::Get()->Register(new import_export::Wavefront_Obj);
         ImportExportManager::Get()->Register(new import_export::DDSC);
         ImportExportManager::Get()->Register(new import_export::AvalancheArchive);
+
+        Window::Get()->Events().FileDropped.connect([](const fs::path& filename) {
+            if (filename.extension() == ".rbm") {
+                std::ifstream input(filename, std::ios::binary | std::ios::ate);
+                auto length = input.tellg();
+                input.seekg(0);
+
+                auto model = new RenderBlockModel(filename);
+                if (model->ParseRenderBlockModel(input)) {
+                    ModelManager::Get()->AddModel(model);
+                }
+
+                input.close();
+            }
+        });
 
         // run!
         Window::Get()->Run();
