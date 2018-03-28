@@ -70,6 +70,13 @@ bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
             m_RenderBlocks.emplace_back(renderBlock);
         }
         else {
+            std::stringstream error;
+            error << "Unknown Render Block type ";
+            error << "0x" << std::uppercase << std::setw(4) << std::hex << hash;
+            error << " (" << RenderBlockFactory::GetRenderBlockName(hash) << ").";
+
+            DEBUG_LOG("[ERROR] " << error.str());
+
 #if 0
             std::stringstream ss;
             ss << "Unknown Render Block type ";

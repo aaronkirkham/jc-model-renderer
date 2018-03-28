@@ -9,92 +9,105 @@
 IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type)
 {
     switch (type) {
-    case 0x2EE0F4A9: return new RenderBlockGeneralJC3;
-    case 0x9D6E332A: return new RenderBlockCharacter;
-    case 0x626F5E3B: return new RenderBlockCharacterSkin;
-    case 0x35BF53D5: return new RenderBlockBuildingJC3;
-    case 0x2CEC5AD5: return new RenderBlockGeneralMkIII;
-    case 0x483304D6: return new RenderBlockCarPaintMM;
+    case RB_GENERALJC3: return new RenderBlockGeneralJC3;
+    case RB_CHARACTER: return new RenderBlockCharacter;
+    case RB_CHARACTERSKIN: return new RenderBlockCharacterSkin;
+    case RB_BUILDINGJC3: return new RenderBlockBuildingJC3;
+    case RB_GENERALMKIII: return new RenderBlockGeneralMkIII;
+    case RB_CARPAINTMM: return new RenderBlockCarPaintMM;
     }
     
     return nullptr;
 }
 
-//0x45DBC85F - 2DTex1
-//0x8663465 - 2DTex2
-//0x474ECF38 - 3DText
-//0x67BCF1D0 - AOBox
-//0xCF84413C - AddFogVolume
-//0x90D7C43 - AtmosphericScattering
-//0x898323B2 - Bark
-//0xA5D24CCD - BavariumShield
-//0x1B5E8315 - Beam
-//0x389265A9 - Billboard
-//0x416C4035 - Box
-//0x91571CF0 - Bullet
-//0xDB948BF1 - CarLight
-//0x3449988B - CirrusClouds
-//0xA399123E - Clouds
-//0xDF9E9916 - DecalDeformable
-//0x2BAFDD6C - DecalSimple
-//0x8A42C0C1 - DecalSkinned
-//0x4684BC - DecalSkinnedDestruction
-//0x4598D520 - DeferredLighting
-//0xF9EF9DE4 - DepthDownSample
-//0x7287FA5F - EnvironmentReflection
-//0x6FF3659 - FXMeshFire
-//0xD885FCDB - Flag
-//0x1637FB2A - FogGradient
-//0xB0E85383 - FogVolume
-//0x3C8DE6D3 - Foilage
-//0x7E8F98CE - Font
-//0xAE7E6231 - FullScreenVideo
-//0x91C2D583 - GIOnly
-//0xA7583B2B - General
-//0x8F2335EC - GeneralMaskedJC3
-//0x65D9B5B2 - Halo
-//0xE13A427D - LRCloudsCompose
-//0x6B535F86 - LRParticleCompose
-//0xC7021EE3 - Layered
-//0xD2033C51 - LightGlow
-//0xDB48F55A - Lights
-//0xC07B6866 - Line
-//0xC2457E44 - MaterialTune
-//0xBAE64FF8 - MeshParticle
-//0x2A44553C - Occluder
-//0xBD231E4 - Occlusion
-//0x5B13AA49 - Open
-//0xDAF5CDB0 - OutlineEffectBlur
-//0x58DE8D87 - PostEffects
-//0x4894ECD - Prop
-//0x7450659E - RainOccluder
-//0xA981F55F - Reflection
-//0x566DCE92 - RoadJunction
-//0xC2C03635 - SSAO
-//0x4FE3AE77 - SSDecal
-//0x3EB17238 - SceneCapture
-//0xDA1EB637 - ScreenSpaceRelection
-//0xB65AC9D7 - ScreenSpaceSubSurfaceSkin
-//0x9D1EE307 - Single
-//0x4D3A7D2F - Skidmarks
-//0xC24EFB87 - SkyBox
-//0x64076188 - SkyGradient
-//0x2D95C25E - SkyModel
-//0xB308E2F4 - SoftClouds
-//0x359F6B2C - SphericalHarmonicProbe
-//0xEDABAD - SplineRoad
-//0x33E6BCA3 - SpotLightCone
-//0x815DF732 - TerrainPatch
-//0x858E7014 - Trail
-//0xEB96E782 - Triangle
-//0x69DE065B - UnderwaterFogGradient
-//0xD89EF9 - VegIntReCenter
-//0x6D87DBFC - VegInteractionVolume
-//0x77B4C335 - VegSampling
-//0x20DA8E9D - VegSystemPostDraw
-//0x1AF1F8AC - VegUpdate
-//0xF99C72A1 - WaterDisplacementOverride
-//0x90FE086C - WaterMask
-//0x910EDC80 - WaterReflectionPlane
-//0x89215D85 - Weather
-//0x5B2003F6 - Window
+const char* RenderBlockFactory::GetRenderBlockName(const uint32_t type)
+{
+    switch (type) {
+    case RB_2DTEX1: return "2DTex1";
+    case RB_2DTEX2: return "2DTex2";
+    case RB_3DTEXT: return "3DText";
+    case RB_AOBOX: return "AOBox";
+    case RB_ADDFOGVOLUME: return "AddFogVolume";
+    case RB_ATMOSPHERICSCATTERING: return "AtmosphericScattering";
+    case RB_BARK: return "Bark";
+    case RB_BAVARIUMSHIELD: return "BavariumShield";
+    case RB_BEAM: return "Beam";
+    case RB_BILLBOARD: return "Billboard";
+    case RB_BOX: return "Box";
+    case RB_BUILDINGJC3: return "BuildingJC3";
+    case RB_BULLET: return "Bullet";
+    case RB_CARLIGHT: return "CarLight";
+    case RB_CARPAINTMM: return "CarPaintMM";
+    case RB_CHARACTER: return "Character";
+    case RB_CHARACTERSKIN: return "CharacterSkin";
+    case RB_CIRRUSCLOUDS: return "CirrusClouds";
+    case RB_CLOUDS: return "Clouds";
+    case RB_DECALDEFORMABLE: return "DecalDeformable";
+    case RB_DECALSIMPLE: return "DecalSimple";
+    case RB_DECALSKINNED: return "DecalSkinned";
+    case RB_DECALSKINNEDDESTRUCTION: return "DecalSkinnedDestruction";
+    case RB_DEFERREDLIGHTING: return "DeferredLighting";
+    case RB_DEPTHDOWNSAMPLE: return "DepthDownSample";
+    case RB_ENVIRONMENTREFLECTION: return "EnvironmentReflection";
+    case RB_FXMESHFIRE: return "FXMeshFire";
+    case RB_FLAG: return "Flag";
+    case RB_FOGGRADIENT: return "FogGradient";
+    case RB_FOGVOLUME: return "FogVolume";
+    case RB_FOILAGE: return "Foilage";
+    case RB_FONT: return "Font";
+    case RB_FULLSCREENVIDEO: return "FullScreenVideo";
+    case RB_GIONLY: return "GIOnly";
+    case RB_GENERAL: return "General";
+    case RB_GENERALJC3: return "GeneralJC3";
+    case RB_GENERALMASKEDJC3: return "GeneralMaskedJC3";
+    case RB_GENERALMKIII: return "GeneralMkIII";
+    case RB_HALO: return "Halo";
+    case RB_LRCLOUDSCOMPOSE: return "LRCloudsCompose";
+    case RB_PARTICLECOMPOSE: return "LRParticleCompose";
+    case RB_LAYERED: return "Layered";
+    case RB_LIGHTGLOW: return "LightGlow";
+    case RB_LIGHTS: return "Lights";
+    case RB_LINE: return "Line";
+    case RB_MATERIALTUNE: return "MaterialTune";
+    case RB_MESHPARTICLE: return "MeshParticle";
+    case RB_OCCLUDER: return "Occluder";
+    case RB_OCCULSION: return "Occulsion";
+    case RB_OPEN: return "Open";
+    case RB_OUTLINEEFFECTBLUR: return "OutlineEffectBlur";
+    case RB_POSTEFFECTS: return "PostEffects";
+    case RB_PROP: return "Prop";
+    case RB_RAINOCCLUDER: return "RainOccluder";
+    case RB_REFLECTION: return "Reflection";
+    case RB_ROADJUNCTION: return "RoadJunction";
+    case RB_SSAO: return "SSAO";
+    case RB_SSDECAL: return "SSDecal";
+    case RB_SCENECAPTURE: return "SceneCapture";
+    case RB_SCREENSPACEREFLECTION: return "ScreenSpaceReflection";
+    case RB_SCREENSPACESUBSURFACESKIN: return "ScreenSpaceSubSurfaceSkin";
+    case RB_SINGLE: return "Single";
+    case RB_SKIDMARKS: return "Skidmarks";
+    case RB_SKYBOX: return "SkyBox";
+    case RB_SKYGRADIENT: return "SkyGradient";
+    case RB_SKYMODEL: return "SkyModel";
+    case RB_SOFTCLOUDS: return "SoftClouds";
+    case RB_SPHERICALHARMONICPROBE: return "SphericalHarmonicProbe";
+    case RB_SPLINEROAD: return "SplineRoad";
+    case RB_SPOTLIGHTCONE: return "SpotLightCone";
+    case RB_TERRAINPATCH: return "TerrainPatch";
+    case RB_TRAIL: return "Trail";
+    case RB_TRIANGLE: return "Triangle";
+    case RB_UNDERWATERFOGGRADIENT: return "UnderwaterFogGradient";
+    case RB_VEGINTRECENTER: return "VegIntReCenter";
+    case RB_VEGINTERACTIONVOLUME: return "VegInteractionVolume";
+    case RB_VEGSAMPLING: return "VegSampling";
+    case RB_VEGSYSTEMPOSTDRAW: return "VegSystemPostDraw";
+    case RB_VEGUPDATE: return "VegUpdate";
+    case RB_WATERDISPLACEMENTOVERRIDE: return "WaterDisplacementOverride";
+    case RB_WATERMARK: return "WaterMask";
+    case RB_WATERREFLECTIONPLANE: return "WaterReflectionPlane";
+    case RB_WEATHER: return "Weather";
+    case RB_WINDOW: return "Window";
+    }
+
+    return "Unknown";
+}
