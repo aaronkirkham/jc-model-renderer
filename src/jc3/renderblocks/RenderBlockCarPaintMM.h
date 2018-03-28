@@ -149,7 +149,7 @@ public:
         }
         else {
             std::vector<UnpackedVertexPosition> vertices;
-            ReadVertexBuffer<UnpackedVertexPosition>(stream, &m_VertexBuffer);
+            ReadVertexBuffer<UnpackedVertexPosition>(stream, &m_VertexBuffer, &vertices);
 
             for (const auto& vertex : vertices) {
                 m_Vertices.emplace_back(vertex.x);
@@ -158,7 +158,7 @@ public:
             }
 
             std::vector<UnpackedNormals> vertices_data;
-            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData);
+            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData, &vertices_data);
 
             for (const auto& data : vertices_data) {
                 m_UVs.emplace_back(data.u0);
