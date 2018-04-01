@@ -102,10 +102,6 @@ public:
         uint32_t count;
         stream.read((char *)&count, sizeof(count));
 
-        /*std::vector<T> vertices;
-        vertices.resize(count);
-        stream.read((char *)vertices.data(), (count * stride));*/
-
         outVertices->resize(count);
         stream.read((char *)outVertices->data(), (count * stride));
 

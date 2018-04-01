@@ -7,34 +7,21 @@
 Texture::Texture(const fs::path& filename)
     : m_Filename(filename)
 {
-    FileLoader::Get()->ReadFile(m_Filename, [this](bool success, FileBuffer data) {
-        if (success) {
-            FileBuffer buffer;
-            if (m_Filename.extension() == ".ddsc") {
-                FileLoader::Get()->ReadCompressedTexture(data, std::numeric_limits<uint64_t>::max(), &buffer);
-            }
-            else {
-                buffer = std::move(data);
-            }
+    FileLoader::Get()->ReadFile(filename, [this](bool success, FileBuffer data) {
+        // TODO: only if success
+        // TODO: what about if we load custom textures from disk??
 
-            LoadFromBuffer(buffer);
-        }
-        // failed, let's look for a HMDDSC file.
-        else {
-            if (m_Filename.extension() == ".ddsc") {
-                auto new_filename = m_Filename.replace_extension(".hmddsc");
+        // if we're reading a ddsc file, look for the hmddsc too
+        if (m_Filename.extension() == ".ddsc") {
+            auto hmddsc_filename = m_Filename.replace_extension(".hmddsc");
+            FileLoader::Get()->ReadFile(hmddsc_filename, [this, data, hmddsc_filename](bool hmddsc_success, FileBuffer hmddsc_data) {
+                m_IsHMDDSC = hmddsc_success;
 
-                // try read the hmddsc file
-                FileLoader::Get()->ReadFile(new_filename, [this](bool success, FileBuffer data) {
-                    if (success) {
-                        // try read the compressed texture buffer
-                        FileBuffer buffer;
-                        if (FileLoader::Get()->ReadCompressedTexture(data, std::numeric_limits<uint64_t>::max(), &buffer)) {
-                            LoadFromBuffer(buffer);
-                        }
-                    }
-                });
-            }
+                FileBuffer buffer;
+                if (FileLoader::Get()->ReadCompressedTexture(&data, (hmddsc_success ? &hmddsc_data : nullptr), &buffer)) {
+                    LoadFromBuffer(buffer);
+                }
+            });
         }
     });
 }
@@ -116,7 +103,7 @@ void TextureManager::Shutdown()
 
 const std::shared_ptr<Texture>& TextureManager::GetTexture(const fs::path& filename, bool create_if_not_exists)
 {
-    auto name = filename.filename().string();
+    auto name = filename.filename().stem().string();
     auto key = fnv_1_32::hash(name.c_str(), name.length());
 
     if (std::find(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key) == m_LastUsedTextures.end()) {

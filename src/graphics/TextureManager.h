@@ -11,6 +11,7 @@ private:
     ID3D11ShaderResourceView* m_SRV = nullptr;
     fs::path m_Filename = "";
     FileBuffer m_Buffer;
+    bool m_IsHMDDSC = false;
 
 public:
     Texture() = default;

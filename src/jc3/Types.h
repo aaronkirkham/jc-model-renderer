@@ -203,7 +203,8 @@ namespace JustCause3
         uint32_t m_Offset;
         uint32_t m_Size;
         uint16_t m_Alignment;
-        char unknown[2];
+        bool m_IsTile;
+        bool m_IsSource;
     };
 
     struct AvalancheTexture

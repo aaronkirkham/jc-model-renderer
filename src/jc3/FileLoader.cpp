@@ -53,7 +53,7 @@ FileLoader::FileLoader()
             std::memcpy((char *)d.data(), str, l);
 
             m_FileListDictionary = json::parse(d);
-            m_FileList->Parse(&m_FileListDictionary, { ".rbm", ".ee", ".bl", ".nl" });
+            m_FileList->Parse(&m_FileListDictionary, { ".rbm", ".ee", ".bl", ".nl" }); // TODO: dds, ddsc, hmddsc
         }
         catch (const std::exception& e) {
             DEBUG_LOG(e.what());
@@ -407,11 +407,12 @@ StreamArchive_t* FileLoader::ReadStreamArchive(const fs::path& filename) noexcep
     return nullptr;
 }
 
-bool FileLoader::ReadCompressedTexture(const FileBuffer& buffer, uint64_t size, FileBuffer* output) noexcept
+bool FileLoader::ReadCompressedTexture(const FileBuffer* buffer, const FileBuffer* hmddsc_buffer, FileBuffer* output) noexcept
 {
-    std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
-    ParseCompressedTexture(stream, size, output);
-    return true;
+    //std::istringstream stream(std::string{ (char *)buffer.data(), buffer.size() });
+    //std::istringstream hmddsc_stream(std::string{ (char *)hmddsc_buffer.data(), hmddsc_buffer.size() });
+
+    return ParseCompressedTexture(buffer, hmddsc_buffer, output);
 }
 
 bool FileLoader::ReadCompressedTexture(const fs::path& filename, FileBuffer* output) noexcept
@@ -427,7 +428,7 @@ bool FileLoader::ReadCompressedTexture(const fs::path& filename, FileBuffer* out
         return false;
     }
 
-    ParseCompressedTexture(stream, std::numeric_limits<uint64_t>::max(), output);
+    //ParseCompressedTexture(stream, std::numeric_limits<uint64_t>::max(), output);
     stream.close();
     return true;
 }
@@ -773,82 +774,103 @@ std::tuple<std::string, std::string, uint32_t> FileLoader::LocateFileInDictionar
         }
     }
 
-    DEBUG_LOG("[ERROR] FileLoader::LocateFileInDictionary - Can't find '" << filename << "'");
+    // DEBUG_LOG("[ERROR] FileLoader::LocateFileInDictionary - Can't find '" << filename << "'");
     return { "", "", 0 };
 }
 
-void FileLoader::ParseCompressedTexture(std::istream& stream, uint64_t size, FileBuffer* output)
+bool FileLoader::ParseCompressedTexture(const FileBuffer* ddsc_buffer, const FileBuffer* hmddsc_buffer, FileBuffer* output) noexcept
 {
-    // figure out the file size if we need to
-    if (size == std::numeric_limits<uint64_t>::max()) {
-        stream.seekg(0, std::ios::end);
-        size = static_cast<uint64_t>(stream.tellg());
-        stream.seekg(0, std::ios::beg);
+    std::istringstream ddsc_stream(std::string{ (char *)ddsc_buffer->data(), ddsc_buffer->size() });
+
+    // read the texture data
+    JustCause3::AvalancheTexture texture;
+    ddsc_stream.read((char *)&texture, sizeof(texture));
+
+    // ensure the header magic is correct
+    if (texture.m_Magic != 0x58545641) {
+        return false;
     }
 
-    JustCause3::AvalancheTexture texture;
-    stream.read((char *)&texture, sizeof(texture));
+    // loop over all streams
+    uint32_t big_size = 0;
+    uint32_t stream_index = 0;
+    for (auto i = 0; i < 8; ++i) {
+        const auto& stream = texture.m_Streams[i];
 
-    // load avalanche texture
-    if (texture.m_Magic == 0x58545641) {
-        auto stream_index = 0;
-        auto offset = texture.m_Streams[stream_index].m_Offset;
+        // skip this stream if we have no data
+        if (stream.m_Size == 0) {
+            continue;
+        }
 
-        auto mipCount = texture.m_Mips - texture.m_MipsRedisent + stream_index;
-        auto width = texture.m_Width >> mipCount;
-        auto height = texture.m_Height >> mipCount;
-        auto depth = texture.m_Depth >> mipCount;
+        // is this the biggest size?
+        if ((hmddsc_buffer != nullptr && stream.m_IsSource) || (!stream.m_IsSource && stream.m_Size > big_size)) {
+            big_size = stream.m_Size;
+            stream_index = i;
+        }
+    }
 
-        stream.seekg(offset);
-        auto block_size = (size - offset);
+    // find the rank
+    uint32_t rank = 0;
+    for (auto i = 0; i < 8; ++i) {
+        if (i == stream_index) {
+            continue;
+        }
 
-        auto block = new char[block_size + 1];
-        stream.read(block, block_size);
+        if (texture.m_Streams[i].m_Size > texture.m_Streams[stream_index].m_Size) {
+            ++rank;
+        }
+    }
 
+    // select the stream offset
+    const auto stream_offset = texture.m_Streams[stream_index].m_Offset;
+
+    // create the block
+    const auto block_size = ((hmddsc_buffer ? hmddsc_buffer->size() : ddsc_buffer->size()) - stream_offset);
+    auto block = std::unique_ptr<char[]>(new char[block_size + 1]);
+
+    // resize the output buffer
+    output->resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + block_size);
+
+    // write the DDS header block to the output
+    {
         DDS_HEADER header;
         ZeroMemory(&header, sizeof(header));
         header.size = 124;
         header.flags = (0x1007 | 0x20000);
-        header.width = width;
-        header.height = height;
-        header.depth = depth;
-        header.mipMapCount = mipCount;
+        header.width = texture.m_Width >> rank;
+        header.height = texture.m_Height >> rank;
+        header.depth = texture.m_Depth;
+        header.mipMapCount = 1;
         header.ddspf = TextureManager::GetPixelFormat(texture.m_Format);
         header.caps = (8 | 0x1000);
 
-        // ugly things
-        output->resize(sizeof(uint32_t) + sizeof(header) + block_size);
-        memcpy(&output->front(), (char *)&DDS_MAGIC, sizeof(uint32_t));
-        memcpy(&output->front() + sizeof(uint32_t), (char *)&header, sizeof(header));
-        memcpy(&output->front() + sizeof(uint32_t) + sizeof(header), block, block_size);
-
-        delete[] block;
+        // write the magic and header
+        memcpy(&output->front(), (char *)&DDS_MAGIC, sizeof(DDS_MAGIC));
+        memcpy(&output->front() + sizeof(DDS_MAGIC), (char *)&header, sizeof(DDS_HEADER));
     }
-    // lol - probably hmddsc file (raw data without headers?)
+
+    // do we have a hmddsc buffer to parse?
+    if (hmddsc_buffer != nullptr) {
+        std::istringstream hmddsc_stream(std::string{ (char *)hmddsc_buffer->data(), hmddsc_buffer->size() });
+
+        // seek to the block position
+        hmddsc_stream.seekg(stream_offset);
+        
+        // read the block data
+        hmddsc_stream.read(block.get(), block_size);
+    }
     else {
-        stream.seekg(0, std::ios::beg);
+        // seek to the block position
+        ddsc_stream.seekg(stream_offset);
 
-        DDS_HEADER header;
-        ZeroMemory(&header, sizeof(header));
-        header.size = 124;
-        header.flags = (0x1007 | 0x20000);
-        header.width = 512;
-        header.height = 512;
-        header.depth = 1;
-        header.mipMapCount = 0;
-        header.ddspf = TextureManager::GetPixelFormat(DXGI_FORMAT_BC1_UNORM);
-        header.caps = (8 | 0x1000);
-
-        auto block = new char[size + 1];
-        stream.read(block, size);
-
-        output->resize(sizeof(uint32_t) + sizeof(header) + size);
-        memcpy(&output->front(), (char *)&DDS_MAGIC, sizeof(uint32_t));
-        memcpy(&output->front() + sizeof(uint32_t), (char *)&header, sizeof(header));
-        memcpy(&output->front() + sizeof(uint32_t) + sizeof(header), block, size);
-
-        delete[] block;
+        // read the block data
+        ddsc_stream.read(block.get(), block_size);
     }
+
+    // write the block data
+    memcpy(&output->front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER), block.get(), block_size);
+
+    return true;
 }
 
 void FileLoader::RegisterCallback(const std::string& filetype, FileTypeCallback fn)

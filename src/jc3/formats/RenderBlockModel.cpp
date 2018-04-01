@@ -77,17 +77,14 @@ bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 
             DEBUG_LOG("[ERROR] " << error.str());
 
-#if 0
-            std::stringstream ss;
-            ss << "Unknown Render Block type ";
-            ss << "0x" << std::uppercase << std::setw(4) << std::hex << hash << ".";
-            m_ReadBlocksError = ss.str();
+            // if we haven't parsed any other blocks yet
+            // we'll never see anything rendered, let the user know something is wrong
+            if (m_RenderBlocks.size() == 0) {
+                m_ReadBlocksError = error.str();
 
-            DEBUG_LOG("[ERROR] " << m_ReadBlocksError);
-
-            parse_success = false;
-            break;
-#endif
+                parse_success = false;
+                break;
+            }
         }
     }
 

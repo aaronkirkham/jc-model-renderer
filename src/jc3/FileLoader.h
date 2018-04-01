@@ -24,7 +24,8 @@ private:
 
     StreamArchive_t* ParseStreamArchive(std::istream& stream);
     bool DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept;
-    void ParseCompressedTexture(std::istream& stream, uint64_t size, FileBuffer* output);
+    //void ParseCompressedTexture(std::istream& stream, uint64_t size, FileBuffer* output);
+    bool ParseCompressedTexture(const FileBuffer* ddsc_buffer, const FileBuffer* hmddsc_buffer, FileBuffer* output) noexcept;
 
 public:
     FileLoader();
@@ -41,7 +42,7 @@ public:
     StreamArchive_t* ReadStreamArchive(const fs::path& filename) noexcept;
 
     // textures
-    bool ReadCompressedTexture(const FileBuffer& buffer, uint64_t size, FileBuffer* output) noexcept;
+    bool ReadCompressedTexture(const FileBuffer* buffer, const FileBuffer* hmddsc_buffer, FileBuffer* output) noexcept;
     bool ReadCompressedTexture(const fs::path& filename, FileBuffer* output) noexcept;
 
     // runtime containers

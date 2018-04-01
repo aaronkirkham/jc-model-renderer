@@ -29,17 +29,42 @@ public:
         // because we might already have the texture loaded in the TextureManager, let's see if the buffer contains
         // a compressed texture
         if (magic != DDS_MAGIC) {
-            FileBuffer uncompressed_data;
-            if (FileLoader::Get()->ReadCompressedTexture(buffer, std::numeric_limits<uint64_t>::max(), &uncompressed_data)) {
-                WriteBufferToFile(path, &uncompressed_data);
+            // are we exporting HMDDSC?
+            // because the HMDDSC only contains pixel information, we now need to find the DDSC file which contains the texture data
+            if (filename.extension() == ".hmddsc") {
+                DEBUG_LOG("file is hmddsc. loading ddsc data...");
+
+                auto tmp_filename = filename;
+                auto ddsc_filename = tmp_filename.replace_extension(".ddsc");
+                FileLoader::Get()->ReadFile(ddsc_filename, [this, path, buffer, callback](bool success, FileBuffer ddsc_buffer) {
+                    FileBuffer data;
+                    if (FileLoader::Get()->ReadCompressedTexture(&ddsc_buffer, &buffer, &data)) {
+                        WriteBufferToFile(path, &data);
+                    }
+
+                    if (callback) {
+                        callback();
+                    }
+                });
+            }
+            // just a standard DDSC file, export now
+            else {
+                FileBuffer data;
+                if (FileLoader::Get()->ReadCompressedTexture(&buffer, nullptr, &data)) {
+                    WriteBufferToFile(path, &data);
+                }
+
+                if (callback) {
+                    callback();
+                }
             }
         }
         else {
             WriteBufferToFile(path, &buffer);
-        }
 
-        if (callback) {
-            callback();
+            if (callback) {
+                callback();
+            }
         }
     }
 };
