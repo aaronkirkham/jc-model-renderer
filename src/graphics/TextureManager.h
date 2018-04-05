@@ -3,6 +3,7 @@
 #include <StdInc.h>
 #include <singleton.h>
 #include <graphics/DDSTextureLoader.h>
+#include <thread>
 
 class Texture
 {
@@ -11,7 +12,16 @@ private:
     ID3D11ShaderResourceView* m_SRV = nullptr;
     fs::path m_Filename = "";
     FileBuffer m_Buffer;
-    bool m_IsHMDDSC = false;
+
+    FileBuffer m_DDSCBuffer;
+    FileBuffer m_HMDDSCBuffer;
+
+    bool m_HasDDSC = false;
+    bool m_HasHMDDSC = false;
+    bool m_IsTryingDDSC = true;
+    bool m_IsTryingHMDDSC = false;
+
+    std::thread m_WaitThread;
 
 public:
     Texture() = default;

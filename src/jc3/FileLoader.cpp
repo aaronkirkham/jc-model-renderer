@@ -17,6 +17,7 @@
 
 #include <zlib.h>
 #include <fnv1.h>
+#include <jc3/hashlittle.h>
 
 // Credits to gibbed for most of the archive format stuff
 // http://gib.me
@@ -52,8 +53,23 @@ FileLoader::FileLoader()
             d.resize(l);
             std::memcpy((char *)d.data(), str, l);
 
-            m_FileListDictionary = json::parse(d);
-            m_FileList->Parse(&m_FileListDictionary, { ".rbm", ".ee", ".bl", ".nl" }); // TODO: dds, ddsc, hmddsc
+            auto& dictionary = json::parse(d);
+            m_FileList->Parse(&dictionary, { ".rbm", ".ee", ".bl", ".nl" }); // TODO: dds, ddsc, hmddsc
+
+            // parse the dictionary
+            for (auto& it = dictionary.begin(); it != dictionary.end(); ++it) {
+                const auto& key = it.key();
+                const auto& data = it.value();
+
+                const auto namehash = static_cast<uint32_t>(std::stoul(data["namehash"].get<std::string>(), nullptr, 16));
+
+                std::vector<std::string> paths;
+                for (const auto& path : data["path"]) {
+                    paths.emplace_back(path.get<std::string>());
+                }
+
+                m_Dictionary[namehash] = std::make_pair(key, paths);
+            }
         }
         catch (const std::exception& e) {
             DEBUG_LOG(e.what());
@@ -151,14 +167,18 @@ FileLoader::FileLoader()
     });
 }
 
-void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback) noexcept
+void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback, uint8_t flags) noexcept
 {
-    std::stringstream status_text;
-    status_text << "Reading \"" << filename << "\"...";
-    const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
+    uint64_t status_text_id = 0;
+
+    if (!m_UseBatches) {
+        std::stringstream status_text;
+        status_text << "Reading \"" << filename << "\"...";
+        status_text_id = UI::Get()->PushStatusText(status_text.str());
+    }
 
     // are we looking for a texture?
-    if (filename.extension() == ".dds" || filename.extension() == ".ddsc" || filename.extension() == ".hmddsc") {
+    if (!(flags & ReadFileFlags::NO_TEX_CACHE) && (filename.extension() == ".dds" || filename.extension() == ".ddsc" || filename.extension() == ".hmddsc")) {
         auto& texture = TextureManager::Get()->GetTexture(filename, false);
 
         // is the texture loaded?
@@ -179,6 +199,11 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback) n
         }
     }
 
+    // should we use file batching?
+    if (m_UseBatches) {
+        return ReadFileBatched(filename, callback);
+    }
+
     // finally, lets read it directory from the arc file
     std::thread([this, filename, callback, status_text_id] {
         const auto& [directory_name, archive_name, namehash] = LocateFileInDictionary(filename);
@@ -195,7 +220,125 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback) n
     }).detach();
 }
 
-bool FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept
+void FileLoader::ReadFileBatched(const fs::path& filename, ReadFileCallback callback) noexcept
+{
+    std::lock_guard<std::recursive_mutex> _lk{ m_BatchesMutex };
+    m_PathBatches[filename.string()].emplace_back(callback);
+}
+
+void FileLoader::RunFileBatches() noexcept
+{
+    std::thread([&] {
+        std::lock_guard<std::recursive_mutex> _lk{ m_BatchesMutex };
+
+        for (const auto& path : m_PathBatches) {
+            const auto& [directory_name, archive_name, namehash] = LocateFileInDictionary(path.first);
+            if (!directory_name.empty()) {
+                const auto& archive_path = (directory_name + "/" + archive_name);
+
+                for (const auto& callback : path.second) {
+                    m_Batches[archive_path][namehash].emplace_back(callback);
+                }
+            }
+            // nothing found, callback
+            else {
+                for (const auto& callback : path.second) {
+                    callback(false, {});
+                }
+            }
+        }
+
+#ifdef DEBUG
+        for (const auto& batch : m_Batches) {
+            int c = 0;
+            for (const auto& file : batch.second) {
+                c += file.second.size();
+            }
+
+            DEBUG_LOG("FileLoader::RunFileBatches - will read " << c << " files from \"" << batch.first << "\".");
+        }
+#endif
+
+        // iterate over all the archives
+        for (const auto& batch : m_Batches) {
+            const auto& archive_path = batch.first;
+            const auto sep = archive_path.find_last_of("/");
+
+            // split the directory and archive
+            const auto& directory = archive_path.substr(0, sep);
+            const auto& archive = archive_path.substr(sep + 1, archive_path.length());
+
+            // get the path names
+            const auto& arc_file = g_JC3Directory / directory / (archive + ".arc");
+            const auto& tab_file = g_JC3Directory / directory / (archive + ".tab");
+
+            // if the arc/tab files don't exist, get out now
+            if (!fs::exists(tab_file) || !fs::exists(arc_file)) {
+                DEBUG_LOG("FileLoader::RunFileBatches - can't find .arc/.tab file (jc3: " << g_JC3Directory << ", dir: " << directory << ", archive: " << archive << ")");
+                continue;
+            }
+
+            // read the archive table
+            JustCause3::ArchiveTable::VfsArchive table;
+            if (ReadArchiveTable(tab_file, &table)) {
+                // open the arc file
+                std::ifstream stream(arc_file, std::ios::binary);
+                if (stream.fail()) {
+                    DEBUG_LOG("FileLoader::RunFileBatches - invalid arc file stream!");
+                    continue;
+                }
+
+#ifdef DEBUG
+                g_ArchiveLoadCount++;
+                DEBUG_LOG("[PERF] Archive load count: " << g_ArchiveLoadCount);
+#endif
+
+                // iterate over all the files
+                for (const auto& file : batch.second) {
+                    bool has_found_file = false;
+
+                    // locate the data for the file
+                    for (const auto& entry : table.m_Entries) {
+                        // is this the correct file hash?
+                        if (entry.m_Hash == file.first) {
+                            has_found_file = true;
+
+                            // resize the buffer
+                            FileBuffer buffer;
+                            buffer.resize(entry.m_Size);
+
+                            // read the file data
+                            stream.seekg(entry.m_Offset);
+                            stream.read((char *)buffer.data(), entry.m_Size);
+
+                            // trigger the callbacks
+                            for (const auto& callback : file.second) {
+                                callback(true, buffer);
+                            }
+                        }
+                    }
+
+                    // have we not found the file?
+                    if (!has_found_file) {
+                        DEBUG_LOG("FileLoader::RunFileBatches ERROR - didn't find \"" << file.first << "\".");
+
+                        for (const auto& callback : file.second) {
+                            callback(false, {});
+                        }
+                    }
+                }
+
+                stream.close();
+            }
+        }
+
+        // clear the batches
+        m_PathBatches.clear();
+        m_Batches.clear();
+    }).detach();
+}
+
+bool FileLoader::ReadArchiveTable(const fs::path& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept
 {
     std::ifstream stream(filename, std::ios::binary);
     if (stream.fail()) {
@@ -206,13 +349,13 @@ bool FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::Archi
     JustCause3::ArchiveTable::TabFileHeader header;
     stream.read((char *)&header, sizeof(header));
 
-    if (header.magic != 0x424154) {
+    if (header.m_Magic != 0x424154) {
         DEBUG_LOG("FileLoader::ReadArchiveTable - Invalid header magic. Input file probably isn't a TAB file.");
         return false;
     }
 
-    output->index = 0;
-    output->version = 2;
+    output->m_Index = 0;
+    output->m_Version = 2;
 
     while (!stream.eof())
     {
@@ -225,10 +368,10 @@ bool FileLoader::ReadArchiveTable(const std::string& filename, JustCause3::Archi
             break;
         }
 
-        output->entries.emplace_back(entry);
+        output->m_Entries.emplace_back(entry);
     }
 
-    DEBUG_LOG("FileLoader::ReadArchiveTable - " << output->entries.size() << " files in archive");
+    DEBUG_LOG("FileLoader::ReadArchiveTable - " << output->m_Entries.size() << " files in archive");
 
     stream.close();
     return true;
@@ -685,8 +828,8 @@ std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveF
 
 bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash, FileBuffer* output) noexcept
 {
-    fs::path tab_file = g_JC3Directory / directory / (archive + ".tab");
-    fs::path arc_file = g_JC3Directory / directory / (archive + ".arc");
+    const auto& tab_file = g_JC3Directory / directory / (archive + ".tab");
+    const auto& arc_file = g_JC3Directory / directory / (archive + ".arc");
 
     const auto arc_hash = fnv_1_32::hash(arc_file.string().c_str(), arc_file.string().length());
 
@@ -706,9 +849,9 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
         uint64_t size = 0;
 
         // locate the data for the file
-        for (const auto& entry : archiveTable.entries) {
-            if (entry.hash == namehash) {
-                DEBUG_LOG("FileLoader::ReadFileFromArchive - Found file in archive at " << entry.offset << " (size: " << entry.size << " bytes)");
+        for (const auto& entry : archiveTable.m_Entries) {
+            if (entry.m_Hash == namehash) {
+                DEBUG_LOG("FileLoader::ReadFileFromArchive - Found file in archive at " << entry.m_Offset << " (size: " << entry.m_Size << " bytes)");
 
                 // open the file stream
                 std::ifstream stream(arc_file, std::ios::binary | std::ios::ate);
@@ -722,10 +865,10 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
 
                 // TODO: caching
 
-                stream.seekg(entry.offset);
-                output->resize(entry.size);
+                stream.seekg(entry.m_Offset);
+                output->resize(entry.m_Size);
 
-                stream.read((char *)output->data(), entry.size);
+                stream.read((char *)output->data(), entry.m_Size);
                 stream.close();
 
                 return true;
@@ -741,41 +884,46 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
 
 std::tuple<std::string, std::string, uint32_t> FileLoader::LocateFileInDictionary(const fs::path& filename) noexcept
 {
-    // ergh, fs::path uses backslashes which is bad for us, is there a way
-    // to stop that or should we switch back to strings?
+#ifdef DEBUG
+    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+#endif
+
+    // we are looking for forward slashes only!
     std::string _filename = filename.string();
     std::replace(_filename.begin(), _filename.end(), '\\', '/');
 
-    // iterate all the root objects
-    for (auto it = m_FileListDictionary.begin(); it != m_FileListDictionary.end(); ++it) {
-        const auto& directory_name = it.key();
-        const auto& directory_obj = it.value();
+    std::string directory_name, archive_name;
+    std::string _path;
+    auto _namehash = hashlittle(_filename.c_str());
 
-        // iterate the files in the archive object
-        for (auto it2 = directory_obj.begin(); it2 != directory_obj.end(); ++it2) {
-            const auto& archive_name = it2.key();
-            const auto& archive_obj = it2.value();
-
-            // iterate the data in the files object
-            for (auto it3 = archive_obj.begin(); it3 != archive_obj.end(); ++it3) {
-                const auto& key = it3.key();
-                const auto& value = it3.value();
-
-                if (value.is_string()) {
-                    const auto& value_str = value.get<std::string>();
-                    if (value_str.find(_filename) != std::string::npos) {
-                        DEBUG_LOG("FileLoader::LocateFileInDictionary - Found '" << value_str << "' (" << key << ") in '/" << directory_name << "/" << archive_name << "'");
-
-                        auto namehash = static_cast<uint32_t>(std::stoul(key, nullptr, 16));
-                        return { directory_name, archive_name, namehash };
-                    }
-                }
-            }
-        }
+    // try find the namehash first to save some time
+    auto find_it = m_Dictionary.find(_namehash);
+    if (find_it == m_Dictionary.end()) {
+        // namehash doesn't exist, look for part of the filename
+        find_it = std::find_if(m_Dictionary.begin(), m_Dictionary.end(), [&](const std::pair<uint32_t, std::pair<std::string, std::vector<std::string>>>& item) {
+            return item.second.first == _filename || item.second.first.find(_filename) != std::string::npos;
+        });
     }
 
-    // DEBUG_LOG("[ERROR] FileLoader::LocateFileInDictionary - Can't find '" << filename << "'");
-    return { "", "", 0 };
+    if (find_it != m_Dictionary.end()) {
+        const auto& file = (*find_it);
+        _path = file.second.second.at(0); // TODO: some hierarchy (patches_win64 over archives_win64)
+        _namehash = file.first;
+
+        // get the directory and archive name
+        const auto pos = _path.find_last_of("/");
+        directory_name = _path.substr(0, pos);
+        archive_name = _path.substr(pos + 1, _path.length());
+    }
+
+#ifdef DEBUG
+    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+
+    DEBUG_LOG("[PERF] FileLoader::LocateFileInDictionary (" << filename.string() << ") - took " << duration << " ms.");
+#endif
+
+    return { directory_name, archive_name, _namehash };
 }
 
 bool FileLoader::ParseCompressedTexture(const FileBuffer* ddsc_buffer, const FileBuffer* hmddsc_buffer, FileBuffer* output) noexcept

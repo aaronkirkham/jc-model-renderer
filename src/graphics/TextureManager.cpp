@@ -4,26 +4,78 @@
 #include <jc3/FileLoader.h>
 #include <fnv1.h>
 
+#include <graphics/UI.h>
+
 Texture::Texture(const fs::path& filename)
     : m_Filename(filename)
 {
-    FileLoader::Get()->ReadFile(filename, [this](bool success, FileBuffer data) {
-        // TODO: only if success
-        // TODO: what about if we load custom textures from disk??
+    if (m_Filename.extension() == ".ddsc") {
+        FileLoader::Get()->ReadFile(filename, [this](bool success, FileBuffer data) {
+            DEBUG_LOG("Texture::Texture READFILE -> Finished reading DDSC buffer.");
 
-        // if we're reading a ddsc file, look for the hmddsc too
-        if (m_Filename.extension() == ".ddsc") {
-            auto hmddsc_filename = m_Filename.replace_extension(".hmddsc");
-            FileLoader::Get()->ReadFile(hmddsc_filename, [this, data, hmddsc_filename](bool hmddsc_success, FileBuffer hmddsc_data) {
-                m_IsHMDDSC = hmddsc_success;
+            // TODO: only if success
+            // TODO: what about if we load custom textures from disk??
 
-                FileBuffer buffer;
-                if (FileLoader::Get()->ReadCompressedTexture(&data, (hmddsc_success ? &hmddsc_data : nullptr), &buffer)) {
-                    LoadFromBuffer(buffer);
+            if (success) {
+                m_DDSCBuffer = std::move(data);
+                m_HasDDSC = true;
+            }
+
+            m_IsTryingDDSC = false;
+        }, NO_TEX_CACHE);
+
+        // try the HMDDSC file
+
+        auto hmddsc_filename = m_Filename.replace_extension(".hmddsc");
+        m_IsTryingHMDDSC = true;
+
+        FileLoader::Get()->ReadFile(hmddsc_filename, [this](bool success, FileBuffer data) {
+            DEBUG_LOG("Texture::Texture READFILE -> Finished reading HMDDSC buffer.");
+
+            if (success) {
+                m_HMDDSCBuffer = std::move(data);
+                m_HasHMDDSC = true;
+            }
+
+            m_IsTryingHMDDSC = false;
+        }, NO_TEX_CACHE);
+
+        // launch the wait thread
+        m_WaitThread = std::thread([this] {
+            std::stringstream status_text;
+            status_text << "Loading texture \"" << m_Filename << "\"...";
+            const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
+
+            while (true) {
+
+                // wait for hmddsc if we need to
+                if (!m_IsTryingDDSC && !m_IsTryingHMDDSC) {
+
+                    // do we have a buffer?
+                    if (m_HasDDSC) {
+                        FileBuffer out;
+                        if (FileLoader::Get()->ReadCompressedTexture(&m_DDSCBuffer, (m_HasHMDDSC ? &m_HMDDSCBuffer : nullptr), &out)) {
+
+                            DEBUG_LOG("Texture::Texture (" << m_Filename.string() << ") -> finished parsing compressed texture.");
+                            DEBUG_LOG(" -> Has DDSC source ? " << (m_HasDDSC ? "yes" : "no"));
+                            DEBUG_LOG(" -> Has HMDDSC source ? " << (m_HasHMDDSC ? "yes" : "no"));
+
+                            LoadFromBuffer(out);
+                        }
+                    }
+
+                    UI::Get()->PopStatusText(status_text_id);
+
+                    break;
+
                 }
-            });
-        }
-    });
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+        });
+
+        m_WaitThread.detach();
+    }
 }
 
 Texture::~Texture()

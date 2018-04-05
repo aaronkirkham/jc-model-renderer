@@ -68,12 +68,6 @@ def read_entry_from_tab_header(filename, abs_filepath):
   found_hashes = 0
   total_hashes = 0
 
-  if not directory in FILELIST:
-    FILELIST[directory] = {}
-
-  if not archive in FILELIST[directory]:
-    FILELIST[directory][archive_name] = {}
-
   with open(abs_filepath, "rb") as file:
     # ensure the magic is correct
     magic, = struct.unpack('I', file.read(4))
@@ -95,14 +89,22 @@ def read_entry_from_tab_header(filename, abs_filepath):
 
         # do we have the hash string in the hints dictionary?
         if hash_str in HINTS:
-          FILELIST[directory][archive_name][hash_str] = HINTS[hash_str]
+          hash_name = HINTS[hash_str].replace("\\", "/")
+
+          if not hash_name in FILELIST:
+            FILELIST[hash_name] = {}
+            FILELIST[hash_name]["path"] = ["%s/%s" % (directory, archive_name)]
+            FILELIST[hash_name]["namehash"] = hash_str
+          else:
+            FILELIST[hash_name]["path"].append("%s/%s" % (directory, archive_name))
+
           found_hashes += 1
     except:
       pass
 
   # stats
-  percentage_found = Decimal(str(100 * (found_hashes / total_hashes))).to_integral()
-  FILELIST[directory][archive_name]["0"] = "%s/%s %s%%" % (found_hashes, total_hashes, percentage_found)
+  #percentage_found = Decimal(str(100 * (found_hashes / total_hashes))).to_integral()
+  #FILELIST[directory][archive_name]["0"] = "%s/%s %s%%" % (found_hashes, total_hashes, percentage_found)
 
 # find the tab files
 for directory in os.listdir(JC3_DIRECTORY):

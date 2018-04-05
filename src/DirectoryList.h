@@ -49,33 +49,19 @@ public:
         if (structure) {
             m_Structure.clear();
 
-            // iterate all the root objects
             for (auto it = structure->begin(); it != structure->end(); ++it) {
-                const auto& directory_obj = it.value();
+                const auto& key = it.key();
 
-                // iterate the files in the archive object
-                for (auto it2 = directory_obj.begin(); it2 != directory_obj.end(); ++it2) {
-                    const auto& archive_obj = it2.value();
-                    
-                    // iterate the data in the files object
-                    for (auto it3 = archive_obj.begin(); it3 != archive_obj.end(); ++it3) {
-                        const auto& value = it3.value();
-                        if (value.is_string()) {
-                            const auto& value_str = value.get<std::string>();
-
-                            // should we only parse specific includes?
-                            if (!include_only.empty()) {
-                                for (const auto& extension : include_only) {
-                                    if (value_str.find(extension) != std::string::npos) {
-                                        split(value_str, m_Structure);
-                                    }
-                                }
-                            }
-                            else {
-                                split(value_str, m_Structure);
-                            }
+                // should we only parse specific includes?
+                if (!include_only.empty()) {
+                    for (const auto& extension : include_only) {
+                        if (key.find(extension) != std::string::npos) {
+                            split(key, m_Structure);
                         }
                     }
+                }
+                else {
+                    split(key, m_Structure);
                 }
             }
         }

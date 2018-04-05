@@ -11,6 +11,7 @@
 #include <imgui.h>
 
 #include <jc3/ModelManager.h>
+#include <jc3/FileLoader.h>
 
 extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;
@@ -18,8 +19,13 @@ extern bool g_ShowModelLabels;
 extern AvalancheArchive* g_CurrentLoadedArchive;
 static auto g_RenderBlockColour = glm::vec4{ 1, 1, 1, 1 };
 
+#if 0
 bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
 {
+    std::stringstream status_text;
+    status_text << "Parsing model \"" << m_Filename.string() << "\"...";
+    const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
+
     bool parse_success = true;
 
     // read the model header
@@ -43,6 +49,9 @@ bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
     // store the bounding box
     m_BoundingBoxMin = header.m_BoundingBoxMin;
     m_BoundingBoxMax = header.m_BoundingBoxMax;
+
+    //
+    FileLoader::Get()->m_UseBatches = true;
 
     // read all the render blocks
     for (uint32_t i = 0; i < header.m_NumberOfBlocks; ++i)
@@ -93,8 +102,15 @@ end:
         ModelManager::Get()->AddModel(this, g_CurrentLoadedArchive);
     }
 
+    //
+    FileLoader::Get()->m_UseBatches = false;
+    FileLoader::Get()->RunFileBatches();
+
+    UI::Get()->PopStatusText(status_text_id);
+
     return parse_success;
 }
+#endif
 
 /*RenderBlockModel::RenderBlockModel(const fs::path& file)
     : m_File(file)
@@ -118,7 +134,7 @@ end:
 }*/
 
 RenderBlockModel::RenderBlockModel(const fs::path& filename)
-    : m_File(filename)
+    : m_Filename(filename)
 {
     // create the mesh constant buffer
     MeshConstants constants;
@@ -138,12 +154,98 @@ RenderBlockModel::~RenderBlockModel()
     Renderer::Get()->DestroyBuffer(m_MeshConstants);
 }
 
-void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuffer& data)
+bool RenderBlockModel::Parse(const FileBuffer& data)
 {
     std::istringstream stream(std::string{ (char*)data.data(), data.size() });
 
+    bool parse_success = true;
+        
+    // read the model header
+    JustCause3::RBMHeader header;
+    stream.read((char *)&header, sizeof(header));
+
+    // ensure the header magic is correct
+    if (strncmp((char *)&header.m_Magic, "RBMDL", 5) != 0) {
+        m_ReadBlocksError = "Invalid file header. Input file probably isn't a RenderBlockModel file.";
+        DEBUG_LOG("[ERROR] " << m_ReadBlocksError);
+
+        parse_success = false;
+        goto end;
+    }
+
+    DEBUG_LOG("RenderBlockModel v" << header.m_VersionMajor << "." << header.m_VersionMinor << "." << header.m_VersionRevision);
+    DEBUG_LOG(" - m_NumberOfBlocks=" << header.m_NumberOfBlocks);
+
+    m_RenderBlocks.reserve(header.m_NumberOfBlocks);
+
+    // store the bounding box
+    m_BoundingBoxMin = header.m_BoundingBoxMin;
+    m_BoundingBoxMax = header.m_BoundingBoxMax;
+
+    // use file batches
+    FileLoader::Get()->m_UseBatches = true;
+
+    // read all the blocks
+    for (uint32_t i = 0; i < header.m_NumberOfBlocks; ++i) {
+        uint32_t hash;
+        stream.read((char *)&hash, sizeof(uint32_t));
+
+        const auto renderBlock = RenderBlockFactory::CreateRenderBlock(hash);
+        if (renderBlock) {
+            renderBlock->Create();
+            renderBlock->Read(stream);
+
+            uint32_t checksum;
+            stream.read((char *)&checksum, sizeof(uint32_t));
+
+            // did we read the block correctly?
+            if (checksum != 0x89ABCDEF) {
+                m_ReadBlocksError = "Failed to read Render Block.";
+                DEBUG_LOG("[ERROR] " << m_ReadBlocksError);
+
+                parse_success = false;
+                break;
+            }
+
+            m_RenderBlocks.emplace_back(renderBlock);
+        }
+        else {
+            std::stringstream error;
+            error << "Unknown Render Block type ";
+            error << "0x" << std::uppercase << std::setw(4) << std::hex << hash;
+            error << " (" << RenderBlockFactory::GetRenderBlockName(hash) << ").";
+
+            DEBUG_LOG("[ERROR] " << error.str());
+
+            // if we haven't parsed any other blocks yet
+            // we'll never see anything rendered, let the user know something is wrong
+            if (m_RenderBlocks.size() == 0) {
+                m_ReadBlocksError = error.str();
+
+                parse_success = false;
+                break;
+            }
+        }
+    }
+
+end:
+    if (parse_success) {
+        ModelManager::Get()->AddModel(this, g_CurrentLoadedArchive);
+    }
+
+    // run file batches
+    FileLoader::Get()->m_UseBatches = false;
+    FileLoader::Get()->RunFileBatches();
+
+    return true;
+}
+
+void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuffer& data)
+{
+    //std::istringstream stream(std::string{ (char*)data.data(), data.size() });
+
     auto rbm = new RenderBlockModel(filename);
-    if (!rbm->ParseRenderBlockModel(stream)) {
+    if (!rbm->Parse(data)) {
         Window::Get()->ShowMessageBox(rbm->GetError());
         safe_delete(rbm);
     }
