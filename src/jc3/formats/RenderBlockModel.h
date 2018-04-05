@@ -6,8 +6,6 @@
 #include <mutex>
 #include <unordered_map>
 
-using RenderBlockParseCallback = std::function<void(bool)>;
-
 class RenderBlockModel
 {
 private:
