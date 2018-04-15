@@ -889,7 +889,7 @@ std::tuple<std::string, std::string, uint32_t> FileLoader::LocateFileInDictionar
 #endif
 
     // we are looking for forward slashes only!
-    std::string _filename = filename.string();
+    auto& _filename = filename.string();
     std::replace(_filename.begin(), _filename.end(), '\\', '/');
 
     std::string directory_name, archive_name;
@@ -900,8 +900,9 @@ std::tuple<std::string, std::string, uint32_t> FileLoader::LocateFileInDictionar
     auto find_it = m_Dictionary.find(_namehash);
     if (find_it == m_Dictionary.end()) {
         // namehash doesn't exist, look for part of the filename
-        find_it = std::find_if(m_Dictionary.begin(), m_Dictionary.end(), [&](const std::pair<uint32_t, std::pair<std::string, std::vector<std::string>>>& item) {
-            return item.second.first == _filename || item.second.first.find(_filename) != std::string::npos;
+        find_it = std::find_if(m_Dictionary.begin(), m_Dictionary.end(), [&](const std::pair<uint32_t, std::pair<fs::path, std::vector<std::string>>>& item) {
+            const auto& item_fn = item.second.first;
+            return item_fn == _filename || (item_fn.string().find(_filename) != std::string::npos && item_fn.extension() == filename.extension());
         });
     }
 

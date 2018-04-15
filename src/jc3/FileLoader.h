@@ -24,7 +24,7 @@ private:
     std::unique_ptr<DirectoryList> m_FileList = nullptr;
 
     // file list dictionary
-    std::unordered_map<uint32_t, std::pair<std::string, std::vector<std::string>>> m_Dictionary;
+    std::unordered_map<uint32_t, std::pair<fs::path, std::vector<std::string>>> m_Dictionary;
 
     // file types
     std::unordered_map<std::string, std::vector<FileTypeCallback>> m_FileTypeCallbacks;
