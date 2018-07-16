@@ -9,6 +9,8 @@
 
 #include <Window.h>
 
+#include <gtc/type_ptr.hpp>
+
 void SetupImGuiStyle();
 
 ConstantBuffer_t* m_LightBuffers = nullptr;
@@ -135,9 +137,7 @@ bool Renderer::Render()
 
     // begin scene
     {
-        static const float colour[4] = { 0.15f, 0.15f, 0.15f, 1.0f };
-
-        m_DeviceContext->ClearRenderTargetView(m_RenderTargetView, colour);
+        m_DeviceContext->ClearRenderTargetView(m_RenderTargetView, glm::value_ptr(m_ClearColour));
         m_DeviceContext->ClearDepthStencilView(m_DepthStencilView, (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL), 1.0f, 0);
     }
 

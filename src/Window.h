@@ -5,7 +5,7 @@
 
 #include <chrono>
 
-static constexpr auto g_WindowName = "Engine";
+static constexpr auto g_WindowName = "JC3 Render Block Model Renderer";
 
 #define DEBUG_LOG(s)                                    \
 {                                                       \

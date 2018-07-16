@@ -44,6 +44,7 @@ bool Input::HandleMessage(MSG* event)
     }
 
     const auto key = static_cast<uint32_t>(event->wParam);
+    const auto modifiers = static_cast<uint32_t>(event->lParam);
 
     if (event->message == WM_KEYDOWN)
     {
