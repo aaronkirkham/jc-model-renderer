@@ -9,8 +9,10 @@
 class RenderBlockModel
 {
 private:
+    std::recursive_mutex m_RenderBlocksMutex;
     std::vector<IRenderBlock*> m_RenderBlocks;
-    fs::path m_File = "";
+
+    fs::path m_Filename = "";
     std::string m_ReadBlocksError = "";
 
     glm::vec3 m_Position = { 0, 0, 0 };
@@ -39,15 +41,16 @@ public:
 
     static void FileReadCallback(const fs::path& filename, const FileBuffer& data);
 
-    bool ParseRenderBlockModel(std::istream& stream);
+    //bool ParseRenderBlockModel(std::istream& stream);
+    bool Parse(const FileBuffer& data);
 
     void Draw(RenderContext_t* context);
 
     const std::vector<IRenderBlock*>& GetRenderBlocks() { return m_RenderBlocks; }
 
-    std::string GetFileName() { return m_File.filename().string(); }
-    std::string GetFilePath() { return m_File.parent_path().string(); }
-    const fs::path& GetPath() { return m_File; }
+    std::string GetFileName() { return m_Filename.filename().string(); }
+    std::string GetFilePath() { return m_Filename.parent_path().string(); }
+    const fs::path& GetPath() { return m_Filename; }
 
     void SetPosition(const glm::vec3& position) { m_Position = position; }
     const glm::vec3& GetPosition() const { return m_Position; }

@@ -65,7 +65,7 @@ public:
 
         // enable textures
         for (uint32_t i = 0; i < m_Textures.size(); ++i) {
-            auto texture = m_Textures[i];
+            const auto& texture = m_Textures[i];
             if (texture && texture->IsLoaded()) {
                 texture->Use(i);
             }

@@ -13,14 +13,26 @@
 using ReadFileCallback = std::function<void(bool, FileBuffer)>;
 using FileTypeCallback = std::function<void(const fs::path& filename, const FileBuffer& data)>;
 
+enum ReadFileFlags : uint8_t {
+    NO_TEX_CACHE = 1,
+};
+
 class RuntimeContainer;
 class FileLoader : public Singleton<FileLoader>
 {
 private:
     std::unique_ptr<DirectoryList> m_FileList = nullptr;
-    json m_FileListDictionary;
 
+    // file list dictionary
+    std::unordered_map<uint32_t, std::pair<fs::path, std::vector<std::string>>> m_Dictionary;
+
+    // file types
     std::unordered_map<std::string, std::vector<FileTypeCallback>> m_FileTypeCallbacks;
+
+    // batch reading
+    std::unordered_map<std::string, std::unordered_map<uint32_t, std::vector<ReadFileCallback>>> m_Batches;
+    std::unordered_map<std::string, std::vector<ReadFileCallback>> m_PathBatches;
+    std::recursive_mutex m_BatchesMutex;
 
     StreamArchive_t* ParseStreamArchive(std::istream& stream);
     bool DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept;
@@ -28,13 +40,17 @@ private:
     bool ParseCompressedTexture(const FileBuffer* ddsc_buffer, const FileBuffer* hmddsc_buffer, FileBuffer* output) noexcept;
 
 public:
+    bool m_UseBatches = false;
+
     FileLoader();
     virtual ~FileLoader() = default;
 
-    void ReadFile(const fs::path& filename, ReadFileCallback callback) noexcept;
+    void ReadFile(const fs::path& filename, ReadFileCallback callback, uint8_t flags = 0) noexcept;
+    void ReadFileBatched(const fs::path& filename, ReadFileCallback callback) noexcept;
+    void RunFileBatches() noexcept;
 
     // archives
-    bool ReadArchiveTable(const std::string& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept;
+    bool ReadArchiveTable(const fs::path& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept;
     bool ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash, FileBuffer* output) noexcept;
 
     // stream archive

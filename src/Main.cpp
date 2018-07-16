@@ -118,51 +118,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         CheckForUpdates();
 #endif
 
-#if 0
+#if 1
         Input::Get()->Events().KeyUp.connect([](uint32_t key) {
             if (key == VK_F1) {
-                // "editor/entities/jc_vehicles/01_land/v0012_car_autostraad_atv/v0012_car_autostraad_atv_civilian_01.ee"
-                FileLoader::Get()->ReadFileFromArchive("game35", 0x6DC24513, [](bool success, FileBuffer data) {
-                    auto ee = new AvalancheArchive("v0012_car_autostraad_atv_civilian_01.ee", data);
-
-                    auto [archive, entry] = FileLoader::Get()->GetStreamArchiveFromFile("v0012_car_autostraad_atv_civilian_01.epe");
-                    if (archive && entry.m_Offset != 0) {
-                        auto epe_data = archive->GetEntryFromArchive(entry);
-                        auto runtime_container = FileLoader::Get()->ReadRuntimeContainer(epe_data);
-
-                        if (runtime_container) {
-                            auto props = runtime_container->GetContainer(0xE9146D12);
-
-                            // TODO: getting this property doesn't seem to work.
-                            // looks like the first child container overwrites it???
-                            auto body_name = props->GetProperty(0xD31AB684)->GetValue();
-                            DEBUG_LOG(std::any_cast<std::string>(body_name));
- 
-                            for (auto& children : props->GetContainers()) {
-                                auto child_name = children->GetProperty(0xD31AB684)->GetValue();
-                                DEBUG_LOG(std::any_cast<std::string>(child_name));
-                            }
-                        }
-                    }
-                });
-            }
-            else if (key == VK_F2) {
-                fs::path filename = "v1400_boat_mugello_spyspeedboat_civilian_01.ee";
-                FileLoader::Get()->ReadFile(filename, [filename](bool success, FileBuffer data) {
-                    auto ee = new AvalancheArchive(filename, data);
-
-                    auto [archive, entry] = FileLoader::Get()->GetStreamArchiveFromFile("spyspeedboat_interior_lod1.rbm");
-                    if (archive && entry.m_Offset != 0) {
-                        auto rbm_data = archive->GetEntryFromArchive(entry);
-                        std::istringstream stream(std::string{ (char*)rbm_data.data(), rbm_data.size() });
-
-                        auto rbm = new RenderBlockModel(filename);
-                        rbm->ParseRenderBlockModel(stream);
-
-                        auto obj_exporter = new Wavefront_Obj;
-                        obj_exporter->Export(rbm);
-                    }
-                });
+                //FileLoader::Get()->LocateFileInDictionary("models/jc_environments/props/animation_prop/textures/bucket_dif.hmddsc");
+                FileLoader::Get()->LocateFileInDictionary("bucket_dif.hmddsc");
             }
         });
 #endif
@@ -181,6 +141,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         ImportExportManager::Get()->Register(new import_export::DDSC);
         ImportExportManager::Get()->Register(new import_export::AvalancheArchive);
 
+#if 0
         Window::Get()->Events().FileDropped.connect([](const fs::path& filename) {
             if (filename.extension() == ".rbm") {
                 std::ifstream input(filename, std::ios::binary | std::ios::ate);
@@ -188,13 +149,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 input.seekg(0);
 
                 auto model = new RenderBlockModel(filename);
-                if (model->ParseRenderBlockModel(input)) {
-                    ModelManager::Get()->AddModel(model);
-                }
+                model->Parse(input, [&](bool success) {
+                    if (!success) {
+                        delete model;
+                    }
+                });
 
                 input.close();
             }
         });
+#endif
 
         // run!
         Window::Get()->Run();

@@ -7,6 +7,10 @@ static constexpr auto g_MouseSensitivity = 0.0025f;
 static constexpr auto g_MovementSensitivity = 0.05f;
 static constexpr auto g_MouseScrollSensitivity = 0.01f;
 
+static auto SpeedMultiplier = [](float value) {
+    return value * (Input::Get()->IsKeyPressed(VK_SHIFT) ? 0.05f : 1.0f);
+};
+
 Camera::Camera()
 {
     const auto window = Window::Get();
@@ -43,35 +47,35 @@ Camera::Camera()
 
     events.MouseMove.connect([&](const glm::vec2& position) {
         if (m_IsRotatingView) {
-            m_Rotation.z += position.x * g_MouseSensitivity;
-            m_Rotation.y += position.y * g_MouseSensitivity;
+            m_Rotation.z += position.x * SpeedMultiplier(g_MouseSensitivity);
+            m_Rotation.y += position.y * SpeedMultiplier(g_MouseSensitivity);
         }
 
         return true;
     });
 
     events.MouseScroll.connect([&](float delta) {
-        m_Position.z += (delta * g_MouseScrollSensitivity);
+        m_Position.z += (delta * SpeedMultiplier(g_MouseScrollSensitivity));
     });
 
     events.KeyDown.connect([&](uint32_t key) {
         if (key == VK_RIGHT) {
-            m_Position.x += g_MovementSensitivity;
+            m_Position.x += SpeedMultiplier(g_MovementSensitivity);
         }
         else if (key == VK_LEFT) {
-            m_Position.x -= g_MovementSensitivity;
+            m_Position.x -= SpeedMultiplier(g_MovementSensitivity);
         }
         else if (key == VK_UP) {
-            m_Position.z += g_MovementSensitivity;
+            m_Position.z += SpeedMultiplier(g_MovementSensitivity);
         }
         else if (key == VK_DOWN) {
-            m_Position.z -= g_MovementSensitivity;
+            m_Position.z -= SpeedMultiplier(g_MovementSensitivity);
         }
         else if (key == VK_PRIOR) {
-            m_Position.y += g_MovementSensitivity;
+            m_Position.y += SpeedMultiplier(g_MovementSensitivity);
         }
         else if (key == VK_NEXT) {
-            m_Position.y -= g_MovementSensitivity;
+            m_Position.y -= SpeedMultiplier(g_MovementSensitivity);
         }
 
         return true;

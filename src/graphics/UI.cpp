@@ -15,6 +15,8 @@
 
 #include <import_export/ImportExportManager.h>
 
+#include <gtc/type_ptr.hpp>
+
 #include <atomic>
 #include <shellapi.h>
 
@@ -26,6 +28,7 @@ extern fs::path g_JC3Directory;
 
 static bool g_ShowAllArchiveContents = false;
 static bool g_ShowAboutWindow = false;
+static bool g_ShowBackgroundColourPicker = false;
 
 #ifdef DEBUG
 static bool g_CheckForUpdatesEnabled = false;
@@ -67,6 +70,10 @@ void UI::Render()
 
             if (ImGui::Checkbox("Show model labels", &g_ShowModelLabels)) {
                 Settings::Get()->SetValue("show_model_labels", g_ShowModelLabels);
+            }
+
+            if (ImGui::Button("Background colour")) {
+                g_ShowBackgroundColourPicker = !g_ShowBackgroundColourPicker;
             }
 
             ImGui::EndMenu();
@@ -123,6 +130,9 @@ void UI::Render()
     if (g_ShowAboutWindow) {
         ImGui::OpenPopup("About");
     }
+    else if (g_ShowBackgroundColourPicker) {
+        ImGui::OpenPopup("BGColPicker");
+    }
 
     // About
     if (ImGui::BeginPopupModal("About", &g_ShowAboutWindow, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove)))
@@ -146,6 +156,23 @@ void UI::Render()
             "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.");
 
         ImGui::EndChild();
+
+        ImGui::EndPopup();
+    }
+
+    // Background colour picker
+    if (ImGui::BeginPopupModal("BGColPicker", &g_ShowBackgroundColourPicker, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove)))
+    {
+        ImGui::SetWindowSize({ 400, 400 });
+
+        auto col = Renderer::Get()->GetClearColour();
+        if (ImGui::ColorPicker3("bg col", glm::value_ptr(col))) {
+            Renderer::Get()->SetClearColour(col);
+        }
+
+        if (ImGui::Button("Reset To Default")) {
+            Renderer::Get()->SetClearColour(g_DefaultClearColour);
+        }
 
         ImGui::EndPopup();
     }

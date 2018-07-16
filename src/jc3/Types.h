@@ -228,35 +228,35 @@ namespace JustCause3
     {
         struct VfsTabEntry
         {
-            uint32_t hash;
-            uint32_t offset;
-            uint32_t size;
+            uint32_t m_Hash;
+            uint32_t m_Offset;
+            uint32_t m_Size;
         };
 
         struct VfsCompressedTabEntry
         {
-            uint32_t hash;
-            uint32_t offset;
-            uint32_t size;
-            uint32_t decompressedSize;
+            uint32_t m_Hash;
+            uint32_t m_Offset;
+            uint32_t m_Size;
+            uint32_t m_DecompressedSize;
         };
 
         struct VfsArchive
         {
-            uint64_t magic;
-            int64_t size;
-            int64_t offset;
-            uint32_t index;
-            uint16_t version;
-            std::vector<VfsTabEntry> entries;
+            uint64_t m_Magic;
+            int64_t m_Size;
+            int64_t m_Offset;
+            uint32_t m_Index;
+            uint16_t m_Version;
+            std::vector<VfsTabEntry> m_Entries;
         };
 
         struct TabFileHeader
         {
-            uint32_t magic;
-            uint16_t version;
-            uint16_t endian;
-            int32_t alignment;
+            uint32_t m_Magic;
+            uint16_t m_Version;
+            uint16_t m_Endian;
+            int32_t m_Alignment;
         };
     };
 

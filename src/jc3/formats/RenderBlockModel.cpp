@@ -11,6 +11,7 @@
 #include <imgui.h>
 
 #include <jc3/ModelManager.h>
+#include <jc3/FileLoader.h>
 
 extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;
@@ -18,10 +19,54 @@ extern bool g_ShowModelLabels;
 extern AvalancheArchive* g_CurrentLoadedArchive;
 static auto g_RenderBlockColour = glm::vec4{ 1, 1, 1, 1 };
 
-bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
+/*RenderBlockModel::RenderBlockModel(const fs::path& file)
+    : m_File(file)
 {
-    bool parse_success = true;
+    // make sure this is an rbm file
+    if (file.extension() != ".rbm") {
+        throw std::invalid_argument("RenderBlockModel type only supports .rbm files!");
+    }
 
+    // try and open the file
+    std::ifstream stream(m_File, std::ios::binary);
+    if (stream.fail()) {
+        throw std::runtime_error("Failed to read RenderBlockModel file!");
+    }
+
+    // create the mesh constant buffer
+    MeshConstants constants;
+    m_MeshConstants = Renderer::Get()->CreateConstantBuffer(constants);
+
+    //ParseRenderBlockModel(stream);
+}*/
+
+RenderBlockModel::RenderBlockModel(const fs::path& filename)
+    : m_Filename(filename)
+{
+    // create the mesh constant buffer
+    MeshConstants constants;
+    m_MeshConstants = Renderer::Get()->CreateConstantBuffer(constants);
+}
+
+RenderBlockModel::~RenderBlockModel()
+{
+    DEBUG_LOG("RenderBlockModel::~RenderBlockModel");
+
+    ModelManager::Get()->RemoveModel(this, g_CurrentLoadedArchive);
+
+    for (auto& render_block : m_RenderBlocks) {
+        safe_delete(render_block);
+    }
+
+    Renderer::Get()->DestroyBuffer(m_MeshConstants);
+}
+
+bool RenderBlockModel::Parse(const FileBuffer& data)
+{
+    std::istringstream stream(std::string{ (char*)data.data(), data.size() });
+
+    bool parse_success = true;
+        
     // read the model header
     JustCause3::RBMHeader header;
     stream.read((char *)&header, sizeof(header));
@@ -44,19 +89,21 @@ bool RenderBlockModel::ParseRenderBlockModel(std::istream& stream)
     m_BoundingBoxMin = header.m_BoundingBoxMin;
     m_BoundingBoxMax = header.m_BoundingBoxMax;
 
-    // read all the render blocks
-    for (uint32_t i = 0; i < header.m_NumberOfBlocks; ++i)
-    {
-        uint32_t hash;
-        stream.read((char *)&hash, sizeof(hash));
+    // use file batches
+    FileLoader::Get()->m_UseBatches = true;
 
-        auto renderBlock = RenderBlockFactory::CreateRenderBlock(hash);
+    // read all the blocks
+    for (uint32_t i = 0; i < header.m_NumberOfBlocks; ++i) {
+        uint32_t hash;
+        stream.read((char *)&hash, sizeof(uint32_t));
+
+        const auto renderBlock = RenderBlockFactory::CreateRenderBlock(hash);
         if (renderBlock) {
             renderBlock->Create();
             renderBlock->Read(stream);
 
             uint32_t checksum;
-            stream.read((char *)&checksum, sizeof(checksum));
+            stream.read((char *)&checksum, sizeof(uint32_t));
 
             // did we read the block correctly?
             if (checksum != 0x89ABCDEF) {
@@ -93,57 +140,19 @@ end:
         ModelManager::Get()->AddModel(this, g_CurrentLoadedArchive);
     }
 
-    return parse_success;
-}
+    // run file batches
+    FileLoader::Get()->m_UseBatches = false;
+    FileLoader::Get()->RunFileBatches();
 
-/*RenderBlockModel::RenderBlockModel(const fs::path& file)
-    : m_File(file)
-{
-    // make sure this is an rbm file
-    if (file.extension() != ".rbm") {
-        throw std::invalid_argument("RenderBlockModel type only supports .rbm files!");
-    }
-
-    // try and open the file
-    std::ifstream stream(m_File, std::ios::binary);
-    if (stream.fail()) {
-        throw std::runtime_error("Failed to read RenderBlockModel file!");
-    }
-
-    // create the mesh constant buffer
-    MeshConstants constants;
-    m_MeshConstants = Renderer::Get()->CreateConstantBuffer(constants);
-
-    //ParseRenderBlockModel(stream);
-}*/
-
-RenderBlockModel::RenderBlockModel(const fs::path& filename)
-    : m_File(filename)
-{
-    // create the mesh constant buffer
-    MeshConstants constants;
-    m_MeshConstants = Renderer::Get()->CreateConstantBuffer(constants);
-}
-
-RenderBlockModel::~RenderBlockModel()
-{
-    DEBUG_LOG("RenderBlockModel::~RenderBlockModel");
-
-    ModelManager::Get()->RemoveModel(this, g_CurrentLoadedArchive);
-
-    for (auto& render_block : m_RenderBlocks) {
-        safe_delete(render_block);
-    }
-
-    Renderer::Get()->DestroyBuffer(m_MeshConstants);
+    return true;
 }
 
 void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuffer& data)
 {
-    std::istringstream stream(std::string{ (char*)data.data(), data.size() });
+    //std::istringstream stream(std::string{ (char*)data.data(), data.size() });
 
     auto rbm = new RenderBlockModel(filename);
-    if (!rbm->ParseRenderBlockModel(stream)) {
+    if (!rbm->Parse(data)) {
         Window::Get()->ShowMessageBox(rbm->GetError());
         safe_delete(rbm);
     }

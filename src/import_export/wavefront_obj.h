@@ -21,10 +21,9 @@ public:
         DEBUG_LOG("Wavefront_Obj::Export");
 
         auto& buffer = std::any_cast<FileBuffer>(input);
-        std::istringstream in_stream(std::string{ (char*)buffer.data(), buffer.size() });
 
         const auto rbm = new RenderBlockModel(filename);
-        if (rbm->ParseRenderBlockModel(in_stream)) {
+        if (rbm->Parse(buffer)) {
             const auto& blocks = rbm->GetRenderBlocks();
 
             std::ofstream out_stream("C:/Users/aaron/Desktop/obj/wavefront_exporter.obj", std::ios::binary);

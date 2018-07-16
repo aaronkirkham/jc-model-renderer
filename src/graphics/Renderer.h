@@ -10,6 +10,8 @@
 #define safe_delete(ptr) if (ptr) { delete ptr; ptr = nullptr; }
 #define safe_release(obj) if (obj) { obj->Release(); obj = nullptr; }
 
+static auto g_DefaultClearColour = glm::vec4{ 0.15f, 0.15f, 0.15f, 1.0f };
+
 struct RenderEvents
 {
     ksignals::Event<void(RenderContext_t*)> RenderFrame;
@@ -41,6 +43,8 @@ private:
     ID3D11SamplerState* m_SamplerState = nullptr;
     ID3D11BlendState* m_BlendState = nullptr;
 
+    glm::vec4 m_ClearColour = g_DefaultClearColour;
+
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
     ID3D11Debug* m_DeviceDebugger = nullptr;
 #endif
@@ -65,6 +69,9 @@ public:
 
     bool Initialise(const HWND& hwnd);
     void Shutdown();
+
+    void SetClearColour(const glm::vec4& colour) { m_ClearColour = colour; }
+    const glm::vec4& GetClearColour() { return m_ClearColour; }
 
     bool Render();
 
