@@ -81,7 +81,7 @@ bool Renderer::Initialise(const HWND& hwnd)
     // setup lighting
     {
         //LightConstants constants;
-        //m_LightBuffers = CreateConstantBuffer(constants);
+        //m_LightBuffers = CreateConstantBuffer(constants, "Renderer Light Buffer");
     }
 
     // setup imgui
@@ -103,6 +103,8 @@ bool Renderer::Initialise(const HWND& hwnd)
 
 void Renderer::Shutdown()
 {
+    DEBUG_LOG("Renderer is shutting down...");
+
     TextureManager::Get()->Shutdown();
     ShaderManager::Get()->Shutdown();
     Camera::Get()->Shutdown();
@@ -452,7 +454,7 @@ void Renderer::DestroyDepthStencil()
     safe_release(m_DepthTexture);
 }
 
-VertexBuffer_t* Renderer::CreateVertexBuffer(uint32_t count, uint32_t stride)
+VertexBuffer_t* Renderer::CreateVertexBuffer(uint32_t count, uint32_t stride, const char* debugName)
 {
     auto buffer = new VertexBuffer_t;
     buffer->m_ElementCount = count;
@@ -470,7 +472,7 @@ VertexBuffer_t* Renderer::CreateVertexBuffer(uint32_t count, uint32_t stride)
     assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-    D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, "Renderer::CreateVertexBuffer");
+    D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, debugName);
 #endif
 
     if (FAILED(result)) {
@@ -483,7 +485,7 @@ VertexBuffer_t* Renderer::CreateVertexBuffer(uint32_t count, uint32_t stride)
     return buffer;
 }
 
-VertexBuffer_t* Renderer::CreateVertexBuffer(const void* data, uint32_t count, uint32_t stride, D3D11_USAGE usage)
+VertexBuffer_t* Renderer::CreateVertexBuffer(const void* data, uint32_t count, uint32_t stride, D3D11_USAGE usage, const char* debugName)
 {
     auto buffer = new VertexBuffer_t;
     buffer->m_ElementCount = count;
@@ -504,7 +506,7 @@ VertexBuffer_t* Renderer::CreateVertexBuffer(const void* data, uint32_t count, u
     assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-    D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, "Renderer::CreateVertexBuffer");
+    D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, debugName);
 #endif
 
     if (FAILED(result)) {
@@ -517,7 +519,7 @@ VertexBuffer_t* Renderer::CreateVertexBuffer(const void* data, uint32_t count, u
     return buffer;
 }
 
-IndexBuffer_t* Renderer::CreateIndexBuffer(const void* data, uint32_t count, D3D11_USAGE usage)
+IndexBuffer_t* Renderer::CreateIndexBuffer(const void* data, uint32_t count, D3D11_USAGE usage, const char* debugName)
 {
     auto buffer = new IndexBuffer_t;
     buffer->m_ElementCount = count;
@@ -538,7 +540,7 @@ IndexBuffer_t* Renderer::CreateIndexBuffer(const void* data, uint32_t count, D3D
     assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-    D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, "Renderer::CreateIndexBuffer");
+    D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, debugName);
 #endif
 
     if (FAILED(result)) {
@@ -560,7 +562,7 @@ void Renderer::DestroyBuffer(IBuffer_t* buffer)
     }
 }
 
-VertexDeclaration_t* Renderer::CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count, VertexShader_t* m_Shader)
+VertexDeclaration_t* Renderer::CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count, VertexShader_t* m_Shader, const char* debugName)
 {
     auto declaration = new VertexDeclaration_t;
 
@@ -568,7 +570,7 @@ VertexDeclaration_t* Renderer::CreateVertexDeclaration(const D3D11_INPUT_ELEMENT
     assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-    D3D_SET_OBJECT_NAME_A(declaration->m_Layout, "Renderer::CreateVertexDeclaration");
+    D3D_SET_OBJECT_NAME_A(declaration->m_Layout, debugName);
 #endif
 
     return declaration;
@@ -582,7 +584,7 @@ void Renderer::DestroyVertexDeclaration(VertexDeclaration_t* declaration)
     }
 }
 
-SamplerState_t* Renderer::CreateSamplerState(const SamplerStateCreationParams_t& params)
+SamplerState_t* Renderer::CreateSamplerState(const SamplerStateCreationParams_t& params, const char* debugName)
 {
     auto sampler = new SamplerState_t;
 
@@ -607,7 +609,7 @@ SamplerState_t* Renderer::CreateSamplerState(const SamplerStateCreationParams_t&
     assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-    D3D_SET_OBJECT_NAME_A(sampler->m_SamplerState, "Renderer::CreateSamplerState");
+    D3D_SET_OBJECT_NAME_A(sampler->m_SamplerState, debugName);
 #endif
 
     if (FAILED(result)) {

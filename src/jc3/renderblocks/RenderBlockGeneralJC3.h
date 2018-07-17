@@ -65,10 +65,10 @@ public:
         };
 
         // create the vertex declaration
-        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get());
+        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockGeneralJC3");
 
         // create the constant buffer
-        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants);
+        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants, "RenderBlockGeneralJC3");
 
         // create the sampler states
         {
@@ -79,8 +79,8 @@ public:
             params.m_MinMip = 0.0f;
             params.m_MaxMip = 13.0f;
 
-            m_SamplerState = Renderer::Get()->CreateSamplerState(params);
-            m_SamplerStateNormalMap = Renderer::Get()->CreateSamplerState(params);
+            m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockGeneralJC3");
+            m_SamplerStateNormalMap = Renderer::Get()->CreateSamplerState(params, "RenderBlockGeneralJC3 - NormalMap");
         }
 
         assert(m_SamplerState);

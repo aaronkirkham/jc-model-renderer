@@ -55,10 +55,10 @@ public:
         };
 
         // create the vertex declaration
-        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 2, m_VertexShader.get());
+        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 2, m_VertexShader.get(), "RenderBlockCharacterSkin");
 
         // create the constant buffer
-        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants);
+        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants, "RenderBlockCharacterSkin");
 
         // create the sampler states
         {
@@ -69,7 +69,7 @@ public:
             params.m_MinMip = 12.0f;
             params.m_MaxMip = 13.0f;
 
-            m_SamplerState = Renderer::Get()->CreateSamplerState(params);
+            m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCharacterSkin");
         }
     }
 

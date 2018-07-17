@@ -17,7 +17,7 @@ private:
     UIEvents m_UIEvents;
     float m_MainMenuBarHeight = 0.0f;
     std::recursive_mutex m_StatusTextsMutex;
-    std::unordered_map<uint64_t, std::string> m_StatusTexts;
+    std::map<uint64_t, std::string> m_StatusTexts;
 
     void RenderFileTreeView();
 

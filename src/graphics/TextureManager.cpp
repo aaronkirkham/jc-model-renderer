@@ -80,7 +80,7 @@ Texture::Texture(const fs::path& filename)
 
 Texture::~Texture()
 {
-    DEBUG_LOG("Deleting texture '" << m_Filename.string().c_str() << "'...");
+    DEBUG_LOG("Deleting texture '" << m_Filename.filename().string() << "'...");
 
     safe_release(m_SRV);
     safe_release(m_Texture);
@@ -114,6 +114,8 @@ bool Texture::LoadFromBuffer(const FileBuffer& buffer)
 
 bool Texture::LoadFromFile(const fs::path& filename)
 {
+    m_Filename = filename;
+
     std::ifstream stream(filename.c_str(), std::ios::binary | std::ios::ate);
     if (stream.fail()) {
         DEBUG_LOG("[ERROR] Failed to create texture from file '" << filename.filename().string() << "'.");

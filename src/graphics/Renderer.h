@@ -91,12 +91,12 @@ public:
     void SetCullMode(D3D11_CULL_MODE mode);
 
     // buffers
-    VertexBuffer_t* CreateVertexBuffer(uint32_t count, uint32_t stride);
-    VertexBuffer_t* CreateVertexBuffer(const void* data, uint32_t count, uint32_t stride, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
-    IndexBuffer_t* CreateIndexBuffer(const void* data, uint32_t count, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
+    VertexBuffer_t* CreateVertexBuffer(uint32_t count, uint32_t stride, const char* debugName = nullptr);
+    VertexBuffer_t* CreateVertexBuffer(const void* data, uint32_t count, uint32_t stride, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, const char* debugName = nullptr);
+    IndexBuffer_t* CreateIndexBuffer(const void* data, uint32_t count, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, const char* debugName = nullptr);
 
     template <typename T>
-    ConstantBuffer_t* CreateConstantBuffer(T& data)
+    ConstantBuffer_t* CreateConstantBuffer(T& data, const char* debugName = nullptr)
     {
         auto buffer = new ConstantBuffer_t;
         buffer->m_ElementCount = 1;
@@ -118,7 +118,7 @@ public:
         assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-        D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, "Renderer::CreateConstantBuffer");
+        D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, debugName);
 #endif
 
         if (FAILED(result)) {
@@ -157,11 +157,11 @@ public:
     }
 
     // vertex declarations
-    VertexDeclaration_t* CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count, VertexShader_t* m_Shader);
+    VertexDeclaration_t* CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count, VertexShader_t* m_Shader, const char* debugName = nullptr);
     void DestroyVertexDeclaration(VertexDeclaration_t* declaration);
 
     // samplers
-    SamplerState_t* CreateSamplerState(const SamplerStateCreationParams_t& params);
+    SamplerState_t* CreateSamplerState(const SamplerStateCreationParams_t& params, const char* debugName = nullptr);
     void DestroySamplerState(SamplerState_t* sampler);
 
     ID3D11Device* GetDevice() { return m_Device; }

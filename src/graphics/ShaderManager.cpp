@@ -35,7 +35,7 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
     assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-    D3D_SET_OBJECT_NAME_A(shader->m_Shader, "ShaderManager::GetVertexShader");
+    D3D_SET_OBJECT_NAME_A(shader->m_Shader, name.c_str());
 #endif
 
     if (FAILED(result)) {
@@ -71,7 +71,7 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
     assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-    D3D_SET_OBJECT_NAME_A(shader->m_Shader, "ShaderManager::GetPixelShader");
+    D3D_SET_OBJECT_NAME_A(shader->m_Shader, name.c_str());
 #endif
 
     if (FAILED(result)) {

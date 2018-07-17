@@ -53,7 +53,11 @@ void AvalancheArchive::Initialise()
 {
     DEBUG_LOG("AvalancheArchive::Initialise");
 
+    if (g_CurrentLoadedArchive) {
+        delete g_CurrentLoadedArchive;
+    }
+
     g_CurrentLoadedArchive = this;
     m_FileList = std::make_unique<DirectoryList>();
-    m_FileList->Parse(m_StreamArchive, { ".rbm" });
+    m_FileList->Parse(m_StreamArchive);//, { ".rbm" });
 }

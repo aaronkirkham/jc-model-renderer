@@ -45,7 +45,7 @@ RenderBlockModel::RenderBlockModel(const fs::path& filename)
 {
     // create the mesh constant buffer
     MeshConstants constants;
-    m_MeshConstants = Renderer::Get()->CreateConstantBuffer(constants);
+    m_MeshConstants = Renderer::Get()->CreateConstantBuffer(constants, "RenderBlockModel Mesh Buffer");
 }
 
 RenderBlockModel::~RenderBlockModel()

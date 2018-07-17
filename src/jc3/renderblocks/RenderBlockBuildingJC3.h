@@ -61,10 +61,10 @@ public:
         };
 
         // create the vertex declaration
-        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get());
+        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockBuildingJC3");
 
         // create the constant buffer
-        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants);
+        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants, "RenderBlockBuildingJC3");
     }
 
     virtual void Read(std::istream& stream) override final

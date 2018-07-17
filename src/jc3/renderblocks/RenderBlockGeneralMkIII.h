@@ -63,15 +63,15 @@ public:
         };
 
         // create the vertex declaration
-        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get());
+        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockGeneralMkIII");
 
         // create the constant buffer
-        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants);
+        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants, "RenderBlockGeneralMkIII");
 
         // create the sampler states
         {
             SamplerStateCreationParams_t params;
-            m_SamplerState = Renderer::Get()->CreateSamplerState(params);
+            m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockGeneralMkIII");
         }
     }
 

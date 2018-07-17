@@ -105,7 +105,7 @@ public:
         outVertices->resize(count);
         stream.read((char *)outVertices->data(), (count * stride));
 
-        *outBuffer = Renderer::Get()->CreateVertexBuffer(outVertices->data(), count, stride);
+        *outBuffer = Renderer::Get()->CreateVertexBuffer(outVertices->data(), count, stride, D3D11_USAGE_DEFAULT, "IRenderBlock Vertex Buffer");
     }
 
     void ReadIndexBuffer(std::istream& stream, IndexBuffer_t** outBuffer)
@@ -116,7 +116,7 @@ public:
         m_Indices.resize(count);
         stream.read((char *)m_Indices.data(), (count * sizeof(uint16_t)));
 
-        *outBuffer = Renderer::Get()->CreateIndexBuffer(m_Indices.data(), count);
+        *outBuffer = Renderer::Get()->CreateIndexBuffer(m_Indices.data(), count, D3D11_USAGE_DEFAULT, "IRenderBlock Index Buffer");
     }
 
     void ReadMaterials(std::istream& stream)

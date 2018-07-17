@@ -21,7 +21,7 @@ Camera::Camera()
 
     // create the frame constant buffers
     FrameConstants constants;
-    m_FrameConstants = Renderer::Get()->CreateConstantBuffer(constants);
+    m_FrameConstants = Renderer::Get()->CreateConstantBuffer(constants, "Camera Frame Buffer");
 
     m_Position = glm::vec3(0, 3, -10);
     m_Rotation = glm::vec3(0, 0, 0);

@@ -45,14 +45,8 @@ FileLoader::FileLoader()
                 throw std::runtime_error("FileLoader - Failed to load dictionary resource");
             }
 
-            // TODO: something with the load resource stuff is breaking this.
-            // this is ugly but works for now
+            // parse the file list json
             auto str = static_cast<const char*>(LockResource(data));
-            //auto l = SizeofResource(handle, rc);
-            //std::vector<uint8_t> d;
-            //d.resize(l);
-            //std::memcpy((char *)d.data(), str, l);
-
             auto& dictionary = json::parse(str);
             m_FileList->Parse(&dictionary);// , { ".rbm", ".ee", ".bl", ".nl" }); // TODO: dds, ddsc, hmddsc
 

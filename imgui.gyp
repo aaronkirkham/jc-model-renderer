@@ -13,6 +13,8 @@
 			'vendor/imgui/imgui.cpp',
             'vendor/imgui/imgui_draw.cpp',
             'vendor/imgui/imgui_internal.h',
+			'vendor/imgui/imgui_tabs.cpp',
+			'vendor/imgui/imgui_tabs.h',
             'vendor/imgui/stb_rect_pack.h',
             'vendor/imgui/stb_textedit.h',
             'vendor/imgui/stb_truetype.h',
