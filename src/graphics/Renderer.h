@@ -4,7 +4,8 @@
 #include <singleton.h>
 #include <graphics/Types.h>
 #include <imgui.h>
-#include <examples/directx11_example/imgui_impl_dx11.h>
+#include <examples/imgui_impl_win32.h>
+#include <examples/imgui_impl_dx11.h>
 
 #define test_hresult(hr) if (FAILED(hr)) { return false; }
 #define safe_delete(ptr) if (ptr) { delete ptr; ptr = nullptr; }

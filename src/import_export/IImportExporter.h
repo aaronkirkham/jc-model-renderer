@@ -41,6 +41,8 @@ public:
             return false;
         }
 
+        DEBUG_LOG("IImportExporter::WriteBufferToFile - writing " << file);
+
         // write the buffer and finish
         stream.write((char *)&buffer->front(), buffer->size());
         stream.close();

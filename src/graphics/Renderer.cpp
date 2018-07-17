@@ -84,8 +84,13 @@ bool Renderer::Initialise(const HWND& hwnd)
         //m_LightBuffers = CreateConstantBuffer(constants);
     }
 
+    // setup imgui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+
     // initialise imgui
-    ImGui_ImplDX11_Init(hwnd, m_Device, m_DeviceContext);
+    ImGui_ImplWin32_Init(hwnd);
+    ImGui_ImplDX11_Init(m_Device, m_DeviceContext);
     SetupImGuiStyle();
 
     // setup the render context
@@ -108,6 +113,8 @@ void Renderer::Shutdown()
     }
 
     ImGui_ImplDX11_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
 
     m_DeviceContext->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
     m_DeviceContext->RSSetState(nullptr);
@@ -130,7 +137,10 @@ void Renderer::Shutdown()
 
 bool Renderer::Render()
 {
+    // start frame for imgui
     ImGui_ImplDX11_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
 
     ID3D11ShaderResourceView* nullViews[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = { 0 };
     m_DeviceContext->PSSetShaderResources(0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, nullViews);
@@ -169,6 +179,7 @@ bool Renderer::Render()
 
     // end scene
     ImGui::Render();
+    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
     SetDepthEnabled(true);
     m_SwapChain->Present(1, 0);

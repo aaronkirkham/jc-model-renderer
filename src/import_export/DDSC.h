@@ -37,9 +37,19 @@ public:
                 auto tmp_filename = filename;
                 auto ddsc_filename = tmp_filename.replace_extension(".ddsc");
                 FileLoader::Get()->ReadFile(ddsc_filename, [this, path, buffer, callback](bool success, FileBuffer ddsc_buffer) {
-                    FileBuffer data;
-                    if (FileLoader::Get()->ReadCompressedTexture(&ddsc_buffer, &buffer, &data)) {
-                        WriteBufferToFile(path, &data);
+                    if (success) {
+                        FileBuffer data;
+                        if (FileLoader::Get()->ReadCompressedTexture(&ddsc_buffer, &buffer, &data)) {
+                            WriteBufferToFile(path, &data);
+                        }
+                    }
+                    else {
+                        DEBUG_LOG("DDSC::Export - Failed to read .ddsc file.");
+
+                        std::stringstream info;
+                        info << "Failed to find the source texture information file." << std::endl << std::endl;
+                        info << "The .hmddsc format can only be exported when the .ddsc equivalent is present.";
+                        Window::Get()->ShowMessageBox(info.str(), MB_ICONERROR);
                     }
 
                     if (callback) {

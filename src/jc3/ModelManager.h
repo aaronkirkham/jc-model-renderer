@@ -29,7 +29,8 @@ public:
         Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
             std::lock_guard<std::recursive_mutex> _lk{ m_ModelsMutex };
 
-            ImGui::Begin("Model Manager", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
+            ImGui::SetNextWindowBgAlpha(0.0f);
+            ImGui::Begin("Model Manager", nullptr, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
             {
                 const auto& window_size = Window::Get()->GetSize();
 
@@ -47,7 +48,7 @@ public:
                     }
                 }
 
-                ImGui::SetCursorPos({ 20, (window_size.y - 35) });
+                ImGui::SetWindowPos({ 10, (window_size.y - 35) });
                 ImGui::Text("Models: %d (%d), Vertices: %d, Indices: %d, Triangles: %d, Textures: %d", m_Models.size(), m_ArchiveModels.size(), vertices, indices, triangles, TextureManager::Get()->GetCacheSize());
             }
             ImGui::End();

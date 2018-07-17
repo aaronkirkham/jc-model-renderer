@@ -3,7 +3,10 @@
 	{
 		'target_name': 'imgui',
 		'type': 'static_library',
-		'include_dirs': ['vendor/imgui', 'vendor/imgui/examples/directx11_example'],
+		'defines': [
+			'IMGUI_DISABLE_OBSOLETE_FUNCTIONS',
+		],
+		'include_dirs': ['vendor/imgui', 'vendor/imgui/examples'],
 		'sources': [
             'vendor/imgui/imconfig.h',
             'vendor/imgui/imgui.h',
@@ -13,11 +16,13 @@
             'vendor/imgui/stb_rect_pack.h',
             'vendor/imgui/stb_textedit.h',
             'vendor/imgui/stb_truetype.h',
-            'vendor/imgui/examples/directx11_example/imgui_impl_dx11.cpp',
-            'vendor/imgui/examples/directx11_example/imgui_impl_dx11.h',
+			'vendor/imgui/examples/imgui_impl_win32.cpp',
+			'vendor/imgui/examples/imgui_impl_win32.h',
+            'vendor/imgui/examples/imgui_impl_dx11.cpp',
+            'vendor/imgui/examples/imgui_impl_dx11.h',
 		],
         'direct_dependent_settings': {
-            'include_dirs': ['vendor/imgui', 'vendor/imgui/examples/directx11_example'],
+            'include_dirs': ['vendor/imgui', 'vendor/imgui/examples'],
          },
 	}
 	]

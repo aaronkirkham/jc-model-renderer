@@ -69,6 +69,7 @@
 			'vendor/httplib/',
 		],
 		'sources': [
+			'src/assets.rc',
 			'<!@pymod_do_main(glob-files src/**/*.cpp)',
 			'<!@pymod_do_main(glob-files src/**/*.h)',
 			'<!@pymod_do_main(glob-files src/shaders/**/*.hlsl)',

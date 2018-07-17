@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
-#include <Windows.h>
+#include <windows.h>
 #ifdef linux
 # include <endian.h>
 #endif

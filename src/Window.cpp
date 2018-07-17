@@ -1,7 +1,7 @@
 #include <Window.h>
 #include <Input.h>
 #include <graphics/Renderer.h>
-#include <examples/directx11_example/imgui_impl_dx11.h>
+#include <examples/imgui_impl_win32.h>
 
 #include <sstream>
 #include <shlobj.h>
@@ -22,6 +22,7 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPA
         }
     }
 
+    // pass input to imgui first
     if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam)) {
         return 1;
     }

@@ -34,7 +34,7 @@ bool Input::HandleMessage(MSG* event)
     }
 
     // don't capture mouse moves if imgui wants it
-    if (imgIO.WantMoveMouse && event->message == WM_MOUSEMOVE) {
+    if (imgIO.WantSetMousePos && event->message == WM_MOUSEMOVE) {
         return false;
     }
 

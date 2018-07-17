@@ -183,15 +183,17 @@ void UI::Render()
     // https://github.com/ocornut/imgui/issues/261
 
     // Stats
-    ImGui::Begin("Stats", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
+    ImGui::SetNextWindowBgAlpha(0.0f);
+    ImGui::Begin("Stats", nullptr, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
     {
-        ImGui::SetCursorPos({ 20, (window_size.y - 35 - 24) });
+        ImGui::SetWindowPos({ 10, (window_size.y - 35 - 24) });
         ImGui::Text("%.01f fps (%.02f ms) (%.0f x %.0f)", ImGui::GetIO().Framerate, (1000.0f / ImGui::GetIO().Framerate), window_size.x, window_size.y);
     }
     ImGui::End();
 
     // Status
-    ImGui::Begin("Status", nullptr, ImVec2(), 0.0f, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
+    ImGui::SetNextWindowBgAlpha(0.0f);
+    ImGui::Begin("Status", nullptr, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
     {
         static auto item_spacing = 24.0f;
         uint32_t current_index = 0;
@@ -295,7 +297,8 @@ void UI::RenderFileTreeView()
     }
 
     // render the archive directory list
-    ImGui::Begin(title.str().c_str(), nullptr, ImVec2(), 1.0f, window_flags);
+    // 1.0f
+    ImGui::Begin(title.str().c_str(), nullptr, window_flags);
     {
         ImGui::SetWindowPos({ window_size.x - 400, m_MainMenuBarHeight });
         ImGui::SetWindowSize({ 400, draw_render_blocks_ui ? ((window_size.y / 2) - m_MainMenuBarHeight / 2) : (window_size.y - m_MainMenuBarHeight) });
@@ -305,7 +308,8 @@ void UI::RenderFileTreeView()
             RenderDirectoryList(FileLoader::Get()->GetDirectoryList()->GetStructure());
         }
         else if (g_CurrentLoadedArchive->GetDirectoryList()) {
-            RenderDirectoryList(g_CurrentLoadedArchive->GetDirectoryList()->GetStructure(), false);
+            ImGui::Button("Go Back", { 400, 0 });
+            RenderDirectoryList(g_CurrentLoadedArchive->GetDirectoryList()->GetStructure());
         }
     }
     ImGui::End();
@@ -313,7 +317,7 @@ void UI::RenderFileTreeView()
     // render the block info
     if (draw_render_blocks_ui) {
         //
-        ImGui::Begin("Render Blocks", nullptr, ImVec2(), 1.0f, window_flags);
+        ImGui::Begin("Render Blocks", nullptr, window_flags);
         {
             ImGui::SetWindowPos({ window_size.x - 400, ((window_size.y / 2) + (m_MainMenuBarHeight / 2)) });
             ImGui::SetWindowSize({ 400, ((window_size.y / 2) - (m_MainMenuBarHeight / 2)) });

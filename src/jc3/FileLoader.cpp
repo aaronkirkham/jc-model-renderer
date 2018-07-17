@@ -35,7 +35,7 @@ FileLoader::FileLoader()
     std::thread([this, status_text_id] {
         try {
             const auto handle = GetModuleHandle(nullptr);
-            const auto rc = FindResource(handle, MAKEINTRESOURCE(128), MAKEINTRESOURCE(256));
+            const auto rc = FindResource(handle, MAKEINTRESOURCE(128), RT_RCDATA);
             if (rc == nullptr) {
                 throw std::runtime_error("FileLoader - Failed to find dictionary resource");
             }
@@ -48,13 +48,13 @@ FileLoader::FileLoader()
             // TODO: something with the load resource stuff is breaking this.
             // this is ugly but works for now
             auto str = static_cast<const char*>(LockResource(data));
-            auto l = SizeofResource(handle, rc);
-            std::vector<uint8_t> d;
-            d.resize(l);
-            std::memcpy((char *)d.data(), str, l);
+            //auto l = SizeofResource(handle, rc);
+            //std::vector<uint8_t> d;
+            //d.resize(l);
+            //std::memcpy((char *)d.data(), str, l);
 
-            auto& dictionary = json::parse(d);
-            m_FileList->Parse(&dictionary, { ".rbm", ".ee", ".bl", ".nl" }); // TODO: dds, ddsc, hmddsc
+            auto& dictionary = json::parse(str);
+            m_FileList->Parse(&dictionary);// , { ".rbm", ".ee", ".bl", ".nl" }); // TODO: dds, ddsc, hmddsc
 
             // parse the dictionary
             for (auto& it = dictionary.begin(); it != dictionary.end(); ++it) {
