@@ -520,7 +520,7 @@ StreamArchive_t* FileLoader::ReadStreamArchive(const fs::path& filename) noexcep
 
     std::ifstream compressed_buffer(filename, std::ios::binary);
     if (compressed_buffer.fail()) {
-        DEBUG_LOG("FileLoader::ReadStreamArchive - Failed to open stream")
+        DEBUG_LOG("FileLoader::ReadStreamArchive - Failed to open stream");
         return nullptr;
     }
 
@@ -803,6 +803,107 @@ RuntimeContainer* FileLoader::ReadRuntimeContainer(const FileBuffer& buffer) noe
     }
 
     return root_container;
+}
+
+void* FileLoader::ReadAvalancheDataFormat(const FileBuffer* buffer) noexcept
+{
+    std::istringstream stream(std::string{ (char *)buffer->data(), buffer->size() });
+
+    DEBUG_LOG("FileLoader::ReadAvalancheDataFormat");
+
+    JustCause3::AvalancheDataFormat::Header header;
+    stream.read((char *)&header, sizeof(header));
+
+    // ensure the header magic is correct "ADF"
+    if (header.m_Magic != 0x41444620) {
+        DEBUG_LOG("FileLoader::ReadAvalancheDataFormat - Invalid header magic. Input probably isn't an AvalancheDataFormat file.");
+        return nullptr;
+    }
+
+    DEBUG_LOG(" - m_Version=" << header.m_Version);
+
+    // make sure it's the correct version
+    if (header.m_Version != 4) {
+        DEBUG_LOG("FileLoader::ReadAvalancheDataFormat - Unexpected AvalancheDataFormat file version!");
+        return nullptr;
+    }
+
+    DEBUG_LOG(" - m_InstanceCount=" << header.m_InstanceCount);
+    DEBUG_LOG(" - m_InstanceOffset=" << header.m_InstanceOffset);
+    DEBUG_LOG(" - m_TypeCount=" << header.m_TypeCount);
+    DEBUG_LOG(" - m_TypeOffset=" << header.m_TypeOffset);
+    DEBUG_LOG(" - m_StringHashCount=" << header.m_StringHashCount);
+    DEBUG_LOG(" - m_StringHashOffset=" << header.m_StringHashOffset);
+    DEBUG_LOG(" - m_StringCount=" << header.m_StringCount);
+    DEBUG_LOG(" - m_StringOffset=" << header.m_StringOffset);
+
+    JustCause3::ADFInstance ins;
+
+    // 
+    std::vector<uint8_t> name_lengths;
+    name_lengths.resize(header.m_StringCount);
+
+    // read names
+    stream.seekg(header.m_StringOffset);
+    stream.read((char *)&name_lengths.front(), sizeof(uint8_t) * header.m_StringCount);
+    for (uint32_t i = 0; i < header.m_StringCount; ++i) {
+        auto name = std::unique_ptr<char[]>(new char[name_lengths[i] + 1]);
+        stream.read(name.get(), name_lengths[i] + 1);
+
+        DEBUG_LOG("string: " << name.get());
+        ins.m_Names.emplace_back(name.get());
+    }
+
+    // read type definitions
+    stream.seekg(header.m_TypeOffset);
+    for (uint32_t i = 0; i < header.m_TypeCount; ++i) {
+        JustCause3::AvalancheDataFormat::TypeDefinition definition;
+        stream.read((char *)&definition, sizeof(definition));
+
+        DEBUG_LOG("definition type: " << JustCause3::AvalancheDataFormat::TypeDefintionStr(definition.m_Type));
+
+        ins.m_Definitions.emplace_back(definition);
+    }
+
+    // read instances
+    stream.seekg(header.m_InstanceOffset);
+    for (uint32_t i = 0; i < header.m_InstanceCount; ++i) {
+        JustCause3::AvalancheDataFormat::InstanceInfo instance;
+        stream.read((char *)&instance, sizeof(instance));
+
+        DEBUG_LOG("instance name: " << ins.m_Names[instance.m_NameIndex]);
+
+        ins.m_InstanceInfos.emplace_back(instance);
+    }
+
+    return nullptr;
+}
+
+bool FileLoader::ReadShaderBundle(const fs::path& filename) noexcept
+{
+    if (!fs::exists(filename)) {
+        DEBUG_LOG("FileLoader::ReadShaderBundle - Input file doesn't exist");
+        return false;
+    }
+
+    std::ifstream stream(filename, std::ios::binary | std::ios::ate);
+    if (stream.fail()) {
+        DEBUG_LOG("FileLoader::ReadShaderBundle - Failed to open stream");
+        return false;
+    }
+
+    DEBUG_LOG("FileLoader::ReadShaderBundle");
+
+    auto size = stream.tellg();
+    stream.seekg(std::ios::beg);
+
+    FileBuffer data;
+    data.resize(size);
+    stream.read((char *)data.data(), size);
+
+    ReadAvalancheDataFormat(&data);
+
+    return true;
 }
 
 std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveFromFile(const fs::path& file) noexcept

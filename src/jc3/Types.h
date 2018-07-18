@@ -334,5 +334,83 @@ namespace JustCause3
             uint8_t m_Type;
         };
     };
+
+    namespace AvalancheDataFormat
+    {
+        struct Header
+        {
+            uint32_t m_Magic;
+            uint32_t m_Version;
+            uint32_t m_InstanceCount;
+            uint32_t m_InstanceOffset;
+            uint32_t m_TypeCount;
+            uint32_t m_TypeOffset;
+            uint32_t m_StringHashCount;
+            uint32_t m_StringHashOffset;
+            uint32_t m_StringCount;
+            uint32_t m_StringOffset;
+            uint32_t m_FileSize;
+            char _padding[20];
+            char const* m_Description;
+        };
+
+        enum TypeDefinitionType : uint32_t
+        {
+            Primitive = 0,
+            Structure = 1,
+            Pointer = 2,
+            Array = 3,
+            InlineArray = 4,
+            String = 5,
+            // 
+            BitField = 7,
+            Enumeration = 8,
+            StringHash = 9,
+        };
+
+        static const char* TypeDefintionStr(TypeDefinitionType type) {
+            switch (type) {
+            case Primitive: return "Primitive";
+            case Structure: return "Structure";
+            case Pointer: return "Pointer";
+            case Array: return "Array";
+            case InlineArray: return "InlineArray";
+            case String: return "String";
+            case BitField: return "BitField";
+            case Enumeration: return "Enumeration";
+            case StringHash: return "StringHash";
+            }
+
+            return "Unknown";
+        }
+
+        struct TypeDefinition
+        {
+            TypeDefinitionType m_Type;
+            uint32_t m_Size;
+            uint32_t m_Alignment;
+            uint32_t m_NameHash;
+            int64_t m_NameIndex;
+            uint32_t m_Flags;
+            uint32_t m_ElementTypeHash;
+            uint32_t m_ElementLength;
+        };
+
+        struct InstanceInfo
+        {
+            uint32_t m_NameHash;
+            uint32_t m_TypeHash;
+            uint32_t m_Offset;
+            uint32_t m_Size;
+            int64_t m_NameIndex;
+        };
+    }
+
+    struct ADFInstance
+    {
+        std::vector<std::string> m_Names;
+        std::vector<AvalancheDataFormat::TypeDefinition> m_Definitions;
+        std::vector<AvalancheDataFormat::InstanceInfo> m_InstanceInfos;
+    };
 };
 #pragma pack(pop)

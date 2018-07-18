@@ -160,6 +160,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         });
 #endif
 
+#ifdef DEBUG
+        FileLoader::Get()->ReadShaderBundle("D:/Steam/steamapps/common/Just Cause 3/Shaders_F.shader_bundle");
+#endif
+
         // run!
         Window::Get()->Run();
     }

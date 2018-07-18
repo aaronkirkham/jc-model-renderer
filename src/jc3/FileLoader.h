@@ -64,11 +64,15 @@ public:
     // runtime containers
     RuntimeContainer* ReadRuntimeContainer(const FileBuffer& buffer) noexcept;
 
+    // avalanche data format
+    void* ReadAvalancheDataFormat(const FileBuffer* buffer) noexcept;
+
+    // shader bundles
+    bool ReadShaderBundle(const fs::path& filename) noexcept;
+
     // stream archive caching
     std::tuple<StreamArchive_t*, StreamArchiveEntry_t> GetStreamArchiveFromFile(const fs::path& file) noexcept;
-
     std::tuple<std::string, std::string, uint32_t> LocateFileInDictionary(const fs::path& filename) noexcept;
-
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
 
     // file read callbacks
