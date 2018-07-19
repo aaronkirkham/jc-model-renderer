@@ -262,7 +262,7 @@ void RenderDirectoryList(json* current, std::string prev = "", bool open_folders
 
                 // fire file selected events
                 if (ImGui::IsItemClicked()) {
-                    UI::Get()->Events().FileTreeItemSelected(filename);
+                    UI::Get()->Events().FileTreeItemSelected(file_path);
                 }
 
                 // context menu
