@@ -109,9 +109,35 @@ FileLoader::FileLoader()
     });
 
     // save file
-    UI::Get()->Events().SaveFileRequest.connect([&](const fs::path& filename) {
-        Window::Get()->ShowFolderSelection("Select a folder to save the file to.", [&, filename](const std::string& selected) {
-            DEBUG_LOG("SaveFileRequest - want to save file '" << filename << "' to '" << selected << "'");
+    UI::Get()->Events().SaveFileRequest.connect([&](const fs::path& file) {
+        Window::Get()->ShowFolderSelection("Select a folder to save the file to.", [&, file](const std::string& selected) {
+            DEBUG_LOG("SaveFileRequest - want to save file '" << file << "' to '" << selected << "'");
+
+            std::stringstream status_text;
+            status_text << "Saving \"" << file << "\"...";
+            const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
+
+            ReadFile(file, [&, file, selected, status_text_id](bool success, FileBuffer data) {
+                if (success) {
+                    fs::path file_with_path = selected;
+                    file_with_path /= file.filename();
+
+                    std::ofstream file(file_with_path, std::ios::binary);
+                    file.write((char *)data.data(), data.size());
+                    file.close();
+
+                    UI::Get()->PopStatusText(status_text_id);
+                }
+                else {
+                    UI::Get()->PopStatusText(status_text_id);
+
+                    std::stringstream error;
+                    error << "Failed to save \"" << file.filename() << "\".";
+                    Window::Get()->ShowMessageBox(error.str());
+
+                    DEBUG_LOG("[ERROR] " << error.str());
+                }
+            });
         });
     });
 
@@ -382,7 +408,7 @@ StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
         return nullptr;
     }
 
-    StreamArchive_t* result = new StreamArchive_t;
+    auto result = new StreamArchive_t;
 
     auto start_pos = stream.tellg();
     while (true) {
