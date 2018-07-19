@@ -81,30 +81,32 @@ FileLoader::FileLoader()
     // TODO: move the events to a better location?
 
     // trigger the file type callbacks
-    UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& filename) {
+    UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& file) {
         // do we have a registered callback for this file type?
-        if (m_FileTypeCallbacks.find(filename.extension().string()) != m_FileTypeCallbacks.end()) {
-            ReadFile(filename, [&, filename](bool success, FileBuffer data) {
+        if (m_FileTypeCallbacks.find(file.extension().string()) != m_FileTypeCallbacks.end()) {
+            ReadFile(file, [&, file](bool success, FileBuffer data) {
                 if (success) {
-                    for (const auto& fn : m_FileTypeCallbacks[filename.extension().string()]) {
-                        fn(filename, data);
+                    for (const auto& fn : m_FileTypeCallbacks[file.extension().string()]) {
+                        fn(file, data);
                     }
                 }
                 else {
                     std::stringstream error;
-                    error << "Failed to load \"" << filename << "\"." << std::endl << std::endl;
+                    error << "Failed to load \"" << file.filename() << "\"." << std::endl << std::endl;
                     error << "Make sure you have selected the correct Just Cause 3 directory.";
                     Window::Get()->ShowMessageBox(error.str());
 
-                    DEBUG_LOG("[ERROR] Failed to load \"" << filename << "\".");
+                    DEBUG_LOG("[ERROR] Failed to load \"" << file << "\".");
                 }
             });
         }
         else {
             std::stringstream info;
-            info << "I don't know how to read the \"" << filename.extension() << "\" extension." << std::endl << std::endl;
+            info << "I don't know how to read the \"" << file.extension() << "\" extension." << std::endl << std::endl;
             info << "Want to help? Check out our GitHub page for information on how to contribute.";
             Window::Get()->ShowMessageBox(info.str(), MB_ICONASTERISK);
+
+            DEBUG_LOG("[ERROR] Unknown file type \"" << file << "\".");
         }
     });
 
@@ -142,15 +144,15 @@ FileLoader::FileLoader()
     });
 
     // export file
-    UI::Get()->Events().ExportFileRequest.connect([&](const fs::path& filename, IImportExporter* exporter) {
-        Window::Get()->ShowFolderSelection("Select a folder to export the file to.", [&, filename, exporter](const std::string& selected) {
-            DEBUG_LOG("ExportFileRequest - want to export file '" << filename << "' to '" << selected << "'");
+    UI::Get()->Events().ExportFileRequest.connect([&](const fs::path& file, IImportExporter* exporter) {
+        Window::Get()->ShowFolderSelection("Select a folder to export the file to.", [&, file, exporter](const std::string& selected) {
+            DEBUG_LOG("ExportFileRequest - want to export file '" << file << "' to '" << selected << "'");
 
             auto use = exporter;
             if (!exporter) {
-                DEBUG_LOG("ExportFileRequest - Finding a suitable exporter for '" << filename << "'...");
+                DEBUG_LOG("ExportFileRequest - Finding a suitable exporter for '" << file.extension() << "'...");
 
-                const auto& exporters = ImportExportManager::Get()->GetExportersForExtension(filename.extension().string());
+                const auto& exporters = ImportExportManager::Get()->GetExportersForExtension(file.extension().string());
                 if (exporters.size() > 0) {
                     DEBUG_LOG("ExportFileRequest - Using exporter '" << exporters.at(0)->GetName() << "'");
 
@@ -161,14 +163,14 @@ FileLoader::FileLoader()
             // if we have a valid exporter, read the file and export it
             if (use) {
                 std::stringstream status_text;
-                status_text << "Exporting \"" << filename << "\"...";
+                status_text << "Exporting \"" << file << "\"...";
                 const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
 
-                FileLoader::Get()->ReadFile(filename, [&, filename, selected, use, status_text_id](bool success, FileBuffer data) {
+                ReadFile(file, [&, file, selected, use, status_text_id](bool success, FileBuffer data) {
                     DEBUG_LOG("ExportFileRequest - Finished reading file, exporting now...");
 
                     if (success) {
-                        use->Export(filename, data, selected, [status_text_id] {
+                        use->Export(file, data, selected, [status_text_id] {
                             UI::Get()->PopStatusText(status_text_id);
                         });
                     }
@@ -176,7 +178,7 @@ FileLoader::FileLoader()
                         UI::Get()->PopStatusText(status_text_id);
 
                         std::stringstream error;
-                        error << "Failed to export \"" << filename.filename() << "\".";
+                        error << "Failed to export \"" << file.filename() << "\".";
                         Window::Get()->ShowMessageBox(error.str());
 
                         DEBUG_LOG("[ERROR] " << error.str());
