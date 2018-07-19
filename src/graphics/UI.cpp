@@ -203,7 +203,7 @@ void UI::Render()
     RenderFileTreeView();
 }
 
-void RenderDirectoryList(json* current, bool open_folders = false)
+void RenderDirectoryList(json* current, std::string prev = "", bool open_folders = false)
 {
     if (!current) {
         return;
@@ -219,14 +219,14 @@ void RenderDirectoryList(json* current, bool open_folders = false)
                  
                 if (ImGui::TreeNodeEx(current_key.c_str(), ImGuiTreeNodeFlags_None, "%s  %s", is_open ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER, current_key.c_str())) {
                     auto next = &current->operator[](current_key);
-                    RenderDirectoryList(next, open_folders);
+                    RenderDirectoryList(next, prev.length() ? prev + "/" + current_key : current_key, open_folders);
 
                     ImGui::TreePop();
                 }
             }
             else {
                 auto next = &current->operator[](current_key);
-                RenderDirectoryList(next, open_folders);
+                RenderDirectoryList(next, prev, open_folders);
             }
         }
     }
@@ -243,6 +243,18 @@ void RenderDirectoryList(json* current, bool open_folders = false)
 
                 ImGui::TreeNodeEx(filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen), "%s %s", is_archive ? ICON_FA_FILE_ARCHIVE_O : ICON_FA_FILE_O, filename.c_str());
 
+                std::string file_path;
+
+                if (prev.length() == 0) {
+                    file_path = filename;
+                }
+                else if (prev.length() == 1) {
+                    file_path = prev + filename;
+                }
+                else {
+                    file_path = prev + "/" + filename;
+                }
+
                 // tooltips
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip(filename.c_str());
@@ -254,7 +266,7 @@ void RenderDirectoryList(json* current, bool open_folders = false)
                 }
 
                 // context menu
-                UI::Get()->RenderContextMenu(filename);
+                UI::Get()->RenderContextMenu(file_path);
             }
         }
     }

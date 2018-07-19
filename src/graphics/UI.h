@@ -6,9 +6,9 @@
 class IImportExporter;
 struct UIEvents
 {
-    ksignals::Event<void(const fs::path& filename)> FileTreeItemSelected;
-    ksignals::Event<void(const fs::path& filename)> SaveFileRequest;
-    ksignals::Event<void(const fs::path& filename, IImportExporter* exporter)> ExportFileRequest;
+    ksignals::Event<void(const fs::path& file)> FileTreeItemSelected;
+    ksignals::Event<void(const fs::path& file)> SaveFileRequest;
+    ksignals::Event<void(const fs::path& file, IImportExporter* exporter)> ExportFileRequest;
 };
 
 class UI : public Singleton<UI>
