@@ -44,6 +44,7 @@ public:
 
     virtual void Create() override final
     {
+#if 0
         // load shaders
         m_VertexShader = GET_VERTEX_SHADER(character);
         m_PixelShader = GET_PIXEL_SHADER(character);
@@ -71,6 +72,7 @@ public:
 
             m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCharacterSkin");
         }
+#endif
     }
 
     virtual void Read(std::istream& stream) override final
@@ -109,6 +111,7 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
+#if 0
         IRenderBlock::Setup(context);
 
         // set shader constants
@@ -119,15 +122,16 @@ public:
         Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
 
         Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+#endif
     }
 
     virtual void Draw(RenderContext_t* context) override final
     {
-        DrawSkinBatches(context);
+        // DrawSkinBatches(context);
     }
 
     virtual void DrawUI() override final
     {
-        ImGui::SliderFloat("Scale", &m_Block.attributes.scale, 0.1f, 10.0f);
+        // ImGui::SliderFloat("Scale", &m_Block.attributes.scale, 0.1f, 10.0f);
     }
 };

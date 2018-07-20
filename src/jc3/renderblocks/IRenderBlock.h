@@ -13,8 +13,9 @@ protected:
     IndexBuffer_t* m_IndexBuffer = nullptr;
     std::shared_ptr<VertexShader_t> m_VertexShader = nullptr;
     std::shared_ptr<PixelShader_t> m_PixelShader = nullptr;
-    VertexDeclaration_t* m_VertexDeclaration = nullptr;
     SamplerState_t* m_SamplerState = nullptr;
+
+    VertexDeclaration_t* m_VertexDeclaration = nullptr;
 
     std::vector<fs::path> m_Materials;
     std::vector<std::shared_ptr<Texture>> m_Textures;
@@ -36,7 +37,6 @@ public:
 
         Renderer::Get()->DestroyBuffer(m_VertexBuffer);
         Renderer::Get()->DestroyBuffer(m_IndexBuffer);
-        Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
         Renderer::Get()->DestroySamplerState(m_SamplerState);
     }
 
@@ -56,10 +56,8 @@ public:
     {
         assert(m_VertexShader);
         assert(m_PixelShader);
-        assert(m_VertexDeclaration);
 
         // enable the vertex and pixel shaders
-        context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
         context->m_DeviceContext->VSSetShader(m_VertexShader->m_Shader, nullptr, 0);
         context->m_DeviceContext->PSSetShader(m_PixelShader->m_Shader, nullptr, 0);
 

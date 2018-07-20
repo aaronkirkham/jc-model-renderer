@@ -7,6 +7,7 @@
 #include <jc3/Types.h>
 
 #include <jc3/formats/StreamArchive.h>
+#include <jc3/formats/AvalancheDataFormat.h>
 
 #include <functional>
 
@@ -64,11 +65,8 @@ public:
     // runtime containers
     RuntimeContainer* ReadRuntimeContainer(const FileBuffer& buffer) noexcept;
 
-    // avalanche data format
-    void* ReadAvalancheDataFormat(const FileBuffer* buffer) noexcept;
-
     // shader bundles
-    bool ReadShaderBundle(const fs::path& filename) noexcept;
+    AvalancheDataFormat* ReadAdf(const fs::path& filename) noexcept;
 
     // stream archive caching
     std::tuple<StreamArchive_t*, StreamArchiveEntry_t> GetStreamArchiveFromFile(const fs::path& file) noexcept;

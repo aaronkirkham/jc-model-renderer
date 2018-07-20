@@ -34599,7 +34599,7 @@ models/jc_environments/structures/wreck/milehighwreck/textures/plaster_nrm.hmdds
 models/jc_environments/structures/wreck/milehighwreck/textures/plaster_worn_dif.hmddsc
 models/jc_environments/structures/wreck/milehighwreck/textures/plaster_worn_glo.hmddsc
 models/jc_environments/structures/wreck/milehighwreck/textures/plaster_worn_nrm.hmddsc
-sound\dialogue\rus\bark_mil_male02_sfx_vehicleooc_01.wavc
+sound/dialogue/rus/bark_mil_male02_sfx_vehicleooc_01.wavc
 sound/dialogue/eng/aaa_dialog_test_island_dima.wavc
 sound/dialogue/eng/aaa_dialog_test_island_mario.wavc
 sound/dialogue/eng/aaa_dialog_test_island_mario_clean.wavc
@@ -47554,6 +47554,6 @@ sound/dialogue/eng/vocals_propaganda_pa_007.wavc
 sound/dialogue/eng/vocals_propaganda_pa_008.wavc
 sound/dialogue/eng/vocals_propaganda_pa_009.wavc
 sound/dialogue/eng/vocals_propaganda_pa_010.wavc
-sound\dialogue\rus\bark_reb_male02_enc_castaway_call2_02.wavc
+sound/dialogue/rus/bark_reb_male02_enc_castaway_call2_02.wavc
 ai/tiles/51_30.navmeshc
-terrain\jc3\patches\patch_09_03_29.streampatch
+terrain/jc3/patches/patch_09_03_29.streampatch

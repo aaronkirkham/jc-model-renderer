@@ -6,6 +6,7 @@
 #include <imgui.h>
 #include <examples/imgui_impl_win32.h>
 #include <examples/imgui_impl_dx11.h>
+#include <array>
 
 #define test_hresult(hr) if (FAILED(hr)) { return false; }
 #define safe_delete(ptr) if (ptr) { delete ptr; ptr = nullptr; }
@@ -35,7 +36,8 @@ private:
     ID3D11Device* m_Device = nullptr;
     ID3D11DeviceContext* m_DeviceContext = nullptr;
     IDXGISwapChain* m_SwapChain = nullptr;
-    ID3D11RenderTargetView* m_RenderTargetView = nullptr;
+    std::array<ID3D11RenderTargetView*, 2> m_RenderTargetView = { nullptr };
+    std::array<ID3D11ShaderResourceView*, 1> m_RenderTargetResourceView = { nullptr };
     ID3D11RasterizerState* m_RasterizerState = nullptr;
     ID3D11Texture2D* m_DepthTexture = nullptr;
     ID3D11DepthStencilState* m_DepthStencilEnabledState = nullptr;

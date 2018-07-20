@@ -47,6 +47,7 @@ public:
 
     virtual void Create() override final
     {
+#if 0
         // load shaders
         m_VertexShader = GET_VERTEX_SHADER(general_jc3);
         m_PixelShader = GET_PIXEL_SHADER(general_jc3);
@@ -65,6 +66,7 @@ public:
 
         // create the constant buffer
         m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants, "RenderBlockBuildingJC3");
+#endif
     }
 
     virtual void Read(std::istream& stream) override final

@@ -33,7 +33,7 @@ public:
 
     void Shutdown();
 
-    void Update();
+    void Update(RenderContext_t* context);
     void ResetToDefault();
 
     void WorldToScreen(const glm::vec3& world, glm::vec3* screen);
@@ -43,6 +43,6 @@ public:
     const glm::vec3& GetRotation() const { return m_Rotation; }
     const glm::mat4& GetViewMatrix() const { return m_View; }
     const glm::mat4& GetProjectionMatrix() const { return m_Projection; }
-    const glm::mat2& GetViewProjectionMatrix() const { return m_ViewProjection; }
+    const glm::mat4& GetViewProjectionMatrix() const { return m_ViewProjection; }
     const glm::vec4& GetViewport() const { return m_Viewport; }
 };

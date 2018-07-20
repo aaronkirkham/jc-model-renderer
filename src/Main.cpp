@@ -136,6 +136,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterCallback(".rbm", RenderBlockModel::FileReadCallback);
         FileLoader::Get()->RegisterCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::FileReadCallback);
 
+        FileLoader::Get()->RegisterCallback(".ddsc", [&](const fs::path& filename, const FileBuffer& data) {
+            FileBuffer buffer;
+            if (FileLoader::Get()->ReadCompressedTexture(&data, nullptr, &buffer)) {
+                TextureManager::Get()->GetTexture(filename, &buffer, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
+            }
+        });
+
         // register importers and exporters
         ImportExportManager::Get()->Register(new import_export::Wavefront_Obj);
         ImportExportManager::Get()->Register(new import_export::DDSC);
@@ -160,8 +167,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         });
 #endif
 
-#ifdef DEBUG
-        FileLoader::Get()->ReadShaderBundle("D:/Steam/steamapps/common/Just Cause 3/Shaders_F.shader_bundle");
+#if 0
+        auto adf = FileLoader::Get()->ReadAdf("D:/Steam/steamapps/common/Just Cause 3/Shaders_F.shader_bundle");
 #endif
 
         // run!

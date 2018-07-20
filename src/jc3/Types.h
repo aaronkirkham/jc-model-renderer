@@ -354,7 +354,7 @@ namespace JustCause3
             char const* m_Description;
         };
 
-        enum TypeDefinitionType : uint32_t
+        enum class TypeDefinitionType: uint32_t
         {
             Primitive = 0,
             Structure = 1,
@@ -362,23 +362,37 @@ namespace JustCause3
             Array = 3,
             InlineArray = 4,
             String = 5,
-            // 
             BitField = 7,
             Enumeration = 8,
             StringHash = 9,
         };
 
+        enum class TypeHashes : uint32_t
+        {
+            Int8 = 0x580D0A62,
+            UInt8 = 0xCA2821D,
+            Int16 = 0xD13FCF93,
+            UInt16 = 0x86D152BD,
+            Int32 = 0x192FE633,
+            UInt32 = 0x75E4E4F,
+            Int64 = 0xAF41354F,
+            UInt64 = 0xA139E01F,
+            Float = 0x7515A207,
+            Double = 0xC609F663,
+            String = 0x8955583E,
+        };
+
         static const char* TypeDefintionStr(TypeDefinitionType type) {
             switch (type) {
-            case Primitive: return "Primitive";
-            case Structure: return "Structure";
-            case Pointer: return "Pointer";
-            case Array: return "Array";
-            case InlineArray: return "InlineArray";
-            case String: return "String";
-            case BitField: return "BitField";
-            case Enumeration: return "Enumeration";
-            case StringHash: return "StringHash";
+            case TypeDefinitionType::Primitive: return "Primitive";
+            case TypeDefinitionType::Structure: return "Structure";
+            case TypeDefinitionType::Pointer: return "Pointer";
+            case TypeDefinitionType::Array: return "Array";
+            case TypeDefinitionType::InlineArray: return "InlineArray";
+            case TypeDefinitionType::String: return "String";
+            case TypeDefinitionType::BitField: return "BitField";
+            case TypeDefinitionType::Enumeration: return "Enumeration";
+            case TypeDefinitionType::StringHash: return "StringHash";
             }
 
             return "Unknown";
@@ -405,12 +419,5 @@ namespace JustCause3
             int64_t m_NameIndex;
         };
     }
-
-    struct ADFInstance
-    {
-        std::vector<std::string> m_Names;
-        std::vector<AvalancheDataFormat::TypeDefinition> m_Definitions;
-        std::vector<AvalancheDataFormat::InstanceInfo> m_InstanceInfos;
-    };
 };
 #pragma pack(pop)

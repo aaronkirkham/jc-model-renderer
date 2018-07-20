@@ -25,16 +25,7 @@ private:
 
     std::unordered_map<IRenderBlock*, glm::vec4> m_RenderBlockColours;
 
-    ConstantBuffer_t* m_MeshConstants = nullptr;
-
 public:
-    struct MeshConstants
-    {
-        glm::mat4 worldMatrix;
-        glm::mat4 worldViewInverseTranspose;
-        glm::vec4 colour;
-    };
-
     //RenderBlockModel(const fs::path& file);
     RenderBlockModel(const fs::path& filename);
     virtual ~RenderBlockModel();

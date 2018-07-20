@@ -144,33 +144,25 @@ bool Renderer::Render()
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
 
-    ID3D11ShaderResourceView* nullViews[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = { 0 };
+    ID3D11ShaderResourceView* nullViews[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = { nullptr };
     m_DeviceContext->PSSetShaderResources(0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, nullViews);
 
     // begin scene
     {
-        m_DeviceContext->ClearRenderTargetView(m_RenderTargetView, glm::value_ptr(m_ClearColour));
+        for (auto& render_target : m_RenderTargetView) {
+            if (render_target) {
+                m_DeviceContext->ClearRenderTargetView(render_target, glm::value_ptr(m_ClearColour));
+            }
+        }
+
         m_DeviceContext->ClearDepthStencilView(m_DepthStencilView, (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL), 1.0f, 0);
-    }
-
-    // lighting
-    {
-        LightConstants constants;
-        constants.position = Camera::Get()->GetPosition();//glm::vec3(0, 1, 0);
-        constants.direction = glm::vec3();
-        constants.diffuseColour = glm::vec4(1, 1, 1, 1);
-        //constants.lightDirection = glm::vec3(0.25f, -2.5f, -1.0f);
-        //constants.lightDirection = glm::vec3(0, 0, -1.0f);
-        //constants.padding = 0.0f;
-
-        // SetPixelShaderConstants(m_LightBuffers, 0, constants);
     }
 
     // Begin the 2d renderer
     DebugRenderer::Get()->Begin(&m_RenderContext);
 
     // update the camera
-    Camera::Get()->Update();
+    Camera::Get()->Update(&m_RenderContext);
 
     m_RenderEvents.RenderFrame(&m_RenderContext);
 
@@ -187,7 +179,6 @@ bool Renderer::Render()
     m_SwapChain->Present(1, 0);
     return true;
 }
-
 
 void Renderer::SetupRenderStates()
 {
@@ -255,20 +246,40 @@ void Renderer::SetCullMode(D3D11_CULL_MODE mode)
 
 void Renderer::CreateRenderTarget(const glm::vec2& size)
 {
-    // create render target back buffer
-    ID3D11Texture2D* back_buffer = nullptr;
-    auto result = m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back_buffer));
-    assert(SUCCEEDED(result));
+    // create back buffer render target
+    {
+        ID3D11Texture2D* back_buffer = nullptr;
+        auto result = m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back_buffer));
+        assert(SUCCEEDED(result));
 
-    result = m_Device->CreateRenderTargetView(back_buffer, nullptr, &m_RenderTargetView);
-    assert(SUCCEEDED(result));
+        result = m_Device->CreateRenderTargetView(back_buffer, nullptr, &m_RenderTargetView[0]);
+        assert(SUCCEEDED(result));
+
+        safe_release(back_buffer);
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-    D3D_SET_OBJECT_NAME_A(m_RenderTargetView, "Renderer::CreateRenderTarget");
+        D3D_SET_OBJECT_NAME_A(m_RenderTargetView[0], "Renderer Back Buffer");
 #endif
+    }
 
-    safe_release(back_buffer);
-    m_DeviceContext->OMSetRenderTargets(1, &m_RenderTargetView, m_DepthStencilView);
+    // create diffuse render target
+    {
+        const auto diffuseTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE));
+        assert(diffuseTex);
+
+        auto result = m_Device->CreateRenderTargetView(diffuseTex, nullptr, &m_RenderTargetView[1]);
+        assert(SUCCEEDED(result));
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        desc.Texture2D = { 0, static_cast<UINT>(-1) };
+        result = m_Device->CreateShaderResourceView(diffuseTex, &desc, &m_RenderTargetResourceView[0]);
+        assert(SUCCEEDED(result));
+    }
+
+    // set the render target
+    m_DeviceContext->OMSetRenderTargets(2, &m_RenderTargetView[0], nullptr);
 
     // create the viewport
     {
@@ -441,7 +452,14 @@ void Renderer::CreateRasterizerState()
 void Renderer::DestroyRenderTarget()
 {
     m_DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
-    safe_release(m_RenderTargetView);
+
+    for (auto& resource_view : m_RenderTargetResourceView) {
+        safe_release(resource_view);
+    }
+
+    for (auto& render_target : m_RenderTargetView) {
+        safe_release(render_target);
+    }
 }
 
 void Renderer::DestroyDepthStencil()

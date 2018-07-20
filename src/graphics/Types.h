@@ -13,6 +13,9 @@ struct RenderContext_t
     bool m_RasterIsDirty = true;
     bool m_BlendEnabled = true;
     D3D11_BLEND m_BlendMode;
+    glm::mat4 m_ProjectionMatrix;
+    glm::mat4 m_ViewMatrix;
+    glm::mat4 m_viewProjectionMatrix;
 };
 
 struct IBuffer_t

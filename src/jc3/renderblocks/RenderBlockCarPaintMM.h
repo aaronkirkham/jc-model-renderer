@@ -47,6 +47,7 @@ public:
 
     virtual void Create() override final
     {
+#if 0
         // load shaders
         m_VertexShader = GET_VERTEX_SHADER(car_paint_mm);
         m_PixelShader = GET_PIXEL_SHADER(car_paint_mm);
@@ -72,6 +73,7 @@ public:
             SamplerStateCreationParams_t params;
             m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCarPaintMM");
         }
+#endif
     }
 
     virtual void Read(std::istream& stream) override final

@@ -1,31 +1,4 @@
 {
-	'target_defaults': {
-		'conditions': [
-			['OS == "win"', {
-				'rules': [{
-					'variables': {
-						'inc_file': 'src/shaders/compiled/shaders.hpp',
-						'output_file': 'src/shaders/compiled/<(RULE_INPUT_ROOT)_hlsl_compiled.hpp',
-					},
-					'rule_name': 'compile_hlsl',
-					'extension': 'hlsl',
-					'outputs': [
-						'<(output_file)',
-					],
-					'action': [
-						'python',
-						'tools/compile_hlsl.py',
-						'--fxc', 'C:/Program Files (x86)/Windows Kits/10/bin/x64/fxc.exe',
-						'--input', '<(RULE_INPUT_PATH)',
-						'--output', '<(output_file)',
-						'--inc' ,'<(inc_file)',
-					],
-					'message': 'Generating shader from <(RULE_INPUT_PATH)',
-					'process_outputs_as_sources': 0,
-				}],
-			}],
-		],
-	},
 	'targets': [
 	{
 		'target_name': 'jc3-rbm-renderer',
@@ -66,13 +39,12 @@
 			'vendor/ksignals',
 			'vendor/json/src',
 			'vendor/glm/glm',
-			'vendor/httplib/',
+			'vendor/httplib',
 		],
 		'sources': [
 			'src/assets.rc',
 			'<!@pymod_do_main(glob-files src/**/*.cpp)',
 			'<!@pymod_do_main(glob-files src/**/*.h)',
-			'<!@pymod_do_main(glob-files src/shaders/**/*.hlsl)',
 		],
 	},
 	]

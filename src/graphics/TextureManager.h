@@ -24,8 +24,7 @@ private:
     std::thread m_WaitThread;
 
 public:
-    Texture() = default;
-    Texture(const fs::path& filename);
+    Texture(const fs::path& filename, bool load_from_dictionary = true);
     virtual ~Texture();
 
     bool LoadFromBuffer(const FileBuffer& buffer);
@@ -44,18 +43,30 @@ public:
 class TextureManager : public Singleton<TextureManager>
 {
 private:
+    std::recursive_mutex m_TexturesMutex;
     std::unordered_map<uint32_t, std::shared_ptr<Texture>> m_Textures;
     std::vector<uint32_t> m_LastUsedTextures;
     std::unique_ptr<Texture> m_MissingTexture;
+    std::vector<std::shared_ptr<Texture>> m_RenderingTextures;
 
 public:
+    enum TextureCreateFlags
+    {
+        NO_CREATE               = (1u << 0),
+        CREATE_IF_NOT_EXISTS    = (1u << 1),
+        IS_UI_RENDERABLE        = (1u << 2),
+    };
+
     TextureManager();
     virtual ~TextureManager() = default;
 
     void Shutdown();
 
-    const std::shared_ptr<Texture>& GetTexture(const fs::path& filename, bool create_if_not_exists = true);
+    std::shared_ptr<Texture> GetTexture(const fs::path& filename, uint8_t flags = CREATE_IF_NOT_EXISTS);
+    std::shared_ptr<Texture> GetTexture(const fs::path& filename, FileBuffer* buffer, uint8_t flags = CREATE_IF_NOT_EXISTS);
+
     void Flush();
+    void Delete(std::shared_ptr<Texture> texture);
     void Empty();
 
     static DDS_PIXELFORMAT GetPixelFormat(DXGI_FORMAT format);
