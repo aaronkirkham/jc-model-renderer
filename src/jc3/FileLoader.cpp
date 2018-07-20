@@ -223,6 +223,7 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback, u
 
     // should we use file batching?
     if (m_UseBatches) {
+        DEBUG_LOG("FileLoader::ReadFile - Using batches for \"" << filename << "\"");
         return ReadFileBatched(filename, callback);
     }
 

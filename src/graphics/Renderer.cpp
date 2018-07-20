@@ -94,6 +94,7 @@ bool Renderer::Initialise(const HWND& hwnd)
     SetupImGuiStyle();
 
     // setup the render context
+    m_RenderContext.m_Renderer = this;
     m_RenderContext.m_Device = m_Device;
     m_RenderContext.m_DeviceContext = m_DeviceContext;
 
@@ -279,7 +280,7 @@ void Renderer::CreateRenderTarget(const glm::vec2& size)
     }
 
     // set the render target
-    m_DeviceContext->OMSetRenderTargets(2, &m_RenderTargetView[0], nullptr);
+    m_DeviceContext->OMSetRenderTargets(2, &m_RenderTargetView[0], m_DepthStencilView);
 
     // create the viewport
     {

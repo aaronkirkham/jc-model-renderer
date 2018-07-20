@@ -12,37 +12,78 @@ Texture::Texture(const fs::path& filename, bool load_from_dictionary)
     : m_Filename(filename)
 {
     if (load_from_dictionary) {
+        DEBUG_LOG("Loading texture " << filename << "...");
+
+        std::stringstream status_text;
+        status_text << "Loading texture \"" << m_Filename << "\"...";
+        const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
+
         if (m_Filename.extension() == ".ddsc") {
-            FileLoader::Get()->ReadFile(filename, [this](bool success, FileBuffer data) {
+            // load the DDSC file
+            FileLoader::Get()->ReadFile(filename, [this, status_text_id](bool success, FileBuffer data) {
                 DEBUG_LOG("Texture::Texture READFILE -> Finished reading DDSC buffer.");
 
-                // TODO: only if success
-                // TODO: what about if we load custom textures from disk??
+                // TODO: support for loading textures from disk
+
+                m_IsTryingDDSC = false;
 
                 if (success) {
                     m_DDSCBuffer = std::move(data);
                     m_HasDDSC = true;
-                }
 
-                m_IsTryingDDSC = false;
+                    // initially set the DDSC texture so we are not waiting for HMDDSC
+                    FileBuffer out;
+                    if (FileLoader::Get()->ReadCompressedTexture(&m_DDSCBuffer, nullptr, &out)) {
+                        auto res = LoadFromBuffer(out);
+                        UI::Get()->PopStatusText(status_text_id);
+                    }
+                }
             }, NO_TEX_CACHE);
 
+#if 0
             // try the HMDDSC file
-
-            auto hmddsc_filename = m_Filename.replace_extension(".hmddsc");
+            auto hmddsc_filename = m_Filename;
+            hmddsc_filename.replace_extension(".hmddsc");
             m_IsTryingHMDDSC = true;
 
-            FileLoader::Get()->ReadFile(hmddsc_filename, [this](bool success, FileBuffer data) {
-                DEBUG_LOG("Texture::Texture READFILE -> Finished reading HMDDSC buffer.");
+            FileLoader::Get()->ReadFile(hmddsc_filename, [this, hmddsc_filename](bool success, FileBuffer data) {
+                DEBUG_LOG("Texture::Texture READFILE -> Finished reading HMDDSC buffer for " << hmddsc_filename);
+
+                m_IsTryingHMDDSC = false;
 
                 if (success) {
                     m_HMDDSCBuffer = std::move(data);
                     m_HasHMDDSC = true;
+
+                    DEBUG_LOG("Texture::Texture REAFILE -> Has valid HMDDSC buffer, launching thread now...");
+
+                    __debugbreak();
+
+                    // launch thread to wait to make sure the DDSC buffer is ready
+                    // just incase somehow the HMDDSC read is finished before the DDSC
+#if 0
+                    std::thread([&] {
+                        while (true) {
+                            // ddsc finished loading
+                            if (!m_IsTryingDDSC) {
+                                // ddsc finished and was a success
+                                if (m_HasDDSC) {
+                                    DEBUG_LOG("HMDDSC read finished and the DDSC buffer is available.");
+
+                                    // TODO: load new texture, replace m_Filename with HMDDSC variant
+                                }
+                                break;
+                            }
+
+                            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                        }
+                    });
+#endif
                 }
-
-                m_IsTryingHMDDSC = false;
             }, NO_TEX_CACHE);
+#endif
 
+#if 0
             // launch the wait thread
             m_WaitThread = std::thread([this] {
                 std::stringstream status_text;
@@ -58,7 +99,6 @@ Texture::Texture(const fs::path& filename, bool load_from_dictionary)
                         if (m_HasDDSC) {
                             FileBuffer out;
                             if (FileLoader::Get()->ReadCompressedTexture(&m_DDSCBuffer, (m_HasHMDDSC ? &m_HMDDSCBuffer : nullptr), &out)) {
-
                                 DEBUG_LOG("Texture::Texture (" << m_Filename.string() << ") -> finished parsing compressed texture.");
                                 DEBUG_LOG(" -> Has DDSC source ? " << (m_HasDDSC ? "yes" : "no"));
                                 DEBUG_LOG(" -> Has HMDDSC source ? " << (m_HasHMDDSC ? "yes" : "no"));
@@ -78,13 +118,14 @@ Texture::Texture(const fs::path& filename, bool load_from_dictionary)
             });
 
             m_WaitThread.detach();
+#endif
         }
     }
 }
 
 Texture::~Texture()
 {
-    DEBUG_LOG("Deleting texture '" << m_Filename.filename().string() << "'...");
+    DEBUG_LOG("Texture::~Texture - Deleting texture '" << m_Filename.filename().string() << "'...");
 
     safe_release(m_SRV);
     safe_release(m_Texture);
@@ -95,6 +136,12 @@ bool Texture::LoadFromBuffer(const FileBuffer& buffer)
     if (buffer.empty()) {
         return false;
     }
+
+#ifdef DEBUG
+    if (m_SRV || m_Texture) {
+        DEBUG_LOG("Texture::LoadFromBuffer - Deleting texture placeholder '" << m_Filename.filename().string() << "'...");
+    }
+#endif
 
     safe_release(m_SRV);
     safe_release(m_Texture);
@@ -148,8 +195,15 @@ void Texture::Use(uint32_t slot)
 
 TextureManager::TextureManager()
 {
-    m_MissingTexture = std::make_unique<Texture>("missing-texture.dds");
-    m_MissingTexture->LoadFromFile("E:/jc3-rbm-renderer/assets/missing-texture.dds");
+    m_MissingTexture = std::make_unique<Texture>("missing-texture.dds", false);
+    m_MissingTexture->LoadFromFile("../assets/missing-texture.dds");
+
+#if 0
+    auto texture = std::make_shared<Texture>("textures/dummies/dummy_white.ddsc", false);
+    texture->LoadFromFile("../assets/dummy_white.dds");
+    auto key = fnv_1_32::hash("dummy_white", strlen("dummy_white"));
+    m_Textures[key] = std::move(texture);
+#endif
 
     Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
         const auto& window_size = Window::Get()->GetSize();

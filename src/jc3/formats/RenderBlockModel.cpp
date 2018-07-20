@@ -144,8 +144,6 @@ end:
 
 void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuffer& data)
 {
-    //std::istringstream stream(std::string{ (char*)data.data(), data.size() });
-
     auto rbm = new RenderBlockModel(filename);
     if (!rbm->Parse(data)) {
         Window::Get()->ShowMessageBox(rbm->GetError());
@@ -170,7 +168,7 @@ void RenderBlockModel::Draw(RenderContext_t* context)
 
     // draw all render blocks
     for (auto& renderBlock : m_RenderBlocks) {
-        Renderer::Get()->SetDefaultRenderStates();
+        context->m_Renderer->SetDefaultRenderStates();
 
         renderBlock->Setup(context);
         renderBlock->Draw(context);
@@ -193,25 +191,4 @@ void RenderBlockModel::Draw(RenderContext_t* context)
         bool is_hover = false;
         DebugRenderer::Get()->DrawBBox(_min, _max, is_hover ? green : red);
     }
-}
-
-void RenderBlockModel::SetRenderBlockColour(IRenderBlock* block, const glm::vec4& colour)
-{
-    auto it = m_RenderBlockColours.find(block);
-    if (it != std::end(m_RenderBlockColours)) {
-        (*it).second = colour;
-        return;
-    }
-
-    m_RenderBlockColours[block] = colour;
-}
-
-const glm::vec4& RenderBlockModel::GetRenderBlockColour(IRenderBlock* block) const
-{
-    auto it = m_RenderBlockColours.find(block);
-    if (it == std::end(m_RenderBlockColours)) {
-        return g_RenderBlockColour;
-    }
-
-    return (*it).second;
 }

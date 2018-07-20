@@ -106,8 +106,6 @@ void Camera::Update(RenderContext_t* context)
     m_ViewProjection = (m_Projection * m_View);
 
     // update the render context
-    context->m_ProjectionMatrix = m_Projection;
-    context->m_ViewMatrix = m_View;
     context->m_viewProjectionMatrix = m_ViewProjection;
 }
 

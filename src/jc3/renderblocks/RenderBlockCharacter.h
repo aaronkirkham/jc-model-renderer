@@ -29,7 +29,7 @@ private:
         glm::mat4 world;
         glm::mat4 worldViewProjection;
         glm::vec4 scale;
-        // glm::mat3x4 data[70];
+        glm::mat3x4 palette[70];
     } m_cbLocalConstants;
 
     JustCause3::RenderBlocks::Character m_Block;
@@ -38,7 +38,7 @@ private:
 
     int64_t GetStride() const
     {
-        static int32_t strides[] = { 0x18, 0x1C, 0x20, 0x20, 0x24, 0x28 };
+        static const int32_t strides[] = { 0x18, 0x1C, 0x20, 0x20, 0x24, 0x28 };
         return strides[3 * ((m_Block.attributes.flags >> 1) & 1) + ((m_Block.attributes.flags >> 5) & 1) + ((m_Block.attributes.flags >> 4) & 1)];
     }
 
@@ -68,7 +68,7 @@ public:
             };
 
             // create the vertex declaration
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacter Stride 0x18");
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacter (Stride 0x18)");
         }
         else {
             __debugbreak();
@@ -77,13 +77,18 @@ public:
         // create the constant buffer
         m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_cbLocalConstants, "RenderBlockCharacter cbLocalConstants");
 
+        // identity the palette data
+        for (int i = 0; i < 70; ++i) {
+            m_cbLocalConstants.palette[i] = glm::mat3x4(1);
+        }
+
         // create the sampler states
         {
             SamplerStateCreationParams_t params;
             params.m_AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
             params.m_AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
             params.m_AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.m_MinMip = 12.0f;
+            params.m_MinMip = 0.0f;
             params.m_MaxMip = 13.0f;
 
             m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCharacter");
@@ -103,6 +108,11 @@ public:
 
         // get the vertices stride
         m_Stride = GetStride();
+
+#ifdef DEBUG
+        int game_using_vertex_decl = 3 * ((m_Block.attributes.flags >> 1) & 1) + ((m_Block.attributes.flags >> 4) & 1) + ((m_Block.attributes.flags >> 5) & 1);
+        game_using_vertex_decl = game_using_vertex_decl;
+#endif
 
         // read vertex data
         if (m_Stride == 0x18) {
@@ -140,7 +150,7 @@ public:
 
             // set vertex shader constants
             m_cbLocalConstants.world = world;
-            m_cbLocalConstants.worldViewProjection = context->m_ProjectionMatrix * context->m_ViewMatrix * world;
+            m_cbLocalConstants.worldViewProjection = world * context->m_viewProjectionMatrix;
             m_cbLocalConstants.scale = glm::vec4(scale, 0, 0, 0);
         }
 
@@ -150,10 +160,10 @@ public:
         context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
 
         // set the constant buffers
-        Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 1, m_cbLocalConstants);
-        // Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        context->m_Renderer->SetVertexShaderConstants(m_ConstantBuffer, 1, m_cbLocalConstants);
+        // context->m_Renderer->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
 
-        Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
     }
 
     virtual void Draw(RenderContext_t* context) override final

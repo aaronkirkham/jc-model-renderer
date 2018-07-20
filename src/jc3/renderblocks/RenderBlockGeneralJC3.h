@@ -75,7 +75,7 @@ private:
     std::array<ConstantBuffer_t*, 2> m_VertexShaderConstants = { nullptr };
     std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = { nullptr };
     SamplerState_t* m_SamplerStateNormalMap = nullptr;
-    std::array<VertexDeclaration_t*, 2> m_VertexDeclaration = { nullptr };
+    VertexDeclaration_t* m_VertexDeclaration = nullptr;
 
 public:
     RenderBlockGeneralJC3() = default;
@@ -84,8 +84,7 @@ public:
         OutputDebugStringA("~RenderBlockGeneralJC3\n");
 
         Renderer::Get()->DestroyBuffer(m_VertexBufferData);
-        Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration[0]);
-        Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration[1]);
+        Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
         Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[0]);
         Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[1]);
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
@@ -109,7 +108,7 @@ public:
                 { "TEXCOORD",   1,  DXGI_FORMAT_R32G32B32_FLOAT,        0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
             };
 
-            m_VertexDeclaration[0] = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockGeneralJC3");
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockGeneralJC3 (Unpacked vertices)");
         }
         else {
             D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
@@ -118,7 +117,7 @@ public:
                 { "TEXCOORD",   1,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
             };
 
-            m_VertexDeclaration[1] = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockGeneralJC3");
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockGeneralJC3 (Packed vertices)");
         }
 
         // create the constant buffer
@@ -196,7 +195,7 @@ public:
             // set vertex shader constants
             m_cbVertexInstanceConsts.viewProjection = context->m_viewProjectionMatrix;
             m_cbVertexInstanceConsts.world = world;
-            m_cbVertexInstanceConsts.colour = glm::vec4(0, 0, 0, 1);
+            m_cbVertexInstanceConsts.colour = glm::vec4(1, 1, 1, 1);
             m_cbVertexInstanceConsts._thing = glm::vec4(0, 1, 2, 1);
             m_cbVertexMaterialConsts.data = { m_Block.attributes.depthBias, m_Block.attributes._unknown3, 0, 0 };
             m_cbVertexMaterialConsts.uv0Extent = m_Block.attributes.packed.uv0Extent;
@@ -211,16 +210,18 @@ public:
         }
 
         // set the input layout
-        context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration[(!(m_Block.attributes.flags & 1))]->m_Layout);
+        context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
 
         // set the constant buffers
-        Renderer::Get()->SetVertexShaderConstants(m_VertexShaderConstants[0], 1, m_cbVertexInstanceConsts);
-        Renderer::Get()->SetVertexShaderConstants(m_VertexShaderConstants[1], 2, m_cbVertexMaterialConsts);
-        Renderer::Get()->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbFragmentMaterialConsts);
-        Renderer::Get()->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbFragmentInstanceConsts);
+        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 1, m_cbVertexInstanceConsts);
+        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[1], 2, m_cbVertexMaterialConsts);
+        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbFragmentMaterialConsts);
+        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbFragmentInstanceConsts);
 
         // set the culling mode
-        Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+
+        // TODO: Upacked vertices condition
 
         // set the 2nd vertex buffers
         uint32_t offset = 0;
@@ -236,6 +237,7 @@ public:
 
     virtual void DrawUI() override final
     {
+        ImGui::SliderFloat("Scale", &m_Block.attributes.packed.scale, 0.1f, 10.0f);
         ImGui::SliderFloat("Depth Bias", &m_Block.attributes.depthBias, 0.0f, 10.0f);
         ImGui::SliderFloat("Specular Gloss", &m_Block.attributes.specularGloss, 0.0f, 10.0f);
         ImGui::SliderFloat("Reflectivity", &m_Block.attributes.reflectivity, 0.0f, 10.0f);

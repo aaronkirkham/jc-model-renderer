@@ -23,8 +23,6 @@ private:
     glm::vec3 m_BoundingBoxMin;
     glm::vec3 m_BoundingBoxMax;
 
-    std::unordered_map<IRenderBlock*, glm::vec4> m_RenderBlockColours;
-
 public:
     //RenderBlockModel(const fs::path& file);
     RenderBlockModel(const fs::path& filename);
@@ -51,9 +49,6 @@ public:
 
     void SetScale(const glm::vec3& scale) { m_Scale = scale; }
     const glm::vec3& GetScale() const { return m_Scale; }
-
-    void SetRenderBlockColour(IRenderBlock* block, const glm::vec4& colour);
-    const glm::vec4& GetRenderBlockColour(IRenderBlock* block) const;
 
     std::tuple<glm::vec3, glm::vec3> GetBoundingBox() { return { m_BoundingBoxMin, m_BoundingBoxMax }; }
 
