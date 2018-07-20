@@ -82,15 +82,19 @@ parser.add_option('--builddir',
 (options, args) = parser.parse_args()
 
 def GetMSBuildPath():
-    aReg = ConnectRegistry(None,HKEY_LOCAL_MACHINE)
-
-    aKey = OpenKey(aReg, r"SOFTWARE\Microsoft\MSBuild\ToolsVersions\14.0")
-    try:
-        val=QueryValueEx(aKey, "MSBuildToolsPath")[0] + "MSBuild.exe"
-        return val
-    except EnvironmentError:
-        print "Unable to find msbuild"
-        return ""
+  msvc = LocateMSVC()
+  if msvc == None:
+    error("Unable to locate MSVC")
+		
+  msbuild = msvc + r"\MSBuild\15.0\Bin\MSBuild.exe"
+  return msbuild
+			
+def LocateMSVC():
+  result = execute_stdout(r"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe").splitlines()
+  for line in result:
+    if line.startswith("installationPath"):
+      path = line.split(": ")
+      return path[1]
 
 def execute(argv, env=os.environ):
   try:

@@ -102,9 +102,10 @@ def read_entry_from_tab_header(filename, abs_filepath):
     except:
       pass
 
-  # stats
-  #percentage_found = Decimal(str(100 * (found_hashes / total_hashes))).to_integral()
-  #FILELIST[directory][archive_name]["0"] = "%s/%s %s%%" % (found_hashes, total_hashes, percentage_found)
+  # show archives with missing hints
+  if (found_hashes != total_hashes):
+    percentage_found = Decimal(str(100 * (found_hashes / total_hashes))).to_integral()
+    print("%s/%s: %s/%s %s%%" % (directory, archive_name, found_hashes, total_hashes, percentage_found))
 
 # find the tab files
 for directory in os.listdir(JC3_DIRECTORY):
