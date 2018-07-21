@@ -759,7 +759,6 @@
       ['OS=="win"', {
         'defines': [
           'WIN32',
-          'WIN32_LEAN_AND_MEAN',
         ],
          'msvs_settings': {
           'VCLinkerTool': {
