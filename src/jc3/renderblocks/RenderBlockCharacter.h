@@ -8,7 +8,16 @@ struct CharacterAttributes
 {
     uint32_t flags;
     float scale;
-    char pad[0x64];
+    char pad[0x14];
+    float specularGloss;
+    float transmission;
+    float specularFresnel;
+    float diffuseRoughness;
+    float diffuseWrap;
+    float _unknown;
+    float dirtFactor;
+    float emissive;
+    char pad2[0x30];
 };
 
 namespace JustCause3::RenderBlocks
@@ -24,16 +33,29 @@ namespace JustCause3::RenderBlocks
 class RenderBlockCharacter : public IRenderBlock
 {
 private:
-    struct cbLocalConstants
+    struct cbLocalConsts
     {
         glm::mat4 world;
         glm::mat4 worldViewProjection;
         glm::vec4 scale;
         glm::mat3x4 palette[70];
-    } m_cbLocalConstants;
+    } m_cbLocalConsts;
+
+    struct cbInstanceConsts
+    {
+        glm::vec4 colour;
+        glm::vec4 colour2;
+        glm::vec4 _unknown;
+    } m_cbInstanceConsts;
+
+    struct cbMaterialConsts
+    {
+        glm::vec4 unknown[10];
+    } m_cbMaterialConsts;
 
     JustCause3::RenderBlocks::Character m_Block;
-    ConstantBuffer_t* m_ConstantBuffer = nullptr;
+    ConstantBuffer_t* m_VertexShaderConstants = nullptr;
+    std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = { nullptr };
     int64_t m_Stride = 0;
 
     int64_t GetStride() const
@@ -46,7 +68,9 @@ public:
     RenderBlockCharacter() = default;
     virtual ~RenderBlockCharacter()
     {
-        Renderer::Get()->DestroyBuffer(m_ConstantBuffer);
+        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants);
+        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
+        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[1]);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockCharacter"; }
@@ -56,7 +80,7 @@ public:
         if (m_Stride == 0x18) {
             // load shaders
             m_VertexShader = ShaderManager::Get()->GetVertexShader("character");
-            m_PixelShader = ShaderManager::Get()->GetPixelShader("_DEBUG");
+            m_PixelShader = ShaderManager::Get()->GetPixelShader("character");
 
             // create the element input desc
             D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
@@ -75,11 +99,14 @@ public:
         }
 
         // create the constant buffer
-        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_cbLocalConstants, "RenderBlockCharacter cbLocalConstants");
+        m_VertexShaderConstants = Renderer::Get()->CreateConstantBuffer(m_cbLocalConsts, "RenderBlockCharacter cbLocalConsts");
+        m_FragmentShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockCharacter cbInstanceConsts");
+        m_FragmentShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockCharacter cbMaterialConsts");
+
 
         // identity the palette data
         for (int i = 0; i < 70; ++i) {
-            m_cbLocalConstants.palette[i] = glm::mat3x4(1);
+            m_cbLocalConsts.palette[i] = glm::mat3x4(1);
         }
 
         // create the sampler states
@@ -149,9 +176,14 @@ public:
             auto world = glm::mat4(1);
 
             // set vertex shader constants
-            m_cbLocalConstants.world = world;
-            m_cbLocalConstants.worldViewProjection = world * context->m_viewProjectionMatrix;
-            m_cbLocalConstants.scale = glm::vec4(scale, 0, 0, 0);
+            m_cbLocalConsts.world = world;
+            m_cbLocalConsts.worldViewProjection = world * context->m_viewProjectionMatrix;
+            m_cbLocalConsts.scale = glm::vec4(scale, 0, 0, 0);
+
+            // set fragment shader constants
+            m_cbInstanceConsts.colour = glm::vec4(1, 1, 1, 1); // these values are weird.
+            m_cbInstanceConsts.colour2 = glm::vec4(0, 0, 0, 1); // these values are weird.
+            m_cbMaterialConsts;
         }
 
         // TODO: conditions for different vertex layouts
@@ -160,8 +192,9 @@ public:
         context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
 
         // set the constant buffers
-        context->m_Renderer->SetVertexShaderConstants(m_ConstantBuffer, 1, m_cbLocalConstants);
-        // context->m_Renderer->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbLocalConsts);
+        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbInstanceConsts);
+        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts);
 
         context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
     }

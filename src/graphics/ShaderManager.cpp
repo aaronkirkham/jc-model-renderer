@@ -27,7 +27,9 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
     // read
     std::ifstream stream(file.str(), std::ios::binary | std::ios::ate);
     if (stream.fail()) {
-        throw std::runtime_error("ShaderManager - Failed to open shader!");
+        DEBUG_LOG("ShaderManager::GetVertexShader - couldn't open \"" << file.str() << "\".");
+        Window::Get()->ShowMessageBox("Couldn't open shader.", MB_ICONERROR | MB_OK);
+        return nullptr;
     }
 
     // resize
@@ -77,7 +79,9 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
     // read
     std::ifstream stream(file.str(), std::ios::binary | std::ios::ate);
     if (stream.fail()) {
-        throw std::runtime_error("ShaderManager - Failed to open shader!");
+        DEBUG_LOG("ShaderManager::GetPixelShader - couldn't open \"" << file.str() << "\".");
+        Window::Get()->ShowMessageBox("Couldn't open shader.", MB_ICONERROR | MB_OK);
+        return nullptr;
     }
 
     // resize

@@ -12,78 +12,37 @@ Texture::Texture(const fs::path& filename, bool load_from_dictionary)
     : m_Filename(filename)
 {
     if (load_from_dictionary) {
-        DEBUG_LOG("Loading texture " << filename << "...");
-
-        std::stringstream status_text;
-        status_text << "Loading texture \"" << m_Filename << "\"...";
-        const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
-
         if (m_Filename.extension() == ".ddsc") {
-            // load the DDSC file
-            FileLoader::Get()->ReadFile(filename, [this, status_text_id](bool success, FileBuffer data) {
+            FileLoader::Get()->ReadFile(filename, [this](bool success, FileBuffer data) {
                 DEBUG_LOG("Texture::Texture READFILE -> Finished reading DDSC buffer.");
 
-                // TODO: support for loading textures from disk
-
-                m_IsTryingDDSC = false;
+                // TODO: only if success
+                // TODO: what about if we load custom textures from disk??
 
                 if (success) {
                     m_DDSCBuffer = std::move(data);
                     m_HasDDSC = true;
-
-                    // initially set the DDSC texture so we are not waiting for HMDDSC
-                    FileBuffer out;
-                    if (FileLoader::Get()->ReadCompressedTexture(&m_DDSCBuffer, nullptr, &out)) {
-                        auto res = LoadFromBuffer(out);
-                        UI::Get()->PopStatusText(status_text_id);
-                    }
                 }
+
+                m_IsTryingDDSC = false;
             }, NO_TEX_CACHE);
 
-#if 0
             // try the HMDDSC file
-            auto hmddsc_filename = m_Filename;
-            hmddsc_filename.replace_extension(".hmddsc");
+
+            auto hmddsc_filename = m_Filename.replace_extension(".hmddsc");
             m_IsTryingHMDDSC = true;
 
-            FileLoader::Get()->ReadFile(hmddsc_filename, [this, hmddsc_filename](bool success, FileBuffer data) {
-                DEBUG_LOG("Texture::Texture READFILE -> Finished reading HMDDSC buffer for " << hmddsc_filename);
-
-                m_IsTryingHMDDSC = false;
+            FileLoader::Get()->ReadFile(hmddsc_filename, [this](bool success, FileBuffer data) {
+                DEBUG_LOG("Texture::Texture READFILE -> Finished reading HMDDSC buffer.");
 
                 if (success) {
                     m_HMDDSCBuffer = std::move(data);
                     m_HasHMDDSC = true;
-
-                    DEBUG_LOG("Texture::Texture REAFILE -> Has valid HMDDSC buffer, launching thread now...");
-
-                    __debugbreak();
-
-                    // launch thread to wait to make sure the DDSC buffer is ready
-                    // just incase somehow the HMDDSC read is finished before the DDSC
-#if 0
-                    std::thread([&] {
-                        while (true) {
-                            // ddsc finished loading
-                            if (!m_IsTryingDDSC) {
-                                // ddsc finished and was a success
-                                if (m_HasDDSC) {
-                                    DEBUG_LOG("HMDDSC read finished and the DDSC buffer is available.");
-
-                                    // TODO: load new texture, replace m_Filename with HMDDSC variant
-                                }
-                                break;
-                            }
-
-                            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                        }
-                    });
-#endif
                 }
-            }, NO_TEX_CACHE);
-#endif
 
-#if 0
+                m_IsTryingHMDDSC = false;
+            }, NO_TEX_CACHE);
+
             // launch the wait thread
             m_WaitThread = std::thread([this] {
                 std::stringstream status_text;
@@ -99,6 +58,7 @@ Texture::Texture(const fs::path& filename, bool load_from_dictionary)
                         if (m_HasDDSC) {
                             FileBuffer out;
                             if (FileLoader::Get()->ReadCompressedTexture(&m_DDSCBuffer, (m_HasHMDDSC ? &m_HMDDSCBuffer : nullptr), &out)) {
+
                                 DEBUG_LOG("Texture::Texture (" << m_Filename.string() << ") -> finished parsing compressed texture.");
                                 DEBUG_LOG(" -> Has DDSC source ? " << (m_HasDDSC ? "yes" : "no"));
                                 DEBUG_LOG(" -> Has HMDDSC source ? " << (m_HasHMDDSC ? "yes" : "no"));
@@ -118,7 +78,6 @@ Texture::Texture(const fs::path& filename, bool load_from_dictionary)
             });
 
             m_WaitThread.detach();
-#endif
         }
     }
 }
