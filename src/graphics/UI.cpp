@@ -7,6 +7,7 @@
 
 #include <fonts/fontawesome_icons.h>
 #include <graphics/imgui/imgui_rotate.h>
+#include <graphics/imgui/imgui_tabscrollcontent.h>
 #include <graphics/Camera.h>
 
 #include <jc3/FileLoader.h>
@@ -292,12 +293,13 @@ void UI::RenderFileTreeView()
         ImGui::BeginTabBar("Directory List Tabs", ImGuiTabBarFlags_NoReorder);
         {
             // file explorer tab
-            if (ImGui::TabItem("File Explorer")) {
+            if (ImGuiCustom::TabItemScroll("File Explorer")) {
                 RenderDirectoryList(FileLoader::Get()->GetDirectoryList()->GetStructure());
+                ImGuiCustom::EndTabItemScroll();
             }
 
             // render blocks
-            if (draw_render_blocks_ui && ImGui::TabItem("Models")) {
+            if (draw_render_blocks_ui && ImGuiCustom::TabItemScroll("Models")) {
                 uint32_t model_index = 0;
                 for (auto& model : models) {
                     uint32_t render_block_index = 0;
@@ -403,6 +405,8 @@ void UI::RenderFileTreeView()
 
                     ++model_index;
                 }
+
+                ImGuiCustom::EndTabItemScroll();
             }
 
             // current archive tab
@@ -410,7 +414,7 @@ void UI::RenderFileTreeView()
                 std::stringstream title;
                 title << ICON_FA_FOLDER_OPEN << "  " << g_CurrentLoadedArchive->GetStreamArchive()->m_Filename.filename().string().c_str();
 
-                const auto tab_is_open = ImGui::TabItem(title.str().c_str());
+                const auto tab_is_open = ImGuiCustom::TabItemScroll(title.str().c_str());
 
                 // render the tab context menu
                 ImGui::PushID("archive-tab-ctx-menu");
@@ -429,6 +433,7 @@ void UI::RenderFileTreeView()
                 // draw the directory list
                 if (tab_is_open && g_CurrentLoadedArchive) {
                     RenderDirectoryList(g_CurrentLoadedArchive->GetDirectoryList()->GetStructure());
+                    ImGuiCustom::EndTabItemScroll();
                 }
             }
         }
@@ -439,9 +444,9 @@ void UI::RenderFileTreeView()
 
 void UI::RenderSpinner(const std::string& str)
 {
-    ImRotateStart();
+    ImGuiCustom::ImRotateStart();
     ImGui::Text(ICON_FA_SPINNER);
-    ImRotateEnd(-0.005f * GetTickCount());
+    ImGuiCustom::ImRotateEnd(-0.005f * GetTickCount());
 
     ImGui::SameLine();
     ImGui::Text(str.c_str());
