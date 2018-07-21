@@ -263,19 +263,19 @@ void Renderer::CreateRenderTarget(const glm::vec2& size)
 #endif
     }
 
-    // create diffuse render target
+    // create normals render target
     {
-        const auto diffuseTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE));
-        assert(diffuseTex);
+        auto normalsTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE));
+        assert(normalsTex);
 
-        auto result = m_Device->CreateRenderTargetView(diffuseTex, nullptr, &m_RenderTargetView[1]);
+        auto result = m_Device->CreateRenderTargetView(normalsTex, nullptr, &m_RenderTargetView[1]);
         assert(SUCCEEDED(result));
 
         D3D11_SHADER_RESOURCE_VIEW_DESC desc;
         desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
         desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         desc.Texture2D = { 0, static_cast<UINT>(-1) };
-        result = m_Device->CreateShaderResourceView(diffuseTex, &desc, &m_RenderTargetResourceView[0]);
+        result = m_Device->CreateShaderResourceView(normalsTex, &desc, &m_RenderTargetResourceView[0]);
         assert(SUCCEEDED(result));
     }
 

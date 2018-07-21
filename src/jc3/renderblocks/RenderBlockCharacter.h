@@ -43,9 +43,9 @@ private:
 
     struct cbInstanceConsts
     {
-        glm::vec4 colour;
-        glm::vec4 colour2;
-        glm::vec4 _unknown;
+        glm::vec4 _unknown = glm::vec4(0);
+        glm::vec4 diffuseColour = glm::vec4(0, 0, 0, 1);
+        glm::vec4 _unknown2 = glm::vec4(0); // .w is some kind of snow factor???
     } m_cbInstanceConsts;
 
     struct cbMaterialConsts
@@ -103,11 +103,13 @@ public:
         m_FragmentShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockCharacter cbInstanceConsts");
         m_FragmentShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockCharacter cbMaterialConsts");
 
-
         // identity the palette data
         for (int i = 0; i < 70; ++i) {
             m_cbLocalConsts.palette[i] = glm::mat3x4(1);
         }
+
+        // reset fragment shader material consts
+        memset(&m_cbMaterialConsts, 0, sizeof(m_cbMaterialConsts));
 
         // create the sampler states
         {
@@ -168,6 +170,8 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
+        if (!m_Visible) return;
+
         IRenderBlock::Setup(context);
 
         // setup the constant buffer
@@ -181,9 +185,7 @@ public:
             m_cbLocalConsts.scale = glm::vec4(scale, 0, 0, 0);
 
             // set fragment shader constants
-            m_cbInstanceConsts.colour = glm::vec4(1, 1, 1, 1); // these values are weird.
-            m_cbInstanceConsts.colour2 = glm::vec4(0, 0, 0, 1); // these values are weird.
-            m_cbMaterialConsts;
+            //
         }
 
         // TODO: conditions for different vertex layouts
@@ -201,11 +203,17 @@ public:
 
     virtual void Draw(RenderContext_t* context) override final
     {
+        if (!m_Visible) return;
+
         DrawSkinBatches(context);
     }
 
     virtual void DrawUI() override final
     {
         ImGui::SliderFloat("Scale", &m_Block.attributes.scale, 0.1f, 10.0f);
+
+        ImGui::SliderFloat4("Unknown #1", glm::value_ptr(m_cbInstanceConsts._unknown), 0, 1);
+        ImGui::SliderFloat4("Diffuse Colour", glm::value_ptr(m_cbInstanceConsts.diffuseColour), 0, 1);
+        ImGui::SliderFloat4("Unknown #2", glm::value_ptr(m_cbInstanceConsts._unknown2), 0, 1);
     }
 };

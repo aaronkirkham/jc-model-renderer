@@ -9,6 +9,8 @@
 class IRenderBlock
 {
 protected:
+    bool m_Visible = true;
+
     VertexBuffer_t* m_VertexBuffer = nullptr;
     IndexBuffer_t* m_IndexBuffer = nullptr;
     std::shared_ptr<VertexShader_t> m_VertexShader = nullptr;
@@ -42,6 +44,8 @@ public:
 
     virtual const char* GetTypeName() = 0;
 
+    virtual void SetVisibility(bool visible) { m_Visible = visible; }
+    virtual bool GetVisibility() { return m_Visible; }
     virtual VertexBuffer_t* GetVertexBuffer() { return m_VertexBuffer; }
     virtual IndexBuffer_t* GetIndexBuffer() { return m_IndexBuffer; }
     virtual const std::vector<std::shared_ptr<Texture>>& GetTextures() { return m_Textures; }
@@ -54,6 +58,8 @@ public:
 
     virtual void Setup(RenderContext_t* context)
     {
+        if (!m_Visible) return;
+
         assert(m_VertexShader);
         assert(m_PixelShader);
 
@@ -84,6 +90,8 @@ public:
 
     virtual void Draw(RenderContext_t* context)
     {
+        if (!m_Visible) return;
+
         if (m_IndexBuffer) {
             Renderer::Get()->DrawIndexed(0, m_IndexBuffer->m_ElementCount, m_IndexBuffer);
         }
@@ -173,7 +181,9 @@ public:
 
     void DrawSkinBatches(RenderContext_t* context)
     {
-        for (auto& batch : m_SkinBatches) {
+        if (!m_Visible) return;
+
+        for (const auto& batch : m_SkinBatches) {
             Renderer::Get()->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
         }
     }

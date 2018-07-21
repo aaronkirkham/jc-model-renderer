@@ -111,6 +111,8 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
+        if (!m_Visible) return;
+
 #if 0
         IRenderBlock::Setup(context);
 
@@ -127,7 +129,9 @@ public:
 
     virtual void Draw(RenderContext_t* context) override final
     {
-        // DrawSkinBatches(context);
+        if (!m_Visible) return;
+
+        // IRenderBlock::DrawSkinBatches(context);
     }
 
     virtual void DrawUI() override final

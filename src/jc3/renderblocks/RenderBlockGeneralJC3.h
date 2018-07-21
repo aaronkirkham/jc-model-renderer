@@ -36,12 +36,12 @@ class RenderBlockGeneralJC3 : public IRenderBlock
 private:
     struct cbVertexInstanceConsts
     {
-        glm::mat4 viewProjection;       // 0000 - 0040 (0 -> 4)
-        glm::mat4 world;                // 0040 - 0080 (4 -> 8)
-        char _pad[0x20];                // 0080 - 00A0 (8 -> 10)
-        char _pad2[0x10];               // 00A0 - 00B0 (10 -> 11)
-        glm::vec4 colour;               // 00B0 - 00C0 (11 -> 12)
-        glm::vec4 _unknown[3];          // 00C0 - 00F0 (12 -> 15)
+        glm::mat4 viewProjection;
+        glm::mat4 world;
+        char _pad[0x20];
+        char _pad2[0x10];
+        glm::vec4 colour;
+        glm::vec4 _unknown[3];
         glm::vec4 _thing;
     } m_cbVertexInstanceConsts;
 
@@ -74,7 +74,6 @@ private:
     VertexBuffer_t* m_VertexBufferData = nullptr;
     std::array<ConstantBuffer_t*, 2> m_VertexShaderConstants = { nullptr };
     std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = { nullptr };
-    SamplerState_t* m_SamplerStateNormalMap = nullptr;
     VertexDeclaration_t* m_VertexDeclaration = nullptr;
 
 public:
@@ -89,7 +88,6 @@ public:
         Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[1]);
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[1]);
-        Renderer::Get()->DestroySamplerState(m_SamplerStateNormalMap);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockGeneralJC3"; }
@@ -136,11 +134,7 @@ public:
             params.m_MaxMip = 13.0f;
 
             m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockGeneralJC3");
-            // m_SamplerStateNormalMap = Renderer::Get()->CreateSamplerState(params, "RenderBlockGeneralJC3 - NormalMap");
         }
-
-        // assert(m_SamplerState);
-        // assert(m_SamplerStateNormalMap);
     }
 
     virtual void Read(std::istream& stream) override final
@@ -154,7 +148,13 @@ public:
         ReadMaterials(stream);
 
         // read the vertex buffers
-        if (m_Block.attributes.packed.format == 1) {
+        if (m_Block.attributes.packed.format != 1) {
+#ifdef DEBUG
+            OutputDebugString("RenderBlockGeneralJC3 is using unpacked vertices!\n");
+            __debugbreak();
+#endif
+        }
+        else {
             std::vector<PackedVertexPosition> vertices;
             ReadVertexBuffer<PackedVertexPosition>(stream, &m_VertexBuffer, &vertices);
 
@@ -172,12 +172,6 @@ public:
                 m_UVs.emplace_back(unpack(data.v0));
             }
         }
-        else {
-#ifdef DEBUG
-            OutputDebugString("RenderBlockGeneralJC3 is using unpacked vertices!\n");
-            __debugbreak();
-#endif
-        }
 
         // read index buffer
         ReadIndexBuffer(stream, &m_IndexBuffer);
@@ -185,6 +179,8 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
+        if (!m_Visible) return;
+
         IRenderBlock::Setup(context);
 
         // setup the constant buffer
@@ -221,18 +217,19 @@ public:
         // set the culling mode
         context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 
-        // TODO: Upacked vertices condition
+        // if we are using packed vertices, set the 2nd vertex buffer
+        if (m_Block.attributes.packed.format == 1) {
+            // set the 2nd vertex buffers
+            uint32_t offset = 0;
+            context->m_DeviceContext->IASetVertexBuffers(1, 1, &m_VertexBufferData->m_Buffer, &m_VertexBufferData->m_ElementStride, &offset);
+        }
 
-        // set the 2nd vertex buffers
-        uint32_t offset = 0;
-        context->m_DeviceContext->IASetVertexBuffers(1, 1, &m_VertexBufferData->m_Buffer, &m_VertexBufferData->m_ElementStride, &offset);
-
-        // set the normal map sampler
-        // context->m_DeviceContext->PSSetSamplers(1, 1, &m_SamplerStateNormalMap->m_SamplerState);
-
+#ifdef DEBUG
+        // set samplers to stop directx debug spam
         context->m_DeviceContext->PSSetSamplers(1, 1, &m_SamplerState->m_SamplerState);
         context->m_DeviceContext->PSSetSamplers(2, 1, &m_SamplerState->m_SamplerState);
         context->m_DeviceContext->PSSetSamplers(3, 1, &m_SamplerState->m_SamplerState);
+#endif
     }
 
     virtual void DrawUI() override final

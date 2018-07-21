@@ -113,11 +113,11 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
         }
         else {
             std::stringstream error;
-            error << "Unknown Render Block type ";
-            error << "0x" << std::uppercase << std::setw(4) << std::hex << hash;
-            error << " (" << RenderBlockFactory::GetRenderBlockName(hash) << ").";
+            error << "\"RenderBlock" << RenderBlockFactory::GetRenderBlockName(hash) << "\" (0x" << std::uppercase << std::setw(4) << std::hex << hash << ") is not yet supported.\n\n";
+            error << "A model might still be rendered, but some parts of it may be missing.";
 
-            DEBUG_LOG("[ERROR] " << error.str());
+            DEBUG_LOG("[WARNING] RenderBlockModel::Parse - Unknown render block. \"" << RenderBlockFactory::GetRenderBlockName(hash) << "\" - " << std::setw(4) << std::hex << hash);
+            Window::Get()->ShowMessageBox(error.str());
 
             // if we haven't parsed any other blocks yet
             // we'll never see anything rendered, let the user know something is wrong

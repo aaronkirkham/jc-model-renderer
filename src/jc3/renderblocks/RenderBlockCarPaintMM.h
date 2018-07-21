@@ -185,6 +185,8 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
+        if (!m_Visible) return;
+
         IRenderBlock::Setup(context);
 
         // do we have layered uvs?
@@ -211,6 +213,8 @@ public:
 
     virtual void Draw(RenderContext_t* context) override final
     {
+        if (!m_Visible) return;
+
         if (m_Block.attributes.flags & 0x2000) {
             IRenderBlock::DrawSkinBatches(context);
         }

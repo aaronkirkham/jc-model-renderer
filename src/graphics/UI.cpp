@@ -279,7 +279,6 @@ void UI::RenderFileTreeView()
     const auto& models = ModelManager::Get()->GetModels();
 
     const auto draw_render_blocks_ui = (models.size() > 0);
-    bool skip_render_blocks_ui = false;
     const auto& window_size = Window::Get()->GetSize();
     const ImGuiWindowFlags window_flags = (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
 
@@ -329,15 +328,40 @@ void UI::RenderFileTreeView()
                     if (model && is_header_open) {
                         const auto& render_blocks = model->GetRenderBlocks();
                         for (auto& render_block : render_blocks) {
-                            // model hover stuff
-                            // TODO: IsItemHovered seems broken here
-                            // model->SetRenderBlockColour(render_block, ImGui::IsItemHovered() ? glm::vec4{ 1, 0, 0, 0.3 } : glm::vec4{ 1, 1, 1, 1 });
+                            // TODO: highlight the current render block when hovering over the ui
 
                             std::stringstream unique_block_id;
                             unique_block_id << render_block_index << "-" << render_block->GetTypeName();
 
+                            // make the things transparent if the block isn't rendering
+                            const auto block_visible = render_block->GetVisibility();
+                            if (!block_visible) {
+                                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.35f);
+                            }
+
+                            // current block header
+                            const bool render_block_open = ImGui::TreeNodeEx(unique_block_id.str().c_str(), 0, render_block->GetTypeName());
+
+                            // block context menu
+                            unique_block_id << "-ctx-menu";
+                            ImGui::PushID(unique_block_id.str().c_str());
+                            {
+                                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1);
+
+                                if (ImGui::BeginPopupContextItem("Context Menu")) {
+                                    if (ImGui::Selectable(block_visible ? ICON_FA_STOP "  Disable Render Block" : ICON_FA_PLAY "  Enable Render Block")) {
+                                        render_block->SetVisibility(!block_visible);
+                                    }
+
+                                    ImGui::EndPopup();
+                                }
+
+                                ImGui::PopStyleVar();
+                            }
+                            ImGui::PopID();
+
                             // render the current render block info
-                            if (ImGui::TreeNodeEx(unique_block_id.str().c_str(), 0, render_block->GetTypeName())) {
+                            if (render_block_open) {
                                 ImGui::Text(ICON_FA_COGS "  Attributes");
 
                                 // draw render block ui
@@ -397,6 +421,10 @@ void UI::RenderFileTreeView()
                                 ImGui::TreePop();
                             }
 
+                            if (!block_visible) {
+                                ImGui::PopStyleVar();
+                            }
+
                             ++render_block_index;
                         }
                     }
@@ -414,7 +442,8 @@ void UI::RenderFileTreeView()
                 std::stringstream title;
                 title << ICON_FA_FOLDER_OPEN << "  " << g_CurrentLoadedArchive->GetStreamArchive()->m_Filename.filename().string().c_str();
 
-                const auto tab_is_open = ImGuiCustom::TabItemScroll(title.str().c_str());
+                // NOTE: can't use custom TabItemScroll here because the child open breaks the context menu.
+                const auto tab_is_open = ImGui::TabItem(title.str().c_str());
 
                 // render the tab context menu
                 ImGui::PushID("archive-tab-ctx-menu");
@@ -423,7 +452,6 @@ void UI::RenderFileTreeView()
                         if (ImGui::Selectable(ICON_FA_WINDOW_CLOSE "  Close Archive")) {
                             delete g_CurrentLoadedArchive;
                             TextureManager::Get()->Flush();
-                            skip_render_blocks_ui = true;
                         }
                         ImGui::EndPopup();
                     }
@@ -432,8 +460,14 @@ void UI::RenderFileTreeView()
 
                 // draw the directory list
                 if (tab_is_open && g_CurrentLoadedArchive) {
+                    // child background will always match the window background
+                    ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
+                    ImGui::BeginChild("archive-tab-scroll-container");
+
                     RenderDirectoryList(g_CurrentLoadedArchive->GetDirectoryList()->GetStructure());
-                    ImGuiCustom::EndTabItemScroll();
+
+                    ImGui::EndChild();
+                    ImGui::PopStyleColor();
                 }
             }
         }
@@ -458,6 +492,7 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra)
     unique_id << "context-menu-" << filename << "-" << unique_id_extra;
 
     ImGui::PushID(unique_id.str().c_str());
+    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1);
 
     if (ImGui::BeginPopupContextItem("Context Menu")) {
         // general save file
@@ -482,6 +517,7 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra)
         ImGui::EndPopup();
     }
 
+    ImGui::PopStyleVar();
     ImGui::PopID();
 }
 

@@ -256,8 +256,6 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, Fi
             m_RenderingTextures.emplace_back(it->second);
         }
 
-        DEBUG_LOG("NEW UC: " << it->second.use_count());
-
         return it->second;
     }
 
@@ -304,7 +302,9 @@ void TextureManager::Flush()
     }
 
 #ifdef DEBUG
-    DEBUG_LOG("TextureManager::Flush - Deleted " << _flush_count << " unused textures.");
+    if (_flush_count > 0) {
+        DEBUG_LOG("TextureManager::Flush - Deleted " << _flush_count << " unused textures.");
+    }
 #endif
 }
 

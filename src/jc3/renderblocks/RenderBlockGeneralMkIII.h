@@ -137,6 +137,9 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
+#if 0
+        if (!m_Visible) return;
+
         IRenderBlock::Setup(context);
 
         // set the constant buffers
@@ -148,6 +151,11 @@ public:
         // set the 2nd vertex buffers
         uint32_t offset = 0;
         context->m_DeviceContext->IASetVertexBuffers(1, 1, &m_VertexBufferData->m_Buffer, &m_VertexBufferData->m_ElementStride, &offset);
+#endif
+    }
+
+    virtual void Draw(RenderContext_t* context) override final
+    {
     }
 
     virtual void DrawUI() override final
