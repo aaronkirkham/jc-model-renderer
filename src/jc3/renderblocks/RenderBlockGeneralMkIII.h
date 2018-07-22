@@ -26,55 +26,72 @@ namespace JustCause3::RenderBlocks
 class RenderBlockGeneralMkIII : public IRenderBlock
 {
 private:
-    struct GeneralMkIIIConstants
-    {
-        float m_Scale = 1.0f;
-        glm::vec2 m_UVExtent = { 0, 0 };
-        char pad[4];
-    } m_Constants;
+    struct RBIInfo {
+        glm::mat4 ModelWorldMatrix;
+        glm::mat4 ModelWorldMatrixPrev;     // [unused]
+        glm::vec4 ModelDiffuseColor;
+        glm::vec4 ModelAmbientColor;        // [unused]
+        glm::vec4 ModelSpecularColor;       // [unused]
+        glm::vec4 ModelEmissiveColor;
+        glm::vec4 ModelDebugColor;          // [unused]
+    } m_cbRBIInfo;
+
+    struct InstanceAttributes {
+        glm::vec4 UVScale;
+        glm::vec4 RippleAngle;              // [unused]
+        glm::vec4 FlashDirection;           // [unused]
+        float DepthBias;
+        float QuantizationScale;
+        float EmissiveStartFadeDistSq;
+        float EmissiveTODScale;
+        float RippleSpeed;                  // [unused]
+        float RippleMagnitude;              // [unused]
+        float PixelScale;                   // [unused]
+        float OutlineThickness;             // [unused]
+    } m_cbInstanceAttributes;
 
     JustCause3::RenderBlocks::GeneralMkIII m_Block;
     VertexBuffer_t* m_VertexBufferData = nullptr;
-    ConstantBuffer_t* m_ConstantBuffer = nullptr;
+    std::array<ConstantBuffer_t*, 2> m_VertexShaderConstants = { nullptr };
 
 public:
     RenderBlockGeneralMkIII() = default;
     virtual ~RenderBlockGeneralMkIII()
     {
         Renderer::Get()->DestroyBuffer(m_VertexBufferData);
-        Renderer::Get()->DestroyBuffer(m_ConstantBuffer);
+        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[0]);
+        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[1]);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockGeneralMkIII"; }
 
     virtual void Create() override final
     {
-#if 0
         // load shaders
-        m_VertexShader = GET_VERTEX_SHADER(general_jc3);
-        m_PixelShader = GET_PIXEL_SHADER(general_jc3);
+        m_VertexShader = ShaderManager::Get()->GetVertexShader("generalmkiii");
+        m_PixelShader = ShaderManager::Get()->GetPixelShader("generalmkiii");
+
+        // TODO: if (m_Block.attributes.flags & 0x20) use R32G32B32A32
 
         // create the element input desc
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-            { "POSITION", 0, DXGI_FORMAT_R16G16B16A16_SINT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R16G16B16A16_SINT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "NORMAL", 0, DXGI_FORMAT_R32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "TANGENT", 0, DXGI_FORMAT_R32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+            { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_UINT,      0,  0,                              D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            { "TEXCOORD",   2,  DXGI_FORMAT_R16G16B16A16_UINT,      1,  0,                              D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            { "TEXCOORD",   3,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
         };
 
         // create the vertex declaration
-        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockGeneralMkIII");
+        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockGeneralMkIII");
 
-        // create the constant buffer
-        m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants, "RenderBlockGeneralMkIII");
+        // create the constant buffers
+        m_VertexShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "RenderBlockGeneralMkIII RBIInfo");
+        m_VertexShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbInstanceAttributes, "RenderBlockGeneralMkIII InstanceAttributes");
 
         // create the sampler states
         {
-            SamplerStateCreationParams_t params;
-            m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockGeneralMkIII");
+            // SamplerStateCreationParams_t params;
+            // m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockGeneralMkIII");
         }
-#endif
     }
 
     virtual void Read(std::istream& stream) override final
@@ -83,10 +100,6 @@ public:
 
         // read the block header
         stream.read((char *)&m_Block, sizeof(m_Block));
-
-        // set vertex shader constants
-        m_Constants.m_Scale = m_Block.attributes.packed.scale;
-        m_Constants.m_UVExtent = m_Block.attributes.packed.uv0Extent;
 
         // read some constant buffer data
         char unknown[280];
@@ -137,29 +150,40 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
-#if 0
         if (!m_Visible) return;
 
         IRenderBlock::Setup(context);
 
+        // setup the constant buffer
+        {
+            const auto scale = m_Block.attributes.packed.scale;
+            auto world = glm::scale(glm::mat4(1), { scale, scale, scale });
+
+            m_cbRBIInfo.ModelWorldMatrix = world * context->m_viewProjectionMatrix;
+        }
+
+        // set the input layout
+        context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
+
         // set the constant buffers
-        Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
-        Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        Renderer::Get()->SetVertexShaderConstants(m_VertexShaderConstants[0], 12, m_cbRBIInfo);
+        // Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        // Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
 
         Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 
         // set the 2nd vertex buffers
         uint32_t offset = 0;
         context->m_DeviceContext->IASetVertexBuffers(1, 1, &m_VertexBufferData->m_Buffer, &m_VertexBufferData->m_ElementStride, &offset);
-#endif
     }
 
+#if 0
     virtual void Draw(RenderContext_t* context) override final
     {
     }
+#endif
 
     virtual void DrawUI() override final
     {
-        ImGui::Text("hello");
     }
 };

@@ -33,7 +33,7 @@ namespace JustCause3
             float z;
         };
 
-        struct UnpackedVertexPositionWith
+        struct UnpackedVertexPosition2UV
         {
             float x;
             float y;

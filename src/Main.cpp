@@ -147,6 +147,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     }
                 });
             }
+            else if (key == VK_F3) {
+                fs::path file = "editor/entities/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13.ee";
+                FileLoader::Get()->ReadFile(file, [&, file](bool success, FileBuffer data) {
+                    if (success) {
+                        new AvalancheArchive(file, data);
+
+                        fs::path rbm = "models/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13_base_body_lod1.rbm";
+                        FileLoader::Get()->ReadFile(rbm, [&, rbm](bool success, FileBuffer data) {
+                            if (success) {
+                                auto r = new RenderBlockModel(rbm);
+                                r->Parse(data);
+                            }
+                        });
+                    }
+                });
+            }
         });
 #endif
 

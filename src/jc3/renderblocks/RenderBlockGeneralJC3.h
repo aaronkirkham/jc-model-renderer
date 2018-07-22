@@ -153,6 +153,19 @@ public:
             OutputDebugString("RenderBlockGeneralJC3 is using unpacked vertices!\n");
             __debugbreak();
 #endif
+
+            std::vector<UnpackedVertexPosition2UV> vertices;
+            ReadVertexBuffer<UnpackedVertexPosition2UV>(stream, &m_VertexBuffer, &vertices);
+
+            for (const auto& vertex : vertices) {
+                m_Vertices.emplace_back(vertex.x);
+                m_Vertices.emplace_back(vertex.y);
+                m_Vertices.emplace_back(vertex.z);
+                m_UVs.emplace_back(vertex.u0);
+                m_UVs.emplace_back(vertex.v0);
+
+                // TODO: uv1
+            }
         }
         else {
             std::vector<PackedVertexPosition> vertices;
@@ -170,6 +183,8 @@ public:
                 m_Vertices.emplace_back(unpack(vertex.z));
                 m_UVs.emplace_back(unpack(data.u0));
                 m_UVs.emplace_back(unpack(data.v0));
+
+                // TODO: uv2
             }
         }
 
