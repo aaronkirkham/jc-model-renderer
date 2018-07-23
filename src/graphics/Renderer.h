@@ -107,15 +107,21 @@ public:
     template <typename T>
     ConstantBuffer_t* CreateConstantBuffer(T& data, const char* debugName = nullptr)
     {
+        return CreateConstantBuffer(data, sizeof(T) / 16, debugName);
+    }
+
+    template <typename T>
+    ConstantBuffer_t* CreateConstantBuffer(T& data, int32_t vec4count, const char* debugName = nullptr)
+    {
         auto buffer = new ConstantBuffer_t;
         buffer->m_ElementCount = 1;
-        buffer->m_ElementStride = sizeof(T);
+        buffer->m_ElementStride = 16 * vec4count;
         buffer->m_Usage = D3D11_USAGE_DYNAMIC;
 
         D3D11_BUFFER_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
         desc.Usage = D3D11_USAGE_DYNAMIC;
-        desc.ByteWidth = sizeof(T);
+        desc.ByteWidth = 16 * vec4count;
         desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 

@@ -56,6 +56,11 @@ private:
         float OutlineThickness;             // [unused]
     } m_cbInstanceAttributes;
 
+    struct cbSkinningConsts
+    {
+        glm::vec4 MatrixPalette[2];
+    } m_cbSkinningConsts;
+
     JustCause3::RenderBlocks::GeneralMkIII m_Block;
     VertexBuffer_t* m_VertexBufferData = nullptr;
     std::array<ConstantBuffer_t*, 2> m_VertexShaderConstants = { nullptr };
@@ -84,8 +89,8 @@ public:
 
         // create the element input desc
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-            { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  0,                              D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   2,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  0,                              D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            { "TEXCOORD",   2,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
             { "TEXCOORD",   3,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
         };
 
@@ -95,6 +100,11 @@ public:
         // create the constant buffers
         m_VertexShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "RenderBlockGeneralMkIII RBIInfo");
         m_VertexShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbInstanceAttributes, "RenderBlockGeneralMkIII InstanceAttributes");
+
+        // identity the palette data
+        for (int i = 0; i < 2; ++i) {
+            m_cbSkinningConsts.MatrixPalette[i] = glm::vec4(1);
+        }
 
         // create the sampler states
         {
@@ -196,23 +206,29 @@ public:
 
     virtual void Draw(RenderContext_t* context) override final
     {
+        if (!m_Visible) return;
+
         // needs matrix palette stuff..
         const auto flags = m_Block.attributes.flags;
-        if (_bittest((LONG *)&flags, 0xF)) {
-            __debugbreak();
+        if (_bittest((const long *)&flags, 0xF)) {
+            for (const auto& batch : m_SkinBatches) {
+                // TODO: upload matrix palette data
 
-            // TODO: upload matrix palette data
+                Renderer::Get()->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
+            }
         }
         else if (flags & 0x20) {
             __debugbreak();
 
             // TODO: upload matrix palette data
         }
-
-        IRenderBlock::Draw(context);
+        else {
+            IRenderBlock::Draw(context);
+        }
     }
 
     virtual void DrawUI() override final
     {
+        ImGui::SliderFloat("Scale", &m_Block.attributes.packed.scale, 0.1f, 10.0f);
     }
 };

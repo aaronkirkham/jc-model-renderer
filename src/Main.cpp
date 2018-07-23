@@ -163,6 +163,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     }
                 });
             }
+            else if (key == VK_F4) {
+                fs::path file = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/v0803_car_na_monstertruck_civilian_01.ee";
+                FileLoader::Get()->ReadFile(file, [&, file](bool success, FileBuffer data) {
+                    if (success) {
+                        new AvalancheArchive(file, data);
+
+                        fs::path rbm = "models/jc_vehicles/01_land/v0803_car_na_monstertruck/monstertruck_body_lod1.rbm";
+                        FileLoader::Get()->ReadFile(rbm, [&, rbm](bool success, FileBuffer data) {
+                            if (success) {
+                                auto r = new RenderBlockModel(rbm);
+                                r->Parse(data);
+                            }
+                        });
+                    }
+                });
+            }
         });
 #endif
 

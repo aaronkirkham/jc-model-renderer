@@ -154,6 +154,12 @@ namespace JustCause3
             };
         };
 
+        struct CDeformTable
+        {
+            uint16_t table[256];
+            uint8_t size;
+        };
+
         template <typename T>
         static T pack(float value) {
             return static_cast<T>(value / 1.0f * std::numeric_limits<T>::max());
