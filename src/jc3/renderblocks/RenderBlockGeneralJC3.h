@@ -74,7 +74,6 @@ private:
     VertexBuffer_t* m_VertexBufferData = nullptr;
     std::array<ConstantBuffer_t*, 2> m_VertexShaderConstants = { nullptr };
     std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = { nullptr };
-    VertexDeclaration_t* m_VertexDeclaration = nullptr;
 
 public:
     RenderBlockGeneralJC3() = default;
@@ -83,7 +82,6 @@ public:
         OutputDebugStringA("~RenderBlockGeneralJC3\n");
 
         Renderer::Get()->DestroyBuffer(m_VertexBufferData);
-        Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
         Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[0]);
         Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[1]);
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
@@ -219,9 +217,6 @@ public:
             m_cbFragmentMaterialConsts.diffuseModulator = m_Block.attributes.diffuseModulator;
             m_cbFragmentInstanceConsts.colour = glm::vec4(1, 1, 1, 0);
         }
-
-        // set the input layout
-        context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
 
         // set the constant buffers
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 1, m_cbVertexInstanceConsts);

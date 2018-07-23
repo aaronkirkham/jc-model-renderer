@@ -35,16 +35,16 @@ class RenderBlockCharacter : public IRenderBlock
 private:
     struct cbLocalConsts
     {
-        glm::mat4 world;
-        glm::mat4 worldViewProjection;
-        glm::vec4 scale;
-        glm::mat3x4 palette[70];
+        glm::mat4 World;
+        glm::mat4 WorldViewProjection;
+        glm::vec4 Scale;
+        glm::mat3x4 MatrixPalette[70];
     } m_cbLocalConsts;
 
     struct cbInstanceConsts
     {
         glm::vec4 _unknown = glm::vec4(0);
-        glm::vec4 diffuseColour = glm::vec4(0, 0, 0, 1);
+        glm::vec4 DiffuseColour = glm::vec4(0, 0, 0, 1);
         glm::vec4 _unknown2 = glm::vec4(0); // .w is some kind of snow factor???
     } m_cbInstanceConsts;
 
@@ -105,7 +105,7 @@ public:
 
         // identity the palette data
         for (int i = 0; i < 70; ++i) {
-            m_cbLocalConsts.palette[i] = glm::mat3x4(1);
+            m_cbLocalConsts.MatrixPalette[i] = glm::mat3x4(1);
         }
 
         // reset fragment shader material consts
@@ -180,18 +180,13 @@ public:
             auto world = glm::mat4(1);
 
             // set vertex shader constants
-            m_cbLocalConsts.world = world;
-            m_cbLocalConsts.worldViewProjection = world * context->m_viewProjectionMatrix;
-            m_cbLocalConsts.scale = glm::vec4(scale, 0, 0, 0);
+            m_cbLocalConsts.World = world;
+            m_cbLocalConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
+            m_cbLocalConsts.Scale = glm::vec4(scale, 0, 0, 0);
 
             // set fragment shader constants
             //
         }
-
-        // TODO: conditions for different vertex layouts
-
-        // set the input layout
-        context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
 
         // set the constant buffers
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbLocalConsts);
@@ -213,7 +208,7 @@ public:
         ImGui::SliderFloat("Scale", &m_Block.attributes.scale, 0.1f, 10.0f);
 
         ImGui::SliderFloat4("Unknown #1", glm::value_ptr(m_cbInstanceConsts._unknown), 0, 1);
-        ImGui::SliderFloat4("Diffuse Colour", glm::value_ptr(m_cbInstanceConsts.diffuseColour), 0, 1);
+        ImGui::SliderFloat4("Diffuse Colour", glm::value_ptr(m_cbInstanceConsts.DiffuseColour), 0, 1);
         ImGui::SliderFloat4("Unknown #2", glm::value_ptr(m_cbInstanceConsts._unknown2), 0, 1);
     }
 };
