@@ -6,11 +6,15 @@
 #pragma pack(push, 1)
 struct GeneralMkIIIAttributes
 {
-    char pad[0x24];
+    float depthBias;
+    char _pad[0x8];
+    float emissiveTODScale;
+    float emissiveStartFadeDistSq;
+    char _pad2[0x10];
     JustCause3::Vertex::SPackedAttribute packed;
-    char pad2[0x4];
+    char _pad3[0x4];
     uint32_t flags;
-    char pad3[0x1C];
+    char _pad4[0x1C];
 };
 
 namespace JustCause3::RenderBlocks
@@ -26,7 +30,8 @@ namespace JustCause3::RenderBlocks
 class RenderBlockGeneralMkIII : public IRenderBlock
 {
 private:
-    struct RBIInfo {
+    struct RBIInfo
+    {
         glm::mat4 ModelWorldMatrix;
         glm::mat4 ModelWorldMatrixPrev;     // [unused]
         glm::vec4 ModelDiffuseColor;
@@ -36,7 +41,8 @@ private:
         glm::vec4 ModelDebugColor;          // [unused]
     } m_cbRBIInfo;
 
-    struct InstanceAttributes {
+    struct InstanceAttributes
+    {
         glm::vec4 UVScale;
         glm::vec4 RippleAngle;              // [unused]
         glm::vec4 FlashDirection;           // [unused]
@@ -72,11 +78,14 @@ public:
         m_PixelShader = ShaderManager::Get()->GetPixelShader("generalmkiii");
 
         // TODO: if (m_Block.attributes.flags & 0x20) use R32G32B32A32
+        if (m_Block.attributes.flags & 0x20) {
+            __debugbreak();
+        }
 
         // create the element input desc
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-            { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_UINT,      0,  0,                              D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   2,  DXGI_FORMAT_R16G16B16A16_UINT,      1,  0,                              D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  0,                              D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            { "TEXCOORD",   2,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  0,                              D3D11_INPUT_PER_VERTEX_DATA,    0 },
             { "TEXCOORD",   3,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
         };
 
@@ -142,6 +151,8 @@ public:
         // read skin batches
         if (m_Block.attributes.flags & 0x8020) {
             ReadSkinBatch(stream);
+
+            OutputDebugStringA("RenderBlockGeneralMkIII has skin batches, need to do matrix palette data stuff...\n");
         }
 
         // read index buffer
@@ -159,29 +170,47 @@ public:
             const auto scale = m_Block.attributes.packed.scale;
             auto world = glm::scale(glm::mat4(1), { scale, scale, scale });
 
-            m_cbRBIInfo.ModelWorldMatrix = world * context->m_viewProjectionMatrix;
+            // set vertex shader constants
+            m_cbRBIInfo.ModelWorldMatrix = world;
+            m_cbInstanceAttributes.UVScale = { m_Block.attributes.packed.uv0Extent, m_Block.attributes.packed.uv1Extent };
+            m_cbInstanceAttributes.DepthBias = m_Block.attributes.depthBias;
+            m_cbInstanceAttributes.QuantizationScale = scale;
+            m_cbInstanceAttributes.EmissiveTODScale = m_Block.attributes.emissiveTODScale;
+            m_cbInstanceAttributes.EmissiveStartFadeDistSq = m_Block.attributes.emissiveStartFadeDistSq;
+
+            // set fragment shader constants
+            //
         }
 
-        // set the input layout
-        context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
-
         // set the constant buffers
-        Renderer::Get()->SetVertexShaderConstants(m_VertexShaderConstants[0], 12, m_cbRBIInfo);
-        // Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
-        // Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 12, m_cbRBIInfo);
+        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[1], 2, m_cbInstanceAttributes);
+        // context->m_Renderer->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
 
-        Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 
         // set the 2nd vertex buffers
         uint32_t offset = 0;
         context->m_DeviceContext->IASetVertexBuffers(1, 1, &m_VertexBufferData->m_Buffer, &m_VertexBufferData->m_ElementStride, &offset);
     }
 
-#if 0
     virtual void Draw(RenderContext_t* context) override final
     {
+        // needs matrix palette stuff..
+        const auto flags = m_Block.attributes.flags;
+        if (_bittest((LONG *)&flags, 0xF)) {
+            __debugbreak();
+
+            // TODO: upload matrix palette data
+        }
+        else if (flags & 0x20) {
+            __debugbreak();
+
+            // TODO: upload matrix palette data
+        }
+
+        IRenderBlock::Draw(context);
     }
-#endif
 
     virtual void DrawUI() override final
     {

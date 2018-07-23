@@ -19,12 +19,14 @@ struct RenderEvents
     ksignals::Event<void(RenderContext_t*)> RenderFrame;
 };
 
-struct LightConstants
+struct GlobalConstants
 {
-    glm::vec3 position;
-    glm::vec3 direction;
-    glm::vec4 diffuseColour;
-    char padding[8];
+    glm::mat4 ViewProjectionMatrix;         // 0
+    glm::vec4 CameraPosition;               // 4
+    glm::vec4 _unknown[24];                 // 5
+    glm::mat4 ViewProjectionMatrix2;        // 29
+    glm::mat4 ViewProjectionMatrix3;        // 33
+    glm::vec4 _unknown2[12];                // 37
 };
 
 class Renderer : public Singleton<Renderer>
@@ -46,6 +48,9 @@ private:
     ID3D11SamplerState* m_SamplerState = nullptr;
     ID3D11BlendState* m_BlendState = nullptr;
 
+    ConstantBuffer_t* m_GlobalConstants = nullptr;
+    GlobalConstants m_cbGlobalConsts;
+
     glm::vec4 m_ClearColour = g_DefaultClearColour;
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
@@ -63,6 +68,8 @@ private:
 
     void DestroyRenderTarget();
     void DestroyDepthStencil();
+
+    void UpdateGlobalConstants();
 
 public:
     Renderer();
@@ -137,7 +144,8 @@ public:
     void MapBuffer(ID3D11Buffer* buffer, T& data)
     {
         D3D11_MAPPED_SUBRESOURCE mapping;
-        m_DeviceContext->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapping);
+        auto hr = m_DeviceContext->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapping);
+        assert(SUCCEEDED(hr));
 
         memcpy(mapping.pData, &data, sizeof(T));
 

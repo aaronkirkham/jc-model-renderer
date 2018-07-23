@@ -7,11 +7,6 @@
 class Camera : public Singleton<Camera>
 {
 private:
-    struct FrameConstants
-    {
-        glm::mat4 viewProjection;
-    };
-
     glm::vec3 m_Position;
     glm::vec3 m_Rotation;
 
@@ -24,8 +19,6 @@ private:
     glm::mat4 m_Projection = glm::mat4(1);
     glm::mat4 m_ViewProjection = glm::mat4(1);
     glm::vec4 m_Viewport = glm::vec4(0);
-
-    ConstantBuffer_t* m_FrameConstants = nullptr;
 
 public:
     Camera();

@@ -13,8 +13,6 @@
 
 void SetupImGuiStyle();
 
-ConstantBuffer_t* m_LightBuffers = nullptr;
-
 Renderer::Renderer()
 {
     Window::Get()->Events().WindowResized.connect([this](const glm::vec2& size) {
@@ -78,11 +76,9 @@ bool Renderer::Initialise(const HWND& hwnd)
     CreateRenderTarget(size);
     CreateBlendState();
 
-    // setup lighting
-    {
-        //LightConstants constants;
-        //m_LightBuffers = CreateConstantBuffer(constants, "Renderer Light Buffer");
-    }
+    // create global constants
+    m_GlobalConstants = CreateConstantBuffer(m_cbGlobalConsts, "Renderer GlobalConstants");
+    memset(&m_cbGlobalConsts, 0, sizeof(m_cbGlobalConsts));
 
     // setup imgui
     IMGUI_CHECKVERSION();
@@ -124,6 +120,7 @@ void Renderer::Shutdown()
 
     DestroyRenderTarget();
     DestroyDepthStencil();
+    DestroyBuffer(m_GlobalConstants);
 
     safe_release(m_BlendState);
     safe_release(m_SamplerState);
@@ -165,6 +162,10 @@ bool Renderer::Render()
     // update the camera
     Camera::Get()->Update(&m_RenderContext);
 
+    // update global constants
+    UpdateGlobalConstants();
+
+    //
     m_RenderEvents.RenderFrame(&m_RenderContext);
 
     SetDepthEnabled(false);
@@ -645,4 +646,15 @@ void Renderer::DestroySamplerState(SamplerState_t* sampler)
         safe_release(sampler->m_SamplerState);
         safe_delete(sampler);
     }
+}
+
+void Renderer::UpdateGlobalConstants()
+{
+    m_cbGlobalConsts.ViewProjectionMatrix = m_RenderContext.m_viewProjectionMatrix;
+    //m_cbGlobalConsts.CameraPosition = glm::vec4(Camera::Get()->GetPosition(), 1);
+    m_cbGlobalConsts.ViewProjectionMatrix2 = m_RenderContext.m_viewProjectionMatrix;
+    m_cbGlobalConsts.ViewProjectionMatrix3 = m_RenderContext.m_viewProjectionMatrix;
+
+    // set the shader constants
+    SetVertexShaderConstants(m_GlobalConstants, 0, m_cbGlobalConsts);
 }

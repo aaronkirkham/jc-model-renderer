@@ -19,10 +19,6 @@ Camera::Camera()
     m_Projection = glm::perspectiveFovLH(glm::radians(m_FOV), window_size.x, window_size.y, m_NearClip, m_FarClip);
     m_Viewport = glm::vec4{ 0, 0, window_size.x, window_size.y };
 
-    // create the frame constant buffers
-    FrameConstants constants;
-    m_FrameConstants = Renderer::Get()->CreateConstantBuffer(constants, "Camera Frame Buffer");
-
     m_Position = glm::vec3(0, 3, -10);
     m_Rotation = glm::vec3(0, 0, 0);
 
@@ -89,7 +85,6 @@ Camera::~Camera()
 
 void Camera::Shutdown()
 {
-    Renderer::Get()->DestroyBuffer(m_FrameConstants);
 }
 
 void Camera::Update(RenderContext_t* context)
