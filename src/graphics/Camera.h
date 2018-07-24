@@ -7,11 +7,6 @@
 class Camera : public Singleton<Camera>
 {
 private:
-    struct FrameConstants
-    {
-        glm::mat4 viewProjection;
-    };
-
     glm::vec3 m_Position;
     glm::vec3 m_Rotation;
 
@@ -25,15 +20,13 @@ private:
     glm::mat4 m_ViewProjection = glm::mat4(1);
     glm::vec4 m_Viewport = glm::vec4(0);
 
-    ConstantBuffer_t* m_FrameConstants = nullptr;
-
 public:
     Camera();
     virtual ~Camera();
 
     void Shutdown();
 
-    void Update();
+    void Update(RenderContext_t* context);
     void ResetToDefault();
 
     void WorldToScreen(const glm::vec3& world, glm::vec3* screen);
@@ -43,6 +36,6 @@ public:
     const glm::vec3& GetRotation() const { return m_Rotation; }
     const glm::mat4& GetViewMatrix() const { return m_View; }
     const glm::mat4& GetProjectionMatrix() const { return m_Projection; }
-    const glm::mat2& GetViewProjectionMatrix() const { return m_ViewProjection; }
+    const glm::mat4& GetViewProjectionMatrix() const { return m_ViewProjection; }
     const glm::vec4& GetViewport() const { return m_Viewport; }
 };

@@ -5,10 +5,13 @@
 #include <graphics/TextureManager.h>
 #include <graphics/Types.h>
 #include <graphics/Renderer.h>
+#include <graphics/imgui/imgui_bitfield.h>
 
 class IRenderBlock
 {
 protected:
+    bool m_Visible = true;
+
     VertexBuffer_t* m_VertexBuffer = nullptr;
     IndexBuffer_t* m_IndexBuffer = nullptr;
     std::shared_ptr<VertexShader_t> m_VertexShader = nullptr;
@@ -42,6 +45,8 @@ public:
 
     virtual const char* GetTypeName() = 0;
 
+    virtual void SetVisibility(bool visible) { m_Visible = visible; }
+    virtual bool GetVisibility() { return m_Visible; }
     virtual VertexBuffer_t* GetVertexBuffer() { return m_VertexBuffer; }
     virtual IndexBuffer_t* GetIndexBuffer() { return m_IndexBuffer; }
     virtual const std::vector<std::shared_ptr<Texture>>& GetTextures() { return m_Textures; }
@@ -54,12 +59,14 @@ public:
 
     virtual void Setup(RenderContext_t* context)
     {
+        if (!m_Visible) return;
+
         assert(m_VertexShader);
         assert(m_PixelShader);
         assert(m_VertexDeclaration);
+        assert(m_VertexBuffer);
 
         // enable the vertex and pixel shaders
-        context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
         context->m_DeviceContext->VSSetShader(m_VertexShader->m_Shader, nullptr, 0);
         context->m_DeviceContext->PSSetShader(m_PixelShader->m_Shader, nullptr, 0);
 
@@ -71,9 +78,11 @@ public:
             }
         }
 
+        // set the input layout
+        context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
+
         // set the vertex buffer
-        uint32_t offset = 0;
-        context->m_DeviceContext->IASetVertexBuffers(0, 1, &m_VertexBuffer->m_Buffer, &m_VertexBuffer->m_ElementStride, &offset);
+        context->m_Renderer->SetVertexStream(m_VertexBuffer, 0);
 
         // set the sampler state
         if (m_SamplerState) {
@@ -86,11 +95,13 @@ public:
 
     virtual void Draw(RenderContext_t* context)
     {
+        if (!m_Visible) return;
+
         if (m_IndexBuffer) {
-            Renderer::Get()->DrawIndexed(0, m_IndexBuffer->m_ElementCount, m_IndexBuffer);
+            context->m_Renderer->DrawIndexed(0, m_IndexBuffer->m_ElementCount, m_IndexBuffer);
         }
         else {
-            Renderer::Get()->Draw(0, m_VertexBuffer->m_ElementCount / 3);
+            context->m_Renderer->Draw(0, (m_VertexBuffer->m_ElementCount / 3));
         }
     }
 
@@ -175,8 +186,10 @@ public:
 
     void DrawSkinBatches(RenderContext_t* context)
     {
-        for (auto& batch : m_SkinBatches) {
-            Renderer::Get()->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
+        if (!m_Visible) return;
+
+        for (const auto& batch : m_SkinBatches) {
+            context->m_Renderer->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
         }
     }
 

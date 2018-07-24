@@ -4,8 +4,10 @@
 #include <cstdint>
 #include <vector>
 
+class Renderer;
 struct RenderContext_t
 {
+    Renderer* m_Renderer = nullptr;
     ID3D11Device* m_Device = nullptr;
     ID3D11DeviceContext* m_DeviceContext = nullptr;
     D3D11_FILL_MODE m_FillMode = D3D11_FILL_SOLID;
@@ -13,6 +15,7 @@ struct RenderContext_t
     bool m_RasterIsDirty = true;
     bool m_BlendEnabled = true;
     D3D11_BLEND m_BlendMode;
+    glm::mat4 m_viewProjectionMatrix;
 };
 
 struct IBuffer_t

@@ -13,8 +13,6 @@
 
 void SetupImGuiStyle();
 
-ConstantBuffer_t* m_LightBuffers = nullptr;
-
 Renderer::Renderer()
 {
     Window::Get()->Events().WindowResized.connect([this](const glm::vec2& size) {
@@ -78,11 +76,9 @@ bool Renderer::Initialise(const HWND& hwnd)
     CreateRenderTarget(size);
     CreateBlendState();
 
-    // setup lighting
-    {
-        //LightConstants constants;
-        //m_LightBuffers = CreateConstantBuffer(constants, "Renderer Light Buffer");
-    }
+    // create global constants
+    m_GlobalConstants = CreateConstantBuffer(m_cbGlobalConsts, "Renderer GlobalConstants");
+    memset(&m_cbGlobalConsts, 0, sizeof(m_cbGlobalConsts));
 
     // setup imgui
     IMGUI_CHECKVERSION();
@@ -94,6 +90,7 @@ bool Renderer::Initialise(const HWND& hwnd)
     SetupImGuiStyle();
 
     // setup the render context
+    m_RenderContext.m_Renderer = this;
     m_RenderContext.m_Device = m_Device;
     m_RenderContext.m_DeviceContext = m_DeviceContext;
 
@@ -123,6 +120,7 @@ void Renderer::Shutdown()
 
     DestroyRenderTarget();
     DestroyDepthStencil();
+    DestroyBuffer(m_GlobalConstants);
 
     safe_release(m_BlendState);
     safe_release(m_SamplerState);
@@ -133,6 +131,9 @@ void Renderer::Shutdown()
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
     m_DeviceDebugger->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+#endif
+
+#ifdef DEBUG
     safe_release(m_DeviceDebugger);
 #endif
 }
@@ -144,34 +145,30 @@ bool Renderer::Render()
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
 
-    ID3D11ShaderResourceView* nullViews[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = { 0 };
+    ID3D11ShaderResourceView* nullViews[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = { nullptr };
     m_DeviceContext->PSSetShaderResources(0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, nullViews);
 
     // begin scene
     {
-        m_DeviceContext->ClearRenderTargetView(m_RenderTargetView, glm::value_ptr(m_ClearColour));
+        for (auto& render_target : m_RenderTargetView) {
+            if (render_target) {
+                m_DeviceContext->ClearRenderTargetView(render_target, glm::value_ptr(m_ClearColour));
+            }
+        }
+
         m_DeviceContext->ClearDepthStencilView(m_DepthStencilView, (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL), 1.0f, 0);
-    }
-
-    // lighting
-    {
-        LightConstants constants;
-        constants.position = Camera::Get()->GetPosition();//glm::vec3(0, 1, 0);
-        constants.direction = glm::vec3();
-        constants.diffuseColour = glm::vec4(1, 1, 1, 1);
-        //constants.lightDirection = glm::vec3(0.25f, -2.5f, -1.0f);
-        //constants.lightDirection = glm::vec3(0, 0, -1.0f);
-        //constants.padding = 0.0f;
-
-        // SetPixelShaderConstants(m_LightBuffers, 0, constants);
     }
 
     // Begin the 2d renderer
     DebugRenderer::Get()->Begin(&m_RenderContext);
 
     // update the camera
-    Camera::Get()->Update();
+    Camera::Get()->Update(&m_RenderContext);
 
+    // update global constants
+    UpdateGlobalConstants();
+
+    //
     m_RenderEvents.RenderFrame(&m_RenderContext);
 
     SetDepthEnabled(false);
@@ -187,7 +184,6 @@ bool Renderer::Render()
     m_SwapChain->Present(1, 0);
     return true;
 }
-
 
 void Renderer::SetupRenderStates()
 {
@@ -255,20 +251,56 @@ void Renderer::SetCullMode(D3D11_CULL_MODE mode)
 
 void Renderer::CreateRenderTarget(const glm::vec2& size)
 {
-    // create render target back buffer
-    ID3D11Texture2D* back_buffer = nullptr;
-    auto result = m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back_buffer));
-    assert(SUCCEEDED(result));
+    // create back buffer render target
+    {
+        ID3D11Texture2D* back_buffer = nullptr;
+        auto result = m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back_buffer));
+        assert(SUCCEEDED(result));
 
-    result = m_Device->CreateRenderTargetView(back_buffer, nullptr, &m_RenderTargetView);
-    assert(SUCCEEDED(result));
+        result = m_Device->CreateRenderTargetView(back_buffer, nullptr, &m_RenderTargetView[0]);
+        assert(SUCCEEDED(result));
+
+        safe_release(back_buffer);
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-    D3D_SET_OBJECT_NAME_A(m_RenderTargetView, "Renderer::CreateRenderTarget");
+        D3D_SET_OBJECT_NAME_A(m_RenderTargetView[0], "Renderer Back Buffer");
 #endif
+    }
 
-    safe_release(back_buffer);
-    m_DeviceContext->OMSetRenderTargets(1, &m_RenderTargetView, m_DepthStencilView);
+    // create normals render target
+    {
+        auto normalsTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE));
+        assert(normalsTex);
+
+        auto result = m_Device->CreateRenderTargetView(normalsTex, nullptr, &m_RenderTargetView[1]);
+        assert(SUCCEEDED(result));
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        desc.Texture2D = { 0, static_cast<UINT>(-1) };
+        result = m_Device->CreateShaderResourceView(normalsTex, &desc, &m_RenderTargetResourceView[0]);
+        assert(SUCCEEDED(result));
+    }
+
+    // create metallic render target
+    {
+        auto metallicTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE));
+        assert(metallicTex);
+
+        auto result = m_Device->CreateRenderTargetView(metallicTex, nullptr, &m_RenderTargetView[2]);
+        assert(SUCCEEDED(result));
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        desc.Texture2D = { 0, static_cast<UINT>(-1) };
+        result = m_Device->CreateShaderResourceView(metallicTex, &desc, &m_RenderTargetResourceView[1]);
+        assert(SUCCEEDED(result));
+    }
+
+    // set the render target
+    m_DeviceContext->OMSetRenderTargets(3, &m_RenderTargetView[0], m_DepthStencilView);
 
     // create the viewport
     {
@@ -312,9 +344,25 @@ void Renderer::CreateDevice(const HWND& hwnd, const glm::vec2& size)
     auto result = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, deviceFlags, nullptr, 0, D3D11_SDK_VERSION, &desc, &m_SwapChain, &m_Device, nullptr, &m_DeviceContext);
     assert(SUCCEEDED(result));
 
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
+#ifdef DEBUG
     result = m_Device->QueryInterface(__uuidof(ID3D11Debug), reinterpret_cast<void**>(&m_DeviceDebugger));
     assert(SUCCEEDED(result));
+
+    ID3D11InfoQueue* info_queue;
+    result = m_DeviceDebugger->QueryInterface(__uuidof(ID3D11InfoQueue), reinterpret_cast<void**>(&info_queue));
+    assert(SUCCEEDED(result));
+
+    // hide specific messages
+    D3D11_MESSAGE_ID messages_to_hide[] = {
+        D3D11_MESSAGE_ID_DEVICE_DRAW_SAMPLER_NOT_SET
+    };
+
+    D3D11_INFO_QUEUE_FILTER filter;
+    ZeroMemory(&filter, sizeof(filter));
+    filter.DenyList.NumIDs = _countof(messages_to_hide);
+    filter.DenyList.pIDList = messages_to_hide;
+    info_queue->AddStorageFilterEntries(&filter);
+    info_queue->Release();
 #endif
 }
 
@@ -402,9 +450,8 @@ void Renderer::CreateBlendState()
     blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
     blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].RenderTargetWriteMask = 0x0f;
+    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-    
     auto result = m_Device->CreateBlendState(&blendDesc, &m_BlendState);
     assert(SUCCEEDED(result));
 
@@ -441,7 +488,14 @@ void Renderer::CreateRasterizerState()
 void Renderer::DestroyRenderTarget()
 {
     m_DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
-    safe_release(m_RenderTargetView);
+
+    for (auto& resource_view : m_RenderTargetResourceView) {
+        safe_release(resource_view);
+    }
+
+    for (auto& render_target : m_RenderTargetView) {
+        safe_release(render_target);
+    }
 }
 
 void Renderer::DestroyDepthStencil()
@@ -562,6 +616,12 @@ void Renderer::DestroyBuffer(IBuffer_t* buffer)
     }
 }
 
+void Renderer::SetVertexStream(VertexBuffer_t* buffer, int32_t slot, uint32_t offset)
+{
+    assert(buffer);
+    m_DeviceContext->IASetVertexBuffers(slot, 1, &buffer->m_Buffer, &buffer->m_ElementStride, &offset);
+}
+
 VertexDeclaration_t* Renderer::CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count, VertexShader_t* m_Shader, const char* debugName)
 {
     auto declaration = new VertexDeclaration_t;
@@ -626,4 +686,15 @@ void Renderer::DestroySamplerState(SamplerState_t* sampler)
         safe_release(sampler->m_SamplerState);
         safe_delete(sampler);
     }
+}
+
+void Renderer::UpdateGlobalConstants()
+{
+    m_cbGlobalConsts.ViewProjectionMatrix = m_RenderContext.m_viewProjectionMatrix;
+    //m_cbGlobalConsts.CameraPosition = glm::vec4(Camera::Get()->GetPosition(), 1);
+    m_cbGlobalConsts.ViewProjectionMatrix2 = m_RenderContext.m_viewProjectionMatrix;
+    m_cbGlobalConsts.ViewProjectionMatrix3 = m_RenderContext.m_viewProjectionMatrix;
+
+    // set the shader constants
+    SetVertexShaderConstants(m_GlobalConstants, 0, m_cbGlobalConsts);
 }

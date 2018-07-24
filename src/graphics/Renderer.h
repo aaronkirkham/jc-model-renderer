@@ -6,6 +6,7 @@
 #include <imgui.h>
 #include <examples/imgui_impl_win32.h>
 #include <examples/imgui_impl_dx11.h>
+#include <array>
 
 #define test_hresult(hr) if (FAILED(hr)) { return false; }
 #define safe_delete(ptr) if (ptr) { delete ptr; ptr = nullptr; }
@@ -18,12 +19,14 @@ struct RenderEvents
     ksignals::Event<void(RenderContext_t*)> RenderFrame;
 };
 
-struct LightConstants
+struct GlobalConstants
 {
-    glm::vec3 position;
-    glm::vec3 direction;
-    glm::vec4 diffuseColour;
-    char padding[8];
+    glm::mat4 ViewProjectionMatrix;         // 0
+    glm::vec4 CameraPosition;               // 4
+    glm::vec4 _unknown[24];                 // 5
+    glm::mat4 ViewProjectionMatrix2;        // 29
+    glm::mat4 ViewProjectionMatrix3;        // 33
+    glm::vec4 _unknown2[12];                // 37
 };
 
 class Renderer : public Singleton<Renderer>
@@ -35,7 +38,8 @@ private:
     ID3D11Device* m_Device = nullptr;
     ID3D11DeviceContext* m_DeviceContext = nullptr;
     IDXGISwapChain* m_SwapChain = nullptr;
-    ID3D11RenderTargetView* m_RenderTargetView = nullptr;
+    std::array<ID3D11RenderTargetView*, 3> m_RenderTargetView = { nullptr };
+    std::array<ID3D11ShaderResourceView*, 2> m_RenderTargetResourceView = { nullptr };
     ID3D11RasterizerState* m_RasterizerState = nullptr;
     ID3D11Texture2D* m_DepthTexture = nullptr;
     ID3D11DepthStencilState* m_DepthStencilEnabledState = nullptr;
@@ -44,9 +48,12 @@ private:
     ID3D11SamplerState* m_SamplerState = nullptr;
     ID3D11BlendState* m_BlendState = nullptr;
 
+    ConstantBuffer_t* m_GlobalConstants = nullptr;
+    GlobalConstants m_cbGlobalConsts;
+
     glm::vec4 m_ClearColour = g_DefaultClearColour;
 
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
+#ifdef DEBUG
     ID3D11Debug* m_DeviceDebugger = nullptr;
 #endif
 
@@ -61,6 +68,8 @@ private:
 
     void DestroyRenderTarget();
     void DestroyDepthStencil();
+
+    void UpdateGlobalConstants();
 
 public:
     Renderer();
@@ -98,15 +107,21 @@ public:
     template <typename T>
     ConstantBuffer_t* CreateConstantBuffer(T& data, const char* debugName = nullptr)
     {
+        return CreateConstantBuffer(data, sizeof(T) / 16, debugName);
+    }
+
+    template <typename T>
+    ConstantBuffer_t* CreateConstantBuffer(T& data, int32_t vec4count, const char* debugName = nullptr)
+    {
         auto buffer = new ConstantBuffer_t;
         buffer->m_ElementCount = 1;
-        buffer->m_ElementStride = sizeof(T);
+        buffer->m_ElementStride = 16 * vec4count;
         buffer->m_Usage = D3D11_USAGE_DYNAMIC;
 
         D3D11_BUFFER_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
         desc.Usage = D3D11_USAGE_DYNAMIC;
-        desc.ByteWidth = sizeof(T);
+        desc.ByteWidth = 16 * vec4count;
         desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
@@ -135,7 +150,8 @@ public:
     void MapBuffer(ID3D11Buffer* buffer, T& data)
     {
         D3D11_MAPPED_SUBRESOURCE mapping;
-        m_DeviceContext->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapping);
+        auto hr = m_DeviceContext->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapping);
+        assert(SUCCEEDED(hr));
 
         memcpy(mapping.pData, &data, sizeof(T));
 
@@ -155,6 +171,8 @@ public:
         MapBuffer(buffer->m_Buffer, data);
         m_DeviceContext->PSSetConstantBuffers(slot, 1, &buffer->m_Buffer);
     }
+
+    void SetVertexStream(VertexBuffer_t* buffer, int32_t slot, uint32_t offset = 0);
 
     // vertex declarations
     VertexDeclaration_t* CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count, VertexShader_t* m_Shader, const char* debugName = nullptr);

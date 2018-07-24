@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <shellapi.h>
+#include <DbgHelp.h>
 
 #include <json.hpp>
 #include <httplib.h>
@@ -21,9 +22,6 @@
 #include <import_export/AvalancheArchive.h>
 
 #include <jc3/ModelManager.h>
-
-// normal: 56523.6641
-// colour: 262143.984
 
 extern fs::path g_JC3Directory = "";
 extern bool g_DrawBoundingBoxes = true;
@@ -64,8 +62,17 @@ void CheckForUpdates(bool show_no_update_messagebox)
     }).detach();
 }
 
+#ifndef DEBUG
+LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS* exception_pointers);
+#endif
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine, int32_t iCmdShow)
 {
+#ifndef DEBUG
+    // generate minidumps
+    SetUnhandledExceptionFilter(UnhandledExceptionHandler);
+#endif
+
     static auto ReadRegistryKeyString = [](HKEY location, const char* subkey, const char* key, char* data, DWORD size) {
         HKEY hKey = nullptr;
         if (RegOpenKeyExA(location, subkey, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
@@ -124,6 +131,54 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 //FileLoader::Get()->LocateFileInDictionary("models/jc_environments/props/animation_prop/textures/bucket_dif.hmddsc");
                 FileLoader::Get()->LocateFileInDictionary("bucket_dif.hmddsc");
             }
+            else if (key == VK_F2) {
+                fs::path file = "editor/entities/gameobjects/main_character.ee";
+                FileLoader::Get()->ReadFile(file, [&, file](bool success, FileBuffer data) {
+                    if (success) {
+                        new AvalancheArchive(file, data);
+
+                        fs::path rbm = "models/jc_characters/main_characters/rico/rico_body_lod1.rbm";
+                        FileLoader::Get()->ReadFile(rbm, [&, rbm](bool success, FileBuffer data) {
+                            if (success) {
+                                auto r = new RenderBlockModel(rbm);
+                                r->Parse(data);
+                            }
+                        });
+                    }
+                });
+            }
+            else if (key == VK_F3) {
+                fs::path file = "editor/entities/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13.ee";
+                FileLoader::Get()->ReadFile(file, [&, file](bool success, FileBuffer data) {
+                    if (success) {
+                        new AvalancheArchive(file, data);
+
+                        fs::path rbm = "models/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13_base_body_lod1.rbm";
+                        FileLoader::Get()->ReadFile(rbm, [&, rbm](bool success, FileBuffer data) {
+                            if (success) {
+                                auto r = new RenderBlockModel(rbm);
+                                r->Parse(data);
+                            }
+                        });
+                    }
+                });
+            }
+            else if (key == VK_F4) {
+                fs::path file = "editor/entities/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/v0405_car_mugello_moderncircuitracer_civilian_01.ee";
+                FileLoader::Get()->ReadFile(file, [&, file](bool success, FileBuffer data) {
+                    if (success) {
+                        new AvalancheArchive(file, data);
+
+                        fs::path rbm = "models/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/moderncircuitracer_body_lod1.rbm";
+                        FileLoader::Get()->ReadFile(rbm, [&, rbm](bool success, FileBuffer data) {
+                            if (success) {
+                                auto r = new RenderBlockModel(rbm);
+                                r->Parse(data);
+                            }
+                        });
+                    }
+                });
+            }
         });
 #endif
 
@@ -135,6 +190,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         // register file type callbacks now
         FileLoader::Get()->RegisterCallback(".rbm", RenderBlockModel::FileReadCallback);
         FileLoader::Get()->RegisterCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::FileReadCallback);
+
+        FileLoader::Get()->RegisterCallback(".ddsc", [&](const fs::path& filename, const FileBuffer& data) {
+            FileBuffer buffer;
+            if (FileLoader::Get()->ReadCompressedTexture(&data, nullptr, &buffer)) {
+                TextureManager::Get()->GetTexture(filename, &buffer, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
+            }
+        });
 
         // register importers and exporters
         ImportExportManager::Get()->Register(new import_export::Wavefront_Obj);
@@ -160,8 +222,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         });
 #endif
 
-#ifdef DEBUG
-        FileLoader::Get()->ReadShaderBundle("D:/Steam/steamapps/common/Just Cause 3/Shaders_F.shader_bundle");
+#if 0
+        auto adf = FileLoader::Get()->ReadAdf("D:/Steam/steamapps/common/Just Cause 3/Shaders_F.shader_bundle");
 #endif
 
         // run!
@@ -170,3 +232,49 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
     return 0;
 }
+
+#ifndef DEBUG
+typedef BOOL(WINAPI *MINIDUMPWRITEDUMP)(
+    HANDLE process,
+    uint32_t process_id,
+    HANDLE file,
+    MINIDUMP_TYPE type,
+    const PMINIDUMP_EXCEPTION_INFORMATION exception_param,
+    const PMINIDUMP_USER_STREAM_INFORMATION user_stream,
+    const PMINIDUMP_CALLBACK_INFORMATION callback);
+
+LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS* exception_pointers)
+{
+    auto dbghelp = LoadLibrary("dbghelp.dll");
+    auto WriteDump = (MINIDUMPWRITEDUMP)GetProcAddress(dbghelp, "MiniDumpWriteDump");
+
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+    auto time = std::put_time(&tm, "%d-%m-%Y-%H-%M-%S");
+    
+    std::stringstream filename;
+    filename << fs::current_path();
+    filename << "\\" << VER_PRODUCTNAME_STR << "-" << VER_FILE_VERSION_STR << "-" << time << ".dmp";
+
+    auto file = CreateFile(filename.str().c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+    _MINIDUMP_EXCEPTION_INFORMATION except_info;
+    except_info.ThreadId = GetCurrentThreadId();
+    except_info.ExceptionPointers = exception_pointers;
+    except_info.ClientPointers = FALSE;
+
+    const auto process = GetCurrentProcess();
+    const auto process_id = GetCurrentProcessId();
+
+    WriteDump(process, process_id, file, MiniDumpNormal, &except_info, nullptr, nullptr);
+    CloseHandle(file);
+
+    std::stringstream msg;
+    msg << "Something somewhere somehow went wrong.\n\n";
+    msg << "A dump file was created at " << filename.str() << "\n\n";
+    msg << "Please create a bug report on our GitHub and attach the dump file and we'll try and fix it.";
+
+    MessageBox(nullptr, msg.str().c_str(), nullptr, MB_ICONSTOP | MB_OK);
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+#endif

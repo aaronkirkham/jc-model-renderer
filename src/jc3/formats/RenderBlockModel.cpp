@@ -43,9 +43,6 @@ static auto g_RenderBlockColour = glm::vec4{ 1, 1, 1, 1 };
 RenderBlockModel::RenderBlockModel(const fs::path& filename)
     : m_Filename(filename)
 {
-    // create the mesh constant buffer
-    MeshConstants constants;
-    m_MeshConstants = Renderer::Get()->CreateConstantBuffer(constants, "RenderBlockModel Mesh Buffer");
 }
 
 RenderBlockModel::~RenderBlockModel()
@@ -57,8 +54,6 @@ RenderBlockModel::~RenderBlockModel()
     for (auto& render_block : m_RenderBlocks) {
         safe_delete(render_block);
     }
-
-    Renderer::Get()->DestroyBuffer(m_MeshConstants);
 }
 
 bool RenderBlockModel::Parse(const FileBuffer& data)
@@ -99,8 +94,8 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
 
         const auto renderBlock = RenderBlockFactory::CreateRenderBlock(hash);
         if (renderBlock) {
-            renderBlock->Create();
             renderBlock->Read(stream);
+            renderBlock->Create();
 
             uint32_t checksum;
             stream.read((char *)&checksum, sizeof(uint32_t));
@@ -118,11 +113,11 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
         }
         else {
             std::stringstream error;
-            error << "Unknown Render Block type ";
-            error << "0x" << std::uppercase << std::setw(4) << std::hex << hash;
-            error << " (" << RenderBlockFactory::GetRenderBlockName(hash) << ").";
+            error << "\"RenderBlock" << RenderBlockFactory::GetRenderBlockName(hash) << "\" (0x" << std::uppercase << std::setw(4) << std::hex << hash << ") is not yet supported.\n\n";
+            error << "A model might still be rendered, but some parts of it may be missing.";
 
-            DEBUG_LOG("[ERROR] " << error.str());
+            DEBUG_LOG("[WARNING] RenderBlockModel::Parse - Unknown render block. \"" << RenderBlockFactory::GetRenderBlockName(hash) << "\" - " << std::setw(4) << std::hex << hash);
+            Window::Get()->ShowMessageBox(error.str());
 
             // if we haven't parsed any other blocks yet
             // we'll never see anything rendered, let the user know something is wrong
@@ -149,8 +144,6 @@ end:
 
 void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuffer& data)
 {
-    //std::istringstream stream(std::string{ (char*)data.data(), data.size() });
-
     auto rbm = new RenderBlockModel(filename);
     if (!rbm->Parse(data)) {
         Window::Get()->ShowMessageBox(rbm->GetError());
@@ -160,6 +153,7 @@ void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuff
 
 void RenderBlockModel::Draw(RenderContext_t* context)
 {
+#if 0
     //m_Rotation.z += 0.015f;
 
     // calculate the world matrix
@@ -170,20 +164,11 @@ void RenderBlockModel::Draw(RenderContext_t* context)
         m_WorldMatrix = glm::rotate(m_WorldMatrix, m_Rotation.y, glm::vec3{ 1.0f, 0.0f, 0.0f });
         m_WorldMatrix = glm::rotate(m_WorldMatrix, m_Rotation.z, glm::vec3{ 0.0f, 1.0f, 0.0f });
     }
-
-    // update mesh constants
-    MeshConstants constants;
-    constants.worldMatrix = m_WorldMatrix;
-    constants.worldViewInverseTranspose = glm::transpose(glm::inverse(m_WorldMatrix * Camera::Get()->GetViewMatrix()));
+#endif
 
     // draw all render blocks
     for (auto& renderBlock : m_RenderBlocks) {
-        Renderer::Get()->SetDefaultRenderStates();
-
-        constants.colour = GetRenderBlockColour(renderBlock);
-
-        Renderer::Get()->SetVertexShaderConstants(m_MeshConstants, 1, constants);
-        Renderer::Get()->SetPixelShaderConstants(m_MeshConstants, 1, constants);
+        context->m_Renderer->SetDefaultRenderStates();
 
         renderBlock->Setup(context);
         renderBlock->Draw(context);
@@ -206,25 +191,4 @@ void RenderBlockModel::Draw(RenderContext_t* context)
         bool is_hover = false;
         DebugRenderer::Get()->DrawBBox(_min, _max, is_hover ? green : red);
     }
-}
-
-void RenderBlockModel::SetRenderBlockColour(IRenderBlock* block, const glm::vec4& colour)
-{
-    auto it = m_RenderBlockColours.find(block);
-    if (it != std::end(m_RenderBlockColours)) {
-        (*it).second = colour;
-        return;
-    }
-
-    m_RenderBlockColours[block] = colour;
-}
-
-const glm::vec4& RenderBlockModel::GetRenderBlockColour(IRenderBlock* block) const
-{
-    auto it = m_RenderBlockColours.find(block);
-    if (it == std::end(m_RenderBlockColours)) {
-        return g_RenderBlockColour;
-    }
-
-    return (*it).second;
 }

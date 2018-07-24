@@ -59,5 +59,5 @@ void AvalancheArchive::Initialise()
 
     g_CurrentLoadedArchive = this;
     m_FileList = std::make_unique<DirectoryList>();
-    m_FileList->Parse(m_StreamArchive);//, { ".rbm" });
+    m_FileList->Parse(m_StreamArchive);
 }

@@ -19,10 +19,6 @@ Camera::Camera()
     m_Projection = glm::perspectiveFovLH(glm::radians(m_FOV), window_size.x, window_size.y, m_NearClip, m_FarClip);
     m_Viewport = glm::vec4{ 0, 0, window_size.x, window_size.y };
 
-    // create the frame constant buffers
-    FrameConstants constants;
-    m_FrameConstants = Renderer::Get()->CreateConstantBuffer(constants, "Camera Frame Buffer");
-
     m_Position = glm::vec3(0, 3, -10);
     m_Rotation = glm::vec3(0, 0, 0);
 
@@ -89,26 +85,23 @@ Camera::~Camera()
 
 void Camera::Shutdown()
 {
-    Renderer::Get()->DestroyBuffer(m_FrameConstants);
 }
 
-void Camera::Update()
+void Camera::Update(RenderContext_t* context)
 {
     // calculate the view matrix
     {
         m_View = glm::translate(glm::mat4(1.0f), -m_Position);
-        m_View = glm::rotate(m_View, m_Rotation.x, glm::vec3{ 0.0f, 0.0f, 1.0f });
-        m_View = glm::rotate(m_View, m_Rotation.y, glm::vec3{ 1.0f, 0.0f, 0.0f });
-        m_View = glm::rotate(m_View, m_Rotation.z, glm::vec3{ 0.0f, 1.0f, 0.0f });
+        m_View = glm::rotate(m_View, m_Rotation.x, { 0, 0, 1 });
+        m_View = glm::rotate(m_View, m_Rotation.y, { 1, 0, 0 });
+        m_View = glm::rotate(m_View, m_Rotation.z, { 0, 1, 0 });
     }
 
-    // update frame constants
-    {
-        FrameConstants constants;
-        constants.viewProjection = (m_Projection * m_View);
+    // update view projection
+    m_ViewProjection = (m_Projection * m_View);
 
-        Renderer::Get()->SetVertexShaderConstants(m_FrameConstants, 0, constants);
-    }
+    // update the render context
+    context->m_viewProjectionMatrix = m_ViewProjection;
 }
 
 void Camera::ResetToDefault()

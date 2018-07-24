@@ -24,29 +24,21 @@ namespace JustCause3::RenderBlocks
 class RenderBlockBuildingJC3 : public IRenderBlock
 {
 private:
-    struct BuildingJC3Constants
-    {
-        float m_Scale = 1.0f;
-        glm::vec2 m_UVExtent = { 0, 0 };
-        char pad[4];
-    } m_Constants;
-
     JustCause3::RenderBlocks::BuildingJC3 m_Block;
     VertexBuffer_t* m_VertexBufferData = nullptr;
-    ConstantBuffer_t* m_ConstantBuffer = nullptr;
 
 public:
     RenderBlockBuildingJC3() = default;
     virtual ~RenderBlockBuildingJC3()
     {
         Renderer::Get()->DestroyBuffer(m_VertexBufferData);
-        Renderer::Get()->DestroyBuffer(m_ConstantBuffer);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockBuildingJC3"; }
 
     virtual void Create() override final
     {
+#if 0
         // load shaders
         m_VertexShader = GET_VERTEX_SHADER(general_jc3);
         m_PixelShader = GET_PIXEL_SHADER(general_jc3);
@@ -65,6 +57,7 @@ public:
 
         // create the constant buffer
         m_ConstantBuffer = Renderer::Get()->CreateConstantBuffer(m_Constants, "RenderBlockBuildingJC3");
+#endif
     }
 
     virtual void Read(std::istream& stream) override final
@@ -75,8 +68,8 @@ public:
         stream.read((char *)&m_Block, sizeof(m_Block));
 
         // set vertex shader constants
-        m_Constants.m_Scale = m_Block.attributes.packed.scale;
-        m_Constants.m_UVExtent = m_Block.attributes.packed.uv0Extent;
+        //m_Constants.m_Scale = m_Block.attributes.packed.scale;
+        //m_Constants.m_UVExtent = m_Block.attributes.packed.uv0Extent;
 
         // read the materials
         ReadMaterials(stream);
@@ -111,17 +104,18 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
+        if (!m_Visible) return;
+
         IRenderBlock::Setup(context);
 
         // set the constant buffers
-        Renderer::Get()->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
-        Renderer::Get()->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        //context->m_Renderer->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
+        //context->m_Renderer->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
 
-        Renderer::Get()->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 
         // set the 2nd vertex buffers
-        uint32_t offset = 0;
-        context->m_DeviceContext->IASetVertexBuffers(1, 1, &m_VertexBufferData->m_Buffer, &m_VertexBufferData->m_ElementStride, &offset);
+        context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
     }
 
     virtual void DrawUI() override final

@@ -1,4 +1,5 @@
 dlc/sky_fortress/sky_fortress.dlcinstallinfo
+dlc/sky_fortress/sky_fortress_world.bin
 dlc/sky_fortress/profile/online.stringlookup
 dlc/sky_fortress/global/revolution.revolutionc
 dlc/sky_fortress/global/revolution.stringlookup
@@ -16,7 +17,6 @@ dlc/sky_fortress/profile/taskgroup.onlinec
 dlc/sky_fortress/profile/task.onlinec
 dlc/sky_fortress/profile/upgrade.onlinec
 
-dlc/sky_fortress/sky_fortress_world.bin
 dlc/sky_fortress/sound/fmod_banks/dlc_01.bank
 dlc/sky_fortress/sound/fmod_banks/dlc_01_music.bank
 dlc/sky_fortress/global/global_sound_dlc1.bl
@@ -106,7 +106,5 @@ dlc/sky_fortress/models/jc_environment/structures/textures/sf_panels_grey_01_dif
 dlc/sky_fortress/models/jc_environment/structures/textures/sf_panels_rust_01_dif.hmddsc
 dlc/sky_fortress/models/jc_environment/structures/textures/sf_panels_white_01_dif.ddsc
 dlc/sky_fortress/models/jc_environment/structures/textures/sf_panels_white_01_dif.hmddsc
-
-
 
 textures/dummies/metergrid.ddsc
