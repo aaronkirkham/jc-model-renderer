@@ -60,6 +60,8 @@ public:
     virtual ~RenderBlockCharacterSkin()
     {
         Renderer::Get()->DestroyBuffer(m_VertexShaderConstants);
+        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
+        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[1]);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockCharacterSkin"; }
