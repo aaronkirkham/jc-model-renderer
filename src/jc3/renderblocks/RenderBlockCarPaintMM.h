@@ -36,7 +36,7 @@ private:
 
     struct InstanceConsts
     {
-        float IsDeformed;
+        float IsDeformed = 0.0f;
         float _pad[3];                      // [unused]
     } m_cbInstanceConsts;
 
@@ -85,12 +85,18 @@ private:
         float m_ClearCoatOverride;
     } m_cbDynamicMaterialParams;
 
+    struct CarPaintDynamicObjectParams
+    {
+        glm::vec4 m_DecalIndex = glm::vec4(0);
+        float m_DirtAmount = 0.0f;
+    } m_cbDynamicObjectParams;
+
     JustCause3::RenderBlocks::CarPaintMM m_Block;
     JustCause3::Vertex::CDeformTable m_DeformTable;
     std::string m_ShaderName = "carpaintmm";
     std::array<VertexBuffer_t*, 2> m_VertexBufferData = { nullptr };
     std::array<ConstantBuffer_t*, 3> m_VertexShaderConstants = { nullptr };
-    std::array<ConstantBuffer_t*, 3> m_FragmentShaderConstants = { nullptr };
+    std::array<ConstantBuffer_t*, 4> m_FragmentShaderConstants = { nullptr };
 
 public:
     RenderBlockCarPaintMM() = default;
@@ -104,6 +110,7 @@ public:
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[1]);
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[2]);
+        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[3]);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockCarPaintMM"; }
@@ -113,6 +120,8 @@ public:
         // load shaders
         m_VertexShader = ShaderManager::Get()->GetVertexShader(m_ShaderName);
         m_PixelShader = ShaderManager::Get()->GetPixelShader("carpaintmm");
+
+        OutputDebugString(m_ShaderName.c_str());
 
         if (m_ShaderName == "carpaintmm") {
             // create the element input desc
@@ -154,7 +163,8 @@ public:
         m_VertexShaderConstants[2] = Renderer::Get()->CreateConstantBuffer(m_cbDeformConsts, "RenderBlockCarPaintMM DeformConsts");
         m_FragmentShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbStaticMaterialParams, 20, "RenderBlockCarPaintMM CarPaintStaticMaterialParams");
         m_FragmentShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbDynamicMaterialParams, 5, "RenderBlockCarPaintMM CarPaintDynamicMaterialParams");
-        m_FragmentShaderConstants[2] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "RenderBlockCarPaintMM RBIInfo (fragment)");
+        m_FragmentShaderConstants[2] = Renderer::Get()->CreateConstantBuffer(m_cbDynamicObjectParams, "RenderBlockCarPaintMM CarPaintDynamicObjectParams");
+        m_FragmentShaderConstants[3] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "RenderBlockCarPaintMM RBIInfo (fragment)");
 
 #if 0
         // create the sampler states
@@ -291,13 +301,26 @@ public:
         // setup the constant buffer
         {
             //const auto scale = m_Block.attributes.packed.scale;
-            auto world = glm::mat4(1);
+            static auto world = glm::mat4(1);
 
             // set vertex shader constants
             m_cbRBIInfo.ModelWorldMatrix = world;
+        }
 
-            // set fragment shader constants
-            //
+        // set the layered albedo map
+        if (m_Block.attributes.flags & 0x20) {
+            const auto& texture = m_Textures.at(10);
+            if (texture && texture->IsLoaded()) {
+                texture->Use(16);
+            }
+        }
+
+        // set the overlay albedo map
+        if (m_Block.attributes.flags & 0x40) {
+            const auto& texture = m_Textures.at(11);
+            if (texture && texture->IsLoaded()) {
+                texture->Use(17);
+            }
         }
 
         // set the constant buffers
@@ -306,7 +329,8 @@ public:
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[2], 2, m_cbDeformConsts);
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 2, m_cbStaticMaterialParams);
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 6, m_cbDynamicMaterialParams);
-        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[2], 8, m_cbRBIInfo);
+        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[2], 7, m_cbDynamicObjectParams);
+        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[3], 8, m_cbRBIInfo);
 
         context->m_Renderer->SetCullMode(static_cast<D3D11_CULL_MODE>(~(m_Block.attributes.flags >> 6) & 2 | 1));
 
@@ -377,5 +401,8 @@ public:
         ImGui::SliderFloat4("R", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorR), 0, 1);
         ImGui::SliderFloat4("G", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorG), 0, 1);
         ImGui::SliderFloat4("B", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorB), 0, 1);
+        ImGui::SliderFloat("Specular Gloss Override", &m_cbDynamicMaterialParams.m_SpecularGlossOverride, 0, 1);
+        ImGui::SliderFloat("Metallic Override", &m_cbDynamicMaterialParams.m_MetallicOverride, 0, 1);
+        ImGui::SliderFloat("Clear Coat Override", &m_cbDynamicMaterialParams.m_ClearCoatOverride, 0, 1);
     }
 };
