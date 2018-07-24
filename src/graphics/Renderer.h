@@ -38,8 +38,8 @@ private:
     ID3D11Device* m_Device = nullptr;
     ID3D11DeviceContext* m_DeviceContext = nullptr;
     IDXGISwapChain* m_SwapChain = nullptr;
-    std::array<ID3D11RenderTargetView*, 2> m_RenderTargetView = { nullptr };
-    std::array<ID3D11ShaderResourceView*, 1> m_RenderTargetResourceView = { nullptr };
+    std::array<ID3D11RenderTargetView*, 3> m_RenderTargetView = { nullptr };
+    std::array<ID3D11ShaderResourceView*, 2> m_RenderTargetResourceView = { nullptr };
     ID3D11RasterizerState* m_RasterizerState = nullptr;
     ID3D11Texture2D* m_DepthTexture = nullptr;
     ID3D11DepthStencilState* m_DepthStencilEnabledState = nullptr;
@@ -53,7 +53,7 @@ private:
 
     glm::vec4 m_ClearColour = g_DefaultClearColour;
 
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
+#ifdef DEBUG
     ID3D11Debug* m_DeviceDebugger = nullptr;
 #endif
 
@@ -171,6 +171,8 @@ public:
         MapBuffer(buffer->m_Buffer, data);
         m_DeviceContext->PSSetConstantBuffers(slot, 1, &buffer->m_Buffer);
     }
+
+    void SetVertexStream(VertexBuffer_t* buffer, int32_t slot, uint32_t offset = 0);
 
     // vertex declarations
     VertexDeclaration_t* CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count, VertexShader_t* m_Shader, const char* debugName = nullptr);

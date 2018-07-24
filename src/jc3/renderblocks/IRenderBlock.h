@@ -5,6 +5,7 @@
 #include <graphics/TextureManager.h>
 #include <graphics/Types.h>
 #include <graphics/Renderer.h>
+#include <graphics/imgui/imgui_bitfield.h>
 
 class IRenderBlock
 {
@@ -81,8 +82,7 @@ public:
         context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
 
         // set the vertex buffer
-        uint32_t offset = 0;
-        context->m_DeviceContext->IASetVertexBuffers(0, 1, &m_VertexBuffer->m_Buffer, &m_VertexBuffer->m_ElementStride, &offset);
+        context->m_Renderer->SetVertexStream(m_VertexBuffer, 0);
 
         // set the sampler state
         if (m_SamplerState) {
@@ -98,10 +98,10 @@ public:
         if (!m_Visible) return;
 
         if (m_IndexBuffer) {
-            Renderer::Get()->DrawIndexed(0, m_IndexBuffer->m_ElementCount, m_IndexBuffer);
+            context->m_Renderer->DrawIndexed(0, m_IndexBuffer->m_ElementCount, m_IndexBuffer);
         }
         else {
-            Renderer::Get()->Draw(0, m_VertexBuffer->m_ElementCount / 3);
+            context->m_Renderer->Draw(0, (m_VertexBuffer->m_ElementCount / 3));
         }
     }
 
@@ -189,7 +189,7 @@ public:
         if (!m_Visible) return;
 
         for (const auto& batch : m_SkinBatches) {
-            Renderer::Get()->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
+            context->m_Renderer->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
         }
     }
 

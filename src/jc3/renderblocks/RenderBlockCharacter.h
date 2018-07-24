@@ -205,10 +205,19 @@ public:
 
     virtual void DrawUI() override final
     {
+        static std::array flag_labels = {
+            "Disable Culling", "", "Use Alpha Mask", "Alpha Blending", "Use Feature", "Use Wrinkle Map", "Use Camera Lighting", "",
+            "", "", "", "", "", "", "", "",
+            "", "", "", "", "", "", "", "",
+            "", "", "", "", "", "", "", ""
+        };
+
+        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+
         ImGui::SliderFloat("Scale", &m_Block.attributes.scale, 0.1f, 10.0f);
 
         ImGui::SliderFloat4("Unknown #1", glm::value_ptr(m_cbInstanceConsts._unknown), 0, 1);
-        ImGui::SliderFloat4("Diffuse Colour", glm::value_ptr(m_cbInstanceConsts.DiffuseColour), 0, 1);
+        ImGui::ColorEdit4("Diffuse Colour", glm::value_ptr(m_cbInstanceConsts.DiffuseColour));
         ImGui::SliderFloat4("Unknown #2", glm::value_ptr(m_cbInstanceConsts._unknown2), 0, 1);
     }
 };

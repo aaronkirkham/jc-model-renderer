@@ -131,6 +131,9 @@ void Renderer::Shutdown()
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
     m_DeviceDebugger->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+#endif
+
+#ifdef DEBUG
     safe_release(m_DeviceDebugger);
 #endif
 }
@@ -280,8 +283,24 @@ void Renderer::CreateRenderTarget(const glm::vec2& size)
         assert(SUCCEEDED(result));
     }
 
+    // create metallic render target
+    {
+        auto metallicTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE));
+        assert(metallicTex);
+
+        auto result = m_Device->CreateRenderTargetView(metallicTex, nullptr, &m_RenderTargetView[2]);
+        assert(SUCCEEDED(result));
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        desc.Texture2D = { 0, static_cast<UINT>(-1) };
+        result = m_Device->CreateShaderResourceView(metallicTex, &desc, &m_RenderTargetResourceView[1]);
+        assert(SUCCEEDED(result));
+    }
+
     // set the render target
-    m_DeviceContext->OMSetRenderTargets(2, &m_RenderTargetView[0], m_DepthStencilView);
+    m_DeviceContext->OMSetRenderTargets(3, &m_RenderTargetView[0], m_DepthStencilView);
 
     // create the viewport
     {
@@ -325,9 +344,25 @@ void Renderer::CreateDevice(const HWND& hwnd, const glm::vec2& size)
     auto result = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, deviceFlags, nullptr, 0, D3D11_SDK_VERSION, &desc, &m_SwapChain, &m_Device, nullptr, &m_DeviceContext);
     assert(SUCCEEDED(result));
 
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
+#ifdef DEBUG
     result = m_Device->QueryInterface(__uuidof(ID3D11Debug), reinterpret_cast<void**>(&m_DeviceDebugger));
     assert(SUCCEEDED(result));
+
+    ID3D11InfoQueue* info_queue;
+    result = m_DeviceDebugger->QueryInterface(__uuidof(ID3D11InfoQueue), reinterpret_cast<void**>(&info_queue));
+    assert(SUCCEEDED(result));
+
+    // hide specific messages
+    D3D11_MESSAGE_ID messages_to_hide[] = {
+        D3D11_MESSAGE_ID_DEVICE_DRAW_SAMPLER_NOT_SET
+    };
+
+    D3D11_INFO_QUEUE_FILTER filter;
+    ZeroMemory(&filter, sizeof(filter));
+    filter.DenyList.NumIDs = _countof(messages_to_hide);
+    filter.DenyList.pIDList = messages_to_hide;
+    info_queue->AddStorageFilterEntries(&filter);
+    info_queue->Release();
 #endif
 }
 
@@ -415,9 +450,8 @@ void Renderer::CreateBlendState()
     blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
     blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].RenderTargetWriteMask = 0x0f;
+    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-    
     auto result = m_Device->CreateBlendState(&blendDesc, &m_BlendState);
     assert(SUCCEEDED(result));
 
@@ -580,6 +614,12 @@ void Renderer::DestroyBuffer(IBuffer_t* buffer)
         safe_release(buffer->m_Buffer);
         safe_delete(buffer);
     }
+}
+
+void Renderer::SetVertexStream(VertexBuffer_t* buffer, int32_t slot, uint32_t offset)
+{
+    assert(buffer);
+    m_DeviceContext->IASetVertexBuffers(slot, 1, &buffer->m_Buffer, &buffer->m_ElementStride, &offset);
 }
 
 VertexDeclaration_t* Renderer::CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count, VertexShader_t* m_Shader, const char* debugName)

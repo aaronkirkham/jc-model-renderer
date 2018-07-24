@@ -189,6 +189,15 @@ public:
 
     virtual void DrawUI() override final
     {
+        static std::array flag_labels = {
+            "Disable Culling", "Use Wrinkle Map", "", "", "Use Feature", "Use Alpha Mask", "", "",
+            "", "", "", "", "", "", "", "",
+            "", "", "", "", "", "", "", "",
+            "", "", "", "", "", "", "", ""
+        };
+
+        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+
         ImGui::SliderFloat("Scale", &m_Block.attributes.scale, 0.1f, 10.0f);
     }
 };

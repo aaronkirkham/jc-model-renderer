@@ -27,7 +27,7 @@ private:
     {
         glm::mat4 ModelWorldMatrix;
         glm::mat4 ModelWorldMatrixPrev;     // [unused]
-        glm::vec4 ModelDiffuseColor;        // [unused]
+        glm::vec4 ModelDiffuseColor = glm::vec4(1);
         glm::vec4 ModelAmbientColor;        // [unused]
         glm::vec4 ModelSpecularColor;       // [unused]
         glm::vec4 ModelEmissiveColor;       // [unused]
@@ -90,7 +90,7 @@ private:
     std::string m_ShaderName = "carpaintmm";
     std::array<VertexBuffer_t*, 2> m_VertexBufferData = { nullptr };
     std::array<ConstantBuffer_t*, 3> m_VertexShaderConstants = { nullptr };
-    std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = { nullptr };
+    std::array<ConstantBuffer_t*, 3> m_FragmentShaderConstants = { nullptr };
 
 public:
     RenderBlockCarPaintMM() = default;
@@ -103,6 +103,7 @@ public:
         Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[2]);
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[1]);
+        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[2]);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockCarPaintMM"; }
@@ -153,6 +154,7 @@ public:
         m_VertexShaderConstants[2] = Renderer::Get()->CreateConstantBuffer(m_cbDeformConsts, "RenderBlockCarPaintMM DeformConsts");
         m_FragmentShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbStaticMaterialParams, 20, "RenderBlockCarPaintMM CarPaintStaticMaterialParams");
         m_FragmentShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbDynamicMaterialParams, 5, "RenderBlockCarPaintMM CarPaintDynamicMaterialParams");
+        m_FragmentShaderConstants[2] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "RenderBlockCarPaintMM RBIInfo (fragment)");
 
 #if 0
         // create the sampler states
@@ -304,22 +306,13 @@ public:
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[2], 2, m_cbDeformConsts);
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 2, m_cbStaticMaterialParams);
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 6, m_cbDynamicMaterialParams);
+        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[2], 8, m_cbRBIInfo);
 
-        // (~(this->m_Attributes.m_Flags >> 6) & 2 | 1)
-        //context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+        context->m_Renderer->SetCullMode(static_cast<D3D11_CULL_MODE>(~(m_Block.attributes.flags >> 6) & 2 | 1));
 
-        // set the 2nd vertex buffers
-        uint32_t offset = 0;
-        context->m_DeviceContext->IASetVertexBuffers(1, 1, &m_VertexBufferData[0]->m_Buffer, &m_VertexBufferData[0]->m_ElementStride, &offset);
-
-        // set the 3rd vertex buffers
-        if (m_VertexBufferData[1]) {
-            context->m_DeviceContext->IASetVertexBuffers(2, 1, &m_VertexBufferData[1]->m_Buffer, &m_VertexBufferData[1]->m_ElementStride, &offset);
-        }
-        // if we don't have layered UVs, set the 2nd buffer
-        else {
-            context->m_DeviceContext->IASetVertexBuffers(2, 1, &m_VertexBufferData[0]->m_Buffer, &m_VertexBufferData[0]->m_ElementStride, &offset);
-        }
+        // set the 2nd and 3rd vertex buffers
+        context->m_Renderer->SetVertexStream(m_VertexBufferData[0], 1);
+        context->m_Renderer->SetVertexStream(m_VertexBufferData[1] ? m_VertexBufferData[1] : m_VertexBufferData[0], 2);
     }
 
     virtual void Draw(RenderContext_t* context) override final
@@ -332,9 +325,7 @@ public:
         else {
             // set deform data
             if (m_Block.attributes.flags & 0x1000) {
-                for (uint8_t i = 0; i < m_DeformTable.size; ++i) {
-                    // TODO
-                }
+                // TODO
             }
 
             IRenderBlock::Draw(context);
@@ -343,6 +334,20 @@ public:
 
     virtual void DrawUI() override final
     {
+        static std::array flag_labels = {
+            "", "", "", "", "", "Layered Albedo Map", "Overlay Albedo Map", "Disable Culling",
+            "Is Transparent", "Alpha Test Enabled", "", "", "Is Deformable", "Is Skinned", "", "",
+            "", "", "", "", "", "", "", "",
+            "", "", "", "", "", "", "", ""
+        };
+
+        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+
+
+        ImGui::ColorEdit3("Diffuse Colour", glm::value_ptr(m_cbRBIInfo.ModelDiffuseColor));
+
+        ImGui::Text("Static Material Params");
+        ImGui::Separator();
         ImGui::SliderFloat4("Specular Gloss", glm::value_ptr(m_cbStaticMaterialParams.m_SpecularGloss), 0, 1);
         ImGui::SliderFloat4("Metallic", glm::value_ptr(m_cbStaticMaterialParams.m_Metallic), 0, 1);
         ImGui::SliderFloat4("Clear Coat", glm::value_ptr(m_cbStaticMaterialParams.m_ClearCoat), 0, 1);
@@ -350,13 +355,12 @@ public:
         ImGui::SliderFloat4("Diffuse Wrap", glm::value_ptr(m_cbStaticMaterialParams.m_DiffuseWrap), 0, 1);
         ImGui::SliderFloat4("Dirt Params", glm::value_ptr(m_cbStaticMaterialParams.m_DirtParams), 0, 1);
         ImGui::SliderFloat4("Dirt Blend", glm::value_ptr(m_cbStaticMaterialParams.m_DirtBlend), 0, 1);
-        ImGui::SliderFloat4("Dirt Colour", glm::value_ptr(m_cbStaticMaterialParams.m_DirtColor), 0, 1);
-        ImGui::SliderFloat4("Decal Count (unused)", glm::value_ptr(m_cbStaticMaterialParams.m_DecalCount), 0, 1);
+        ImGui::ColorEdit3("Dirt Colour", glm::value_ptr(m_cbStaticMaterialParams.m_DirtColor));
         ImGui::SliderFloat4("Decal Width", glm::value_ptr(m_cbStaticMaterialParams.m_DecalWidth), 0, 1);
-        ImGui::SliderFloat4("Decal 1 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal1Color), 0, 1);
-        ImGui::SliderFloat4("Decal 2 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal2Color), 0, 1);
-        ImGui::SliderFloat4("Decal 3 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal3Color), 0, 1);
-        ImGui::SliderFloat4("Decal 4 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal4Color), 0, 1);
+        ImGui::ColorEdit3("Decal 1 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal1Color));
+        ImGui::ColorEdit3("Decal 2 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal2Color));
+        ImGui::ColorEdit3("Decal 3 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal3Color));
+        ImGui::ColorEdit3("Decal 4 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal4Color));
         ImGui::SliderFloat4("Decal Blend", glm::value_ptr(m_cbStaticMaterialParams.m_DecalBlend), 0, 1);
         ImGui::SliderFloat4("Damage", glm::value_ptr(m_cbStaticMaterialParams.m_Damage), 0, 1);
         ImGui::SliderFloat4("Damage Blend", glm::value_ptr(m_cbStaticMaterialParams.m_DamageBlend), 0, 1);
@@ -365,8 +369,13 @@ public:
         ImGui::Checkbox("Support Damage Blend", (bool *)&m_cbStaticMaterialParams.SupportDmgBlend);
         ImGui::Checkbox("Support Layered", (bool *)&m_cbStaticMaterialParams.SupportLayered);
         ImGui::Checkbox("Support Overlay", (bool *)&m_cbStaticMaterialParams.SupportOverlay);
-        ImGui::Checkbox("Support Rotating (unused)", (bool *)&m_cbStaticMaterialParams.SupportRotating);
         ImGui::Checkbox("Support Dirt", (bool *)&m_cbStaticMaterialParams.SupportDirt);
         ImGui::Checkbox("Support Soft Tint", (bool *)&m_cbStaticMaterialParams.SupportSoftTint);
+
+        ImGui::Text("Dynamic Material Params");
+        ImGui::Separator();
+        ImGui::SliderFloat4("R", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorR), 0, 1);
+        ImGui::SliderFloat4("G", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorG), 0, 1);
+        ImGui::SliderFloat4("B", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorB), 0, 1);
     }
 };

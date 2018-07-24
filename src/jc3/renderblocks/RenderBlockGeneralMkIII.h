@@ -200,8 +200,7 @@ public:
         context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 
         // set the 2nd vertex buffers
-        uint32_t offset = 0;
-        context->m_DeviceContext->IASetVertexBuffers(1, 1, &m_VertexBufferData->m_Buffer, &m_VertexBufferData->m_ElementStride, &offset);
+        context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
     }
 
     virtual void Draw(RenderContext_t* context) override final
@@ -214,7 +213,7 @@ public:
             for (const auto& batch : m_SkinBatches) {
                 // TODO: upload matrix palette data
 
-                Renderer::Get()->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
+                context->m_Renderer->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
             }
         }
         else if (flags & 0x20) {
@@ -229,6 +228,18 @@ public:
 
     virtual void DrawUI() override final
     {
+        // flags & 2 = something with transparency?
+
+        static std::array flag_labels = {
+            "Disable Culling", "", "", "", "", "Has Packed Vertices", "", "",
+            "", "", "", "", "", "", "", "Has Skin Batches",
+
+            "", "", "", "", "", "", "", "",
+            "", "", "", "", "", "", "", ""
+        };
+
+        ImGuiCustom::BitFieldTooltip("", &m_Block.attributes.flags, flag_labels);
+
         ImGui::SliderFloat("Scale", &m_Block.attributes.packed.scale, 0.1f, 10.0f);
     }
 };

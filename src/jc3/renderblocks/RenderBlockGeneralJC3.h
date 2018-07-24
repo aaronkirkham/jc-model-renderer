@@ -229,9 +229,7 @@ public:
 
         // if we are using packed vertices, set the 2nd vertex buffer
         if (m_Block.attributes.packed.format == 1) {
-            // set the 2nd vertex buffers
-            uint32_t offset = 0;
-            context->m_DeviceContext->IASetVertexBuffers(1, 1, &m_VertexBufferData->m_Buffer, &m_VertexBufferData->m_ElementStride, &offset);
+            context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
         }
 
 #ifdef DEBUG
@@ -244,6 +242,15 @@ public:
 
     virtual void DrawUI() override final
     {
+        static std::array flag_labels = {
+            "Disable Culling", "", "", "", "", "", "", "",
+            "", "", "", "", "", "", "", "",
+            "", "", "", "", "", "", "", "",
+            "", "", "", "", "", "", "", ""
+        };
+
+        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+
         ImGui::SliderFloat("Scale", &m_Block.attributes.packed.scale, 0.1f, 10.0f);
         ImGui::SliderFloat("Depth Bias", &m_Block.attributes.depthBias, 0.0f, 10.0f);
         ImGui::SliderFloat("Specular Gloss", &m_Block.attributes.specularGloss, 0.0f, 10.0f);
