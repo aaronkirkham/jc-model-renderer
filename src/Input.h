@@ -7,10 +7,9 @@ struct InputEvents
 {
     ksignals::Event<void(uint32_t)> KeyDown;
     ksignals::Event<void(uint32_t)> KeyUp;
-    ksignals::Event<void(const glm::vec2&)> MouseDown;
-    ksignals::Event<void(const glm::vec2&)> MouseUp;
+    ksignals::Event<void(uint32_t, const glm::vec2&)> MousePress;
     ksignals::Event<void(const glm::vec2&)> MouseMove;
-    ksignals::Event<void(float delta)> MouseScroll;
+    ksignals::Event<void(float)> MouseScroll;
 };
 
 class Input : public Singleton<Input>
@@ -22,7 +21,6 @@ private:
     glm::vec3 m_MouseWorldPosition;
     glm::vec2 m_LastClickPosition;
     glm::vec3 m_LastClickWorldPosition;
-    bool m_IsMouseDown = false;
 
 public:
     virtual ~Input();

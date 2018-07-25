@@ -179,6 +179,56 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     }
                 });
             }
+            else if (key == VK_F5) {
+                fs::path file = "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/v4602_plane_urga_fighterbomber_debug.ee";
+                FileLoader::Get()->ReadFile(file, [&, file](bool success, FileBuffer data) {
+                    if (success) {
+                        new AvalancheArchive(file, data);
+
+                        static std::array models = {
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_body_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_tail_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_wing_l_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_wing_r_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_stabilizer_l_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_stabilizer_r_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_fueltank_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_hatch_r_l_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_hatch_r_r_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_door_f_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_rocketpod_l_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_rocketpod_r_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_airbrake_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_gear_base_r_l_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_gear_base_r_r_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_aileron_r_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_aileron_l_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_flap_r_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_flap_l_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_rudder_l_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_rudder_r_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_leading_edge_flap_r_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_leading_edge_flap_l_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_ground_lockon_r_01_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_ground_lockon_r_02_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_ground_lockon_r_03_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_ground_lockon_l_01_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_ground_lockon_l_02_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_ground_lockon_l_03_lod1.rbm",
+                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_hatch_f_lod1.rbm"
+                        };
+
+                        for (auto& mdl : models) {
+                            FileLoader::Get()->ReadFile(mdl, [&, mdl](bool success, FileBuffer data) {
+                                if (success) {
+                                    auto r = new RenderBlockModel(mdl);
+                                    r->Parse(data);
+                                }
+                            });
+                        }
+                    }
+                });
+            }
         });
 #endif
 

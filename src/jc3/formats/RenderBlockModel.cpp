@@ -84,6 +84,11 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
     m_BoundingBoxMin = header.m_BoundingBoxMin;
     m_BoundingBoxMax = header.m_BoundingBoxMax;
 
+    // focus on the bounding box
+    if (!ModelManager::Get()->HasAnyModel()) {
+        Camera::Get()->FocusOnBoundingBox(m_BoundingBoxMin, m_BoundingBoxMax);
+    }
+
     // use file batches
     FileLoader::Get()->m_UseBatches = true;
 
@@ -117,7 +122,7 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
             error << "A model might still be rendered, but some parts of it may be missing.";
 
             DEBUG_LOG("[WARNING] RenderBlockModel::Parse - Unknown render block. \"" << RenderBlockFactory::GetRenderBlockName(hash) << "\" - " << std::setw(4) << std::hex << hash);
-            Window::Get()->ShowMessageBox(error.str());
+            Window::Get()->ShowMessageBox(error.str(), MB_ICONINFORMATION | MB_OK);
 
             // if we haven't parsed any other blocks yet
             // we'll never see anything rendered, let the user know something is wrong

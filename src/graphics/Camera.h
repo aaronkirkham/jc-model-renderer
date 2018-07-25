@@ -10,6 +10,7 @@ private:
     glm::vec3 m_Position;
     glm::vec3 m_Rotation;
 
+    bool m_IsTranslatingView = false;
     bool m_IsRotatingView = false;
 
     float m_FOV = 45.0f;
@@ -31,6 +32,8 @@ public:
 
     void WorldToScreen(const glm::vec3& world, glm::vec3* screen);
     void ScreenToWorld(const glm::vec3& screen, glm::vec3* world);
+
+    void FocusOnBoundingBox(const glm::vec3& bb_min, const glm::vec3& bb_max);
 
     const glm::vec3& GetPosition() const { return m_Position; }
     const glm::vec3& GetRotation() const { return m_Rotation; }

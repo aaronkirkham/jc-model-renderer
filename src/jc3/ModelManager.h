@@ -102,6 +102,11 @@ public:
         }
     }
 
+    bool HasAnyModel()
+    {
+        return !m_Models.empty();
+    }
+
     std::vector<RenderBlockModel*> GetModels()
     {
         std::lock_guard<std::recursive_mutex> _lk{ m_ModelsMutex };

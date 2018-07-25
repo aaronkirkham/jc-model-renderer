@@ -8,7 +8,9 @@ static constexpr auto g_MovementSensitivity = 0.05f;
 static constexpr auto g_MouseScrollSensitivity = 0.01f;
 
 static auto SpeedMultiplier = [](float value) {
-    return value * (Input::Get()->IsKeyPressed(VK_SHIFT) ? 0.05f : 1.0f);
+    const auto& input = Input::Get();
+
+    return value * (input->IsKeyPressed(VK_SHIFT) ? 0.05f : input->IsKeyPressed(VK_CONTROL) ? 5.0f : 1.0f);
 };
 
 Camera::Camera()
@@ -31,17 +33,46 @@ Camera::Camera()
     });
 
     auto& events = Input::Get()->Events();
-    events.MouseDown.connect([&](const glm::vec2& position) {
-        m_IsRotatingView = true;
-        return true;
-    });
+    events.MousePress.connect([&](uint32_t message, const glm::vec2& position) {
+        bool capture_mouse = false;
 
-    events.MouseUp.connect([&](const glm::vec2& position) {
-        m_IsRotatingView = false;
+        switch (message) {
+            // left button down
+        case WM_LBUTTONDOWN:
+            m_IsRotatingView = true;
+            capture_mouse = true;
+            break;
+
+            // left button up
+        case WM_LBUTTONUP:
+            m_IsRotatingView = false;
+            break;
+
+            // right button down
+        case WM_RBUTTONDOWN:
+            m_IsTranslatingView = true;
+            capture_mouse = true;
+            break;
+
+        case WM_RBUTTONUP:
+            m_IsTranslatingView = false;
+            break;
+        }
+
+        // capture the mouse to stop it escaping the window
+        Window::Get()->CaptureMouse(capture_mouse);
+
         return true;
     });
 
     events.MouseMove.connect([&](const glm::vec2& position) {
+        // handle view translation
+        if (m_IsTranslatingView) {
+            m_Position.x += position.x * SpeedMultiplier(g_MouseSensitivity);
+            m_Position.y -= position.y * SpeedMultiplier(g_MouseSensitivity);
+        }
+
+        // handle view rotation
         if (m_IsRotatingView) {
             m_Rotation.z += position.x * SpeedMultiplier(g_MouseSensitivity);
             m_Rotation.y += position.y * SpeedMultiplier(g_MouseSensitivity);
@@ -106,8 +137,8 @@ void Camera::Update(RenderContext_t* context)
 
 void Camera::ResetToDefault()
 {
-    m_Position = glm::vec3(0, 3, -10);
-    m_Rotation = glm::vec3(0, 0, 0);
+    m_Position = glm::vec3(0, 0, -10);
+    m_Rotation = glm::vec3(0);
 }
 
 void Camera::WorldToScreen(const glm::vec3& world, glm::vec3* screen)
@@ -124,4 +155,17 @@ void Camera::ScreenToWorld(const glm::vec3& screen, glm::vec3* world)
     // glm uses the bottom of the window, so we need to take that into account
     const auto window_size = Window::Get()->GetSize();
     *world = glm::unProject({ screen.x, window_size.y - screen.y, screen.z }, m_View, m_Projection, m_Viewport);
+}
+
+void Camera::FocusOnBoundingBox(const glm::vec3& bb_min, const glm::vec3& bb_max)
+{
+    const auto bb_width = (bb_max.x - bb_min.x);
+    const auto bb_height = (bb_max.y - bb_min.y);
+    const auto bb_length = (bb_max.z - bb_min.z);
+
+    // calculate how far we need to translate to get the model in view
+    const float distance = ((glm::max(glm::max(bb_width, bb_height), bb_length) / 2) / glm::sin(glm::radians(m_FOV) / 2));
+
+    m_Position = glm::vec3{ 0, (bb_height / 2), -(distance + 0.5f) };
+    m_Rotation = glm::vec3(0);
 }

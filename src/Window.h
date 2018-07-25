@@ -28,6 +28,7 @@ private:
     bool m_Running = true;
     HINSTANCE m_Instance = nullptr;
     HWND m_Hwnd = nullptr;
+    bool m_IsMouseCaptured = false;
 
     static LRESULT CALLBACK WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam);
 
@@ -46,6 +47,9 @@ public:
     glm::vec2 GetSize() const;
     glm::vec2 GetPosition() const;
     glm::vec2 GetCenterPoint() const;
+
+    void CaptureMouse(bool capture);
+    bool IsMouseCpatured() const { return m_IsMouseCaptured; }
 
     int32_t ShowMessageBox(const std::string& message, uint32_t type = MB_ICONERROR | MB_OK);
     void ShowFolderSelection(const std::string& title, std::function<void(const std::string&)> fn_selected, std::function<void()> fn_cancelled = {});

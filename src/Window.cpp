@@ -177,6 +177,18 @@ glm::vec2 Window::GetCenterPoint() const
     return glm::vec2{ size.x / 2, size.y / 2 };
 }
 
+void Window::CaptureMouse(bool capture)
+{
+    if (capture && !m_IsMouseCaptured) {
+        SetCapture(m_Hwnd);
+        m_IsMouseCaptured = true;
+    }
+    else if (!capture && m_IsMouseCaptured) {
+        ReleaseCapture();
+        m_IsMouseCaptured = false;
+    }
+}
+
 int32_t Window::ShowMessageBox(const std::string& message, uint32_t type)
 {
     return MessageBox(m_Hwnd, message.c_str(), g_WindowName, type);
