@@ -125,8 +125,9 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
                 m_ReadBlocksError = error.str();
 
                 parse_success = false;
-                break;
             }
+
+            break;
         }
     }
 
@@ -168,7 +169,7 @@ void RenderBlockModel::Draw(RenderContext_t* context)
 
     // draw all render blocks
     for (auto& renderBlock : m_RenderBlocks) {
-        context->m_Renderer->SetDefaultRenderStates();
+        //context->m_Renderer->SetDefaultRenderStates();
 
         renderBlock->Setup(context);
         renderBlock->Draw(context);

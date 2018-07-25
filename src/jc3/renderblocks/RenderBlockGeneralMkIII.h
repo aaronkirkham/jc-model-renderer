@@ -195,7 +195,6 @@ public:
         // set the constant buffers
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 12, m_cbRBIInfo);
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[1], 2, m_cbInstanceAttributes);
-        // context->m_Renderer->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
 
         context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 

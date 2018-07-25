@@ -122,6 +122,7 @@ public:
         m_PixelShader = ShaderManager::Get()->GetPixelShader("carpaintmm");
 
         OutputDebugString(m_ShaderName.c_str());
+        OutputDebugString("\n");
 
         if (m_ShaderName == "carpaintmm") {
             // create the element input desc
@@ -166,13 +167,15 @@ public:
         m_FragmentShaderConstants[2] = Renderer::Get()->CreateConstantBuffer(m_cbDynamicObjectParams, "RenderBlockCarPaintMM CarPaintDynamicObjectParams");
         m_FragmentShaderConstants[3] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "RenderBlockCarPaintMM RBIInfo (fragment)");
 
-#if 0
         // create the sampler states
         {
             SamplerStateCreationParams_t params;
+            params.m_AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.m_AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.m_AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.m_ZFunc = D3D11_COMPARISON_NEVER;
             m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCarPaintMM");
         }
-#endif
     }
 
     virtual void Read(std::istream& stream) override final
@@ -321,6 +324,11 @@ public:
             if (texture && texture->IsLoaded()) {
                 texture->Use(17);
             }
+        }
+
+        // set the sampler states
+        for (int i = 0; i < 10; i++) {
+            context->m_Renderer->SetSamplerState(m_SamplerState, i);
         }
 
         // set the constant buffers

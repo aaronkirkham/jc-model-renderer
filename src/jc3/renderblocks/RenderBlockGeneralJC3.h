@@ -108,8 +108,8 @@ public:
         }
         else {
             D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  0,                              D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  0,                              D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
                 { "TEXCOORD",   1,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
             };
 
@@ -122,6 +122,7 @@ public:
         m_FragmentShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbFragmentMaterialConsts, "RenderBlockGeneralJC3 cbFragmentMaterialConsts");
         m_FragmentShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbFragmentInstanceConsts, "RenderBlockGeneralJC3 cbFragmentInstanceConsts");
 
+#if 0
         // create the sampler states
         {
             SamplerStateCreationParams_t params;
@@ -133,6 +134,7 @@ public:
 
             m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockGeneralJC3");
         }
+#endif
     }
 
     virtual void Read(std::istream& stream) override final
@@ -231,13 +233,6 @@ public:
         if (m_Block.attributes.packed.format == 1) {
             context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
         }
-
-#ifdef DEBUG
-        // set samplers to stop directx debug spam
-        context->m_DeviceContext->PSSetSamplers(1, 1, &m_SamplerState->m_SamplerState);
-        context->m_DeviceContext->PSSetSamplers(2, 1, &m_SamplerState->m_SamplerState);
-        context->m_DeviceContext->PSSetSamplers(3, 1, &m_SamplerState->m_SamplerState);
-#endif
     }
 
     virtual void DrawUI() override final

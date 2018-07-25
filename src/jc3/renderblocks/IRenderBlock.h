@@ -84,11 +84,6 @@ public:
         // set the vertex buffer
         context->m_Renderer->SetVertexStream(m_VertexBuffer, 0);
 
-        // set the sampler state
-        if (m_SamplerState) {
-            context->m_DeviceContext->PSSetSamplers(0, 1, &m_SamplerState->m_SamplerState);
-        }
-
         // set the topology
         context->m_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     }

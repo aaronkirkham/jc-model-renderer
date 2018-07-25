@@ -173,6 +173,7 @@ public:
     }
 
     void SetVertexStream(VertexBuffer_t* buffer, int32_t slot, uint32_t offset = 0);
+    void SetSamplerState(SamplerState_t* sampler, int32_t slot);
 
     // vertex declarations
     VertexDeclaration_t* CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count, VertexShader_t* m_Shader, const char* debugName = nullptr);

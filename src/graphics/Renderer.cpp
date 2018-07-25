@@ -145,9 +145,6 @@ bool Renderer::Render()
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
 
-    ID3D11ShaderResourceView* nullViews[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = { nullptr };
-    m_DeviceContext->PSSetShaderResources(0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, nullViews);
-
     // begin scene
     {
         for (auto& render_target : m_RenderTargetView) {
@@ -622,6 +619,12 @@ void Renderer::SetVertexStream(VertexBuffer_t* buffer, int32_t slot, uint32_t of
     m_DeviceContext->IASetVertexBuffers(slot, 1, &buffer->m_Buffer, &buffer->m_ElementStride, &offset);
 }
 
+void Renderer::SetSamplerState(SamplerState_t* sampler, int32_t slot)
+{
+    assert(sampler);
+    m_DeviceContext->PSSetSamplers(slot, 1, &sampler->m_SamplerState);
+}
+
 VertexDeclaration_t* Renderer::CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count, VertexShader_t* m_Shader, const char* debugName)
 {
     auto declaration = new VertexDeclaration_t;
@@ -652,12 +655,12 @@ SamplerState_t* Renderer::CreateSamplerState(const SamplerStateCreationParams_t&
     ZeroMemory(&samplerDesc, sizeof(D3D11_SAMPLER_DESC));
 
     samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    samplerDesc.AddressU = params.m_AddressU;
+    samplerDesc.AddressV = params.m_AddressV;
+    samplerDesc.AddressW = params.m_AddressW;
     samplerDesc.MipLODBias = 0.0f;
     samplerDesc.MaxAnisotropy = 1;
-    samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    samplerDesc.ComparisonFunc = params.m_ZFunc;
     samplerDesc.BorderColor[0] = 1.0f;
     samplerDesc.BorderColor[1] = 1.0f;
     samplerDesc.BorderColor[2] = 1.0f;
