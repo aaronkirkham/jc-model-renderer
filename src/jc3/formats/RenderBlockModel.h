@@ -29,6 +29,7 @@ public:
     virtual ~RenderBlockModel();
 
     static void FileReadCallback(const fs::path& filename, const FileBuffer& data);
+    static void LoadModel(const fs::path& filename);
 
     //bool ParseRenderBlockModel(std::istream& stream);
     bool Parse(const FileBuffer& data);

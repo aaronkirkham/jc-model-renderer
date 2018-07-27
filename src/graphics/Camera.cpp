@@ -159,13 +159,10 @@ void Camera::ScreenToWorld(const glm::vec3& screen, glm::vec3* world)
 
 void Camera::FocusOnBoundingBox(const glm::vec3& bb_min, const glm::vec3& bb_max)
 {
-    const auto bb_width = (bb_max.x - bb_min.x);
-    const auto bb_height = (bb_max.y - bb_min.y);
-    const auto bb_length = (bb_max.z - bb_min.z);
-
     // calculate how far we need to translate to get the model in view
-    const float distance = ((glm::max(glm::max(bb_width, bb_height), bb_length) / 2) / glm::sin(glm::radians(m_FOV) / 2));
+    const auto dimensions = (bb_max - bb_min);
+    const float distance = ((glm::max(glm::max(dimensions.x, dimensions.y), dimensions.z) / 2) / glm::sin(glm::radians(m_FOV) / 2));
 
-    m_Position = glm::vec3{ 0, (bb_height / 2), -(distance + 0.5f) };
+    m_Position = glm::vec3{ 0, (dimensions.y / 2), -(distance + 0.5f) };
     m_Rotation = glm::vec3(0);
 }

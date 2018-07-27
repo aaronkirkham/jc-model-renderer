@@ -8,6 +8,7 @@
 
 #include <jc3/formats/StreamArchive.h>
 #include <jc3/formats/AvalancheDataFormat.h>
+#include <jc3/formats/NameHashLookup.h>
 
 #include <functional>
 
@@ -63,7 +64,8 @@ public:
     bool ReadCompressedTexture(const fs::path& filename, FileBuffer* output) noexcept;
 
     // runtime containers
-    RuntimeContainer* ReadRuntimeContainer(const FileBuffer& buffer) noexcept;
+    RuntimeContainer* GetRuntimeContainer(const fs::path& filename);
+    RuntimeContainer* ParseRuntimeContainer(const FileBuffer& buffer) noexcept;
 
     // shader bundles
     AvalancheDataFormat* ReadAdf(const fs::path& filename) noexcept;

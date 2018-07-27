@@ -23,6 +23,7 @@
 // http://gib.me
 
 extern AvalancheArchive* g_CurrentLoadedArchive;
+extern std::vector<RuntimeContainer*> g_RuntimeContainers;
 extern fs::path g_JC3Directory;
 
 static uint64_t g_ArchiveLoadCount = 0;
@@ -77,6 +78,9 @@ FileLoader::FileLoader()
 
         UI::Get()->PopStatusText(status_text_id);
     }).detach();
+
+    // init the namehash lookup table
+    NameHashLookup::Init();
 
     // TODO: move the events to a better location?
 
@@ -599,6 +603,19 @@ bool FileLoader::ReadCompressedTexture(const fs::path& filename, FileBuffer* out
     return true;
 }
 
+RuntimeContainer* FileLoader::GetRuntimeContainer(const fs::path& filename)
+{
+    auto find_it = std::find_if(g_RuntimeContainers.begin(), g_RuntimeContainers.end(), [&](RuntimeContainer* rc) {
+        return rc && rc->GetFileName() == filename;
+    });
+
+    if (find_it != g_RuntimeContainers.end()) {
+        return *find_it;
+    }
+
+    return nullptr;
+}
+
 template <typename T>
 inline T ALIGN_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
 {
@@ -609,7 +626,7 @@ inline T ALIGN_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
     return value;
 }
 
-RuntimeContainer* FileLoader::ReadRuntimeContainer(const FileBuffer& buffer) noexcept
+RuntimeContainer* FileLoader::ParseRuntimeContainer(const FileBuffer& buffer) noexcept
 {
     std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
 
@@ -619,7 +636,7 @@ RuntimeContainer* FileLoader::ReadRuntimeContainer(const FileBuffer& buffer) noe
 
     // ensure the header magic is correct
     if (strncmp(header.m_Magic, "RTPC", 4) != 0) {
-        DEBUG_LOG("FileLoader::ReadRuntimeContainer - Invalid header magic. Input probably isn't a RuntimeContainer file.");
+        DEBUG_LOG("FileLoader::ParseRuntimeContainer - Invalid header magic. Input probably isn't a RuntimeContainer file.");
         return nullptr;
     }
 
@@ -631,6 +648,7 @@ RuntimeContainer* FileLoader::ReadRuntimeContainer(const FileBuffer& buffer) noe
 
     // create the root container
     auto root_container = new RuntimeContainer{ rootNode.m_NameHash };
+    g_RuntimeContainers.emplace_back(root_container);
 
     std::queue<std::tuple<RuntimeContainer*, JustCause3::RuntimeContainer::Node>> instanceQueue;
     std::queue<std::tuple<RuntimeContainerProperty*, JustCause3::RuntimeContainer::Property>> propertyQueue;
@@ -644,7 +662,7 @@ RuntimeContainer* FileLoader::ReadRuntimeContainer(const FileBuffer& buffer) noe
 
 #if 0
         DEBUG_LOG(" ====== NODE ======");
-        DEBUG_LOG("  - m_NameHash: 0x" << std::setw(4) << std::hex << item.m_NameHash << " (" << DebugNameHash(item.m_NameHash) << ")");
+        DEBUG_LOG("  - m_NameHash: 0x" << std::setw(4) << std::hex << item.m_NameHash << " (" << NameHashLookup::GetName(item.m_NameHash) << ")");
         DEBUG_LOG("  - m_PropertyCount: " << item.m_PropertyCount);
         DEBUG_LOG("  - m_InstanceCount: " << item.m_InstanceCount << " (queue: " << instanceQueue.size() << ")");
         DEBUG_LOG("  - m_DataOffset: " << item.m_DataOffset << " (current: " << stream.tellg() << ")");
@@ -675,7 +693,7 @@ RuntimeContainer* FileLoader::ReadRuntimeContainer(const FileBuffer& buffer) noe
 
         // read all the node instances
 #if 0
-        DEBUG_LOG("   > NODES");
+        DEBUG_LOG("   > INSTANCES");
 #endif
         for (uint16_t i = 0; i < item.m_InstanceCount; ++i) {
             JustCause3::RuntimeContainer::Node node;
@@ -830,6 +848,9 @@ RuntimeContainer* FileLoader::ReadRuntimeContainer(const FileBuffer& buffer) noe
 
         propertyQueue.pop();
     }
+
+    // generate container names if needed
+    root_container->GenerateNamesIfNeeded();
 
     return root_container;
 }

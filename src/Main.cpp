@@ -138,12 +138,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         new AvalancheArchive(file, data);
 
                         fs::path rbm = "models/jc_characters/main_characters/rico/rico_body_lod1.rbm";
-                        FileLoader::Get()->ReadFile(rbm, [&, rbm](bool success, FileBuffer data) {
-                            if (success) {
-                                auto r = new RenderBlockModel(rbm);
-                                r->Parse(data);
-                            }
-                        });
+                        RenderBlockModel::LoadModel(rbm);
                     }
                 });
             }
@@ -154,12 +149,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         new AvalancheArchive(file, data);
 
                         fs::path rbm = "models/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13_base_body_lod1.rbm";
-                        FileLoader::Get()->ReadFile(rbm, [&, rbm](bool success, FileBuffer data) {
-                            if (success) {
-                                auto r = new RenderBlockModel(rbm);
-                                r->Parse(data);
-                            }
-                        });
+                        RenderBlockModel::LoadModel(rbm);
                     }
                 });
             }
@@ -170,12 +160,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         new AvalancheArchive(file, data);
 
                         fs::path rbm = "models/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/moderncircuitracer_body_lod1.rbm";
-                        FileLoader::Get()->ReadFile(rbm, [&, rbm](bool success, FileBuffer data) {
-                            if (success) {
-                                auto r = new RenderBlockModel(rbm);
-                                r->Parse(data);
-                            }
-                        });
+                        RenderBlockModel::LoadModel(rbm);
                     }
                 });
             }
@@ -219,13 +204,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         };
 
                         for (auto& mdl : models) {
-                            FileLoader::Get()->ReadFile(mdl, [&, mdl](bool success, FileBuffer data) {
-                                if (success) {
-                                    auto r = new RenderBlockModel(mdl);
-                                    r->Parse(data);
-                                }
-                            });
+                            RenderBlockModel::LoadModel(mdl);
                         }
+                    }
+                });
+            }
+            else if (key == VK_F6) {
+                fs::path file = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/v0803_car_na_monstertruck_civilian_01.ee";
+                FileLoader::Get()->ReadFile(file, [&, file](bool success, FileBuffer data) {
+                    if (success) {
+                        new AvalancheArchive(file, data);
+
+                        fs::path epe = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/v0803_car_na_monstertruck_civilian_01.epe";
+                        FileLoader::Get()->ReadFile(epe, [&](bool success, FileBuffer data) {
+                            RuntimeContainer::FileReadCallback(epe, data);
+                        });
                     }
                 });
             }
@@ -240,6 +233,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         // register file type callbacks now
         FileLoader::Get()->RegisterCallback(".rbm", RenderBlockModel::FileReadCallback);
         FileLoader::Get()->RegisterCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::FileReadCallback);
+        FileLoader::Get()->RegisterCallback(".epe", RuntimeContainer::FileReadCallback);
 
         FileLoader::Get()->RegisterCallback(".ddsc", [&](const fs::path& filename, const FileBuffer& data) {
             FileBuffer buffer;
@@ -247,6 +241,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 TextureManager::Get()->GetTexture(filename, &buffer, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
             }
         });
+
+        // register file type context menu callbacks
+        UI::Get()->RegisterContextMenuCallback(".epe", RuntimeContainer::ContextMenuUI);
 
         // register importers and exporters
         ImportExportManager::Get()->Register(new import_export::Wavefront_Obj);

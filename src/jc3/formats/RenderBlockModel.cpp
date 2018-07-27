@@ -157,6 +157,20 @@ void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuff
     }
 }
 
+void RenderBlockModel::LoadModel(const fs::path& filename)
+{
+    FileLoader::Get()->ReadFile(filename, [&](bool success, FileBuffer data) {
+        if (success) {
+            auto rbm = new RenderBlockModel(filename);
+            assert(rbm);
+            rbm->Parse(data);
+        }
+        else {
+            DEBUG_LOG("RenderBlockModel::LoadModel - Failed to read model \"" << filename << "\".");
+        }
+    });
+}
+
 void RenderBlockModel::Draw(RenderContext_t* context)
 {
 #if 0

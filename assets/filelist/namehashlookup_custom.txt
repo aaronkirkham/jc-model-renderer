@@ -1,0 +1,9 @@
+root
+weapon_type
+one_shot
+volume_max_speed
+enable_with_parent
+near_distance_fade
+specular_multiplier
+is_spot_light
+user_type

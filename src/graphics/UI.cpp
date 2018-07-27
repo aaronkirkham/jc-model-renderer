@@ -10,10 +10,11 @@
 #include <graphics/imgui/imgui_tabscrollcontent.h>
 #include <graphics/Camera.h>
 
+#include <jc3/ModelManager.h>
 #include <jc3/FileLoader.h>
 #include <jc3/formats/AvalancheArchive.h>
 #include <jc3/formats/RenderBlockModel.h>
-#include <jc3/ModelManager.h>
+#include <jc3/formats/RuntimeContainer.h>
 
 #include <import_export/ImportExportManager.h>
 
@@ -28,6 +29,7 @@ extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;
 
 extern AvalancheArchive* g_CurrentLoadedArchive;
+extern std::vector<RuntimeContainer*> g_RuntimeContainers;
 extern fs::path g_JC3Directory;
 
 static bool g_ShowAllArchiveContents = false;
@@ -201,7 +203,22 @@ void UI::Render()
     }
     ImGui::End();
     
+    // file tree view
     RenderFileTreeView();
+
+    // render runtime container stuff
+    for (const auto& runtime_container : g_RuntimeContainers) {
+        std::stringstream ss;
+        ss << "Runtime Container Editor - ";
+        ss << runtime_container->GetFileName().filename();
+
+        bool open = true;
+        if (ImGui::Begin(ss.str().c_str(), &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings)) {
+            runtime_container->DrawUI();
+
+            ImGui::End();
+        }
+    }
 }
 
 void RenderDirectoryList(json* current, std::string prev = "", bool open_folders = false)
@@ -513,6 +530,13 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra)
                 ImGui::EndMenu();
             }
         }
+
+        // custom context menus
+        auto it = m_ContextMenuCallbacks.find(filename.extension().string());
+        if (it != m_ContextMenuCallbacks.end()) {
+            (*it).second(filename);
+        }
+
 
         ImGui::EndPopup();
     }

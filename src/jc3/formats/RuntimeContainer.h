@@ -1,8 +1,6 @@
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <vector>
+#include <StdInc.h>
 #include <any>
 
 enum PropertyType : uint8_t
@@ -26,6 +24,7 @@ enum PropertyType : uint8_t
 class RuntimeContainerProperty
 {
 private:
+    std::string m_Name = "";
     uint32_t m_NameHash = 0x0;
     PropertyType m_Type = RTPC_TYPE_UNASSIGNED;
     std::any m_Value;
@@ -37,10 +36,13 @@ public:
     void SetValue(const std::any& anything) { m_Value = anything; }
     const std::any& GetValue() { return m_Value; }
 
+    template <typename T>
+    T GetValue() const { return std::any_cast<T>(m_Value); }
+
+    const std::string& GetName() const { return m_Name; }
     uint32_t GetNameHash() const { return m_NameHash; }
     PropertyType GetType() const { return m_Type; }
 
-#if 0
     static std::string GetTypeName(uint8_t type) {
         switch (type) {
         case RTPC_TYPE_UNASSIGNED: return "unassigned";
@@ -60,12 +62,13 @@ public:
 
         return "unknown";
     }
-#endif
 };
 
 class RuntimeContainer
 {
 private:
+    fs::path m_Filename = "";
+    std::string m_Name = "";
     uint32_t m_NameHash = 0x0;
     std::vector<RuntimeContainerProperty*> m_Properties;
     std::vector<RuntimeContainer*> m_Containers;
@@ -74,14 +77,27 @@ public:
     RuntimeContainer(uint32_t name_hash);
     virtual ~RuntimeContainer();
 
-    void AddProperty(RuntimeContainerProperty* prop) { m_Properties.emplace_back(prop); };
+    void GenerateNamesIfNeeded();
+
+    void AddProperty(RuntimeContainerProperty* prop) { m_Properties.emplace_back(prop); }
     void AddContainer(RuntimeContainer* cont) { m_Containers.emplace_back(cont); };
 
+    static void FileReadCallback(const fs::path& filename, const FileBuffer& data);
+    void DrawUI(uint8_t depth = 0);
+    static void ContextMenuUI(const fs::path& filename);
+
+    void SetFileName(const fs::path& filename) { m_Filename = filename; }
+    const fs::path& GetFileName() const { return m_Filename; }
+    const std::string& GetName() const { return m_Name; }
     uint32_t GetNameHash() const { return m_NameHash; }
 
     RuntimeContainerProperty* GetProperty(uint32_t name_hash);
+    RuntimeContainerProperty* GetProperty(const std::string& name);
+
     RuntimeContainer* GetContainer(uint32_t name_hash);
+    RuntimeContainer* GetContainer(const std::string& name);
 
     const std::vector<RuntimeContainerProperty*>& GetProperties() { return m_Properties; }
+    std::vector<RuntimeContainerProperty*> GetSortedProperties();
     const std::vector<RuntimeContainer*>& GetContainers() { return m_Containers; }
 };
