@@ -43,7 +43,6 @@ public:
 class TextureManager : public Singleton<TextureManager>
 {
 private:
-    std::recursive_mutex m_TexturesMutex;
     std::unordered_map<uint32_t, std::shared_ptr<Texture>> m_Textures;
     std::vector<uint32_t> m_LastUsedTextures;
     std::unique_ptr<Texture> m_MissingTexture;

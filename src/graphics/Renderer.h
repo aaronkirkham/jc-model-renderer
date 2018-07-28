@@ -8,9 +8,8 @@
 #include <examples/imgui_impl_dx11.h>
 #include <array>
 
-#define test_hresult(hr) if (FAILED(hr)) { return false; }
-#define safe_delete(ptr) if (ptr) { delete ptr; ptr = nullptr; }
-#define safe_release(obj) if (obj) { obj->Release(); obj = nullptr; }
+#define SAFE_DELETE(ptr) if (ptr) { delete ptr; ptr = nullptr; }
+#define SAFE_RELEASE(obj) if (obj) { obj->Release(); obj = nullptr; }
 
 static auto g_DefaultClearColour = glm::vec4{ 0.15f, 0.15f, 0.15f, 1.0f };
 
@@ -137,7 +136,7 @@ public:
 #endif
 
         if (FAILED(result)) {
-            safe_delete(buffer);
+            SAFE_DELETE(buffer);
             return nullptr;
         }
 

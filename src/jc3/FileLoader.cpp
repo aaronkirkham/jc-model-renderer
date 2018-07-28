@@ -22,7 +22,6 @@
 // Credit to gibbed for most of the file formats
 // http://gib.me
 
-extern AvalancheArchive* g_CurrentLoadedArchive;
 extern std::vector<RuntimeContainer*> g_RuntimeContainers;
 extern fs::path g_JC3Directory;
 
@@ -85,7 +84,7 @@ FileLoader::FileLoader()
     // TODO: move the events to a better location?
 
     // trigger the file type callbacks
-    UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& file) {
+    UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& file, std::shared_ptr<AvalancheArchive> archive) {
         // do we have a registered callback for this file type?
         if (m_FileTypeCallbacks.find(file.extension().string()) != m_FileTypeCallbacks.end()) {
             ReadFile(file, [&, file](bool success, FileBuffer data) {
@@ -215,14 +214,12 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback, u
     }
 
     // check any loaded archives for the file
-    if (g_CurrentLoadedArchive) {
-        const auto& [archive, entry] = GetStreamArchiveFromFile(filename);
-        if (archive && entry.m_Offset != 0) {
-            auto buffer = archive->GetEntryFromArchive(entry);
+    const auto&[archive, entry] = GetStreamArchiveFromFile(filename);
+    if (archive && entry.m_Offset != 0) {
+        auto buffer = archive->GetEntryFromArchive(entry);
 
-            UI::Get()->PopStatusText(status_text_id);
-            return callback(true, std::move(buffer));
-        }
+        UI::Get()->PopStatusText(status_text_id);
+        return callback(true, std::move(buffer));
     }
 
     // should we use file batching?
@@ -884,14 +881,23 @@ AvalancheDataFormat* FileLoader::ReadAdf(const fs::path& filename) noexcept
     return nullptr;
 }
 
-std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveFromFile(const fs::path& file) noexcept
+std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveFromFile(const fs::path& file, StreamArchive_t* archive) noexcept
 {
-    if (g_CurrentLoadedArchive) {
-        auto streamArchive = g_CurrentLoadedArchive->GetStreamArchive();
-
-        for (auto& entry : streamArchive->m_Files) {
+    if (archive) {
+        for (const auto& entry : archive->m_Files) {
             if (entry.m_Filename == file || entry.m_Filename.find(file.string()) != std::string::npos) {
-                return { streamArchive, entry };
+                return { archive, entry };
+            }
+        }
+    }
+    else {
+        std::lock_guard<std::recursive_mutex> _lk{ AvalancheArchive::InstancesMutex };
+        for (const auto& arc : AvalancheArchive::Instances) {
+            const auto stream_arc = arc.second->GetStreamArchive();
+            for (const auto& entry : stream_arc->m_Files) {
+                if (entry.m_Filename == file || entry.m_Filename.find(file.string()) != std::string::npos) {
+                    return { stream_arc, entry };
+                }
             }
         }
     }

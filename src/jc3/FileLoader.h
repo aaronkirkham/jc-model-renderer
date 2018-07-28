@@ -71,7 +71,7 @@ public:
     AvalancheDataFormat* ReadAdf(const fs::path& filename) noexcept;
 
     // stream archive caching
-    std::tuple<StreamArchive_t*, StreamArchiveEntry_t> GetStreamArchiveFromFile(const fs::path& file) noexcept;
+    std::tuple<StreamArchive_t*, StreamArchiveEntry_t> GetStreamArchiveFromFile(const fs::path& file, StreamArchive_t* archive = nullptr) noexcept;
     std::tuple<std::string, std::string, uint32_t> LocateFileInDictionary(const fs::path& filename) noexcept;
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
 

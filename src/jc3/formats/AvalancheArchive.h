@@ -3,21 +3,22 @@
 #include <StdInc.h>
 #include <DirectoryList.h>
 #include <jc3/formats/StreamArchive.h>
+#include <Factory.h>
 
 class RenderBlockModel;
-class AvalancheArchive
+class AvalancheArchive : public Factory<AvalancheArchive>
 {
 private:
     fs::path m_File = "";
     StreamArchive_t* m_StreamArchive = nullptr;
     std::unique_ptr<DirectoryList> m_FileList = nullptr;
 
-    void Initialise();
-
 public:
     AvalancheArchive(const fs::path& file);
     AvalancheArchive(const fs::path& filename, const FileBuffer& buffer);
     virtual ~AvalancheArchive();
+
+    bool HasFile(const fs::path& filename);
 
     static void FileReadCallback(const fs::path& filename, const FileBuffer& data);
 
@@ -25,4 +26,9 @@ public:
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
 
     const fs::path& GetFileName() { return m_File; }
+
+    virtual std::string GetFactoryKey() const
+    {
+        return m_File.string();
+    }
 };

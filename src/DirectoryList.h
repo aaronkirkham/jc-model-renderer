@@ -2,8 +2,13 @@
 
 #include <json.hpp>
 #include <string.h>
+#include <memory.h>
 
 #include <jc3/formats/StreamArchive.h>
+
+#include <imgui.h>
+#include <fonts/fontawesome_icons.h>
+#include <graphics/UI.h>
 
 class DirectoryList
 {
@@ -41,11 +46,13 @@ public:
     DirectoryList() = default;
     virtual ~DirectoryList() = default;
 
-    void Add(const std::string& filename) {
+    void Add(const std::string& filename)
+    {
         split(filename, m_Structure);
     }
 
-    void Parse(nlohmann::json* structure, const std::vector<std::string>& include_only = {}) {
+    void Parse(nlohmann::json* structure, const std::vector<std::string>& include_only = {})
+    {
         if (structure) {
             m_Structure.clear();
 
@@ -67,7 +74,8 @@ public:
         }
     }
 
-    void Parse(StreamArchive_t* archive, const std::vector<std::string>& include_only = {}) {
+    void Parse(StreamArchive_t* archive, const std::vector<std::string>& include_only = {})
+    {
         if (archive) {
             m_Structure.clear();
 
@@ -81,6 +89,73 @@ public:
                 }
                 else {
                     split(file.m_Filename, m_Structure);
+                }
+            }
+        }
+    }
+
+    void Draw(std::shared_ptr<AvalancheArchive> archive, nlohmann::json* current = nullptr, std::string prev = "", bool open_folders = false)
+    {
+        if (!current) current = GetStructure();
+
+        if (current->is_object()) {
+            for (auto it = current->begin(); it != current->end(); ++it) {
+                auto current_key = it.key();
+
+                if (current_key != "/") {
+                    auto id = ImGui::GetID(current_key.c_str());
+                    auto is_open = ImGui::GetStateStorage()->GetInt(id);
+
+                    if (ImGui::TreeNodeEx(current_key.c_str(), ImGuiTreeNodeFlags_None, "%s  %s", is_open ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER, current_key.c_str())) {
+                        auto next = &current->operator[](current_key);
+                        Draw(archive, next, prev.length() ? prev + "/" + current_key : current_key, open_folders);
+
+                        ImGui::TreePop();
+                    }
+                }
+                else {
+                    auto next = &current->operator[](current_key);
+                    Draw(archive, next, prev, open_folders);
+                }
+            }
+        }
+        else {
+            if (current->is_string()) {
+#ifdef DEBUG
+                __debugbreak();
+#endif
+            }
+            else {
+                for (auto& leaf : *current) {
+                    auto filename = leaf.get<std::string>();
+                    auto is_archive = (filename.find(".ee") != std::string::npos || filename.find(".bl") != std::string::npos || filename.find(".nl") != std::string::npos);
+
+                    ImGui::TreeNodeEx(filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen), "%s %s", is_archive ? ICON_FA_FILE_ARCHIVE_O : ICON_FA_FILE_O, filename.c_str());
+
+                    std::string file_path;
+
+                    if (prev.length() == 0) {
+                        file_path = filename;
+                    }
+                    else if (prev.length() == 1) {
+                        file_path = prev + filename;
+                    }
+                    else {
+                        file_path = prev + "/" + filename;
+                    }
+
+                    // tooltips
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip(filename.c_str());
+                    }
+
+                    // fire file selected events
+                    if (ImGui::IsItemClicked()) {
+                        UI::Get()->Events().FileTreeItemSelected(file_path, archive);
+                    }
+
+                    // context menu
+                    UI::Get()->RenderContextMenu(file_path);
                 }
             }
         }
