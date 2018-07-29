@@ -64,7 +64,7 @@ public:
     bool ReadCompressedTexture(const fs::path& filename, FileBuffer* output) noexcept;
 
     // runtime containers
-    RuntimeContainer* GetRuntimeContainer(const fs::path& filename);
+    std::shared_ptr<RuntimeContainer> GetRuntimeContainer(const fs::path& filename);
     RuntimeContainer* ParseRuntimeContainer(const FileBuffer& buffer) noexcept;
 
     // shader bundles

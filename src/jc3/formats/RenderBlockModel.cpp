@@ -155,7 +155,6 @@ void RenderBlockModel::LoadModel(const fs::path& filename)
 
 void RenderBlockModel::Draw(RenderContext_t* context)
 {
-    DEBUG_LOG("use_count(): " << m_ParentArchive.use_count());
 #if 0
     //m_Rotation.z += 0.015f;
 

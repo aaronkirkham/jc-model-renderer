@@ -26,8 +26,6 @@
 
 extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;
-
-extern std::vector<RuntimeContainer*> g_RuntimeContainers;
 extern fs::path g_JC3Directory;
 
 static bool g_ShowAllArchiveContents = false;
@@ -205,17 +203,23 @@ void UI::Render()
     RenderFileTreeView();
 
     // render runtime container stuff
-    for (const auto& runtime_container : g_RuntimeContainers) {
+    for (auto it = RuntimeContainer::Instances.begin(); it != RuntimeContainer::Instances.end(); ) {
         std::stringstream ss;
         ss << "Runtime Container Editor - ";
-        ss << runtime_container->GetFileName().filename();
+        ss << (*it).second->GetFileName().filename();
 
         bool open = true;
         if (ImGui::Begin(ss.str().c_str(), &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings)) {
-            runtime_container->DrawUI();
+            (*it).second->DrawUI();
 
             ImGui::End();
         }
+
+        if (!open) {
+            std::lock_guard<std::recursive_mutex> _lk{ RuntimeContainer::InstancesMutex };
+            it = RuntimeContainer::Instances.erase(it);
+        }
+        else ++it;
     }
 }
 

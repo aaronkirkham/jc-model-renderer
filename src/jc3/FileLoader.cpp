@@ -22,9 +22,7 @@
 // Credit to gibbed for most of the file formats
 // http://gib.me
 
-extern std::vector<RuntimeContainer*> g_RuntimeContainers;
 extern fs::path g_JC3Directory;
-
 static uint64_t g_ArchiveLoadCount = 0;
 
 FileLoader::FileLoader()
@@ -600,14 +598,14 @@ bool FileLoader::ReadCompressedTexture(const fs::path& filename, FileBuffer* out
     return true;
 }
 
-RuntimeContainer* FileLoader::GetRuntimeContainer(const fs::path& filename)
+std::shared_ptr<RuntimeContainer> FileLoader::GetRuntimeContainer(const fs::path& filename)
 {
-    auto find_it = std::find_if(g_RuntimeContainers.begin(), g_RuntimeContainers.end(), [&](RuntimeContainer* rc) {
-        return rc && rc->GetFileName() == filename;
+    auto find_it = std::find_if(RuntimeContainer::Instances.begin(), RuntimeContainer::Instances.end(), [&](const std::pair<uint32_t, std::shared_ptr<RuntimeContainer>>& item) {
+        return item.second && item.second->GetFileName() == filename;
     });
 
-    if (find_it != g_RuntimeContainers.end()) {
-        return *find_it;
+    if (find_it != RuntimeContainer::Instances.end()) {
+        return (*find_it).second;
     }
 
     return nullptr;
@@ -644,13 +642,12 @@ RuntimeContainer* FileLoader::ParseRuntimeContainer(const FileBuffer& buffer) no
     stream.read((char *)&rootNode, sizeof(rootNode));
 
     // create the root container
-    auto root_container = new RuntimeContainer{ rootNode.m_NameHash };
-    g_RuntimeContainers.emplace_back(root_container);
+    auto root_container = RuntimeContainer::make(rootNode.m_NameHash);
 
     std::queue<std::tuple<RuntimeContainer*, JustCause3::RuntimeContainer::Node>> instanceQueue;
     std::queue<std::tuple<RuntimeContainerProperty*, JustCause3::RuntimeContainer::Property>> propertyQueue;
 
-    instanceQueue.push({ root_container, rootNode });
+    instanceQueue.push({ root_container.get(), rootNode });
 
     while (!instanceQueue.empty()) {
         const auto&[current_container, item] = instanceQueue.front();
@@ -849,7 +846,7 @@ RuntimeContainer* FileLoader::ParseRuntimeContainer(const FileBuffer& buffer) no
     // generate container names if needed
     root_container->GenerateNamesIfNeeded();
 
-    return root_container;
+    return root_container.get();
 }
 
 AvalancheDataFormat* FileLoader::ReadAdf(const fs::path& filename) noexcept

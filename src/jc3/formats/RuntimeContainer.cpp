@@ -5,7 +5,8 @@
 #include <glm.hpp>
 #include <jc3/formats/RenderBlockModel.h>
 
-std::vector<RuntimeContainer*> g_RuntimeContainers;
+std::recursive_mutex Factory<RuntimeContainer>::InstancesMutex;
+std::map<uint32_t, std::shared_ptr<RuntimeContainer>> Factory<RuntimeContainer>::Instances;
 
 RuntimeContainerProperty::RuntimeContainerProperty(uint32_t name_hash, uint8_t type)
     : m_NameHash(name_hash),
@@ -149,7 +150,6 @@ void RuntimeContainer::FileReadCallback(const fs::path& filename, const FileBuff
 void RuntimeContainer::DrawUI(uint8_t depth)
 {
     if (ImGui::TreeNode(m_Name.c_str())) {
-
         for (const auto& prop : GetSortedProperties()) {
             switch (prop->GetType()) {
             case RTPC_TYPE_INTEGER: {

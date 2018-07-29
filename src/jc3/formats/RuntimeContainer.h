@@ -2,6 +2,7 @@
 
 #include <StdInc.h>
 #include <any>
+#include <Factory.h>
 
 enum PropertyType : uint8_t
 {
@@ -64,7 +65,7 @@ public:
     }
 };
 
-class RuntimeContainer
+class RuntimeContainer : public Factory<RuntimeContainer>
 {
 private:
     fs::path m_Filename = "";
@@ -76,6 +77,8 @@ private:
 public:
     RuntimeContainer(uint32_t name_hash);
     virtual ~RuntimeContainer();
+
+    virtual std::string GetFactoryKey() const { return m_Name; }
 
     void GenerateNamesIfNeeded();
 

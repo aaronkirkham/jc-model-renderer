@@ -220,6 +220,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     }
                 });
             }
+            else if (key == VK_F7) {
+                std::thread([] {
+                    fs::path filename = "models/jc_characters/animals/cow/cow_mesh_body_lod1.rbm";
+                    RenderBlockModel::LoadModel(filename);
+                }).detach();
+            }
         });
 #endif
 
@@ -245,7 +251,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
         //
         Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
-            std::lock_guard<std::recursive_mutex> _lk{ RenderBlockModel::InstancesMutex };
+            //std::lock_guard<std::recursive_mutex> _lk{ RenderBlockModel::InstancesMutex };
 
             ImGui::SetNextWindowBgAlpha(0.0f);
             ImGui::Begin("Model Manager", nullptr, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
