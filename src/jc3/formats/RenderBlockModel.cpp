@@ -74,7 +74,7 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
 
     // focus on the bounding box
     if (RenderBlockModel::Instances.size() == 1) {
-        Camera::Get()->FocusOnBoundingBox(m_BoundingBoxMin, m_BoundingBoxMax);
+        Camera::Get()->FocusOn(this);
     }
 
     // use file batches
@@ -85,10 +85,10 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
         uint32_t hash;
         stream.read((char *)&hash, sizeof(uint32_t));
 
-        const auto renderBlock = RenderBlockFactory::CreateRenderBlock(hash);
-        if (renderBlock) {
-            renderBlock->Read(stream);
-            renderBlock->Create();
+        const auto render_block = RenderBlockFactory::CreateRenderBlock(hash);
+        if (render_block) {
+            render_block->Read(stream);
+            render_block->Create();
 
             uint32_t checksum;
             stream.read((char *)&checksum, sizeof(uint32_t));
@@ -101,7 +101,7 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
                 break;
             }
 
-            m_RenderBlocks.emplace_back(renderBlock);
+            m_RenderBlocks.emplace_back(render_block);
         }
         else {
             std::stringstream error;

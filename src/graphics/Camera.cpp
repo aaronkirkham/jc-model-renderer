@@ -2,6 +2,7 @@
 #include <graphics/Renderer.h>
 #include <Window.h>
 #include <Input.h>
+#include <jc3/formats/RenderBlockModel.h>
 
 static constexpr auto g_MouseSensitivity = 0.0025f;
 static constexpr auto g_MovementSensitivity = 0.05f;
@@ -135,12 +136,6 @@ void Camera::Update(RenderContext_t* context)
     context->m_viewProjectionMatrix = m_ViewProjection;
 }
 
-void Camera::ResetToDefault()
-{
-    m_Position = glm::vec3(0, 0, -10);
-    m_Rotation = glm::vec3(0);
-}
-
 void Camera::WorldToScreen(const glm::vec3& world, glm::vec3* screen)
 {
     *screen = glm::project(world, m_View, m_Projection, m_Viewport);
@@ -157,8 +152,17 @@ void Camera::ScreenToWorld(const glm::vec3& screen, glm::vec3* world)
     *world = glm::unProject({ screen.x, window_size.y - screen.y, screen.z }, m_View, m_Projection, m_Viewport);
 }
 
-void Camera::FocusOnBoundingBox(const glm::vec3& bb_min, const glm::vec3& bb_max)
+void Camera::FocusOn(RenderBlockModel* model)
 {
+    // TODO: make better, doesn't work well in every situation
+    // and some times doesn't zoom in far enough!
+
+    // We should look at the current camera rotation and zoom to the
+    // side of the bounding box we are facing.
+
+    assert(model);
+    const auto& [bb_min, bb_max] = model->GetBoundingBox();
+
     // calculate how far we need to translate to get the model in view
     const auto dimensions = (bb_max - bb_min);
     const float distance = ((glm::max(glm::max(dimensions.x, dimensions.y), dimensions.z) / 2) / glm::sin(glm::radians(m_FOV) / 2));

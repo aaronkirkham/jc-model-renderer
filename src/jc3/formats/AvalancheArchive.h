@@ -27,5 +27,5 @@ public:
     StreamArchive_t* GetStreamArchive() { return m_StreamArchive; }
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
 
-    const fs::path& GetFileName() { return m_File; }
+    const fs::path& GetFilePath() { return m_File; }
 };

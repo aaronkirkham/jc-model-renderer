@@ -23,7 +23,7 @@ public:
         return p;
     }
 
-    static size_t destroy(std::shared_ptr<T> p)
+    static void destroy(std::shared_ptr<T> p)
     {
         if (p) {
             const auto& key = p->GetFactoryKey();

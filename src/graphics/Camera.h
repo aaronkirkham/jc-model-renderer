@@ -4,6 +4,7 @@
 #include <singleton.h>
 #include <graphics/Types.h>
 
+class RenderBlockModel;
 class Camera : public Singleton<Camera>
 {
 private:
@@ -28,12 +29,11 @@ public:
     void Shutdown();
 
     void Update(RenderContext_t* context);
-    void ResetToDefault();
 
     void WorldToScreen(const glm::vec3& world, glm::vec3* screen);
     void ScreenToWorld(const glm::vec3& screen, glm::vec3* world);
 
-    void FocusOnBoundingBox(const glm::vec3& bb_min, const glm::vec3& bb_max);
+    void FocusOn(RenderBlockModel* model);
 
     const glm::vec3& GetPosition() const { return m_Position; }
     const glm::vec3& GetRotation() const { return m_Rotation; }
