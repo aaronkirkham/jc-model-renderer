@@ -27,36 +27,49 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPA
         return 1;
     }
 
-    if (message == WM_SIZE)
-    {
+    switch (message) {
+        // resize handler
+    case WM_SIZE:
         m_IsResizing = true;
         m_ResizeTime = std::chrono::high_resolution_clock::now();
-        return 0;
-    }
-    else if (message == WM_SYSCOMMAND)
-    {
-        // Disable ALT application menu
-        if ((wParam & 0xfff0) == SC_KEYMENU) {
-            return 0;
-        }
-    }
-    else if (message == WM_DROPFILES)
-    {
-        const auto drop = reinterpret_cast<HDROP>(wParam);
+        break;
 
-        char file[MAX_PATH];
+        // focus gained handler
+    case WM_SETFOCUS:
+        Window::Get()->Events().WindowFocusGained();
+        break;
+
+        // focus lost handler
+    case WM_KILLFOCUS:
+        Window::Get()->Events().WindowFocusLost();
+        break;
+
+        // file drop handler
+    case WM_DROPFILES: {
+        const auto drop = reinterpret_cast<HDROP>(wParam);
+        char file[MAX_PATH] = { 0 };
+
         if (DragQueryFile(drop, 0, file, MAX_PATH) != 0) {
             Window::Get()->Events().FileDropped(file);
             DragFinish(drop);
         }
-    }
-    else if (message == WM_DESTROY || message == WM_CLOSE)
-    {
-        PostQuitMessage(0);
-        return 0;
+
+        break;
     }
 
-    return DefWindowProc(hwnd, message, wParam, lParam);
+    case WM_CLOSE:
+        DestroyWindow(hwnd);
+        break;
+
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+
+    default:
+        return DefWindowProc(hwnd, message, wParam, lParam);
+    }
+   
+    return 0;
 }
 
 bool Window::Initialise(const HINSTANCE& instance)
@@ -71,11 +84,11 @@ bool Window::Initialise(const HINSTANCE& instance)
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
     wc.hInstance = instance;
-    wc.hIcon = LoadIcon(NULL, IDI_WINLOGO);
+    wc.hIcon = LoadIcon(nullptr, IDI_WINLOGO);
     wc.hIconSm = wc.hIcon;
-    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wc.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
-    wc.lpszMenuName = NULL;
+    wc.lpszMenuName = nullptr;
     wc.lpszClassName = g_WindowName;
     wc.cbSize = sizeof(WNDCLASSEX);
 
@@ -84,7 +97,7 @@ bool Window::Initialise(const HINSTANCE& instance)
     auto x = (GetSystemMetrics(SM_CXSCREEN) - static_cast<int32_t>(size.x)) / 2;
     auto y = (GetSystemMetrics(SM_CYSCREEN) - static_cast<int32_t>(size.y)) / 2;
 
-    m_Hwnd = CreateWindowA(g_WindowName, g_WindowName, WS_OVERLAPPEDWINDOW, x, y, static_cast<int32_t>(size.x), static_cast<int32_t>(size.y), nullptr, nullptr, instance, nullptr);
+    m_Hwnd = CreateWindowA(g_WindowName, g_WindowName, WS_OVERLAPPEDWINDOW, x, y, static_cast<int32_t>(size.x), static_cast<int32_t>(size.y), nullptr, nullptr, instance, this);
 
     ShowWindow(m_Hwnd, SW_SHOW);
     UpdateWindow(m_Hwnd);
@@ -101,10 +114,11 @@ bool Window::Initialise(const HINSTANCE& instance)
 
 void Window::Shutdown()
 {
+    m_Running = false;
+
     Renderer::Get()->Shutdown();
 
     ShowCursor(true);
-
     DestroyWindow(m_Hwnd);
     m_Hwnd = nullptr;
 
@@ -114,21 +128,16 @@ void Window::Shutdown()
 
 bool Window::Frame()
 {
-    Input::Get()->Update();
-
     return Renderer::Get()->Render();
 }
 
 void Window::Run()
 {
-    while (m_Running)
-    {
+    while (m_Running) {
         // handle messages
         MSG msg{};
-        while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE) > 0)
-        {
+        while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE) > 0) {
             if (msg.message == WM_QUIT) {
-                m_Running = false;
                 goto shutdown;
             }
 

@@ -1,15 +1,18 @@
 #include <jc3/formats/RenderBlockModel.h>
+#include <jc3/formats/AvalancheArchive.h>
 #include <jc3/RenderBlockFactory.h>
+#include <jc3/FileLoader.h>
+
 #include <Window.h>
+
+#include <imgui.h>
 #include <graphics/Renderer.h>
 #include <graphics/Camera.h>
 #include <graphics/DebugRenderer.h>
 #include <graphics/UI.h>
-#include <jc3/formats/AvalancheArchive.h>
-#include <fonts/fontawesome_icons.h>
+#include <graphics/imgui/fonts/fontawesome_icons.h>
+
 #include <Input.h>
-#include <imgui.h>
-#include <jc3/FileLoader.h>
 
 extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;

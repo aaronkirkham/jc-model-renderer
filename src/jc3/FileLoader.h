@@ -8,7 +8,7 @@
 
 #include <jc3/formats/StreamArchive.h>
 #include <jc3/formats/AvalancheDataFormat.h>
-#include <jc3/formats/NameHashLookup.h>
+#include <jc3/NameHashLookup.h>
 
 #include <functional>
 

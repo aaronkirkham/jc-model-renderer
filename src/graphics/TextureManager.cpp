@@ -4,7 +4,7 @@
 #include <jc3/FileLoader.h>
 #include <fnv1.h>
 
-#include <fonts/fontawesome_icons.h>
+#include <graphics/imgui/fonts/fontawesome_icons.h>
 
 #include <graphics/UI.h>
 

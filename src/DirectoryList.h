@@ -7,7 +7,7 @@
 #include <jc3/formats/StreamArchive.h>
 
 #include <imgui.h>
-#include <fonts/fontawesome_icons.h>
+#include <graphics/imgui/fonts/fontawesome_icons.h>
 #include <graphics/UI.h>
 
 class DirectoryList

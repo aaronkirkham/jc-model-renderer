@@ -5,7 +5,7 @@
 #include <imgui_tabs.h>
 #include <json.hpp>
 
-#include <fonts/fontawesome_icons.h>
+#include <graphics/imgui/fonts/fontawesome_icons.h>
 #include <graphics/imgui/imgui_rotate.h>
 #include <graphics/imgui/imgui_tabscrollcontent.h>
 #include <graphics/Camera.h>
@@ -265,7 +265,6 @@ void UI::RenderFileTreeView()
                     // render the current directory
                     bool is_open = true;
                     if (ImGui::CollapsingHeader(filename.string().c_str(), &is_open)) {
-
                         ImGui::PushID(filename.string().c_str());
 
                         // draw the directory list

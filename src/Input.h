@@ -23,14 +23,13 @@ private:
     glm::vec3 m_LastClickWorldPosition;
 
 public:
-    virtual ~Input();
+    Input() = default;
+    virtual ~Input() = default;
 
     virtual InputEvents& Events() { return m_InputEvents; }
 
     void Initialise();
-
     bool HandleMessage(MSG* message);
-    void Update();
 
     bool IsKeyPressed(uint8_t key) { return m_KeyboardState[key]; }
 

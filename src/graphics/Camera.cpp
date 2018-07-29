@@ -33,6 +33,16 @@ Camera::Camera()
         }
     });
 
+    // handle window losing focus
+    window->Events().WindowFocusLost.connect([&] {
+        if (m_IsTranslatingView || m_IsRotatingView) {
+            Window::Get()->CaptureMouse(false);
+        }
+
+        m_IsTranslatingView = false;
+        m_IsRotatingView = false;
+    });
+
     auto& events = Input::Get()->Events();
     events.MousePress.connect([&](uint32_t message, const glm::vec2& position) {
         bool capture_mouse = false;
