@@ -254,42 +254,28 @@ void UI::RenderFileTreeView()
             // archives
             if (ImGuiCustom::TabItemScroll("Archives", nullptr, AvalancheArchive::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
                 for (auto it = AvalancheArchive::Instances.begin(); it != AvalancheArchive::Instances.end(); ) {
-                    std::stringstream title;
-                    title << ICON_FA_FOLDER_OPEN << "  " << (*it).second->GetFileName().filename();
-
-                    auto archive_open = ImGui::TreeNodeEx(title.str().c_str());
-                    bool has_closed = false;
-
-                    // render the tab context menu
-                    ImGui::PushID("archive-tab-ctx-menu");
-                    {
-                        if (ImGui::BeginPopupContextItem("Context Menu")) {
-                            if (ImGui::Selectable(ICON_FA_WINDOW_CLOSE "  Close Archive")) {
-                                std::lock_guard<std::recursive_mutex> _lk{ AvalancheArchive::InstancesMutex };
-                                it = AvalancheArchive::Instances.erase(it);
-                                TextureManager::Get()->Flush();
-                                has_closed = true;
-
-                                // if we have closed all render blocks, switch tab
-                                if (AvalancheArchive::Instances.size() == 0) {
-                                    switch_to_tab = "File Explorer";
-                                }
-                            }
-                            ImGui::EndPopup();
-                        }
-                    }
-                    ImGui::PopID();
-
-                    // draw the directory list
-                    if (archive_open && !has_closed) {
+                    // render the current directory
+                    bool is_open = true;
+                    if (ImGui::CollapsingHeader((*it).second->GetFileName().filename().string().c_str(), &is_open)) {
+                        // draw the directory list
                         (*it).second->GetDirectoryList()->Draw((*it).second);
                     }
 
-                    if (archive_open) {
-                        ImGui::TreePop();
+                    // if the close button was pressed, delete the archive
+                    if (!is_open) {
+                        std::lock_guard<std::recursive_mutex> _lk{ AvalancheArchive::InstancesMutex };
+                        it = AvalancheArchive::Instances.erase(it);
+                        TextureManager::Get()->Flush();
+
+                        // if we have closed all render blocks, switch tab
+                        if (AvalancheArchive::Instances.size() == 0) {
+                            switch_to_tab = "File Explorer";
+                        }
+
+                        continue;
                     }
 
-                    if (!has_closed) ++it;
+                    ++it;
                 }
 
                 ImGuiCustom::EndTabItemScroll();
@@ -307,29 +293,9 @@ void UI::RenderFileTreeView()
 
                     ImGui::PushID(unique_model_id.str().c_str());
 
-                    // render the collapsing header
-                    auto is_header_open = ImGui::CollapsingHeader(filename.c_str());
-                    bool has_cloded = false;
-
-                    // context menu
-                    if (ImGui::BeginPopupContextItem("Context Menu")) {
-                        if (ImGui::Selectable(ICON_FA_WINDOW_CLOSE "  Close")) {
-                            std::lock_guard<std::recursive_mutex> _lk{ RenderBlockModel::InstancesMutex };
-                            it = RenderBlockModel::Instances.erase(it);
-                            is_header_open = false;
-                            has_cloded = true;
-
-                            // if we have closed all render blocks, switch tab
-                            if (RenderBlockModel::Instances.size() == 0) {
-                                switch_to_tab = AvalancheArchive::Instances.size() == 0 ? "File Explorer" : "Archives";
-                            }
-                        }
-
-                        ImGui::EndPopup();
-                    }
-
-                    // render the current file info
-                    if (is_header_open) {
+                    // render the current model info
+                    bool is_open = true;
+                    if (ImGui::CollapsingHeader(filename.c_str(), &is_open)) {
                         const auto& render_blocks = (*it).second->GetRenderBlocks();
                         for (auto& render_block : render_blocks) {
                             // TODO: highlight the current render block when hovering over the ui
@@ -437,7 +403,20 @@ void UI::RenderFileTreeView()
 
                     ++model_index;
 
-                    if (!has_cloded) ++it;
+                    // if the close button was pressed, delete the model
+                    if (!is_open) {
+                        std::lock_guard<std::recursive_mutex> _lk{ RenderBlockModel::InstancesMutex };
+                        it = RenderBlockModel::Instances.erase(it);
+
+                        // if we have closed all render blocks, switch tab
+                        if (RenderBlockModel::Instances.size() == 0) {
+                            switch_to_tab = AvalancheArchive::Instances.size() == 0 ? "File Explorer" : "Archives";
+                        }
+
+                        continue;
+                    }
+                    
+                    ++it;
                 }
 
                 ImGuiCustom::EndTabItemScroll();

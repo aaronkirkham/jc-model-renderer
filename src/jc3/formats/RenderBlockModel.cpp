@@ -169,9 +169,12 @@ void RenderBlockModel::Draw(RenderContext_t* context)
 #endif
 
     // draw all render blocks
-    for (auto& renderBlock : m_RenderBlocks) {
-        renderBlock->Setup(context);
-        renderBlock->Draw(context);
+    for (auto& render_block : m_RenderBlocks) {
+        render_block->Setup(context);
+        render_block->Draw(context);
+
+        // reset
+        context->m_Renderer->SetDefaultRenderStates();
     }
 
     // draw filename label

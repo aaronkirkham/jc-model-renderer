@@ -75,10 +75,10 @@ private:
     std::vector<RuntimeContainer*> m_Containers;
 
 public:
-    RuntimeContainer(uint32_t name_hash);
+    RuntimeContainer(uint32_t name_hash, const fs::path& filename = "");
     virtual ~RuntimeContainer();
 
-    virtual std::string GetFactoryKey() const { return m_Name; }
+    virtual std::string GetFactoryKey() const { return m_Filename.string(); }
 
     void GenerateNamesIfNeeded();
 
@@ -99,6 +99,8 @@ public:
 
     RuntimeContainer* GetContainer(uint32_t name_hash);
     RuntimeContainer* GetContainer(const std::string& name);
+
+    std::vector<RuntimeContainer*> GetAllContainers(const std::string& class_name);
 
     const std::vector<RuntimeContainerProperty*>& GetProperties() { return m_Properties; }
     std::vector<RuntimeContainerProperty*> GetSortedProperties();

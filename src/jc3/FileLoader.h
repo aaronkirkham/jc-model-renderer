@@ -64,8 +64,7 @@ public:
     bool ReadCompressedTexture(const fs::path& filename, FileBuffer* output) noexcept;
 
     // runtime containers
-    std::shared_ptr<RuntimeContainer> GetRuntimeContainer(const fs::path& filename);
-    RuntimeContainer* ParseRuntimeContainer(const FileBuffer& buffer) noexcept;
+    std::shared_ptr<RuntimeContainer> ParseRuntimeContainer(const fs::path& filename, const FileBuffer& buffer) noexcept;
 
     // shader bundles
     AvalancheDataFormat* ReadAdf(const fs::path& filename) noexcept;

@@ -34,6 +34,22 @@ public:
         }
     }
 
+    static std::shared_ptr<T> get(const std::string& key)
+    {
+        const auto hash = fnv_1_32::hash(key.c_str(), key.length());
+
+        std::lock_guard<decltype(InstancesMutex)> _lk{ InstancesMutex };
+        const auto find_it = std::find_if(Instances.begin(), Instances.end(), [&](const std::pair<uint32_t, std::shared_ptr<T>>& item) {
+            return item.first == hash;
+        });
+
+        if (find_it != Instances.end()) {
+            return (*find_it).second;
+        }
+
+        return nullptr;
+    }
+
     static std::recursive_mutex InstancesMutex;
     static std::map<uint32_t, std::shared_ptr<T>> Instances;
 };

@@ -598,19 +598,6 @@ bool FileLoader::ReadCompressedTexture(const fs::path& filename, FileBuffer* out
     return true;
 }
 
-std::shared_ptr<RuntimeContainer> FileLoader::GetRuntimeContainer(const fs::path& filename)
-{
-    auto find_it = std::find_if(RuntimeContainer::Instances.begin(), RuntimeContainer::Instances.end(), [&](const std::pair<uint32_t, std::shared_ptr<RuntimeContainer>>& item) {
-        return item.second && item.second->GetFileName() == filename;
-    });
-
-    if (find_it != RuntimeContainer::Instances.end()) {
-        return (*find_it).second;
-    }
-
-    return nullptr;
-}
-
 template <typename T>
 inline T ALIGN_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
 {
@@ -621,7 +608,7 @@ inline T ALIGN_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
     return value;
 }
 
-RuntimeContainer* FileLoader::ParseRuntimeContainer(const FileBuffer& buffer) noexcept
+std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const fs::path& filename, const FileBuffer& buffer) noexcept
 {
     std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
 
@@ -642,7 +629,7 @@ RuntimeContainer* FileLoader::ParseRuntimeContainer(const FileBuffer& buffer) no
     stream.read((char *)&rootNode, sizeof(rootNode));
 
     // create the root container
-    auto root_container = RuntimeContainer::make(rootNode.m_NameHash);
+    auto root_container = RuntimeContainer::make(rootNode.m_NameHash, filename);
 
     std::queue<std::tuple<RuntimeContainer*, JustCause3::RuntimeContainer::Node>> instanceQueue;
     std::queue<std::tuple<RuntimeContainerProperty*, JustCause3::RuntimeContainer::Property>> propertyQueue;
@@ -846,7 +833,7 @@ RuntimeContainer* FileLoader::ParseRuntimeContainer(const FileBuffer& buffer) no
     // generate container names if needed
     root_container->GenerateNamesIfNeeded();
 
-    return root_container.get();
+    return root_container;
 }
 
 AvalancheDataFormat* FileLoader::ReadAdf(const fs::path& filename) noexcept

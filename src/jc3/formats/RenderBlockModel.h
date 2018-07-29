@@ -28,6 +28,8 @@ public:
     RenderBlockModel(const fs::path& filename);
     virtual ~RenderBlockModel();
 
+    virtual std::string GetFactoryKey() const { return m_Filename.string(); }
+
     static void FileReadCallback(const fs::path& filename, const FileBuffer& data);
     static void LoadModel(const fs::path& filename);
 
@@ -53,9 +55,4 @@ public:
     std::tuple<glm::vec3, glm::vec3> GetBoundingBox() { return { m_BoundingBoxMin, m_BoundingBoxMax }; }
 
     AvalancheArchive* GetParentArchive() { return m_ParentArchive.get(); }
-
-    virtual std::string GetFactoryKey() const
-    {
-        return m_Filename.string();
-    }
 };

@@ -18,6 +18,8 @@ public:
     AvalancheArchive(const fs::path& filename, const FileBuffer& buffer);
     virtual ~AvalancheArchive();
 
+    virtual std::string GetFactoryKey() const { return m_File.string(); }
+
     bool HasFile(const fs::path& filename);
 
     static void FileReadCallback(const fs::path& filename, const FileBuffer& data);
@@ -26,9 +28,4 @@ public:
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
 
     const fs::path& GetFileName() { return m_File; }
-
-    virtual std::string GetFactoryKey() const
-    {
-        return m_File.string();
-    }
 };
