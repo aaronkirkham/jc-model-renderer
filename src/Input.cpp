@@ -20,7 +20,7 @@ void Input::Initialise()
 #endif
 
     // reset all keys if we lose window focus
-    Window::Get()->Events().WindowFocusLost.connect([&] {
+    Window::Get()->Events().FocusLost.connect([&] {
         std::fill(m_KeyboardState.begin(), m_KeyboardState.end(), false);
     });
 }

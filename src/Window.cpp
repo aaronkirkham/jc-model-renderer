@@ -18,7 +18,7 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPA
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - m_ResizeTime);
         if (duration.count() > 50) {
             m_IsResizing = false;
-            Window::Get()->Events().WindowResized(Window::Get()->GetSize());
+            Window::Get()->Events().SizeChanged(Window::Get()->GetSize());
         }
     }
 
@@ -36,12 +36,12 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPA
 
         // focus gained handler
     case WM_SETFOCUS:
-        Window::Get()->Events().WindowFocusGained();
+        Window::Get()->Events().FocusGained();
         break;
 
         // focus lost handler
     case WM_KILLFOCUS:
-        Window::Get()->Events().WindowFocusLost();
+        Window::Get()->Events().FocusLost();
         break;
 
         // file drop handler

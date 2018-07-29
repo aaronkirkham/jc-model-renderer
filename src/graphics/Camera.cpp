@@ -26,7 +26,7 @@ Camera::Camera()
     m_Rotation = glm::vec3(0, 0, 0);
 
     // rebuild projection matrix if the window is resized
-    window->Events().WindowResized.connect([&](const glm::vec2& size) {
+    window->Events().SizeChanged.connect([&](const glm::vec2& size) {
         if (size.x != 0 && size.y != 0) {
             m_Projection = glm::perspectiveFovLH(glm::radians(m_FOV), size.x, size.y, m_NearClip, m_FarClip);
             m_Viewport = glm::vec4{ 0, 0, size.x, size.y };
@@ -34,7 +34,7 @@ Camera::Camera()
     });
 
     // handle window losing focus
-    window->Events().WindowFocusLost.connect([&] {
+    window->Events().FocusLost.connect([&] {
         if (m_IsTranslatingView || m_IsRotatingView) {
             Window::Get()->CaptureMouse(false);
         }

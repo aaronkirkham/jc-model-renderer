@@ -13,7 +13,7 @@ void SetupImGuiStyle();
 
 Renderer::Renderer()
 {
-    Window::Get()->Events().WindowResized.connect([this](const glm::vec2& size) {
+    Window::Get()->Events().SizeChanged.connect([this](const glm::vec2& size) {
         if (size.x == 0 || size.y == 0 || !m_Device || !m_DeviceContext) {
             return true;
         }
