@@ -56,7 +56,7 @@ private:
     ID3D11Debug* m_DeviceDebugger = nullptr;
 #endif
 
-    ID3D11Texture2D* CreateTexture2D(const glm::vec2& size, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, uint32_t bindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE);
+    ID3D11Texture2D* CreateTexture2D(const glm::vec2& size, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, uint32_t bindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE, const char* debugName = nullptr);
 
     void CreateDevice(const HWND& hwnd, const glm::vec2& size);
     void CreateRenderTarget(const glm::vec2& size);

@@ -6,12 +6,11 @@
 
 class NameHashLookup
 {
-private:
-    inline static std::unordered_map<uint32_t, std::string> LookupTable;
-
 public:
     NameHashLookup() = delete;
     virtual ~NameHashLookup() = delete;
+
+    static std::unordered_map<uint32_t, std::string> LookupTable;
 
     static void Init()
     {

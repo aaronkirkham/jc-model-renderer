@@ -47,7 +47,7 @@ Texture::Texture(const fs::path& filename, bool load_from_dictionary)
             m_WaitThread = std::thread([this] {
                 std::stringstream status_text;
                 status_text << "Loading texture \"" << m_Filename << "\"...";
-                const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
+                m_StatusTextId = UI::Get()->PushStatusText(status_text.str());
 
                 while (true) {
 
@@ -67,7 +67,8 @@ Texture::Texture(const fs::path& filename, bool load_from_dictionary)
                             }
                         }
 
-                        UI::Get()->PopStatusText(status_text_id);
+                        UI::Get()->PopStatusText(m_StatusTextId);
+                        m_StatusTextId = std::numeric_limits<uint64_t>::max();
 
                         break;
 
@@ -88,6 +89,11 @@ Texture::~Texture()
 
     SAFE_RELEASE(m_SRV);
     SAFE_RELEASE(m_Texture);
+
+    // pop status text if we are still waiting for something
+    if (m_StatusTextId != std::numeric_limits<uint64_t>::max()) {
+        UI::Get()->PopStatusText(m_StatusTextId);
+    }
 }
 
 bool Texture::LoadFromBuffer(const FileBuffer& buffer)
@@ -156,13 +162,6 @@ TextureManager::TextureManager()
 {
     m_MissingTexture = std::make_unique<Texture>("missing-texture.dds", false);
     m_MissingTexture->LoadFromFile("../assets/missing-texture.dds");
-
-#if 0
-    auto texture = std::make_shared<Texture>("textures/dummies/dummy_white.ddsc", false);
-    texture->LoadFromFile("../assets/dummy_white.dds");
-    auto key = fnv_1_32::hash("dummy_white", strlen("dummy_white"));
-    m_Textures[key] = std::move(texture);
-#endif
 
     Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
         const auto& window_size = Window::Get()->GetSize();

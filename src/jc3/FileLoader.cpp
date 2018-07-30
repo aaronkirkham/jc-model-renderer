@@ -25,6 +25,8 @@
 extern fs::path g_JC3Directory;
 static uint64_t g_ArchiveLoadCount = 0;
 
+std::unordered_map<uint32_t, std::string> NameHashLookup::LookupTable;
+
 FileLoader::FileLoader()
 {
     m_FileList = std::make_unique<DirectoryList>();

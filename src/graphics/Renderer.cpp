@@ -23,6 +23,8 @@ Renderer::Renderer()
         DestroyRenderTarget();
         DestroyDepthStencil();
 
+        m_DeviceContext->Flush();
+
         m_SwapChain->ResizeBuffers(0, static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y), DXGI_FORMAT_UNKNOWN, 0);
 
         CreateDepthStencil(size);
@@ -38,7 +40,7 @@ Renderer::~Renderer()
     Shutdown();
 }
 
-ID3D11Texture2D* Renderer::CreateTexture2D(const glm::vec2& size, DXGI_FORMAT format, uint32_t bindFlags)
+ID3D11Texture2D* Renderer::CreateTexture2D(const glm::vec2& size, DXGI_FORMAT format, uint32_t bindFlags, const char* debugName)
 {
     D3D11_TEXTURE2D_DESC textureDesc;
     textureDesc.Width = static_cast<UINT>(size.x);
@@ -58,7 +60,7 @@ ID3D11Texture2D* Renderer::CreateTexture2D(const glm::vec2& size, DXGI_FORMAT fo
     assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-    D3D_SET_OBJECT_NAME_A(texture, "Renderer::CreateTexture2D");
+    D3D_SET_OBJECT_NAME_A(texture, debugName);
 #endif
 
     return texture;
@@ -263,7 +265,7 @@ void Renderer::CreateRenderTarget(const glm::vec2& size)
 
     // create normals render target
     {
-        auto normalsTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE));
+        auto normalsTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Normals texture");
         assert(normalsTex);
 
         auto result = m_Device->CreateRenderTargetView(normalsTex, nullptr, &m_RenderTargetView[1]);
@@ -275,11 +277,18 @@ void Renderer::CreateRenderTarget(const glm::vec2& size)
         desc.Texture2D = { 0, static_cast<UINT>(-1) };
         result = m_Device->CreateShaderResourceView(normalsTex, &desc, &m_RenderTargetResourceView[0]);
         assert(SUCCEEDED(result));
+
+        SAFE_RELEASE(normalsTex);
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+        D3D_SET_OBJECT_NAME_A(m_RenderTargetView[1], "Renderer Normal Buffer");
+        D3D_SET_OBJECT_NAME_A(m_RenderTargetResourceView[0], "Renderer Normal Buffer SRV");
+#endif
     }
 
     // create metallic render target
     {
-        auto metallicTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE));
+        auto metallicTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Metallic texture");
         assert(metallicTex);
 
         auto result = m_Device->CreateRenderTargetView(metallicTex, nullptr, &m_RenderTargetView[2]);
@@ -291,6 +300,13 @@ void Renderer::CreateRenderTarget(const glm::vec2& size)
         desc.Texture2D = { 0, static_cast<UINT>(-1) };
         result = m_Device->CreateShaderResourceView(metallicTex, &desc, &m_RenderTargetResourceView[1]);
         assert(SUCCEEDED(result));
+
+        SAFE_RELEASE(metallicTex);
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+        D3D_SET_OBJECT_NAME_A(m_RenderTargetView[2], "Renderer Metallic Buffer");
+        D3D_SET_OBJECT_NAME_A(m_RenderTargetResourceView[1], "Renderer Metallic Buffer SRV");
+#endif
     }
 
     // set the render target
@@ -383,7 +399,7 @@ void Renderer::CreateDepthStencil(const glm::vec2& size)
         assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-        D3D_SET_OBJECT_NAME_A(m_DepthStencilEnabledState, "Renderer::CreateDepthStencil - m_DepthStencilEnabledState");
+        D3D_SET_OBJECT_NAME_A(m_DepthStencilEnabledState, "CreateDepthStencil m_DepthStencilEnabledState");
 #endif
 
         depthStencilDesc.DepthEnable = false;
@@ -393,7 +409,7 @@ void Renderer::CreateDepthStencil(const glm::vec2& size)
         assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-        D3D_SET_OBJECT_NAME_A(m_DepthStencilDisabledState, "Renderer::CreateDepthStencil - m_DepthStencilDisabledState");
+        D3D_SET_OBJECT_NAME_A(m_DepthStencilDisabledState, "CreateDepthStencil m_DepthStencilDisabledState");
 #endif
 
         // enable depth
@@ -401,7 +417,7 @@ void Renderer::CreateDepthStencil(const glm::vec2& size)
     }
 
     // create the depth buffer
-    m_DepthTexture = CreateTexture2D(size, DXGI_FORMAT_R24G8_TYPELESS, D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE);
+    m_DepthTexture = CreateTexture2D(size, DXGI_FORMAT_R24G8_TYPELESS, (D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE), "Depth stencil texture");
 
     // create depth stencil view
     {
@@ -424,17 +440,6 @@ void Renderer::CreateBlendState()
 {
     D3D11_BLEND_DESC blendDesc;
     ZeroMemory(&blendDesc, sizeof(blendDesc));
-
-    /*D3D11_RENDER_TARGET_BLEND_DESC renderTargetBlendDesc;
-    ZeroMemory(&renderTargetBlendDesc, sizeof(renderTargetBlendDesc));
-    renderTargetBlendDesc.BlendEnable = true;
-    renderTargetBlendDesc.SrcBlend = D3D11_BLEND_SRC_COLOR;
-    renderTargetBlendDesc.DestBlend = D3D11_BLEND_BLEND_FACTOR;
-    renderTargetBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;
-    renderTargetBlendDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
-    renderTargetBlendDesc.DestBlendAlpha = D3D11_BLEND_ZERO;
-    renderTargetBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_ADD;
-    renderTargetBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;*/
 
     blendDesc.AlphaToCoverageEnable = false;
     blendDesc.RenderTarget[0].BlendEnable = TRUE;
@@ -481,7 +486,8 @@ void Renderer::CreateRasterizerState()
 
 void Renderer::DestroyRenderTarget()
 {
-    m_DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+    ID3D11RenderTargetView* null_targets[3] = { nullptr };
+    m_DeviceContext->OMSetRenderTargets(3, null_targets, nullptr);
 
     for (auto& resource_view : m_RenderTargetResourceView) {
         SAFE_RELEASE(resource_view);

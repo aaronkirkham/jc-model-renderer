@@ -22,6 +22,7 @@ private:
     bool m_IsTryingHMDDSC = false;
 
     std::thread m_WaitThread;
+    uint64_t m_StatusTextId = std::numeric_limits<uint64_t>::max();
 
 public:
     Texture(const fs::path& filename, bool load_from_dictionary = true);
