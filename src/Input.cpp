@@ -7,10 +7,6 @@
 
 #include <graphics/DebugRenderer.h>
 
-Input::~Input()
-{
-}
-
 void Input::Initialise()
 {
 #if 0
@@ -22,6 +18,11 @@ void Input::Initialise()
         DebugRenderer::Get()->DrawLine(window_center_world, m_MouseWorldPosition, { 1, 0, 0, 1 });
     });
 #endif
+
+    // reset all keys if we lose window focus
+    Window::Get()->Events().FocusLost.connect([&] {
+        std::fill(m_KeyboardState.begin(), m_KeyboardState.end(), false);
+    });
 }
 
 bool Input::HandleMessage(MSG* event)
@@ -84,8 +85,4 @@ bool Input::HandleMessage(MSG* event)
     }
 
     return true;
-}
-
-void Input::Update()
-{
 }

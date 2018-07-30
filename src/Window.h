@@ -16,7 +16,9 @@ static constexpr auto g_WindowName = "JC3 Render Block Model Renderer";
 
 struct WindowEvents
 {
-    ksignals::Event<void(const glm::vec2& size)> WindowResized;
+    ksignals::Event<void(const glm::vec2& size)> SizeChanged;
+    ksignals::Event<void()> FocusLost;
+    ksignals::Event<void()> FocusGained;
     ksignals::Event<void(const fs::path& filename)> FileDropped;
 };
 

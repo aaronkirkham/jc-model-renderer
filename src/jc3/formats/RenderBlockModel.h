@@ -2,18 +2,19 @@
 
 #include <StdInc.h>
 #include <jc3/renderblocks/IRenderBlock.h>
-
 #include <mutex>
-#include <unordered_map>
+#include <Factory.h>
 
-class RenderBlockModel
+class AvalancheArchive;
+class RenderBlockModel : public Factory<RenderBlockModel>
 {
 private:
     std::recursive_mutex m_RenderBlocksMutex;
     std::vector<IRenderBlock*> m_RenderBlocks;
 
+    std::shared_ptr<AvalancheArchive> m_ParentArchive;
+
     fs::path m_Filename = "";
-    std::string m_ReadBlocksError = "";
 
     glm::vec3 m_Position = { 0, 0, 0 };
     glm::vec3 m_Rotation = { 0, 0, 0 };
@@ -24,14 +25,14 @@ private:
     glm::vec3 m_BoundingBoxMax;
 
 public:
-    //RenderBlockModel(const fs::path& file);
     RenderBlockModel(const fs::path& filename);
     virtual ~RenderBlockModel();
+
+    virtual std::string GetFactoryKey() const { return m_Filename.string(); }
 
     static void FileReadCallback(const fs::path& filename, const FileBuffer& data);
     static void LoadModel(const fs::path& filename);
 
-    //bool ParseRenderBlockModel(std::istream& stream);
     bool Parse(const FileBuffer& data);
 
     void Draw(RenderContext_t* context);
@@ -53,5 +54,5 @@ public:
 
     std::tuple<glm::vec3, glm::vec3> GetBoundingBox() { return { m_BoundingBoxMin, m_BoundingBoxMax }; }
 
-    const std::string& GetError() const { return m_ReadBlocksError; }
+    AvalancheArchive* GetParentArchive() { return m_ParentArchive.get(); }
 };

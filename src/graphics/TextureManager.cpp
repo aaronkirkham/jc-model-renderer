@@ -4,7 +4,7 @@
 #include <jc3/FileLoader.h>
 #include <fnv1.h>
 
-#include <fonts/fontawesome_icons.h>
+#include <graphics/imgui/fonts/fontawesome_icons.h>
 
 #include <graphics/UI.h>
 
@@ -86,8 +86,8 @@ Texture::~Texture()
 {
     DEBUG_LOG("Texture::~Texture - Deleting texture '" << m_Filename.filename().string() << "'...");
 
-    safe_release(m_SRV);
-    safe_release(m_Texture);
+    SAFE_RELEASE(m_SRV);
+    SAFE_RELEASE(m_Texture);
 }
 
 bool Texture::LoadFromBuffer(const FileBuffer& buffer)
@@ -102,8 +102,8 @@ bool Texture::LoadFromBuffer(const FileBuffer& buffer)
     }
 #endif
 
-    safe_release(m_SRV);
-    safe_release(m_Texture);
+    SAFE_RELEASE(m_SRV);
+    SAFE_RELEASE(m_Texture);
 
     // create the dds texture resources
     auto result = DirectX::CreateDDSTextureFromMemory(Renderer::Get()->GetDevice(), buffer.data(), buffer.size(), &m_Texture, &m_SRV);
@@ -168,8 +168,6 @@ TextureManager::TextureManager()
         const auto& window_size = Window::Get()->GetSize();
         const auto aspect_ratio = (window_size.x / window_size.y);
 
-        std::lock_guard<std::recursive_mutex> _lk{ m_TexturesMutex };
-
         for (auto it = m_RenderingTextures.begin(); it != m_RenderingTextures.end();) {
             bool open = true;
 
@@ -212,8 +210,6 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, ui
     auto name = filename.filename().stem().string();
     auto key = fnv_1_32::hash(name.c_str(), name.length());
 
-    std::lock_guard<std::recursive_mutex> _lk{ m_TexturesMutex };
-
     if (std::find(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key) == m_LastUsedTextures.end()) {
         m_LastUsedTextures.emplace_back(key);
     }
@@ -240,8 +236,6 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, Fi
     auto key = fnv_1_32::hash(name.c_str(), name.length());
 
     DEBUG_LOG(name);
-
-    std::lock_guard<std::recursive_mutex> _lk{ m_TexturesMutex };
 
     if (std::find(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key) == m_LastUsedTextures.end()) {
         m_LastUsedTextures.emplace_back(key);
@@ -278,8 +272,6 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, Fi
 
 void TextureManager::Flush()
 {
-    std::lock_guard<std::recursive_mutex> _lk{ m_TexturesMutex };
-
 #ifdef DEBUG
     uint32_t _flush_count = 0;
 #endif
@@ -313,16 +305,12 @@ void TextureManager::Delete(std::shared_ptr<Texture> texture)
     auto name = texture->GetPath().filename().stem().string();
     auto key = fnv_1_32::hash(name.c_str(), name.length());
 
-    std::lock_guard<std::recursive_mutex> _lk{ m_TexturesMutex };
-
     m_LastUsedTextures.erase(std::remove(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key), m_LastUsedTextures.end());
     m_Textures.erase(key);
 }
 
 void TextureManager::Empty()
 {
-    std::lock_guard<std::recursive_mutex> _lk{ m_TexturesMutex };
-
     m_Textures.clear();
     m_LastUsedTextures.clear();
 }

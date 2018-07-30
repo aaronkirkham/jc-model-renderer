@@ -21,12 +21,9 @@
 #include <import_export/DDSC.h>
 #include <import_export/AvalancheArchive.h>
 
-#include <jc3/ModelManager.h>
-
 extern fs::path g_JC3Directory = "";
 extern bool g_DrawBoundingBoxes = true;
 extern bool g_ShowModelLabels = true;
-extern AvalancheArchive* g_CurrentLoadedArchive;
 
 void CheckForUpdates(bool show_no_update_messagebox)
 {
@@ -132,10 +129,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 FileLoader::Get()->LocateFileInDictionary("bucket_dif.hmddsc");
             }
             else if (key == VK_F2) {
-                fs::path file = "editor/entities/gameobjects/main_character.ee";
-                FileLoader::Get()->ReadFile(file, [&, file](bool success, FileBuffer data) {
+                fs::path filename = "editor/entities/gameobjects/main_character.ee";
+                FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                     if (success) {
-                        new AvalancheArchive(file, data);
+                        AvalancheArchive::make(filename, data);
 
                         fs::path rbm = "models/jc_characters/main_characters/rico/rico_body_lod1.rbm";
                         RenderBlockModel::LoadModel(rbm);
@@ -143,10 +140,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 });
             }
             else if (key == VK_F3) {
-                fs::path file = "editor/entities/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13.ee";
-                FileLoader::Get()->ReadFile(file, [&, file](bool success, FileBuffer data) {
+                fs::path filename = "editor/entities/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13.ee";
+                FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                     if (success) {
-                        new AvalancheArchive(file, data);
+                        AvalancheArchive::make(filename, data);
 
                         fs::path rbm = "models/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13_base_body_lod1.rbm";
                         RenderBlockModel::LoadModel(rbm);
@@ -154,10 +151,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 });
             }
             else if (key == VK_F4) {
-                fs::path file = "editor/entities/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/v0405_car_mugello_moderncircuitracer_civilian_01.ee";
-                FileLoader::Get()->ReadFile(file, [&, file](bool success, FileBuffer data) {
+                fs::path filename = "editor/entities/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/v0405_car_mugello_moderncircuitracer_civilian_01.ee";
+                FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                     if (success) {
-                        new AvalancheArchive(file, data);
+                        AvalancheArchive::make(filename, data);
 
                         fs::path rbm = "models/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/moderncircuitracer_body_lod1.rbm";
                         RenderBlockModel::LoadModel(rbm);
@@ -165,10 +162,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 });
             }
             else if (key == VK_F5) {
-                fs::path file = "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/v4602_plane_urga_fighterbomber_debug.ee";
-                FileLoader::Get()->ReadFile(file, [&, file](bool success, FileBuffer data) {
+                fs::path filename = "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/v4602_plane_urga_fighterbomber_debug.ee";
+                FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                     if (success) {
-                        new AvalancheArchive(file, data);
+                        AvalancheArchive::make(filename, data);
 
                         static std::array models = {
                             "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_body_lod1.rbm",
@@ -210,25 +207,27 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 });
             }
             else if (key == VK_F6) {
-                fs::path file = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/v0803_car_na_monstertruck_civilian_01.ee";
-                FileLoader::Get()->ReadFile(file, [&, file](bool success, FileBuffer data) {
+                fs::path filename = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/v0803_car_na_monstertruck_civilian_01.ee";
+                FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                     if (success) {
-                        new AvalancheArchive(file, data);
+                        AvalancheArchive::make(filename, data);
 
-                        fs::path epe = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/v0803_car_na_monstertruck_civilian_01.epe";
-                        FileLoader::Get()->ReadFile(epe, [&](bool success, FileBuffer data) {
-                            RuntimeContainer::FileReadCallback(epe, data);
-                        });
+
+//                         fs::path epe = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/v0803_car_na_monstertruck_civilian_01.epe";
+//                         FileLoader::Get()->ReadFile(epe, [&](bool success, FileBuffer data) {
+//                             RuntimeContainer::FileReadCallback(epe, data);
+//                         });
                     }
                 });
             }
+            else if (key == VK_F7) {
+                std::thread([] {
+                    fs::path filename = "models/jc_characters/animals/cow/cow_mesh_body_lod1.rbm";
+                    RenderBlockModel::LoadModel(filename);
+                }).detach();
+            }
         });
 #endif
-
-        // empty the texture manager once all models are unloaded
-        ModelManager::Get()->Events().EmptyModels.connect([] {
-            TextureManager::Get()->Empty();
-        });
 
         // register file type callbacks now
         FileLoader::Get()->RegisterCallback(".rbm", RenderBlockModel::FileReadCallback);
@@ -249,6 +248,39 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         ImportExportManager::Get()->Register(new import_export::Wavefront_Obj);
         ImportExportManager::Get()->Register(new import_export::DDSC);
         ImportExportManager::Get()->Register(new import_export::AvalancheArchive);
+
+        //
+        Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
+            //std::lock_guard<std::recursive_mutex> _lk{ RenderBlockModel::InstancesMutex };
+
+            ImGui::SetNextWindowBgAlpha(0.0f);
+            ImGui::Begin("Model Manager", nullptr, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
+            {
+                const auto& window_size = Window::Get()->GetSize();
+
+                uint32_t vertices = 0;
+                uint32_t indices = 0;
+                uint32_t triangles = 0;
+
+                for (const auto& model : RenderBlockModel::Instances) {
+                    for (const auto& block : model.second->GetRenderBlocks()) {
+                        auto index_count = block->GetIndexBuffer()->m_ElementCount;
+
+                        vertices += block->GetVertexBuffer()->m_ElementCount;
+                        indices += index_count;
+                        triangles += (index_count / 3);
+                    }
+                }
+
+                ImGui::SetWindowPos({ 10, (window_size.y - 35) });
+                ImGui::Text("Models: %d, Vertices: %d, Indices: %d, Triangles: %d, Textures: %d", RenderBlockModel::Instances.size(), vertices, indices, triangles, TextureManager::Get()->GetCacheSize());
+            }
+            ImGui::End();
+
+            for (const auto& model : RenderBlockModel::Instances) {
+                model.second->Draw(context);
+            }
+        });
 
 #if 0
         Window::Get()->Events().FileDropped.connect([](const fs::path& filename) {

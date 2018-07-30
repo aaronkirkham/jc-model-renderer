@@ -8,7 +8,7 @@
 
 #include <jc3/formats/StreamArchive.h>
 #include <jc3/formats/AvalancheDataFormat.h>
-#include <jc3/formats/NameHashLookup.h>
+#include <jc3/NameHashLookup.h>
 
 #include <functional>
 
@@ -64,14 +64,13 @@ public:
     bool ReadCompressedTexture(const fs::path& filename, FileBuffer* output) noexcept;
 
     // runtime containers
-    RuntimeContainer* GetRuntimeContainer(const fs::path& filename);
-    RuntimeContainer* ParseRuntimeContainer(const FileBuffer& buffer) noexcept;
+    std::shared_ptr<RuntimeContainer> ParseRuntimeContainer(const fs::path& filename, const FileBuffer& buffer) noexcept;
 
     // shader bundles
     AvalancheDataFormat* ReadAdf(const fs::path& filename) noexcept;
 
     // stream archive caching
-    std::tuple<StreamArchive_t*, StreamArchiveEntry_t> GetStreamArchiveFromFile(const fs::path& file) noexcept;
+    std::tuple<StreamArchive_t*, StreamArchiveEntry_t> GetStreamArchiveFromFile(const fs::path& file, StreamArchive_t* archive = nullptr) noexcept;
     std::tuple<std::string, std::string, uint32_t> LocateFileInDictionary(const fs::path& filename) noexcept;
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
 

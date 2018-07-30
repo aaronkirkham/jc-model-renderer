@@ -2,11 +2,13 @@
 
 #include <StdInc.h>
 #include <singleton.h>
+#include <memory.h>
 
 class IImportExporter;
+class AvalancheArchive;
 struct UIEvents
 {
-    ksignals::Event<void(const fs::path& file)> FileTreeItemSelected;
+    ksignals::Event<void(const fs::path& file, std::shared_ptr<AvalancheArchive> archive)> FileTreeItemSelected;
     ksignals::Event<void(const fs::path& file)> SaveFileRequest;
     ksignals::Event<void(const fs::path& file, IImportExporter* exporter)> ExportFileRequest;
 };

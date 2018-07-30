@@ -5,8 +5,6 @@
 #include <graphics/Camera.h>
 #include <graphics/DebugRenderer.h>
 
-#include <jc3/ModelManager.h>
-
 #include <Window.h>
 
 #include <gtc/type_ptr.hpp>
@@ -15,7 +13,7 @@ void SetupImGuiStyle();
 
 Renderer::Renderer()
 {
-    Window::Get()->Events().WindowResized.connect([this](const glm::vec2& size) {
+    Window::Get()->Events().SizeChanged.connect([this](const glm::vec2& size) {
         if (size.x == 0 || size.y == 0 || !m_Device || !m_DeviceContext) {
             return true;
         }
@@ -105,7 +103,6 @@ void Renderer::Shutdown()
     TextureManager::Get()->Shutdown();
     ShaderManager::Get()->Shutdown();
     Camera::Get()->Shutdown();
-    ModelManager::Get()->Shutdown();
 
     if (m_SwapChain) {
         m_SwapChain->SetFullscreenState(false, nullptr);
@@ -122,19 +119,19 @@ void Renderer::Shutdown()
     DestroyDepthStencil();
     DestroyBuffer(m_GlobalConstants);
 
-    safe_release(m_BlendState);
-    safe_release(m_SamplerState);
-    safe_release(m_RasterizerState);
-    safe_release(m_SwapChain);
-    safe_release(m_DeviceContext);
-    safe_release(m_Device);
+    SAFE_RELEASE(m_BlendState);
+    SAFE_RELEASE(m_SamplerState);
+    SAFE_RELEASE(m_RasterizerState);
+    SAFE_RELEASE(m_SwapChain);
+    SAFE_RELEASE(m_DeviceContext);
+    SAFE_RELEASE(m_Device);
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
     m_DeviceDebugger->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
 #endif
 
 #ifdef DEBUG
-    safe_release(m_DeviceDebugger);
+    SAFE_RELEASE(m_DeviceDebugger);
 #endif
 }
 
@@ -257,7 +254,7 @@ void Renderer::CreateRenderTarget(const glm::vec2& size)
         result = m_Device->CreateRenderTargetView(back_buffer, nullptr, &m_RenderTargetView[0]);
         assert(SUCCEEDED(result));
 
-        safe_release(back_buffer);
+        SAFE_RELEASE(back_buffer);
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
         D3D_SET_OBJECT_NAME_A(m_RenderTargetView[0], "Renderer Back Buffer");
@@ -460,7 +457,7 @@ void Renderer::CreateBlendState()
 void Renderer::CreateRasterizerState()
 {
     if (m_RenderContext.m_RasterIsDirty) {
-        safe_release(m_RasterizerState);
+        SAFE_RELEASE(m_RasterizerState);
 
         D3D11_RASTERIZER_DESC rasterDesc;
         ZeroMemory(&rasterDesc, sizeof(D3D11_RASTERIZER_DESC));
@@ -487,11 +484,11 @@ void Renderer::DestroyRenderTarget()
     m_DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 
     for (auto& resource_view : m_RenderTargetResourceView) {
-        safe_release(resource_view);
+        SAFE_RELEASE(resource_view);
     }
 
     for (auto& render_target : m_RenderTargetView) {
-        safe_release(render_target);
+        SAFE_RELEASE(render_target);
     }
 }
 
@@ -499,10 +496,10 @@ void Renderer::DestroyDepthStencil()
 {
     m_DeviceContext->OMSetDepthStencilState(nullptr, 0);
 
-    safe_release(m_DepthStencilEnabledState);
-    safe_release(m_DepthStencilDisabledState);
-    safe_release(m_DepthStencilView);
-    safe_release(m_DepthTexture);
+    SAFE_RELEASE(m_DepthStencilEnabledState);
+    SAFE_RELEASE(m_DepthStencilDisabledState);
+    SAFE_RELEASE(m_DepthStencilView);
+    SAFE_RELEASE(m_DepthTexture);
 }
 
 VertexBuffer_t* Renderer::CreateVertexBuffer(uint32_t count, uint32_t stride, const char* debugName)
@@ -527,7 +524,7 @@ VertexBuffer_t* Renderer::CreateVertexBuffer(uint32_t count, uint32_t stride, co
 #endif
 
     if (FAILED(result)) {
-        safe_delete(buffer);
+        SAFE_DELETE(buffer);
         return nullptr;
     }
 
@@ -561,7 +558,7 @@ VertexBuffer_t* Renderer::CreateVertexBuffer(const void* data, uint32_t count, u
 #endif
 
     if (FAILED(result)) {
-        safe_delete(buffer);
+        SAFE_DELETE(buffer);
         return nullptr;
     }
 
@@ -595,7 +592,7 @@ IndexBuffer_t* Renderer::CreateIndexBuffer(const void* data, uint32_t count, D3D
 #endif
 
     if (FAILED(result)) {
-        safe_delete(buffer);
+        SAFE_DELETE(buffer);
         return nullptr;
     }
 
@@ -607,9 +604,9 @@ IndexBuffer_t* Renderer::CreateIndexBuffer(const void* data, uint32_t count, D3D
 void Renderer::DestroyBuffer(IBuffer_t* buffer)
 {
     if (buffer) {
-        safe_release(buffer->m_SRV);
-        safe_release(buffer->m_Buffer);
-        safe_delete(buffer);
+        SAFE_RELEASE(buffer->m_SRV);
+        SAFE_RELEASE(buffer->m_Buffer);
+        SAFE_DELETE(buffer);
     }
 }
 
@@ -642,8 +639,8 @@ VertexDeclaration_t* Renderer::CreateVertexDeclaration(const D3D11_INPUT_ELEMENT
 void Renderer::DestroyVertexDeclaration(VertexDeclaration_t* declaration)
 {
     if (declaration) {
-        safe_release(declaration->m_Layout);
-        safe_delete(declaration);
+        SAFE_RELEASE(declaration->m_Layout);
+        SAFE_DELETE(declaration);
     }
 }
 
@@ -676,7 +673,7 @@ SamplerState_t* Renderer::CreateSamplerState(const SamplerStateCreationParams_t&
 #endif
 
     if (FAILED(result)) {
-        safe_delete(sampler);
+        SAFE_DELETE(sampler);
         return nullptr;
     }
 
@@ -686,8 +683,8 @@ SamplerState_t* Renderer::CreateSamplerState(const SamplerStateCreationParams_t&
 void Renderer::DestroySamplerState(SamplerState_t* sampler)
 {
     if (sampler) {
-        safe_release(sampler->m_SamplerState);
-        safe_delete(sampler);
+        SAFE_RELEASE(sampler->m_SamplerState);
+        SAFE_DELETE(sampler);
     }
 }
 

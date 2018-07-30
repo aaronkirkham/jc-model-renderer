@@ -5,7 +5,8 @@
 #include <glm.hpp>
 #include <jc3/formats/RenderBlockModel.h>
 
-std::vector<RuntimeContainer*> g_RuntimeContainers;
+std::recursive_mutex Factory<RuntimeContainer>::InstancesMutex;
+std::map<uint32_t, std::shared_ptr<RuntimeContainer>> Factory<RuntimeContainer>::Instances;
 
 RuntimeContainerProperty::RuntimeContainerProperty(uint32_t name_hash, uint8_t type)
     : m_NameHash(name_hash),
@@ -21,8 +22,9 @@ RuntimeContainerProperty::RuntimeContainerProperty(uint32_t name_hash, uint8_t t
     }
 }
 
-RuntimeContainer::RuntimeContainer(uint32_t name_hash)
-    : m_NameHash(name_hash)
+RuntimeContainer::RuntimeContainer(uint32_t name_hash, const fs::path& filename)
+    : m_NameHash(name_hash),
+    m_Filename(filename)
 {
     //DEBUG_LOG("RuntimeContainer::RuntimeContainer");
     m_Name = NameHashLookup::GetName(name_hash);
@@ -119,6 +121,28 @@ RuntimeContainer* RuntimeContainer::GetContainer(const std::string& name)
     return GetContainer(hashlittle(name.c_str()));
 }
 
+std::vector<RuntimeContainer*> RuntimeContainer::GetAllContainers(const std::string& class_name)
+{
+    std::vector<RuntimeContainer*> result;
+
+    const auto _class = GetProperty("_class");
+    assert(_class);
+
+    //
+    auto _class_name = _class->GetValue<std::string>();
+    if (_class_name == class_name) {
+        result.emplace_back(this);
+    }
+
+
+    for (const auto& child : m_Containers) {
+        auto r = child->GetAllContainers(class_name);
+        std::copy(r.begin(), r.end(), std::back_inserter(result));
+    }
+
+    return result;
+}
+
 std::vector<RuntimeContainerProperty*> RuntimeContainer::GetSortedProperties()
 {
     auto properties = GetProperties();
@@ -137,19 +161,13 @@ void RuntimeContainer::FileReadCallback(const fs::path& filename, const FileBuff
     DEBUG_LOG("RuntimeContainer::FileReadCallback");
     DEBUG_LOG(filename);
 
-    const auto rtpc = FileLoader::Get()->ParseRuntimeContainer(data);
-    if (rtpc) {
-        rtpc->SetFileName(filename);
-    }
-    else {
-        DEBUG_LOG("failed to read RTPC!");
-    }
+    const auto rtpc = FileLoader::Get()->ParseRuntimeContainer(filename, data);
+    assert(rtpc);
 }
 
 void RuntimeContainer::DrawUI(uint8_t depth)
 {
     if (ImGui::TreeNode(m_Name.c_str())) {
-
         for (const auto& prop : GetSortedProperties()) {
             switch (prop->GetType()) {
             case RTPC_TYPE_INTEGER: {
@@ -228,45 +246,24 @@ void RuntimeContainer::DrawUI(uint8_t depth)
 void RuntimeContainer::ContextMenuUI(const fs::path& filename)
 {
     if (ImGui::Selectable("Load models")) {
-        DEBUG_LOG("loading...");
+        auto rc = RuntimeContainer::get(filename.string());
+        if (rc) {
+            auto path = filename.parent_path().string();
+            path = path.replace(path.find("editor\\entities"), strlen("editor\\entities"), "models");
 
-        auto rtpc = FileLoader::Get()->GetRuntimeContainer(filename);
-
-        if (!rtpc) {
-        }
-
-        if (rtpc) {
-            auto parts = rtpc->GetContainer("CParts");
-            assert(parts);
-
-            auto file = filename.parent_path().string();
-            file = file.replace(file.find("editor\\entities"), strlen("editor\\entities"), "models");
-
-            for (const auto& container : parts->GetContainers()) {
-                auto child_name = container->GetProperty("name");
-                if (child_name) {
-                    auto filename = std::any_cast<std::string>(child_name->GetValue());
+            std::thread([&, rc, path] {
+                for (const auto& container : rc->GetAllContainers("CPartProp")) {
+                    auto name = container->GetProperty("name");
+                    auto filename = std::any_cast<std::string>(name->GetValue());
                     filename += "_lod1.rbm";
 
-                    fs::path modelname = file;
+                    fs::path modelname = path;
                     modelname /= filename;
 
                     DEBUG_LOG(modelname);
                     RenderBlockModel::LoadModel(modelname);
                 }
-
-                for (const auto& child : container->GetContainers()) {
-                    auto child_name = child->GetProperty("name");
-                    auto filename = std::any_cast<std::string>(child_name->GetValue());
-                    filename += "_lod1.rbm";
-
-                    fs::path modelname = file;
-                    modelname /= filename;
-
-                    DEBUG_LOG(modelname);
-                    RenderBlockModel::LoadModel(modelname);
-                }
-            }
+            }).detach();
         }
     }
 }

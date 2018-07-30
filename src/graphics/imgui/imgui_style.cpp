@@ -1,7 +1,7 @@
 #include <imgui.h>
 #include <imgui_tabs.h>
-#include <fonts/fontawesome.h>
-#include <fonts/roboto_medium.h>
+#include <graphics/imgui/fonts/fontawesome.h>
+#include <graphics/imgui/fonts/roboto_medium.h>
 
 // https://gist.github.com/ongamex/4ee36fb23d6c527939d0f4ba72144d29
 void SetupImGuiStyle()

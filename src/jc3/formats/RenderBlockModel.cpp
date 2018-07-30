@@ -1,58 +1,50 @@
 #include <jc3/formats/RenderBlockModel.h>
+#include <jc3/formats/AvalancheArchive.h>
 #include <jc3/RenderBlockFactory.h>
+#include <jc3/FileLoader.h>
+
 #include <Window.h>
+
+#include <imgui.h>
 #include <graphics/Renderer.h>
 #include <graphics/Camera.h>
 #include <graphics/DebugRenderer.h>
 #include <graphics/UI.h>
-#include <jc3/formats/AvalancheArchive.h>
-#include <fonts/fontawesome_icons.h>
-#include <Input.h>
-#include <imgui.h>
+#include <graphics/imgui/fonts/fontawesome_icons.h>
 
-#include <jc3/ModelManager.h>
-#include <jc3/FileLoader.h>
+#include <Input.h>
 
 extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;
 
-extern AvalancheArchive* g_CurrentLoadedArchive;
-static auto g_RenderBlockColour = glm::vec4{ 1, 1, 1, 1 };
-
-/*RenderBlockModel::RenderBlockModel(const fs::path& file)
-    : m_File(file)
-{
-    // make sure this is an rbm file
-    if (file.extension() != ".rbm") {
-        throw std::invalid_argument("RenderBlockModel type only supports .rbm files!");
-    }
-
-    // try and open the file
-    std::ifstream stream(m_File, std::ios::binary);
-    if (stream.fail()) {
-        throw std::runtime_error("Failed to read RenderBlockModel file!");
-    }
-
-    // create the mesh constant buffer
-    MeshConstants constants;
-    m_MeshConstants = Renderer::Get()->CreateConstantBuffer(constants);
-
-    //ParseRenderBlockModel(stream);
-}*/
+std::recursive_mutex Factory<RenderBlockModel>::InstancesMutex;
+std::map<uint32_t, std::shared_ptr<RenderBlockModel>> Factory<RenderBlockModel>::Instances;
 
 RenderBlockModel::RenderBlockModel(const fs::path& filename)
     : m_Filename(filename)
 {
+    // find the parent archive
+    // TODO: better way.
+    std::lock_guard<std::recursive_mutex> _lk{ AvalancheArchive::InstancesMutex };
+    for (const auto& archive : AvalancheArchive::Instances) {
+        if (archive.second->HasFile(filename)) {
+            m_ParentArchive = archive.second;
+        }
+    }
+
+    if (!m_ParentArchive) {
+        DEBUG_LOG("didn't find a parent :(");
+    }
 }
 
 RenderBlockModel::~RenderBlockModel()
 {
     DEBUG_LOG("RenderBlockModel::~RenderBlockModel");
 
-    ModelManager::Get()->RemoveModel(this, g_CurrentLoadedArchive);
+    // ModelManager::Get()->RemoveModel(this);
 
     for (auto& render_block : m_RenderBlocks) {
-        safe_delete(render_block);
+        SAFE_DELETE(render_block);
     }
 }
 
@@ -68,8 +60,7 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
 
     // ensure the header magic is correct
     if (strncmp((char *)&header.m_Magic, "RBMDL", 5) != 0) {
-        m_ReadBlocksError = "Invalid file header. Input file probably isn't a RenderBlockModel file.";
-        DEBUG_LOG("[ERROR] " << m_ReadBlocksError);
+        DEBUG_LOG("RenderBlockModel::Parse - Invalid file header. Input file probably isn't a RenderBlockModel file.");
 
         parse_success = false;
         goto end;
@@ -85,8 +76,8 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
     m_BoundingBoxMax = header.m_BoundingBoxMax;
 
     // focus on the bounding box
-    if (!ModelManager::Get()->HasAnyModel()) {
-        Camera::Get()->FocusOnBoundingBox(m_BoundingBoxMin, m_BoundingBoxMax);
+    if (RenderBlockModel::Instances.size() == 1) {
+        Camera::Get()->FocusOn(this);
     }
 
     // use file batches
@@ -97,24 +88,23 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
         uint32_t hash;
         stream.read((char *)&hash, sizeof(uint32_t));
 
-        const auto renderBlock = RenderBlockFactory::CreateRenderBlock(hash);
-        if (renderBlock) {
-            renderBlock->Read(stream);
-            renderBlock->Create();
+        const auto render_block = RenderBlockFactory::CreateRenderBlock(hash);
+        if (render_block) {
+            render_block->Read(stream);
+            render_block->Create();
 
             uint32_t checksum;
             stream.read((char *)&checksum, sizeof(uint32_t));
 
             // did we read the block correctly?
             if (checksum != 0x89ABCDEF) {
-                m_ReadBlocksError = "Failed to read Render Block.";
-                DEBUG_LOG("[ERROR] " << m_ReadBlocksError);
+                DEBUG_LOG("RenderBlockModel::Parse - Failed to read Render Block");
 
                 parse_success = false;
                 break;
             }
 
-            m_RenderBlocks.emplace_back(renderBlock);
+            m_RenderBlocks.emplace_back(render_block);
         }
         else {
             std::stringstream error;
@@ -127,8 +117,6 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
             // if we haven't parsed any other blocks yet
             // we'll never see anything rendered, let the user know something is wrong
             if (m_RenderBlocks.size() == 0) {
-                m_ReadBlocksError = error.str();
-
                 parse_success = false;
             }
 
@@ -138,7 +126,6 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
 
 end:
     if (parse_success) {
-        ModelManager::Get()->AddModel(this, g_CurrentLoadedArchive);
     }
 
     // run file batches
@@ -150,18 +137,16 @@ end:
 
 void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuffer& data)
 {
-    auto rbm = new RenderBlockModel(filename);
-    if (!rbm->Parse(data)) {
-        Window::Get()->ShowMessageBox(rbm->GetError());
-        safe_delete(rbm);
-    }
+    auto rbm = RenderBlockModel::make(filename);
+    assert(rbm);
+    rbm->Parse(data);
 }
 
 void RenderBlockModel::LoadModel(const fs::path& filename)
 {
-    FileLoader::Get()->ReadFile(filename, [&](bool success, FileBuffer data) {
+    FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
         if (success) {
-            auto rbm = new RenderBlockModel(filename);
+            auto rbm = RenderBlockModel::make(filename);
             assert(rbm);
             rbm->Parse(data);
         }
@@ -187,11 +172,12 @@ void RenderBlockModel::Draw(RenderContext_t* context)
 #endif
 
     // draw all render blocks
-    for (auto& renderBlock : m_RenderBlocks) {
-        //context->m_Renderer->SetDefaultRenderStates();
+    for (auto& render_block : m_RenderBlocks) {
+        render_block->Setup(context);
+        render_block->Draw(context);
 
-        renderBlock->Setup(context);
-        renderBlock->Draw(context);
+        // reset
+        context->m_Renderer->SetDefaultRenderStates();
     }
 
     // draw filename label
