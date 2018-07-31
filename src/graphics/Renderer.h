@@ -18,14 +18,30 @@ struct RenderEvents
     ksignals::Event<void(RenderContext_t*)> RenderFrame;
 };
 
-struct GlobalConstants
+struct VertexGlobalConstants
 {
-    glm::mat4 ViewProjectionMatrix;         // 0
-    glm::vec4 CameraPosition;               // 4
-    glm::vec4 _unknown[24];                 // 5
-    glm::mat4 ViewProjectionMatrix2;        // 29
-    glm::mat4 ViewProjectionMatrix3;        // 33
-    glm::vec4 _unknown2[12];                // 37
+    glm::mat4 ViewProjectionMatrix;         // 0 - 4
+    glm::vec4 CameraPosition;               // 4 - 5
+    glm::vec4 _unknown[2];                  // 5 - 7
+    glm::vec4 LightDiffuseColour;           // 7 - 8
+    glm::vec4 LightDirection;               // 8 - 9
+    glm::vec4 _unknown2[20];                // 9 - 29
+    glm::mat4 ViewProjectionMatrix2;        // 29 - 33
+    glm::mat4 ViewProjectionMatrix3;        // 33 - 37
+    glm::vec4 _unknown3[12];                // 37 - 49
+};
+
+struct FragmentGlobalConstants
+{
+    glm::vec4 _unknown;                     // 0 - 1
+    glm::vec4 LightSpecularColour;          // 1 - 2
+    glm::vec4 LightDiffuseColour;           // 2 - 3
+    glm::vec4 LightDirection;               // 3 - 4
+    glm::vec4 _unknown2;                    // 4 - 5
+    glm::vec4 CameraPosition;               // 5 - 6
+    glm::vec4 _unknown3[25];                // 6 - 31
+    glm::vec4 LightDirection2;              // 31 - 32
+    glm::vec4 _unknown4[63];                // 32 - 95
 };
 
 class Renderer : public Singleton<Renderer>
@@ -37,8 +53,8 @@ private:
     ID3D11Device* m_Device = nullptr;
     ID3D11DeviceContext* m_DeviceContext = nullptr;
     IDXGISwapChain* m_SwapChain = nullptr;
-    std::array<ID3D11RenderTargetView*, 3> m_RenderTargetView = { nullptr };
-    std::array<ID3D11ShaderResourceView*, 2> m_RenderTargetResourceView = { nullptr };
+    std::array<ID3D11RenderTargetView*, 4> m_RenderTargetView = { nullptr };
+    std::array<ID3D11ShaderResourceView*, 3> m_RenderTargetResourceView = { nullptr };
     ID3D11RasterizerState* m_RasterizerState = nullptr;
     ID3D11Texture2D* m_DepthTexture = nullptr;
     ID3D11DepthStencilState* m_DepthStencilEnabledState = nullptr;
@@ -47,8 +63,9 @@ private:
     ID3D11SamplerState* m_SamplerState = nullptr;
     ID3D11BlendState* m_BlendState = nullptr;
 
-    ConstantBuffer_t* m_GlobalConstants = nullptr;
-    GlobalConstants m_cbGlobalConsts;
+    std::array<ConstantBuffer_t*, 2> m_GlobalConstants = { nullptr };
+    VertexGlobalConstants m_cbVertexGlobalConsts;
+    FragmentGlobalConstants m_cbFragmentGlobalConsts;
 
     glm::vec4 m_ClearColour = g_DefaultClearColour;
 
@@ -112,6 +129,8 @@ public:
     template <typename T>
     ConstantBuffer_t* CreateConstantBuffer(T& data, int32_t vec4count, const char* debugName = nullptr)
     {
+        assert(vec4count > 0);
+
         auto buffer = new ConstantBuffer_t;
         buffer->m_ElementCount = 1;
         buffer->m_ElementStride = 16 * vec4count;

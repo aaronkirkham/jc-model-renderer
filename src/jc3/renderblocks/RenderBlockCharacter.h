@@ -177,13 +177,12 @@ public:
 
         // setup the constant buffer
         {
-            const auto scale = m_Block.attributes.scale;
-            auto world = glm::mat4(1);
+            static auto world = glm::mat4(1);
 
             // set vertex shader constants
             m_cbLocalConsts.World = world;
             m_cbLocalConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
-            m_cbLocalConsts.Scale = glm::vec4(scale, 0, 0, 0);
+            m_cbLocalConsts.Scale = glm::vec4(m_Block.attributes.scale * m_ScaleModifier);
 
             // set fragment shader constants
             //
@@ -215,7 +214,7 @@ public:
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 
-        ImGui::SliderFloat("Scale", &m_Block.attributes.scale, 0.1f, 10.0f);
+        ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
 
         ImGui::SliderFloat4("Unknown #1", glm::value_ptr(m_cbInstanceConsts._unknown), 0, 1);
         ImGui::ColorEdit4("Diffuse Colour", glm::value_ptr(m_cbInstanceConsts.DiffuseColour));

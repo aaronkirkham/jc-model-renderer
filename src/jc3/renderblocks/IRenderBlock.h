@@ -11,6 +11,7 @@ class IRenderBlock
 {
 protected:
     bool m_Visible = true;
+    float m_ScaleModifier = 1.0f;
 
     VertexBuffer_t* m_VertexBuffer = nullptr;
     IndexBuffer_t* m_IndexBuffer = nullptr;
@@ -39,12 +40,18 @@ public:
         Renderer::Get()->DestroyBuffer(m_IndexBuffer);
         Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
         Renderer::Get()->DestroySamplerState(m_SamplerState);
+
+        // delete the batch lookup
+        for (auto& batch : m_SkinBatches) {
+            SAFE_DELETE(batch.m_BatchLookup);
+        }
     }
 
     virtual const char* GetTypeName() = 0;
 
-    virtual void SetVisibility(bool visible) { m_Visible = visible; }
-    virtual bool GetVisibility() { return m_Visible; }
+    virtual void SetVisible(bool visible) { m_Visible = visible; }
+    virtual bool IsVisible() { return m_Visible; }
+    virtual float GetScale() { return m_ScaleModifier; }
     virtual VertexBuffer_t* GetVertexBuffer() { return m_VertexBuffer; }
     virtual IndexBuffer_t* GetIndexBuffer() { return m_IndexBuffer; }
     virtual const std::vector<std::shared_ptr<Texture>>& GetTextures() { return m_Textures; }
@@ -168,9 +175,10 @@ public:
             stream.read((char *)&batch.m_Offset, sizeof(batch.m_Offset));
             stream.read((char *)&batch.m_BatchSize, sizeof(batch.m_BatchSize));
 
-            for (int32_t n = 0; n < batch.m_BatchSize; ++n) {
-                int16_t unknown;
-                stream.read((char *)&unknown, sizeof(unknown));
+            // allocate the batch lookup
+            if (batch.m_BatchSize != 0) {
+                batch.m_BatchLookup = new int16_t[batch.m_BatchSize];
+                stream.read((char *)batch.m_BatchLookup, sizeof(int16_t) * batch.m_BatchSize);
             }
 
             m_SkinBatches.emplace_back(batch);

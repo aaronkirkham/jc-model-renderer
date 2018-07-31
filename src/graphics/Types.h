@@ -74,3 +74,37 @@ struct SamplerStateCreationParams_t
     float m_MaxMip = 1.0f;
     D3D11_COMPARISON_FUNC m_ZFunc = D3D11_COMPARISON_NEVER;
 };
+
+struct BoundingBox
+{
+    glm::vec3 m_Min;
+    glm::vec3 m_Max;
+    float m_Scale = 1.0f;
+
+    BoundingBox()
+        : m_Min({}),
+        m_Max({})
+    {
+    }
+
+    BoundingBox(const glm::vec3& min, const glm::vec3& max)
+        : m_Min(min),
+        m_Max(max)
+    {
+    }
+
+    inline void SetScale(const float scale)
+    {
+        m_Scale = scale;
+    }
+
+    inline glm::vec3 GetCenter() const
+    {
+        return ((m_Max * m_Scale) + (m_Min * m_Scale)) * 0.5f;
+    }
+
+    inline glm::vec3 GetSize() const
+    {
+        return ((m_Max * m_Scale) - (m_Min * m_Scale));
+    }
+};

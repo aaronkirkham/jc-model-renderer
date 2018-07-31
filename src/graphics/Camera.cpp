@@ -171,10 +171,9 @@ void Camera::FocusOn(RenderBlockModel* model)
     // side of the bounding box we are facing.
 
     assert(model);
-    const auto& [bb_min, bb_max] = model->GetBoundingBox();
 
     // calculate how far we need to translate to get the model in view
-    const auto dimensions = (bb_max - bb_min);
+    const auto& dimensions = model->GetBoundingBox()->GetSize();
     const float distance = ((glm::max(glm::max(dimensions.x, dimensions.y), dimensions.z) / 2) / glm::sin(glm::radians(m_FOV) / 2));
 
     m_Position = glm::vec3{ 0, (dimensions.y / 2), -(distance + 0.5f) };

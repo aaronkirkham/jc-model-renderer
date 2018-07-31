@@ -18,8 +18,7 @@ private:
 
     std::shared_ptr<AvalancheArchive> m_ParentArchive;
 
-    glm::vec3 m_BoundingBoxMin;
-    glm::vec3 m_BoundingBoxMax;
+    BoundingBox m_BoundingBox;
 
 public:
     RenderBlockModel(const fs::path& filename);
@@ -43,7 +42,7 @@ public:
     std::string GetFilePath() { return m_Filename.parent_path().string(); }
     const fs::path& GetPath() { return m_Filename; }
 
-    std::tuple<glm::vec3, glm::vec3> GetBoundingBox() { return { m_BoundingBoxMin, m_BoundingBoxMax }; }
+    BoundingBox* GetBoundingBox() { return &m_BoundingBox; }
 
     AvalancheArchive* GetParentArchive() { return m_ParentArchive.get(); }
 };

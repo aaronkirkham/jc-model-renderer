@@ -74,9 +74,13 @@ bool Renderer::Initialise(const HWND& hwnd)
     CreateRenderTarget(size);
     CreateBlendState();
 
-    // create global constants
-    m_GlobalConstants = CreateConstantBuffer(m_cbGlobalConsts, "Renderer GlobalConstants");
-    memset(&m_cbGlobalConsts, 0, sizeof(m_cbGlobalConsts));
+    // create vertex shader global constants
+    m_GlobalConstants[0] = CreateConstantBuffer(m_cbVertexGlobalConsts, "Renderer VertexGlobalConstants");
+    memset(&m_cbVertexGlobalConsts, 0, sizeof(m_cbVertexGlobalConsts));
+
+    // create fragment shader global constants
+    m_GlobalConstants[1] = CreateConstantBuffer(m_cbFragmentGlobalConsts, "Renderer FragmentGlobalConstants");
+    memset(&m_cbFragmentGlobalConsts, 0, sizeof(m_cbFragmentGlobalConsts));
 
     // setup imgui
     IMGUI_CHECKVERSION();
@@ -117,7 +121,8 @@ void Renderer::Shutdown()
 
     DestroyRenderTarget();
     DestroyDepthStencil();
-    DestroyBuffer(m_GlobalConstants);
+    DestroyBuffer(m_GlobalConstants[0]);
+    DestroyBuffer(m_GlobalConstants[1]);
 
     SAFE_RELEASE(m_BlendState);
     SAFE_RELEASE(m_SamplerState);
@@ -307,8 +312,31 @@ void Renderer::CreateRenderTarget(const glm::vec2& size)
 #endif
     }
 
+    // create unknown render target
+    {
+        auto unknownTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Unknown texture");
+        assert(unknownTex);
+
+        auto result = m_Device->CreateRenderTargetView(unknownTex, nullptr, &m_RenderTargetView[3]);
+        assert(SUCCEEDED(result));
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        desc.Texture2D = { 0, static_cast<UINT>(-1) };
+        result = m_Device->CreateShaderResourceView(unknownTex, &desc, &m_RenderTargetResourceView[2]);
+        assert(SUCCEEDED(result));
+
+        SAFE_RELEASE(unknownTex);
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+        D3D_SET_OBJECT_NAME_A(m_RenderTargetView[2], "Renderer Unknown Buffer");
+        D3D_SET_OBJECT_NAME_A(m_RenderTargetResourceView[1], "Renderer Unknown Buffer SRV");
+#endif
+    }
+
     // set the render target
-    m_DeviceContext->OMSetRenderTargets(3, &m_RenderTargetView[0], m_DepthStencilView);
+    m_DeviceContext->OMSetRenderTargets(4, &m_RenderTargetView[0], m_DepthStencilView);
 
     // create the viewport
     {
@@ -694,11 +722,28 @@ void Renderer::DestroySamplerState(SamplerState_t* sampler)
 
 void Renderer::UpdateGlobalConstants()
 {
-    m_cbGlobalConsts.ViewProjectionMatrix = m_RenderContext.m_viewProjectionMatrix;
-    //m_cbGlobalConsts.CameraPosition = glm::vec4(Camera::Get()->GetPosition(), 1);
-    m_cbGlobalConsts.ViewProjectionMatrix2 = m_RenderContext.m_viewProjectionMatrix;
-    m_cbGlobalConsts.ViewProjectionMatrix3 = m_RenderContext.m_viewProjectionMatrix;
+    // update vertex shader constants
+    {
+        m_cbVertexGlobalConsts.ViewProjectionMatrix = m_RenderContext.m_viewProjectionMatrix;
+        //m_cbVertexGlobalConsts.CameraPosition = glm::vec4(Camera::Get()->GetPosition(), 1);
+        m_cbVertexGlobalConsts.LightDiffuseColour = glm::vec4(1, 0, 0, 1);
+        m_cbVertexGlobalConsts.LightDirection = glm::vec4(-1, -1, -1, 0);
+        m_cbVertexGlobalConsts.ViewProjectionMatrix2 = m_RenderContext.m_viewProjectionMatrix;
+        m_cbVertexGlobalConsts.ViewProjectionMatrix3 = m_RenderContext.m_viewProjectionMatrix;
 
-    // set the shader constants
-    SetVertexShaderConstants(m_GlobalConstants, 0, m_cbGlobalConsts);
+        // set the shader constants
+        SetVertexShaderConstants(m_GlobalConstants[0], 0, m_cbVertexGlobalConsts);
+    }
+
+    // update fragment shader constants
+    {
+        m_cbFragmentGlobalConsts.LightSpecularColour = glm::vec4(0, 1, 0, 1);
+        m_cbFragmentGlobalConsts.LightDiffuseColour = m_cbVertexGlobalConsts.LightDiffuseColour;
+        m_cbFragmentGlobalConsts.LightDirection = m_cbVertexGlobalConsts.LightDirection;
+        //m_cbFragmentGlobalConsts.CameraPosition = m_cbVertexGlobalConsts.CameraPosition;
+        m_cbFragmentGlobalConsts.LightDirection2 = m_cbVertexGlobalConsts.LightDirection;
+
+        // set the shader constants
+        SetPixelShaderConstants(m_GlobalConstants[1], 0, m_cbFragmentGlobalConsts);
+    }
 }

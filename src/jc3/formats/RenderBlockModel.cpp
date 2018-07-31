@@ -17,6 +17,9 @@
 
 #include <any>
 
+extern bool g_DrawBoundingBoxes;
+extern bool g_ShowModelLabels;
+
 std::recursive_mutex Factory<RenderBlockModel>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<RenderBlockModel>> Factory<RenderBlockModel>::Instances;
 
@@ -70,8 +73,8 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
     m_RenderBlocks.reserve(header.m_NumberOfBlocks);
 
     // store the bounding box
-    m_BoundingBoxMin = header.m_BoundingBoxMin;
-    m_BoundingBoxMax = header.m_BoundingBoxMax;
+    m_BoundingBox.m_Min = header.m_BoundingBoxMin;
+    m_BoundingBox.m_Max = header.m_BoundingBoxMax;
 
     // focus on the bounding box
     if (RenderBlockModel::Instances.size() == 1) {
@@ -156,6 +159,8 @@ void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuff
 
 void RenderBlockModel::Draw(RenderContext_t* context)
 {
+    auto largest_scale = 0.0f;
+
     // draw all render blocks
     for (auto& render_block : m_RenderBlocks) {
         render_block->Setup(context);
@@ -163,27 +168,31 @@ void RenderBlockModel::Draw(RenderContext_t* context)
 
         // reset
         context->m_Renderer->SetDefaultRenderStates();
+
+        //
+        if (render_block->IsVisible()) {
+            const auto scale = render_block->GetScale();
+
+            // keep the biggest scale
+            if (scale > largest_scale) {
+                largest_scale = scale;
+            }
+        }
     }
 
-#if 0
+    // hack to fix GetCenter
+    m_BoundingBox.SetScale(largest_scale);
+
     // draw filename label
     if (g_ShowModelLabels) {
         static auto white = glm::vec4{ 1, 1, 1, 0.6 };
-        DebugRenderer::Get()->DrawText(GetFileName(), m_Position, white, true);
+        DebugRenderer::Get()->DrawText(m_Filename.filename().string(), m_BoundingBox.GetCenter(), white, true);
     }
 
     // draw bounding boxes
     if (g_DrawBoundingBoxes) {
-        auto _min = m_BoundingBoxMin + m_Position;
-        auto _max = m_BoundingBoxMax + m_Position;
-
-        static auto red = glm::vec4{ 1, 0, 0, 1 };
-        static auto green = glm::vec4{ 0, 1, 0, 1 };
-
-        bool is_hover = false;
-        DebugRenderer::Get()->DrawBBox(_min, _max, is_hover ? green : red);
+        DebugRenderer::Get()->DrawBBox(m_BoundingBox.m_Min * largest_scale, m_BoundingBox.m_Max * largest_scale, { 1, 0, 0, 1 });
     }
-#endif
 }
 
 void RenderBlockModel::Load(const fs::path& filename)

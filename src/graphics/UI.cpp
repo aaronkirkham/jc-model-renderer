@@ -306,7 +306,7 @@ void UI::RenderFileTreeView()
                             block_label << "##" << filename << "-" << render_block_index;
 
                             // make the things transparent if the block isn't rendering
-                            const auto block_visible = render_block->GetVisibility();
+                            const auto block_visible = render_block->IsVisible();
                             if (!block_visible) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.35f);
 
                             // current block header
@@ -318,7 +318,7 @@ void UI::RenderFileTreeView()
 
                                 if (ImGui::BeginPopupContextItem()) {
                                     if (ImGui::Selectable(block_visible ? ICON_FA_STOP "  Disable Render Block" : ICON_FA_PLAY "  Enable Render Block")) {
-                                        render_block->SetVisibility(!block_visible);
+                                        render_block->SetVisible(!block_visible);
                                     }
 
                                     ImGui::EndPopup();

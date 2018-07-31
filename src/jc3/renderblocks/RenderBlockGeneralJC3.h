@@ -104,7 +104,7 @@ public:
                 { "TEXCOORD",   1,  DXGI_FORMAT_R32G32B32_FLOAT,        0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
             };
 
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockGeneralJC3 (Unpacked vertices)");
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockGeneralJC3 (unpacked)");
         }
         else {
             D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
@@ -113,7 +113,7 @@ public:
                 { "TEXCOORD",   1,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
             };
 
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockGeneralJC3 (Packed vertices)");
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockGeneralJC3 (packed)");
         }
 
         // create the constant buffer
@@ -200,12 +200,11 @@ public:
 
         // setup the constant buffer
         {
-            const auto scale = m_Block.attributes.packed.scale;
-            auto world = glm::scale(glm::mat4(1), { scale, scale, scale });
+            const auto scale = m_Block.attributes.packed.scale * m_ScaleModifier;
 
             // set vertex shader constants
             m_cbVertexInstanceConsts.viewProjection = context->m_viewProjectionMatrix;
-            m_cbVertexInstanceConsts.world = world;
+            m_cbVertexInstanceConsts.world = glm::scale(glm::mat4(1), { scale, scale, scale });
             m_cbVertexInstanceConsts.colour = glm::vec4(1, 1, 1, 1);
             m_cbVertexInstanceConsts._thing = glm::vec4(0, 1, 2, 1);
             m_cbVertexMaterialConsts.data = { m_Block.attributes.depthBias, m_Block.attributes._unknown3, 0, 0 };
@@ -246,7 +245,7 @@ public:
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 
-        ImGui::SliderFloat("Scale", &m_Block.attributes.packed.scale, 0.1f, 10.0f);
+        ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.1f, 10.0f);
         ImGui::SliderFloat("Depth Bias", &m_Block.attributes.depthBias, 0.0f, 10.0f);
         ImGui::SliderFloat("Specular Gloss", &m_Block.attributes.specularGloss, 0.0f, 10.0f);
         ImGui::SliderFloat("Reflectivity", &m_Block.attributes.reflectivity, 0.0f, 10.0f);
