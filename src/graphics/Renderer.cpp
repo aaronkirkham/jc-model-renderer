@@ -23,8 +23,6 @@ Renderer::Renderer()
         DestroyRenderTarget();
         DestroyDepthStencil();
 
-        m_DeviceContext->Flush();
-
         m_SwapChain->ResizeBuffers(0, static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y), DXGI_FORMAT_UNKNOWN, 0);
 
         CreateDepthStencil(size);
@@ -347,14 +345,14 @@ void Renderer::CreateDevice(const HWND& hwnd, const glm::vec2& size)
     desc.Flags = 0;
 
     UINT deviceFlags = 0;
-#ifdef DEBUG
+#if 0
     deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
     auto result = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, deviceFlags, nullptr, 0, D3D11_SDK_VERSION, &desc, &m_SwapChain, &m_Device, nullptr, &m_DeviceContext);
     assert(SUCCEEDED(result));
 
-#ifdef DEBUG
+#if 0
     result = m_Device->QueryInterface(__uuidof(ID3D11Debug), reinterpret_cast<void**>(&m_DeviceDebugger));
     assert(SUCCEEDED(result));
 

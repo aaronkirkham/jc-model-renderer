@@ -79,13 +79,13 @@ public:
     RenderBlockGeneralJC3() = default;
     virtual ~RenderBlockGeneralJC3()
     {
-        OutputDebugStringA("~RenderBlockGeneralJC3\n");
-
         Renderer::Get()->DestroyBuffer(m_VertexBufferData);
-        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[0]);
-        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[1]);
-        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
-        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[1]);
+
+        for (auto& vsc : m_VertexShaderConstants)
+            Renderer::Get()->DestroyBuffer(vsc);
+
+        for (auto& fsc : m_FragmentShaderConstants)
+            Renderer::Get()->DestroyBuffer(fsc);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockGeneralJC3"; }

@@ -32,8 +32,6 @@ public:
     IRenderBlock() = default;
     virtual ~IRenderBlock()
     {
-        OutputDebugStringA("~IRenderBlock\n");
-
         m_VertexShader = nullptr;
         m_PixelShader = nullptr;
 

@@ -13,19 +13,8 @@ private:
     fs::path m_Filename = "";
     FileBuffer m_Buffer;
 
-    FileBuffer m_DDSCBuffer;
-    FileBuffer m_HMDDSCBuffer;
-
-    bool m_HasDDSC = false;
-    bool m_HasHMDDSC = false;
-    bool m_IsTryingDDSC = true;
-    bool m_IsTryingHMDDSC = false;
-
-    std::thread m_WaitThread;
-    uint64_t m_StatusTextId = std::numeric_limits<uint64_t>::max();
-
 public:
-    Texture(const fs::path& filename, bool load_from_dictionary = true);
+    Texture(const fs::path& filename);
     virtual ~Texture();
 
     bool LoadFromBuffer(const FileBuffer& buffer);
@@ -49,6 +38,8 @@ private:
     std::unique_ptr<Texture> m_MissingTexture;
     std::vector<std::shared_ptr<Texture>> m_RenderingTextures;
 
+    std::thread m_TextureLoad;
+
 public:
     enum TextureCreateFlags
     {
@@ -64,6 +55,8 @@ public:
 
     std::shared_ptr<Texture> GetTexture(const fs::path& filename, uint8_t flags = CREATE_IF_NOT_EXISTS);
     std::shared_ptr<Texture> GetTexture(const fs::path& filename, FileBuffer* buffer, uint8_t flags = CREATE_IF_NOT_EXISTS);
+
+    bool HasTexture(const fs::path& filename);
 
     void Flush();
     void Delete(std::shared_ptr<Texture> texture);

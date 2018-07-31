@@ -78,6 +78,8 @@ public:
     RuntimeContainer(uint32_t name_hash, const fs::path& filename = "");
     virtual ~RuntimeContainer();
 
+    static void Load(const fs::path& filename);
+
     virtual std::string GetFactoryKey() const { return m_Filename.string(); }
 
     void GenerateNamesIfNeeded();

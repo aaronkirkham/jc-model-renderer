@@ -12,11 +12,11 @@
 
 #include <functional>
 
-using ReadFileCallback = std::function<void(bool, FileBuffer)>;
-using FileTypeCallback = std::function<void(const fs::path& filename, const FileBuffer& data)>;
+using ReadFileCallback = std::function<void(bool success, FileBuffer data)>;
+using FileTypeCallback = std::function<void(const fs::path& filename, FileBuffer data)>;
 
 enum ReadFileFlags : uint8_t {
-    NO_TEX_CACHE = 1,
+    SKIP_TEXTURE_LOADER = 1,
 };
 
 class RuntimeContainer;
@@ -38,11 +38,9 @@ private:
 
     StreamArchive_t* ParseStreamArchive(std::istream& stream);
     bool DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept;
-    //void ParseCompressedTexture(std::istream& stream, uint64_t size, FileBuffer* output);
-    bool ParseCompressedTexture(const FileBuffer* ddsc_buffer, const FileBuffer* hmddsc_buffer, FileBuffer* output) noexcept;
 
 public:
-    bool m_UseBatches = false;
+    inline static bool UseBatches = false;
 
     FileLoader();
     virtual ~FileLoader() = default;
@@ -60,8 +58,7 @@ public:
     StreamArchive_t* ReadStreamArchive(const fs::path& filename) noexcept;
 
     // textures
-    bool ReadCompressedTexture(const FileBuffer* buffer, const FileBuffer* hmddsc_buffer, FileBuffer* output) noexcept;
-    bool ReadCompressedTexture(const fs::path& filename, FileBuffer* output) noexcept;
+    void ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept;
 
     // runtime containers
     std::shared_ptr<RuntimeContainer> ParseRuntimeContainer(const fs::path& filename, const FileBuffer& buffer) noexcept;
@@ -75,6 +72,5 @@ public:
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
 
     // file read callbacks
-    void RegisterCallback(const std::string& filetype, FileTypeCallback fn);
-    void RegisterCallback(const std::vector<std::string>& filetypes, FileTypeCallback fn);
+    void RegisterReadCallback(const std::vector<std::string>& filetypes, FileTypeCallback fn);
 };

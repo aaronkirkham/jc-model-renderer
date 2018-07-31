@@ -135,7 +135,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         AvalancheArchive::make(filename, data);
 
                         fs::path rbm = "models/jc_characters/main_characters/rico/rico_body_lod1.rbm";
-                        RenderBlockModel::LoadModel(rbm);
+                        RenderBlockModel::Load(rbm);
                     }
                 });
             }
@@ -146,7 +146,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         AvalancheArchive::make(filename, data);
 
                         fs::path rbm = "models/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13_base_body_lod1.rbm";
-                        RenderBlockModel::LoadModel(rbm);
+                        RenderBlockModel::Load(rbm);
                     }
                 });
             }
@@ -157,7 +157,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         AvalancheArchive::make(filename, data);
 
                         fs::path rbm = "models/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/moderncircuitracer_body_lod1.rbm";
-                        RenderBlockModel::LoadModel(rbm);
+                        RenderBlockModel::Load(rbm);
                     }
                 });
             }
@@ -167,42 +167,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     if (success) {
                         AvalancheArchive::make(filename, data);
 
-                        static std::array models = {
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_body_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_tail_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_wing_l_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_wing_r_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_stabilizer_l_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_stabilizer_r_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_fueltank_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_hatch_r_l_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_hatch_r_r_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_door_f_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_rocketpod_l_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_rocketpod_r_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_airbrake_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_gear_base_r_l_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_gear_base_r_r_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_aileron_r_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_aileron_l_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_flap_r_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_flap_l_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_rudder_l_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_rudder_r_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_leading_edge_flap_r_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_leading_edge_flap_l_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_ground_lockon_r_01_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_ground_lockon_r_02_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_ground_lockon_r_03_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_ground_lockon_l_01_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_ground_lockon_l_02_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_ground_lockon_l_03_lod1.rbm",
-                            "models/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/fighterbomber_hatch_f_lod1.rbm"
-                        };
 
-                        for (auto& mdl : models) {
-                            RenderBlockModel::LoadModel(mdl);
+                        fs::path epe = "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/v4602_plane_urga_fighterbomber_debug.epe";
+                        auto rc = RuntimeContainer::get(epe.string());
+                        if (!rc) {
+                            RuntimeContainer::Load(epe);
+                            rc = RuntimeContainer::get(epe.string());
                         }
+
+                        RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
                     }
                 });
             }
@@ -221,24 +194,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 });
             }
             else if (key == VK_F7) {
-                std::thread([] {
-                    fs::path filename = "models/jc_characters/animals/cow/cow_mesh_body_lod1.rbm";
-                    RenderBlockModel::LoadModel(filename);
-                }).detach();
             }
         });
 #endif
 
-        // register file type callbacks now
-        FileLoader::Get()->RegisterCallback(".rbm", RenderBlockModel::FileReadCallback);
-        FileLoader::Get()->RegisterCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::FileReadCallback);
-        FileLoader::Get()->RegisterCallback(".epe", RuntimeContainer::FileReadCallback);
-
-        FileLoader::Get()->RegisterCallback(".ddsc", [&](const fs::path& filename, const FileBuffer& data) {
-            FileBuffer buffer;
-            if (FileLoader::Get()->ReadCompressedTexture(&data, nullptr, &buffer)) {
-                TextureManager::Get()->GetTexture(filename, &buffer, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
-            }
+        // register file type callbacks
+        FileLoader::Get()->RegisterReadCallback({ ".rbm" }, RenderBlockModel::FileReadCallback);
+        FileLoader::Get()->RegisterReadCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::FileReadCallback);
+        FileLoader::Get()->RegisterReadCallback({ ".epe" }, RuntimeContainer::FileReadCallback);
+        FileLoader::Get()->RegisterReadCallback({ ".ddsc" }, [&](const fs::path& filename, FileBuffer data) {
+            TextureManager::Get()->GetTexture(filename, &data, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
         });
 
         // register file type context menu callbacks
@@ -281,25 +246,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 model.second->Draw(context);
             }
         });
-
-#if 0
-        Window::Get()->Events().FileDropped.connect([](const fs::path& filename) {
-            if (filename.extension() == ".rbm") {
-                std::ifstream input(filename, std::ios::binary | std::ios::ate);
-                auto length = input.tellg();
-                input.seekg(0);
-
-                auto model = new RenderBlockModel(filename);
-                model->Parse(input, [&](bool success) {
-                    if (!success) {
-                        delete model;
-                    }
-                });
-
-                input.close();
-            }
-        });
-#endif
 
 #if 0
         auto adf = FileLoader::Get()->ReadAdf("D:/Steam/steamapps/common/Just Cause 3/Shaders_F.shader_bundle");

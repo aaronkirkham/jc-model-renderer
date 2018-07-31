@@ -26,6 +26,7 @@ public:
         uint32_t magic = 0;
         std::memcpy(&magic, (char *)&buffer.front(), sizeof(magic));
 
+#if 0
         // because we might already have the texture loaded in the TextureManager, let's see if the buffer contains
         // a compressed texture
         if (magic != DDS_MAGIC) {
@@ -76,6 +77,7 @@ public:
                 callback();
             }
         }
+#endif
     }
 };
 

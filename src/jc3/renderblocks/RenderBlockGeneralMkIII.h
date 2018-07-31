@@ -70,8 +70,9 @@ public:
     virtual ~RenderBlockGeneralMkIII()
     {
         Renderer::Get()->DestroyBuffer(m_VertexBufferData);
-        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[0]);
-        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[1]);
+
+        for (auto& vsc : m_VertexShaderConstants)
+            Renderer::Get()->DestroyBuffer(vsc);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockGeneralMkIII"; }

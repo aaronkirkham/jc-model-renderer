@@ -246,24 +246,26 @@ void RuntimeContainer::DrawUI(uint8_t depth)
 void RuntimeContainer::ContextMenuUI(const fs::path& filename)
 {
     if (ImGui::Selectable("Load models")) {
-        auto rc = RuntimeContainer::get(filename.string());
-        if (rc) {
-            auto path = filename.parent_path().string();
-            path = path.replace(path.find("editor\\entities"), strlen("editor\\entities"), "models");
+        auto rc = get(filename.string());
 
-            std::thread([&, rc, path] {
-                for (const auto& container : rc->GetAllContainers("CPartProp")) {
-                    auto name = container->GetProperty("name");
-                    auto filename = std::any_cast<std::string>(name->GetValue());
-                    filename += "_lod1.rbm";
-
-                    fs::path modelname = path;
-                    modelname /= filename;
-
-                    DEBUG_LOG(modelname);
-                    RenderBlockModel::LoadModel(modelname);
-                }
-            }).detach();
+        // load the runtime container
+        if (!rc) {
+            Load(filename);
+            rc = get(filename.string());
         }
+
+        RenderBlockModel::LoadFromRuntimeContainer(filename, rc);
     }
+}
+
+void RuntimeContainer::Load(const fs::path& filename)
+{
+    FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
+        if (success) {
+            FileLoader::Get()->ParseRuntimeContainer(filename, data);
+        }
+        else {
+            DEBUG_LOG("RuntimeContainer::Load - Failed to read runtime container \"" << filename << "\".");
+        }
+    });
 }

@@ -1,5 +1,6 @@
 #include <jc3/formats/RenderBlockModel.h>
 #include <jc3/formats/AvalancheArchive.h>
+#include <jc3/formats/RuntimeContainer.h>
 #include <jc3/RenderBlockFactory.h>
 #include <jc3/FileLoader.h>
 
@@ -14,8 +15,7 @@
 
 #include <Input.h>
 
-extern bool g_DrawBoundingBoxes;
-extern bool g_ShowModelLabels;
+#include <any>
 
 std::recursive_mutex Factory<RenderBlockModel>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<RenderBlockModel>> Factory<RenderBlockModel>::Instances;
@@ -40,8 +40,6 @@ RenderBlockModel::RenderBlockModel(const fs::path& filename)
 RenderBlockModel::~RenderBlockModel()
 {
     DEBUG_LOG("RenderBlockModel::~RenderBlockModel");
-
-    // ModelManager::Get()->RemoveModel(this);
 
     for (auto& render_block : m_RenderBlocks) {
         SAFE_DELETE(render_block);
@@ -81,7 +79,7 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
     }
 
     // use file batches
-    FileLoader::Get()->m_UseBatches = true;
+    if (!LoadingFromRC) FileLoader::UseBatches = true;
 
     // read all the blocks
     for (uint32_t i = 0; i < header.m_NumberOfBlocks; ++i) {
@@ -107,12 +105,23 @@ bool RenderBlockModel::Parse(const FileBuffer& data)
             m_RenderBlocks.emplace_back(render_block);
         }
         else {
-            std::stringstream error;
-            error << "\"RenderBlock" << RenderBlockFactory::GetRenderBlockName(hash) << "\" (0x" << std::uppercase << std::setw(4) << std::hex << hash << ") is not yet supported.\n\n";
-            error << "A model might still be rendered, but some parts of it may be missing.";
-
             DEBUG_LOG("[WARNING] RenderBlockModel::Parse - Unknown render block. \"" << RenderBlockFactory::GetRenderBlockName(hash) << "\" - " << std::setw(4) << std::hex << hash);
-            Window::Get()->ShowMessageBox(error.str(), MB_ICONINFORMATION | MB_OK);
+
+            if (LoadingFromRC) {
+                std::stringstream error;
+                error << "\"RenderBlock" << RenderBlockFactory::GetRenderBlockName(hash) << "\" (0x" << std::uppercase << std::setw(4) << std::hex << hash << ") is not yet supported.\n";
+
+                if (std::find(SuppressedWarnings.begin(), SuppressedWarnings.end(), error.str()) == SuppressedWarnings.end()) {
+                    SuppressedWarnings.emplace_back(error.str());
+                }
+            }
+            else {
+                std::stringstream error;
+                error << "\"RenderBlock" << RenderBlockFactory::GetRenderBlockName(hash) << "\" (0x" << std::uppercase << std::setw(4) << std::hex << hash << ") is not yet supported.\n\n";
+                error << "A model might still be rendered, but some parts of it may be missing.";
+
+                Window::Get()->ShowMessageBox(error.str(), MB_ICONINFORMATION | MB_OK);
+            }
 
             // if we haven't parsed any other blocks yet
             // we'll never see anything rendered, let the user know something is wrong
@@ -128,11 +137,14 @@ end:
     if (parse_success) {
     }
 
-    // run file batches
-    FileLoader::Get()->m_UseBatches = false;
-    FileLoader::Get()->RunFileBatches();
+    // if we are not loading from a runtime container, run the batches now
+    if (!LoadingFromRC) {
+        // run file batches
+        FileLoader::UseBatches = false;
+        FileLoader::Get()->RunFileBatches();
+    }
 
-    return true;
+    return parse_success;
 }
 
 void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuffer& data)
@@ -142,35 +154,8 @@ void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuff
     rbm->Parse(data);
 }
 
-void RenderBlockModel::LoadModel(const fs::path& filename)
-{
-    FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
-        if (success) {
-            auto rbm = RenderBlockModel::make(filename);
-            assert(rbm);
-            rbm->Parse(data);
-        }
-        else {
-            DEBUG_LOG("RenderBlockModel::LoadModel - Failed to read model \"" << filename << "\".");
-        }
-    });
-}
-
 void RenderBlockModel::Draw(RenderContext_t* context)
 {
-#if 0
-    //m_Rotation.z += 0.015f;
-
-    // calculate the world matrix
-    {
-        m_WorldMatrix = glm::translate(glm::mat4(1.0f), m_Position);
-        m_WorldMatrix = glm::scale(m_WorldMatrix, m_Scale);
-        m_WorldMatrix = glm::rotate(m_WorldMatrix, m_Rotation.x, glm::vec3{ 0.0f, 0.0f, 1.0f });
-        m_WorldMatrix = glm::rotate(m_WorldMatrix, m_Rotation.y, glm::vec3{ 1.0f, 0.0f, 0.0f });
-        m_WorldMatrix = glm::rotate(m_WorldMatrix, m_Rotation.z, glm::vec3{ 0.0f, 1.0f, 0.0f });
-    }
-#endif
-
     // draw all render blocks
     for (auto& render_block : m_RenderBlocks) {
         render_block->Setup(context);
@@ -180,6 +165,7 @@ void RenderBlockModel::Draw(RenderContext_t* context)
         context->m_Renderer->SetDefaultRenderStates();
     }
 
+#if 0
     // draw filename label
     if (g_ShowModelLabels) {
         static auto white = glm::vec4{ 1, 1, 1, 0.6 };
@@ -197,4 +183,56 @@ void RenderBlockModel::Draw(RenderContext_t* context)
         bool is_hover = false;
         DebugRenderer::Get()->DrawBBox(_min, _max, is_hover ? green : red);
     }
+#endif
+}
+
+void RenderBlockModel::Load(const fs::path& filename)
+{
+    FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
+        if (success) {
+            auto rbm = RenderBlockModel::make(filename);
+            assert(rbm);
+            rbm->Parse(data);
+        }
+        else {
+            DEBUG_LOG("RenderBlockModel::Load - Failed to read model \"" << filename << "\".");
+        }
+    });
+}
+
+void RenderBlockModel::LoadFromRuntimeContainer(const fs::path& filename, std::shared_ptr<RuntimeContainer> rc)
+{
+    assert(rc);
+
+    auto path = filename.parent_path().string();
+    path = path.replace(path.find("editor\\entities"), strlen("editor\\entities"), "models");
+
+    std::thread([&, rc, path] {
+        FileLoader::UseBatches = true;
+        RenderBlockModel::LoadingFromRC = true;
+
+        for (const auto& container : rc->GetAllContainers("CPartProp")) {
+            auto name = container->GetProperty("name");
+            auto filename = std::any_cast<std::string>(name->GetValue());
+            filename += "_lod1.rbm";
+
+            fs::path modelname = path;
+            modelname /= filename;
+
+            DEBUG_LOG(modelname);
+            RenderBlockModel::Load(modelname);
+        }
+
+        RenderBlockModel::LoadingFromRC = false;
+        FileLoader::UseBatches = false;
+        FileLoader::Get()->RunFileBatches();
+
+        std::stringstream error;
+        for (const auto& warning : RenderBlockModel::SuppressedWarnings) {
+            error << warning;
+        }
+
+        error << "\nA model might still be rendered, but some parts of it may be missing.";
+        Window::Get()->ShowMessageBox(error.str(), MB_ICONINFORMATION | MB_OK);
+    }).detach();
 }

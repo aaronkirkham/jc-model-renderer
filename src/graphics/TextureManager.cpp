@@ -8,79 +8,9 @@
 
 #include <graphics/UI.h>
 
-Texture::Texture(const fs::path& filename, bool load_from_dictionary)
+Texture::Texture(const fs::path& filename)
     : m_Filename(filename)
 {
-    if (load_from_dictionary) {
-        if (m_Filename.extension() == ".ddsc") {
-            FileLoader::Get()->ReadFile(filename, [this](bool success, FileBuffer data) {
-                DEBUG_LOG("Texture::Texture READFILE -> Finished reading DDSC buffer.");
-
-                // TODO: only if success
-                // TODO: what about if we load custom textures from disk??
-
-                if (success) {
-                    m_DDSCBuffer = std::move(data);
-                    m_HasDDSC = true;
-                }
-
-                m_IsTryingDDSC = false;
-            }, NO_TEX_CACHE);
-
-            // try the HMDDSC file
-
-            auto hmddsc_filename = m_Filename.replace_extension(".hmddsc");
-            m_IsTryingHMDDSC = true;
-
-            FileLoader::Get()->ReadFile(hmddsc_filename, [this](bool success, FileBuffer data) {
-                DEBUG_LOG("Texture::Texture READFILE -> Finished reading HMDDSC buffer.");
-
-                if (success) {
-                    m_HMDDSCBuffer = std::move(data);
-                    m_HasHMDDSC = true;
-                }
-
-                m_IsTryingHMDDSC = false;
-            }, NO_TEX_CACHE);
-
-            // launch the wait thread
-            m_WaitThread = std::thread([this] {
-                std::stringstream status_text;
-                status_text << "Loading texture \"" << m_Filename << "\"...";
-                m_StatusTextId = UI::Get()->PushStatusText(status_text.str());
-
-                while (true) {
-
-                    // wait for hmddsc if we need to
-                    if (!m_IsTryingDDSC && !m_IsTryingHMDDSC) {
-
-                        // do we have a buffer?
-                        if (m_HasDDSC) {
-                            FileBuffer out;
-                            if (FileLoader::Get()->ReadCompressedTexture(&m_DDSCBuffer, (m_HasHMDDSC ? &m_HMDDSCBuffer : nullptr), &out)) {
-
-                                DEBUG_LOG("Texture::Texture (" << m_Filename.string() << ") -> finished parsing compressed texture.");
-                                DEBUG_LOG(" -> Has DDSC source ? " << (m_HasDDSC ? "yes" : "no"));
-                                DEBUG_LOG(" -> Has HMDDSC source ? " << (m_HasHMDDSC ? "yes" : "no"));
-
-                                LoadFromBuffer(out);
-                            }
-                        }
-
-                        UI::Get()->PopStatusText(m_StatusTextId);
-                        m_StatusTextId = std::numeric_limits<uint64_t>::max();
-
-                        break;
-
-                    }
-
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                }
-            });
-
-            m_WaitThread.detach();
-        }
-    }
 }
 
 Texture::~Texture()
@@ -89,11 +19,6 @@ Texture::~Texture()
 
     SAFE_RELEASE(m_SRV);
     SAFE_RELEASE(m_Texture);
-
-    // pop status text if we are still waiting for something
-    if (m_StatusTextId != std::numeric_limits<uint64_t>::max()) {
-        UI::Get()->PopStatusText(m_StatusTextId);
-    }
 }
 
 bool Texture::LoadFromBuffer(const FileBuffer& buffer)
@@ -104,7 +29,7 @@ bool Texture::LoadFromBuffer(const FileBuffer& buffer)
 
 #ifdef DEBUG
     if (m_SRV || m_Texture) {
-        DEBUG_LOG("Texture::LoadFromBuffer - Deleting texture placeholder '" << m_Filename.filename().string() << "'...");
+        DEBUG_LOG("Texture::LoadFromBuffer - texture already exists. deleting old one...");
     }
 #endif
 
@@ -119,7 +44,7 @@ bool Texture::LoadFromBuffer(const FileBuffer& buffer)
     m_Buffer = std::move(buffer);
 
     if (FAILED(result)) {
-        DEBUG_LOG("[ERROR] Failed to create texture '" << m_Filename.filename().string() << "'.");
+        DEBUG_LOG("[ERROR] Texture::Create - Failed to create texture '" << m_Filename.filename().string() << "'.");
         return false;
     }
 
@@ -132,20 +57,19 @@ bool Texture::LoadFromFile(const fs::path& filename)
 {
     m_Filename = filename;
 
-    std::ifstream stream(filename.c_str(), std::ios::binary | std::ios::ate);
+    const auto size = fs::file_size(filename);
+
+    std::ifstream stream(filename.c_str(), std::ios::binary);
     if (stream.fail()) {
         DEBUG_LOG("[ERROR] Failed to create texture from file '" << filename.filename().string() << "'.");
         return false;
     }
 
-    const auto length = stream.tellg();
-    stream.seekg(0, std::ios::beg);
-
     FileBuffer buffer;
-    buffer.resize(length);
-    stream.read((char *)buffer.data(), length);
+    buffer.resize(size);
+    stream.read((char *)buffer.data(), size);
 
-    DEBUG_LOG("Texture::LoadFromFile - Read " << length << " bytes from " << filename.filename().string());
+    DEBUG_LOG("Texture::LoadFromFile - Read " << size << " bytes from " << filename.filename().string());
 
     auto result = LoadFromBuffer(buffer);
     stream.close();
@@ -160,7 +84,7 @@ void Texture::Use(uint32_t slot)
 
 TextureManager::TextureManager()
 {
-    m_MissingTexture = std::make_unique<Texture>("missing-texture.dds", false);
+    m_MissingTexture = std::make_unique<Texture>("missing-texture.dds");
     m_MissingTexture->LoadFromFile("../assets/missing-texture.dds");
 
     Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
@@ -216,13 +140,20 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, ui
     // if we have already cached this texture, use that
     auto it = m_Textures.find(key);
     if (it != m_Textures.end()) {
-        DEBUG_LOG("TextureManager::GetTexture - Using cached texture '" << name.c_str() << "' (refcount: " << it->second.use_count() << ")");
         return it->second;
     }
 
     // do we want to create the texture?
     if (flags & CREATE_IF_NOT_EXISTS) {
         m_Textures[key] = std::make_shared<Texture>(filename);
+
+        // load the texture
+        FileLoader::Get()->ReadTexture(filename, [&, key, filename](bool success, FileBuffer data) {
+            if (success && HasTexture(filename)) {
+                m_Textures[key]->LoadFromBuffer(data);
+            }
+        });
+
         return m_Textures[key];
     }
 
@@ -234,8 +165,6 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, Fi
     auto name = filename.filename().stem().string();
     auto key = fnv_1_32::hash(name.c_str(), name.length());
 
-    DEBUG_LOG(name);
-
     if (std::find(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key) == m_LastUsedTextures.end()) {
         m_LastUsedTextures.emplace_back(key);
     }
@@ -243,8 +172,6 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, Fi
     // if we have already cached this texture, use that
     auto it = m_Textures.find(key);
     if (it != m_Textures.end()) {
-        DEBUG_LOG("TextureManager::GetTexture - Using cached texture '" << name.c_str() << "' (refcount: " << it->second.use_count() << ")");
-
         if (flags & IS_UI_RENDERABLE) {
             m_RenderingTextures.emplace_back(it->second);
         }
@@ -254,7 +181,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, Fi
 
     // do we want to create the texture?
     if (flags & CREATE_IF_NOT_EXISTS) {
-        m_Textures[key] = std::make_shared<Texture>(filename, false);
+        m_Textures[key] = std::make_shared<Texture>(filename);
         if (!m_Textures[key]->LoadFromBuffer(*buffer)) {
             DEBUG_LOG("TextureManager::GetTexture - Failed to load texture from buffer!");
         }
@@ -267,6 +194,14 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, Fi
     }
 
     return nullptr;
+}
+
+bool TextureManager::HasTexture(const fs::path& filename)
+{
+    auto name = filename.filename().stem().string();
+    auto key = fnv_1_32::hash(name.c_str(), name.length());
+
+    return (m_Textures.find(key) != m_Textures.end());
 }
 
 void TextureManager::Flush()

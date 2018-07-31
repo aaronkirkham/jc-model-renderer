@@ -230,6 +230,41 @@ namespace JustCause3
         AvalancheTextureStream m_Streams[8];
     };
 
+    static uint32_t GetHighestTextureRank(AvalancheTexture* texture, uint32_t stream_index) {
+        uint32_t rank = 0;
+        for (uint32_t i = 0; i < 8; ++i) {
+            if (i == stream_index) continue;
+
+            if (texture->m_Streams[i].m_Size > texture->m_Streams[stream_index].m_Size) {
+                ++rank;
+            }
+        }
+
+        return rank;
+    }
+
+    static std::tuple<uint8_t, bool> FindBestTexture(AvalancheTexture* texture) {
+        uint8_t biggest = 0;
+        uint8_t stream_index = 0;
+        bool load_source = false;
+
+        for (uint8_t i = 0; i < 8; ++i) {
+            const auto& stream = texture->m_Streams[i];
+
+            // skip this stream if we have no data
+            if (stream.m_Size == 0) continue;
+
+            // find the biggest stream index
+            if (stream.m_IsSource || (!stream.m_IsSource && stream.m_Size > biggest)) {
+                biggest = stream.m_Size;
+                stream_index = i;
+                load_source = stream.m_IsSource;
+            }
+        }
+
+        return { stream_index, load_source };
+    }
+
     namespace ArchiveTable
     {
         struct VfsTabEntry

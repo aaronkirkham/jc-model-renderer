@@ -98,19 +98,20 @@ private:
     std::array<ConstantBuffer_t*, 3> m_VertexShaderConstants = { nullptr };
     std::array<ConstantBuffer_t*, 4> m_FragmentShaderConstants = { nullptr };
 
+    glm::mat4 world = glm::mat4(1);
+
 public:
     RenderBlockCarPaintMM() = default;
     virtual ~RenderBlockCarPaintMM()
     {
-        Renderer::Get()->DestroyBuffer(m_VertexBufferData[0]);
-        Renderer::Get()->DestroyBuffer(m_VertexBufferData[1]);
-        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[0]);
-        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[1]);
-        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[2]);
-        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
-        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[1]);
-        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[2]);
-        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[3]);
+        for (auto& vb : m_VertexBufferData)
+            Renderer::Get()->DestroyBuffer(vb);
+
+        for (auto& vsc : m_VertexShaderConstants)
+            Renderer::Get()->DestroyBuffer(vsc);
+
+        for (auto& fsc : m_FragmentShaderConstants)
+            Renderer::Get()->DestroyBuffer(fsc);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockCarPaintMM"; }
@@ -120,9 +121,6 @@ public:
         // load shaders
         m_VertexShader = ShaderManager::Get()->GetVertexShader(m_ShaderName);
         m_PixelShader = ShaderManager::Get()->GetPixelShader("carpaintmm");
-
-        OutputDebugString(m_ShaderName.c_str());
-        OutputDebugString("\n");
 
         if (m_ShaderName == "carpaintmm") {
             // create the element input desc
@@ -232,8 +230,6 @@ public:
 
             // read skin batch
             ReadSkinBatch(stream);
-
-            OutputDebugStringA("CarPaintMM (skinned) - UnpackedVertexWithNormal1\n");
         }
         else if (_bittest((const long *)&m_Block.attributes.flags, 12)) {
             std::vector<VertexDeformPos> vertices;
@@ -254,8 +250,6 @@ public:
             }
 
             m_ShaderName = "carpaintmm_deform";
-
-            OutputDebugStringA("CarPaintMM (deform) - VertexDeformPos\n");
         }
         else {
             std::vector<UnpackedVertexPosition> vertices;
@@ -274,8 +268,6 @@ public:
                 m_UVs.emplace_back(data.u0);
                 m_UVs.emplace_back(data.v0);
             }
-
-            OutputDebugStringA("CarPaintMM - UnpackedVertexPosition\n");
         }
 
         // read the layered uv data if needed
@@ -287,8 +279,6 @@ public:
                 m_UVs.emplace_back(uv.u);
                 m_UVs.emplace_back(uv.v);
             }
-
-            OutputDebugStringA("CarPaintMM - has layered UV data\n");
         }
 
         // read index buffer
@@ -304,10 +294,10 @@ public:
         // setup the constant buffer
         {
             //const auto scale = m_Block.attributes.packed.scale;
-            static auto world = glm::mat4(1);
+            //static auto world = glm::mat4(1);
 
             // set vertex shader constants
-            m_cbRBIInfo.ModelWorldMatrix = world;
+            m_cbRBIInfo.ModelWorldMatrix = glm::scale(world, { 1, 1, 1 });
         }
 
         // set the layered albedo map
@@ -374,6 +364,14 @@ public:
         };
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+
+
+        ImGui::Text("World");
+        ImGui::Separator();
+        ImGui::InputFloat4("m0", glm::value_ptr(world[0]));
+        ImGui::InputFloat4("m1", glm::value_ptr(world[1]));
+        ImGui::InputFloat4("m2", glm::value_ptr(world[2]));
+        ImGui::InputFloat4("m3", glm::value_ptr(world[3]));
 
 
         ImGui::ColorEdit3("Diffuse Colour", glm::value_ptr(m_cbRBIInfo.ModelDiffuseColor));
