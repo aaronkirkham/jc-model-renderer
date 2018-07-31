@@ -689,7 +689,6 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
         stream.read((char *)out.data() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER), texture.m_Streams[stream_index].m_Size);
 
         return callback(true, std::move(out));
-
     }, SKIP_TEXTURE_LOADER);
 }
 

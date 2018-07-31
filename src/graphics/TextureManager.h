@@ -38,8 +38,6 @@ private:
     std::unique_ptr<Texture> m_MissingTexture;
     std::vector<std::shared_ptr<Texture>> m_RenderingTextures;
 
-    std::thread m_TextureLoad;
-
 public:
     enum TextureCreateFlags
     {
