@@ -36,20 +36,17 @@ AvalancheArchive::~AvalancheArchive()
 {
     DEBUG_LOG("AvalancheArchive::~AvalancheArchive");
 
-#if 0
-    // delete all models from this archive
-    const auto& models = ModelManager::Get()->GetModels();
-    for (auto& model : models) {
-        if (model->GetParentArchive() == this) {
-            delete model;
-        }
-    }
-#endif
-
     //
     SAFE_DELETE(m_StreamArchive);
+}
 
-    //SAFE_DELETE(m_StreamArchive);
+void AvalancheArchive::AddFile(const fs::path& filename, const FileBuffer& data)
+{
+    assert(m_StreamArchive);
+    assert(m_FileList);
+
+    m_StreamArchive->AddFile(filename.string(), data);
+    m_FileList->Add(filename.string());
 }
 
 bool AvalancheArchive::HasFile(const fs::path& filename)

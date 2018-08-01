@@ -271,6 +271,19 @@ void UI::RenderFileTreeView()
                         (*it).second->GetDirectoryList()->Draw((*it).second);
 
                         ImGui::PopID();
+
+                        if (ImGui::Button("Add file")) {
+                            fs::path filename = "E:/jc3-packing/_test_file.lod";
+                            const auto size = fs::file_size(filename);
+
+                            FileBuffer bytes;
+                            bytes.resize(size);
+                            std::ifstream stream(filename, std::ios::binary);
+                            stream.read((char *)bytes.data(), size);
+                            stream.close();
+
+                            (*it).second->AddFile("_test_file.lod", bytes);
+                        }
                     }
 
                     // if the close button was pressed, delete the archive

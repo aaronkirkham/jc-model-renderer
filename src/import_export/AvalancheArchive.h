@@ -37,7 +37,7 @@ public:
                     if (entry.m_Offset != 0) {
                         const auto file = to / path / entry.m_Filename;
 
-                        auto bytes = archive->GetEntryFromArchive(entry);
+                        auto bytes = archive->GetEntryBuffer(entry);
                         WriteBufferToFile(file, &bytes);
                     }
                 }

@@ -20,6 +20,8 @@ public:
 
     virtual std::string GetFactoryKey() const { return m_File.string(); }
 
+    void AddFile(const fs::path& filename, const FileBuffer& data);
+
     bool HasFile(const fs::path& filename);
 
     static void FileReadCallback(const fs::path& filename, const FileBuffer& data);

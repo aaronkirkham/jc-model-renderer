@@ -56,6 +56,7 @@ public:
     // stream archive
     StreamArchive_t* ReadStreamArchive(const FileBuffer& buffer) noexcept;
     StreamArchive_t* ReadStreamArchive(const fs::path& filename) noexcept;
+    bool WriteStreamArchive() noexcept;
 
     // textures
     void ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept;

@@ -250,7 +250,7 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback, u
     // check any loaded archives for the file
     const auto&[archive, entry] = GetStreamArchiveFromFile(filename);
     if (archive && entry.m_Offset != 0) {
-        auto buffer = archive->GetEntryFromArchive(entry);
+        auto buffer = archive->GetEntryBuffer(entry);
 
         UI::Get()->PopStatusText(status_text_id);
         return callback(true, std::move(buffer));
@@ -447,6 +447,7 @@ StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
     }
 
     auto result = new StreamArchive_t;
+    result->m_Header = header;
 
     auto start_pos = stream.tellg();
     while (true) {
@@ -455,11 +456,11 @@ StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
         uint32_t length;
         stream.read((char *)&length, sizeof(length));
 
-        auto filename = std::unique_ptr<char[]>(new char[length + 1]);
+        auto filename = std::unique_ptr<char[]>(new char[length]);
         stream.read(filename.get(), length);
-        filename[length] = '\0';
 
         entry.m_Filename = filename.get();
+        entry.m_Filename.resize(length);
 
         stream.read((char *)&entry.m_Offset, sizeof(entry.m_Offset));
         stream.read((char *)&entry.m_Size, sizeof(entry.m_Size));
@@ -606,6 +607,11 @@ StreamArchive_t* FileLoader::ReadStreamArchive(const fs::path& filename) noexcep
     }
 
     return nullptr;
+}
+
+bool FileLoader::WriteStreamArchive() noexcept
+{
+    return false;
 }
 
 void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept
