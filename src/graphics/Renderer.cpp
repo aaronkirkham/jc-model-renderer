@@ -330,8 +330,8 @@ void Renderer::CreateRenderTarget(const glm::vec2& size)
         SAFE_RELEASE(unknownTex);
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-        D3D_SET_OBJECT_NAME_A(m_RenderTargetView[2], "Renderer Unknown Buffer");
-        D3D_SET_OBJECT_NAME_A(m_RenderTargetResourceView[1], "Renderer Unknown Buffer SRV");
+        D3D_SET_OBJECT_NAME_A(m_RenderTargetView[3], "Renderer Unknown Buffer");
+        D3D_SET_OBJECT_NAME_A(m_RenderTargetResourceView[2], "Renderer Unknown Buffer SRV");
 #endif
     }
 
@@ -512,8 +512,8 @@ void Renderer::CreateRasterizerState()
 
 void Renderer::DestroyRenderTarget()
 {
-    ID3D11RenderTargetView* null_targets[3] = { nullptr };
-    m_DeviceContext->OMSetRenderTargets(3, null_targets, nullptr);
+    ID3D11RenderTargetView* null_targets[4] = { nullptr };
+    m_DeviceContext->OMSetRenderTargets(4, null_targets, nullptr);
 
     for (auto& resource_view : m_RenderTargetResourceView) {
         SAFE_RELEASE(resource_view);
