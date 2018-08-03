@@ -36,7 +36,7 @@ private:
     std::unordered_map<std::string, std::vector<ReadFileCallback>> m_PathBatches;
     std::recursive_mutex m_BatchesMutex;
 
-    StreamArchive_t* ParseStreamArchive(std::istream& stream);
+    std::unique_ptr<StreamArchive_t> ParseStreamArchive(std::istream& stream);
     bool DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept;
 
 public:
@@ -54,8 +54,8 @@ public:
     bool ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash, FileBuffer* output) noexcept;
 
     // stream archive
-    StreamArchive_t* ReadStreamArchive(const FileBuffer& buffer) noexcept;
-    StreamArchive_t* ReadStreamArchive(const fs::path& filename) noexcept;
+    std::unique_ptr<StreamArchive_t> ReadStreamArchive(const FileBuffer& buffer) noexcept;
+    std::unique_ptr<StreamArchive_t> ReadStreamArchive(const fs::path& filename) noexcept;
     bool WriteStreamArchive() noexcept;
 
     // textures
@@ -65,7 +65,7 @@ public:
     std::shared_ptr<RuntimeContainer> ParseRuntimeContainer(const fs::path& filename, const FileBuffer& buffer) noexcept;
 
     // shader bundles
-    AvalancheDataFormat* ReadAdf(const fs::path& filename) noexcept;
+    std::unique_ptr<AvalancheDataFormat> ReadAdf(const fs::path& filename) noexcept;
 
     // stream archive caching
     std::tuple<StreamArchive_t*, StreamArchiveEntry_t> GetStreamArchiveFromFile(const fs::path& file, StreamArchive_t* archive = nullptr) noexcept;

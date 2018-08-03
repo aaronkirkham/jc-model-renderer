@@ -114,7 +114,7 @@ FileLoader::FileLoader()
     });
 
     // trigger the file type callbacks
-    UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& file, std::shared_ptr<AvalancheArchive> archive) {
+    UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& file, AvalancheArchive* archive) {
         // do we have a registered callback for this file type?
         if (m_FileTypeCallbacks.find(file.extension().string()) != m_FileTypeCallbacks.end()) {
             ReadFile(file, [&, file](bool success, FileBuffer data) {
@@ -435,7 +435,7 @@ bool FileLoader::ReadArchiveTable(const fs::path& filename, JustCause3::ArchiveT
     return true;
 }
 
-StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
+std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(std::istream& stream)
 {
     JustCause3::StreamArchive::SARCHeader header;
     stream.read((char *)&header, sizeof(header));
@@ -446,7 +446,7 @@ StreamArchive_t* FileLoader::ParseStreamArchive(std::istream& stream)
         return nullptr;
     }
 
-    auto result = new StreamArchive_t;
+    auto result = std::make_unique<StreamArchive_t>();
     result->m_Header = header;
 
     auto start_pos = stream.tellg();
@@ -553,7 +553,7 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
     return true;
 }
 
-StreamArchive_t* FileLoader::ReadStreamArchive(const FileBuffer& data) noexcept
+std::unique_ptr<StreamArchive_t> FileLoader::ReadStreamArchive(const FileBuffer& data) noexcept
 {
     // TODO: need to read the header, check if the archive is compressed,
     // then just back to the start of the stream!
@@ -576,7 +576,7 @@ StreamArchive_t* FileLoader::ReadStreamArchive(const FileBuffer& data) noexcept
     return nullptr;
 }
 
-StreamArchive_t* FileLoader::ReadStreamArchive(const fs::path& filename) noexcept
+std::unique_ptr<StreamArchive_t> FileLoader::ReadStreamArchive(const fs::path& filename) noexcept
 {
     if (!fs::exists(filename)) {
         DEBUG_LOG("FileLoader::ReadStreamArchive - Input file doesn't exist");
@@ -936,7 +936,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const fs::pa
     return root_container;
 }
 
-AvalancheDataFormat* FileLoader::ReadAdf(const fs::path& filename) noexcept
+std::unique_ptr<AvalancheDataFormat> FileLoader::ReadAdf(const fs::path& filename) noexcept
 {
     if (!fs::exists(filename)) {
         DEBUG_LOG("FileLoader::ReadAdf - Input file doesn't exist");
@@ -957,7 +957,7 @@ AvalancheDataFormat* FileLoader::ReadAdf(const fs::path& filename) noexcept
     stream.read((char *)data.data(), size);
 
     // parse the adf file
-    auto adf = new AvalancheDataFormat(filename);
+    auto adf = std::make_unique<AvalancheDataFormat>(filename);
     if (adf->Parse(data)) {
         return adf;
     }

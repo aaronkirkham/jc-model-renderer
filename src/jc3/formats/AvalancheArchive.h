@@ -10,13 +10,13 @@ class AvalancheArchive : public Factory<AvalancheArchive>
 {
 private:
     fs::path m_File = "";
-    StreamArchive_t* m_StreamArchive = nullptr;
+    std::unique_ptr<StreamArchive_t> m_StreamArchive = nullptr;
     std::unique_ptr<DirectoryList> m_FileList = nullptr;
 
 public:
     AvalancheArchive(const fs::path& file);
     AvalancheArchive(const fs::path& filename, const FileBuffer& buffer);
-    virtual ~AvalancheArchive();
+    virtual ~AvalancheArchive() = default;
 
     virtual std::string GetFactoryKey() const { return m_File.string(); }
 
@@ -26,7 +26,7 @@ public:
 
     static void FileReadCallback(const fs::path& filename, const FileBuffer& data);
 
-    StreamArchive_t* GetStreamArchive() { return m_StreamArchive; }
+    StreamArchive_t* GetStreamArchive() { return m_StreamArchive.get(); }
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
 
     const fs::path& GetFilePath() { return m_File; }

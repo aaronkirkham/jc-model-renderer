@@ -16,7 +16,7 @@ AvalancheArchive::AvalancheArchive(const fs::path& file)
 
     // parse the file list
     m_FileList = std::make_unique<DirectoryList>();
-    m_FileList->Parse(m_StreamArchive);
+    m_FileList->Parse(m_StreamArchive.get());
 }
 
 AvalancheArchive::AvalancheArchive(const fs::path& filename, const FileBuffer& buffer)
@@ -29,15 +29,7 @@ AvalancheArchive::AvalancheArchive(const fs::path& filename, const FileBuffer& b
 
     // parse the file list
     m_FileList = std::make_unique<DirectoryList>();
-    m_FileList->Parse(m_StreamArchive);
-}
-
-AvalancheArchive::~AvalancheArchive()
-{
-    DEBUG_LOG("AvalancheArchive::~AvalancheArchive");
-
-    //
-    SAFE_DELETE(m_StreamArchive);
+    m_FileList->Parse(m_StreamArchive.get());
 }
 
 void AvalancheArchive::AddFile(const fs::path& filename, const FileBuffer& data)

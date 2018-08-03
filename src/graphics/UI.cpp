@@ -268,7 +268,7 @@ void UI::RenderFileTreeView()
                         ImGui::PushID(filename.string().c_str());
 
                         // draw the directory list
-                        (*it).second->GetDirectoryList()->Draw((*it).second);
+                        (*it).second->GetDirectoryList()->Draw((*it).second.get());
 
                         ImGui::PopID();
 

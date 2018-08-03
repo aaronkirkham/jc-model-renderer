@@ -94,7 +94,7 @@ public:
         }
     }
 
-    void Draw(std::shared_ptr<AvalancheArchive> archive, nlohmann::json* current = nullptr, std::string prev = "", bool open_folders = false)
+    void Draw(AvalancheArchive* archive, nlohmann::json* current = nullptr, std::string prev = "", bool open_folders = false)
     {
         if (!current) current = GetStructure();
 
