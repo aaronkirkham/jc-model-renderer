@@ -33,6 +33,7 @@
 			'd3d11.lib',
 			'dxgi.lib',
 			'D3DCompiler.lib',
+			'Ole32.lib',
 		],
 		'include_dirs': [
 			'src',

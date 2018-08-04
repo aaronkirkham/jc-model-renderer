@@ -2,6 +2,7 @@
 
 #include <StdInc.h>
 #include <singleton.h>
+#include <DropTarget.h>
 
 #include <chrono>
 
@@ -23,7 +24,11 @@ struct WindowEvents
     ksignals::Event<void(const glm::vec2& size)> SizeChanged;
     ksignals::Event<void()> FocusLost;
     ksignals::Event<void()> FocusGained;
-    ksignals::Event<void(const fs::path& filename)> FileDropped;
+    //ksignals::Event<void(const fs::path& filename)> FileDropped;
+
+    ksignals::Event<void(const fs::path& filename)> DragEnter;
+    ksignals::Event<void()> DragLeave;
+    ksignals::Event<void()> DragDropped;
 };
 
 class Window : public Singleton<Window>
@@ -35,6 +40,7 @@ private:
     HINSTANCE m_Instance = nullptr;
     HWND m_Hwnd = nullptr;
     bool m_IsMouseCaptured = false;
+    std::unique_ptr<DropTarget> m_DragDrop = nullptr;
 
     static LRESULT CALLBACK WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam);
 

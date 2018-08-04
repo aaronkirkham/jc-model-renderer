@@ -103,6 +103,7 @@ FileLoader::FileLoader()
 
     // TODO: move the events to a better location?
 
+#if 0
     // handle file drops
     Window::Get()->Events().FileDropped.connect([&](const fs::path& file) {
         // do we have a registered callback for this file type?
@@ -132,6 +133,7 @@ FileLoader::FileLoader()
             DEBUG_LOG("[ERROR] Unknown file type \"" << file << "\".");
         }
     });
+#endif
 
     // trigger the file type callbacks
     UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& file, AvalancheArchive* archive) {
@@ -159,14 +161,14 @@ FileLoader::FileLoader()
             info << "Want to help? Check out our GitHub page for information on how to contribute.";
             Window::Get()->ShowMessageBox(info.str(), MB_ICONASTERISK);
 
-            DEBUG_LOG("[ERROR] Unknown file type \"" << file << "\".");
+            DEBUG_LOG("[ERROR] Unknown file type \"" << file.extension() << "\". (" << file << ")");
         }
     });
 
     // save file
     UI::Get()->Events().SaveFileRequest.connect([&](const fs::path& file) {
         Window::Get()->ShowFolderSelection("Select a folder to save the file to.", [&, file](const std::string& selected) {
-            DEBUG_LOG("SaveFileRequest - want to save file '" << file << "' to '" << selected << "'");
+            DEBUG_LOG("SaveFileRequest - want to save file \"" << file << "\" to \"" << selected << "\"..");
 
             std::stringstream status_text;
             status_text << "Saving \"" << file << "\"...";

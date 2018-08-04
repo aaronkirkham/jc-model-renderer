@@ -38,8 +38,47 @@ static bool g_CheckForUpdatesEnabled = false;
 static bool g_CheckForUpdatesEnabled = true;
 #endif
 
+static bool _is_dragging = false;
+static fs::path _dragdrop_filename = "";
+
 void UI::Render()
 {
+    static std::once_flag _flag;
+    std::call_once(_flag, [&] {
+        Window::Get()->Events().DragEnter.connect([&](const fs::path& filename) {
+            _is_dragging = true;
+            _dragdrop_filename = filename;
+
+            ImGuiIO& io = ImGui::GetIO();
+            io.MouseDown[0] = true;
+        });
+
+        Window::Get()->Events().DragLeave.connect([&] {
+            _is_dragging = false;
+
+            ImGuiIO& io = ImGui::GetIO();
+            io.MouseDown[0] = false;
+        });
+
+        Window::Get()->Events().DragDropped.connect([&] {
+            _is_dragging = false;
+
+            ImGuiIO& io = ImGui::GetIO();
+            io.MouseDown[0] = false;
+        });
+    });
+
+    if (_is_dragging) {
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern)) {
+            static uint32_t test = 0x10;
+            ImGui::SetDragDropPayload("_ADD_FILE", &test, 1);
+
+            ImGui::Text(_dragdrop_filename.filename().string().c_str());
+
+            ImGui::EndDragDropSource();
+        }
+    }
+
     const auto& window_size = Window::Get()->GetSize();
 
     if (ImGui::BeginMainMenuBar())
@@ -204,7 +243,7 @@ void UI::Render()
         }
     }
     ImGui::End();
-    
+
     // file tree view
     RenderFileTreeView();
 
@@ -234,16 +273,15 @@ void UI::RenderFileTreeView()
 {
     static std::string switch_to_tab = "";
     const auto& window_size = Window::Get()->GetSize();
-    const ImGuiWindowFlags window_flags = (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
 
     // render the archive directory list
     ImGui::SetNextWindowBgAlpha(1.0f);
-    ImGui::Begin("Archive Directory List", nullptr, window_flags | ImGuiWindowFlags_NoTitleBar);
+    ImGui::Begin("Archive Directory List", nullptr, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar));
     {
         ImGui::SetWindowPos({ window_size.x - DIRECTORY_LIST_WIDTH, m_MainMenuBarHeight });
         ImGui::SetWindowSize({ DIRECTORY_LIST_WIDTH, (window_size.y - m_MainMenuBarHeight) });
 
-        ImGui::BeginTabBar("Directory List Tabs", ImGuiTabBarFlags_NoReorder | ImGuiTabBarFlags_SizingPolicyEqual);
+        ImGui::BeginTabBar("Directory List Tabs", (ImGuiTabBarFlags_NoReorder | ImGuiTabBarFlags_SizingPolicyEqual));
         {
             // switch active tab if we need to
             if (!switch_to_tab.empty()) {
@@ -260,38 +298,38 @@ void UI::RenderFileTreeView()
             // archives
             if (ImGuiCustom::TabItemScroll("Archives", nullptr, AvalancheArchive::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
                 for (auto it = AvalancheArchive::Instances.begin(); it != AvalancheArchive::Instances.end(); ) {
-                    const auto& filename = (*it).second->GetFilePath().filename();
+                    const auto& archive = (*it).second;
+                    const auto& filename = archive->GetFilePath().filename();
 
                     // render the current directory
-                    bool is_open = true;
-                    if (ImGui::CollapsingHeader(filename.string().c_str(), &is_open)) {
-                        ImGui::PushID(filename.string().c_str());
+                    bool is_still_open = true;
+                    auto open = ImGui::CollapsingHeader(filename.string().c_str(), &is_still_open);
 
-                        // draw the directory list
-                        (*it).second->GetDirectoryList()->Draw((*it).second.get());
-
-                        ImGui::PopID();
-
-                        if (ImGui::Button("Add file")) {
-                            fs::path filename = "E:/jc3-packing/_test_file.lod";
-                            const auto size = fs::file_size(filename);
-
-                            FileBuffer bytes;
-                            bytes.resize(size);
-                            std::ifstream stream(filename, std::ios::binary);
-                            stream.read((char *)bytes.data(), size);
-                            stream.close();
-
-                            (*it).second->AddFile("_test_file.lod", bytes);
+                    // drag drop target
+                    if (ImGui::BeginDragDropTarget()) {
+                        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_ADD_FILE")) {
+                            archive->AddDirectory(_dragdrop_filename, _dragdrop_filename.parent_path());
                         }
+
+                        ImGui::EndDragDropTarget();
+                    }
+
+                    // context menu
+                    RenderContextMenu(filename);
+
+                    if (open) {
+                        // draw the directory list
+                        ImGui::PushID(filename.string().c_str());
+                        archive->GetDirectoryList()->Draw(archive.get());
+                        ImGui::PopID();
                     }
 
                     // if the close button was pressed, delete the archive
-                    if (!is_open) {
+                    if (!is_still_open) {
                         std::lock_guard<std::recursive_mutex> _lk{ AvalancheArchive::InstancesMutex };
                         it = AvalancheArchive::Instances.erase(it);
                         TextureManager::Get()->Flush();
-
+  
                         continue;
                     }
 
@@ -370,10 +408,8 @@ void UI::RenderFileTreeView()
                                             ImGui::Text(path.filename().string().c_str());
                                         }
                                         else {
-                                            static auto red = ImGui::GetColorU32({ 1, 0, 0, 1 });
-                                            ImGui::PushStyleColor(ImGuiCol_Text, red);
-                                            ImGui::Text(path.filename().string().c_str());
-                                            ImGui::PopStyleColor();
+                                            static auto red = ImVec4{ 1, 0, 0, 1 };
+                                            ImGui::TextColored(red, path.filename().string().c_str());
                                         }
 
                                         ImGui::BeginGroup();

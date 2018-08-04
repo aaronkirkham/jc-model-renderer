@@ -46,6 +46,7 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPA
 
         // file drop handler
     case WM_DROPFILES: {
+#if 0
         const auto drop = reinterpret_cast<HDROP>(wParam);
         char file[MAX_PATH] = { 0 };
 
@@ -53,6 +54,7 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPA
             Window::Get()->Events().FileDropped(file);
             DragFinish(drop);
         }
+#endif
 
         break;
     }
@@ -105,6 +107,7 @@ bool Window::Initialise(const HINSTANCE& instance)
     SetFocus(m_Hwnd);
     ShowCursor(true);
 
+    m_DragDrop = std::make_unique<DropTarget>(m_Hwnd);
     DragAcceptFiles(m_Hwnd, true);
 
     Input::Get()->Initialise();
