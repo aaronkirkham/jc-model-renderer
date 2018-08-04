@@ -37,6 +37,8 @@ private:
     std::recursive_mutex m_BatchesMutex;
 
     std::unique_ptr<StreamArchive_t> ParseStreamArchive(std::istream& stream);
+
+    void CompressArchive(JustCause3::AvalancheArchiveHeader* header, std::vector<JustCause3::AvalancheArchiveChunk>* chunks) noexcept;
     bool DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept;
 
 public:

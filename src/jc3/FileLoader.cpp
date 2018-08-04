@@ -19,6 +19,26 @@
 #include <fnv1.h>
 #include <jc3/hashlittle.h>
 
+template <typename T>
+inline T ALIGN_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
+{
+    if ((value % alignment) != 0) {
+        return (value + (alignment - (value % alignment)));
+    }
+
+    return value;
+}
+
+template <typename T>
+inline uint32_t DISTANCE_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
+{
+    if ((value % alignment) != 0) {
+        return (alignment - (value % alignment));
+    }
+
+    return 0;
+}
+
 // Credit to gibbed for most of the file formats
 // http://gib.me
 
@@ -476,6 +496,56 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(std::istream& st
     return result;
 }
 
+void FileLoader::CompressArchive(JustCause3::AvalancheArchiveHeader* header, std::vector<JustCause3::AvalancheArchiveChunk>* chunks) noexcept
+{
+    std::ofstream stream("C:/users/aaron/desktop/main_character.bin", std::ios::binary);
+    assert(!stream.fail());
+    stream.write((char *)header, sizeof(JustCause3::AvalancheArchiveHeader));
+
+    // write all the blocks
+    for (uint32_t i = 0; i < header->m_BlockCount; ++i) {
+        auto& chunk = chunks->at(i);
+
+        // write the chunk
+        stream.write((char *)&chunk.m_CompressedSize, sizeof(uint32_t));
+        stream.write((char *)&chunk.m_UncompressedSize, sizeof(uint32_t));
+        stream.write((char *)&chunk.m_DataSize, sizeof(uint32_t));
+        stream.write((char *)&chunk.m_Magic, sizeof(uint32_t));
+
+        // compress the chunk data
+        {
+            // NOTE: 2 + 4 for the compression header & footer
+            // no way to tell zlib not to write them??
+            uLong compressed_size = (uLong)chunk.m_CompressedSize + 2 + 4;
+            uLong decompressed_size = (uLong)chunk.m_UncompressedSize;
+
+            DEBUG_LOG("data size: " << chunk.m_DataSize);
+            DEBUG_LOG("expected compresed size: " << chunk.m_CompressedSize);
+
+            FileBuffer result;
+            result.reserve(compressed_size);
+            auto res = compress(result.data(), &compressed_size, chunk.m_BlockData.data(), decompressed_size);
+
+            DEBUG_LOG("actual compressed size: " << compressed_size);
+
+            assert(res == Z_OK);
+            assert(compressed_size == (chunk.m_CompressedSize + 2 + 4));
+
+            // ignore the header when writing the data
+            stream.write((char *)result.data() + 2, chunk.m_CompressedSize);
+        }
+
+        // write the padding
+        auto dist = DISTANCE_TO_BOUNDARY(stream.tellp(), 16);
+        static uint32_t thingy = 0x30;
+        for (decltype(dist) i = 0; i < dist; ++i) {
+            stream.write((char *)&thingy, 1);
+        }
+    }
+
+    stream.close();
+}
+
 bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept
 {
     // read the archive header
@@ -494,19 +564,19 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
 
     output->reserve(header.m_TotalUncompressedSize);
 
+    std::vector<JustCause3::AvalancheArchiveChunk> chunks;
+    chunks.reserve(header.m_BlockCount);
+
     // read all the blocks
     for (uint32_t i = 0; i < header.m_BlockCount; ++i) {
         auto base_position = stream.tellg();
 
+        // read the chunk
         JustCause3::AvalancheArchiveChunk chunk;
         stream.read((char *)&chunk.m_CompressedSize, sizeof(chunk.m_CompressedSize));
         stream.read((char *)&chunk.m_UncompressedSize, sizeof(chunk.m_UncompressedSize));
-
-        uint32_t blockSize;
-        uint32_t blockMagic;
-
-        stream.read((char *)&blockSize, sizeof(blockSize));
-        stream.read((char *)&blockMagic, sizeof(blockMagic));
+        stream.read((char *)&chunk.m_DataSize, sizeof(chunk.m_DataSize));
+        stream.read((char *)&chunk.m_Magic, sizeof(chunk.m_Magic));
 
 #if 0
         DEBUG_LOG(" ==== Block #" << i << " ====");
@@ -517,24 +587,21 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
 #endif
 
         // 'EWAM' magic
-        if (blockMagic != 0x4D415745) {
+        if (chunk.m_Magic != 0x4D415745) {
             output->shrink_to_fit();
 
             DEBUG_LOG("FileLoader::DecompressArchiveFromStream - Invalid chunk magic.");
             return false;
         }
 
-        // set the chunk offset
-        chunk.m_DataOffset = static_cast<uint64_t>(stream.tellg());
-
         // read the block data
         FileBuffer data;
-        data.resize(blockSize);
-        stream.read((char *)data.data(), blockSize);
+        data.resize(chunk.m_CompressedSize);
+        stream.read((char *)data.data(), chunk.m_CompressedSize);
 
         // decompress the block
         {
-            uLong compressed_size = (uLong)header.m_BlockSize;
+            uLong compressed_size = (uLong)chunk.m_CompressedSize;
             uLong decompressed_size = (uLong)chunk.m_UncompressedSize;
 
             FileBuffer result;
@@ -545,10 +612,20 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
             assert(decompressed_size == chunk.m_UncompressedSize);
 
             output->insert(output->end(), result.begin(), result.end());
+            chunk.m_BlockData = std::move(result);
         }
 
-        stream.seekg((uint64_t)base_position + blockSize);
+        // testing
+        chunks.push_back(chunk);
+
+        // goto the next block
+        stream.seekg((uint64_t)base_position + chunk.m_DataSize);
     }
+
+#if 0
+    // testing
+    CompressArchive(&header, &chunks);
+#endif
 
     return true;
 }
@@ -696,16 +773,6 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
 
         return callback(true, std::move(out));
     }, SKIP_TEXTURE_LOADER);
-}
-
-template <typename T>
-inline T ALIGN_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
-{
-    if ((value % alignment) != 0) {
-        return (value + (alignment - (value % alignment)));
-    }
-
-    return value;
 }
 
 std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const fs::path& filename, const FileBuffer& buffer) noexcept
