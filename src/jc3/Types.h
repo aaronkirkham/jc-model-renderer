@@ -312,23 +312,28 @@ namespace JustCause3
         };
     };
 
-    struct AvalancheArchiveHeader
+    namespace AvalancheArchive
     {
-        char m_Magic[4];
-        uint32_t m_Version;
-        char m_Magic2[28];
-        uint32_t m_TotalUncompressedSize;
-        uint32_t m_UncompressedBufferSize;
-        uint32_t m_BlockCount;
-    };
+        struct Header
+        {
+            char m_Magic[4];
+            uint32_t m_Version;
+            char m_Magic2[28];
+            uint32_t m_TotalUncompressedSize;
+            uint32_t m_UncompressedBufferSize;
+            uint32_t m_ChunkCount;
+        };
 
-    struct AvalancheArchiveChunk
-    {
-        uint32_t m_CompressedSize;
-        uint32_t m_UncompressedSize;
-        uint32_t m_DataSize;
-        uint32_t m_Magic;
-        std::vector<uint8_t> m_BlockData;
+        struct Chunk
+        {
+            uint32_t m_CompressedSize;
+            uint32_t m_UncompressedSize;
+            uint32_t m_DataSize;
+            uint32_t m_Magic;
+            std::vector<uint8_t> m_BlockData;
+        };
+
+        static constexpr auto CHUNK_SIZE = (sizeof(uint32_t) * 4);
     };
 
     struct RBMHeader

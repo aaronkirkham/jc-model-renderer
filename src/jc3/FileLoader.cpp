@@ -167,6 +167,7 @@ FileLoader::FileLoader()
 
     // save file
     UI::Get()->Events().SaveFileRequest.connect([&](const fs::path& file) {
+#if 0
         Window::Get()->ShowFolderSelection("Select a folder to save the file to.", [&, file](const std::string& selected) {
             DEBUG_LOG("SaveFileRequest - want to save file \"" << file << "\" to \"" << selected << "\"..");
 
@@ -196,6 +197,7 @@ FileLoader::FileLoader()
                 }
             });
         });
+#endif
     });
 
     // export file
@@ -498,15 +500,42 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(std::istream& st
     return result;
 }
 
-void FileLoader::CompressArchive(JustCause3::AvalancheArchiveHeader* header, std::vector<JustCause3::AvalancheArchiveChunk>* chunks) noexcept
+void FileLoader::CompressArchive(JustCause3::AvalancheArchive::Header* header, std::vector<JustCause3::AvalancheArchive::Chunk>* chunks) noexcept
 {
     std::ofstream stream("C:/users/aaron/desktop/main_character.bin", std::ios::binary);
     assert(!stream.fail());
-    stream.write((char *)header, sizeof(JustCause3::AvalancheArchiveHeader));
+    stream.write((char *)header, sizeof(JustCause3::AvalancheArchive::Header));
 
     // write all the blocks
-    for (uint32_t i = 0; i < header->m_BlockCount; ++i) {
+    for (uint32_t i = 0; i < header->m_ChunkCount; ++i) {
         auto& chunk = chunks->at(i);
+
+        // compress the chunk data
+        // NOTE: 2 + 4 for the compression header & checksum
+        // no way to tell zlib not to write them??
+        auto decompressed_size = (uLong)chunk.m_UncompressedSize;
+        auto compressed_size = compressBound(decompressed_size);
+
+        DEBUG_LOG("data size: " << chunk.m_DataSize);
+        DEBUG_LOG("expected compresed size: " << chunk.m_CompressedSize);
+
+        FileBuffer result;
+        result.reserve(compressed_size);
+        auto res = compress(result.data(), &compressed_size, chunk.m_BlockData.data(), decompressed_size);
+
+        // store the compressed size
+        chunk.m_CompressedSize = static_cast<uint32_t>(compressed_size) - 6; // remove the header and checksum from the total size
+        DEBUG_LOG("actual compressed size: " << chunk.m_CompressedSize);
+
+        assert(res == Z_OK);
+
+        // calculate the distance to the 16-byte boundary after we write our data
+        auto pos = static_cast<uint32_t>(stream.tellp()) + JustCause3::AvalancheArchive::CHUNK_SIZE + chunk.m_CompressedSize;
+        auto padding = DISTANCE_TO_BOUNDARY(pos, 16);
+
+        // generate the data size
+        chunk.m_DataSize = (JustCause3::AvalancheArchive::CHUNK_SIZE + chunk.m_CompressedSize + padding);
+        DEBUG_LOG("data size: " << chunk.m_DataSize);
 
         // write the chunk
         stream.write((char *)&chunk.m_CompressedSize, sizeof(uint32_t));
@@ -514,44 +543,66 @@ void FileLoader::CompressArchive(JustCause3::AvalancheArchiveHeader* header, std
         stream.write((char *)&chunk.m_DataSize, sizeof(uint32_t));
         stream.write((char *)&chunk.m_Magic, sizeof(uint32_t));
 
-        // compress the chunk data
-        {
-            // NOTE: 2 + 4 for the compression header & footer
-            // no way to tell zlib not to write them??
-            uLong compressed_size = (uLong)chunk.m_CompressedSize + 2 + 4;
-            uLong decompressed_size = (uLong)chunk.m_UncompressedSize;
-
-            DEBUG_LOG("data size: " << chunk.m_DataSize);
-            DEBUG_LOG("expected compresed size: " << chunk.m_CompressedSize);
-
-            FileBuffer result;
-            result.reserve(compressed_size);
-            auto res = compress(result.data(), &compressed_size, chunk.m_BlockData.data(), decompressed_size);
-
-            DEBUG_LOG("actual compressed size: " << compressed_size);
-
-            assert(res == Z_OK);
-            assert(compressed_size == (chunk.m_CompressedSize + 2 + 4));
-
-            // ignore the header when writing the data
-            stream.write((char *)result.data() + 2, chunk.m_CompressedSize);
-        }
+        // ignore the header when writing the data
+        stream.write((char *)result.data() + 2, chunk.m_CompressedSize);
 
         // write the padding
-        auto dist = DISTANCE_TO_BOUNDARY(stream.tellp(), 16);
-        static uint32_t thingy = 0x30;
-        for (decltype(dist) i = 0; i < dist; ++i) {
-            stream.write((char *)&thingy, 1);
+        DEBUG_LOG("writing " << padding << " bytes of padding...");
+        static uint32_t PADDING_BYTE = 0x30;
+        for (decltype(padding) i = 0; i < padding; ++i) {
+            stream.write((char *)&PADDING_BYTE, 1);
         }
     }
 
     stream.close();
 }
 
+void FileLoader::CompressArchive(StreamArchive_t* archive) noexcept
+{
+    assert(archive);
+
+    // TODO: support chunks. how do avalanche determine when to create a new block?
+    // there seems to be no obvious patterns with the buffer sizes
+
+    // generate the header
+    JustCause3::AvalancheArchive::Header header;
+    strcpy(header.m_Magic, "AAF");
+    header.m_Version = 1;
+    strcpy(header.m_Magic2, "AVALANCHEARCHIVEFORMATISCOOL");
+    header.m_TotalUncompressedSize = archive->m_SARCBytes.size();
+    header.m_UncompressedBufferSize = archive->m_SARCBytes.size();
+    header.m_ChunkCount = 1;
+
+    // TODO: figure out how m_UncompressedBufferSize is calculated for multiple blocks!
+
+    DEBUG_LOG("CompressArchive");
+    DEBUG_LOG(" - TotalUncompressedSize=" << header.m_TotalUncompressedSize);
+    DEBUG_LOG(" - UncompressedBufferSize=" << header.m_UncompressedBufferSize);
+
+    auto& block_data = archive->m_SARCBytes;
+
+    // generate the chunks
+    std::vector<JustCause3::AvalancheArchive::Chunk> chunks;
+    for (uint32_t i = 0; i < header.m_ChunkCount; ++i) {
+        // TODO: chunks should copy the block_data.begin() + offset
+
+        JustCause3::AvalancheArchive::Chunk chunk;
+        chunk.m_Magic = 0x4D415745;
+        chunk.m_CompressedSize = 0; // NOTE: generated later
+        chunk.m_UncompressedSize = block_data.size();
+        chunk.m_DataSize = 0; // NOTE: generated later
+        chunk.m_BlockData = block_data;
+
+        chunks.emplace_back(std::move(chunk));
+    }
+
+    return CompressArchive(&header, &chunks);
+}
+
 bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept
 {
     // read the archive header
-    JustCause3::AvalancheArchiveHeader header;
+    JustCause3::AvalancheArchive::Header header;
     stream.read((char *)&header, sizeof(header));
 
     // ensure the header magic is correct
@@ -561,24 +612,27 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
     }
 
     DEBUG_LOG("AvalancheArchiveFormat v" << header.m_Version);
-    DEBUG_LOG(" - m_BlockCount=" << header.m_BlockCount);
+    DEBUG_LOG(" - m_ChunkCount=" << header.m_ChunkCount);
     DEBUG_LOG(" - m_TotalUncompressedSize=" << header.m_TotalUncompressedSize);
+    DEBUG_LOG(" - m_UncompressedBufferSize=" << header.m_UncompressedBufferSize);
 
     output->reserve(header.m_TotalUncompressedSize);
 
-    std::vector<JustCause3::AvalancheArchiveChunk> chunks;
-    chunks.reserve(header.m_BlockCount);
+    std::vector<JustCause3::AvalancheArchive::Chunk> chunks;
+    chunks.reserve(header.m_ChunkCount);
 
     // read all the blocks
-    for (uint32_t i = 0; i < header.m_BlockCount; ++i) {
+    for (uint32_t i = 0; i < header.m_ChunkCount; ++i) {
         auto base_position = stream.tellg();
 
         // read the chunk
-        JustCause3::AvalancheArchiveChunk chunk;
+        JustCause3::AvalancheArchive::Chunk chunk;
         stream.read((char *)&chunk.m_CompressedSize, sizeof(chunk.m_CompressedSize));
         stream.read((char *)&chunk.m_UncompressedSize, sizeof(chunk.m_UncompressedSize));
         stream.read((char *)&chunk.m_DataSize, sizeof(chunk.m_DataSize));
         stream.read((char *)&chunk.m_Magic, sizeof(chunk.m_Magic));
+
+        DEBUG_LOG("AAF chunk #" << i << ", CompressedSize=" << chunk.m_CompressedSize << ", UncompressedSize=" << chunk.m_UncompressedSize << ", DataSize=" << chunk.m_DataSize);
 
 #if 0
         DEBUG_LOG(" ==== Block #" << i << " ====");
@@ -588,7 +642,7 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
         DEBUG_LOG(" - Magic: " << std::string((char *)&blockMagic, 4));
 #endif
 
-        // 'EWAM' magic
+        // make sure the block magic is correct
         if (chunk.m_Magic != 0x4D415745) {
             output->shrink_to_fit();
 
@@ -623,6 +677,8 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
         // goto the next block
         stream.seekg((uint64_t)base_position + chunk.m_DataSize);
     }
+
+    assert(output->size() == header.m_TotalUncompressedSize);
 
 #if 0
     // testing
@@ -686,11 +742,6 @@ std::unique_ptr<StreamArchive_t> FileLoader::ReadStreamArchive(const fs::path& f
     }
 
     return nullptr;
-}
-
-bool FileLoader::WriteStreamArchive() noexcept
-{
-    return false;
 }
 
 void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept

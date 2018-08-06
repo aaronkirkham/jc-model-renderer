@@ -74,7 +74,7 @@ struct StreamArchive_t
     std::vector<uint8_t> GetEntryBuffer(const StreamArchiveEntry_t& entry)
     {
         auto start = m_SARCBytes.begin() + entry.m_Offset;
-        auto end = m_SARCBytes.begin() + entry.m_Offset + entry.m_Size;
+        auto end = start + entry.m_Size;
 
         return std::vector<uint8_t>(start, end);
     }
@@ -124,7 +124,7 @@ struct StreamArchive_t
         }
 
 #if 1
-        std::ofstream out("E:/jc3-packing/test.bin", std::ios::binary);
+        std::ofstream out("C:/users/aaron/desktop/packing-test.bin", std::ios::binary);
         out.write((char *)m_SARCBytes.data(), m_SARCBytes.size());
         out.close();
 #endif

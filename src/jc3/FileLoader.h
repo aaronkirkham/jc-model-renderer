@@ -38,9 +38,6 @@ private:
 
     std::unique_ptr<StreamArchive_t> ParseStreamArchive(std::istream& stream);
 
-    void CompressArchive(JustCause3::AvalancheArchiveHeader* header, std::vector<JustCause3::AvalancheArchiveChunk>* chunks) noexcept;
-    bool DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept;
-
 public:
     inline static bool UseBatches = false;
 
@@ -58,7 +55,9 @@ public:
     // stream archive
     std::unique_ptr<StreamArchive_t> ReadStreamArchive(const FileBuffer& buffer) noexcept;
     std::unique_ptr<StreamArchive_t> ReadStreamArchive(const fs::path& filename) noexcept;
-    bool WriteStreamArchive() noexcept;
+    void CompressArchive(JustCause3::AvalancheArchive::Header* header, std::vector<JustCause3::AvalancheArchive::Chunk>* chunks) noexcept;
+    void CompressArchive(StreamArchive_t* archive) noexcept;
+    bool DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept;
 
     // textures
     void ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept;
