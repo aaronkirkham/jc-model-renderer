@@ -16,37 +16,46 @@ public:
     std::vector<const char*> GetInputExtensions() override final { return { ".ee", ".bl", ".nl" }; }
     const char* GetOutputExtension() override final { return "/"; }
 
-    void Export(const fs::path& filename, const std::any& input, const fs::path& to, ImportExportFinishedCallback callback) override final
+    void WriteArchiveFiles(const fs::path& path, ::AvalancheArchive* archive) {
+        assert(archive);
+        assert(archive->GetStreamArchive());
+
+        // create the directory if we need to
+        if (!fs::exists(path)) {
+            fs::create_directory(path);
+        }
+
+        // write files
+        const auto sarc = archive->GetStreamArchive();
+        for (const auto& entry : sarc->m_Files) {
+            if (entry.m_Offset != 0) {
+                const auto& file_path = path / entry.m_Filename;
+                const auto& bytes = sarc->GetEntryBuffer(entry);
+                WriteBufferToFile(file_path, &bytes);
+            }
+        }
+    }
+
+    void Export(const fs::path& filename, const fs::path& to, ImportExportFinishedCallback callback) override final
     {
-        const auto& buffer = std::any_cast<FileBuffer>(input);
+        const auto& path = to / filename.stem();
+        DEBUG_LOG("AvalancheArchive::Export - Exporting archive to '" << path << "'...");
 
-        std::thread([&, filename, buffer, to, callback] {
-            auto path = filename.stem();
-            DEBUG_LOG("AvalancheArchive::Export - Exporting archive to '" << path << "'...");
-
-            // create the directory if we need to
-            if (!fs::exists(path)) {
-                fs::create_directory(path);
-            }
-
-            // read the archive data from the buffer
-            auto archive = FileLoader::Get()->ReadStreamArchive(buffer);
-            if (archive) {
-                // iterate over all the archive entries
-                for (const auto& entry : archive->m_Files) {
-                    if (entry.m_Offset != 0) {
-                        const auto file = to / path / entry.m_Filename;
-
-                        auto bytes = archive->GetEntryBuffer(entry);
-                        WriteBufferToFile(file, &bytes);
-                    }
+        auto archive = ::AvalancheArchive::get(filename.string());
+        if (archive) {
+            WriteArchiveFiles(path, archive.get());
+            callback(true);
+        }
+        else {
+            FileLoader::Get()->ReadFile(filename, [&, filename, path, callback](bool success, FileBuffer data) {
+                if (success) {
+                    auto arc = std::make_unique<::AvalancheArchive>(filename, data);
+                    WriteArchiveFiles(path, arc.get());
                 }
-            }
 
-            if (callback) {
-                callback();
-            }
-        }).detach();
+                callback(success);
+            });
+        }
     }
 };
 

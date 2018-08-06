@@ -15,7 +15,7 @@ class RenderBlockModel;
 class IImportExporter
 {
 public:
-    using ImportExportFinishedCallback = std::function<void()>;
+    using ImportExportFinishedCallback = std::function<void(bool)>;
 
 public:
     IImportExporter() = default;
@@ -27,9 +27,9 @@ public:
     virtual const char* GetOutputExtension() = 0;
 
     // NOTE: callback can be nullptr! remember to check this correctly in overrides of this function!
-    virtual void Export(const fs::path& filename, const std::any& data, const fs::path& to, ImportExportFinishedCallback callback = {}) = 0;
+    virtual void Export(const fs::path& filename, const fs::path& to, ImportExportFinishedCallback callback = {}) = 0;
 
-    bool WriteBufferToFile(const fs::path& file, FileBuffer* buffer) noexcept
+    bool WriteBufferToFile(const fs::path& file, const FileBuffer* buffer) noexcept
     {
         // create the directories for the file
         fs::create_directories(file.parent_path());

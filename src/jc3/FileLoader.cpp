@@ -205,7 +205,7 @@ FileLoader::FileLoader()
         Window::Get()->ShowFolderSelection("Select a folder to export the file to.", [&, file, exporter](const std::string& selected) {
             DEBUG_LOG("ExportFileRequest - want to export file '" << file << "' to '" << selected << "'");
 
-            auto use = exporter;
+            auto _exporter = exporter;
             if (!exporter) {
                 DEBUG_LOG("ExportFileRequest - Finding a suitable exporter for '" << file.extension() << "'...");
 
@@ -213,34 +213,29 @@ FileLoader::FileLoader()
                 if (exporters.size() > 0) {
                     DEBUG_LOG("ExportFileRequest - Using exporter '" << exporters.at(0)->GetName() << "'");
 
-                    use = exporters.at(0);
+                    _exporter = exporters.at(0);
                 }
             }
 
             // if we have a valid exporter, read the file and export it
-            if (use) {
+            if (_exporter) {
                 std::stringstream status_text;
                 status_text << "Exporting \"" << file << "\"...";
                 const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
 
-                ReadFile(file, [&, file, selected, use, status_text_id](bool success, FileBuffer data) {
-                    DEBUG_LOG("ExportFileRequest - Finished reading file, exporting now...");
-
-                    if (success) {
-                        use->Export(file, data, selected, [status_text_id] {
-                            UI::Get()->PopStatusText(status_text_id);
-                        });
-                    }
-                    else {
+                std::thread([&, file, selected, status_text_id] {
+                    _exporter->Export(file, selected, [&, status_text_id](bool success) {
                         UI::Get()->PopStatusText(status_text_id);
 
-                        std::stringstream error;
-                        error << "Failed to export \"" << file.filename() << "\".";
-                        Window::Get()->ShowMessageBox(error.str());
+                        if (!success) {
+                            std::stringstream error;
+                            error << "Failed to export \"" << file.filename() << "\".";
+                            Window::Get()->ShowMessageBox(error.str());
 
-                        DEBUG_LOG("[ERROR] " << error.str());
-                    }
-                });
+                            DEBUG_LOG("[ERROR] " << error.str());
+                        }
+                    });
+                }).detach();
             }
         });
     });
@@ -618,9 +613,6 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
 
     output->reserve(header.m_TotalUncompressedSize);
 
-    std::vector<JustCause3::AvalancheArchive::Chunk> chunks;
-    chunks.reserve(header.m_ChunkCount);
-
     // read all the blocks
     for (uint32_t i = 0; i < header.m_ChunkCount; ++i) {
         auto base_position = stream.tellg();
@@ -633,14 +625,6 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
         stream.read((char *)&chunk.m_Magic, sizeof(chunk.m_Magic));
 
         DEBUG_LOG("AAF chunk #" << i << ", CompressedSize=" << chunk.m_CompressedSize << ", UncompressedSize=" << chunk.m_UncompressedSize << ", DataSize=" << chunk.m_DataSize);
-
-#if 0
-        DEBUG_LOG(" ==== Block #" << i << " ====");
-        DEBUG_LOG(" - Compressed Size: " << chunk.m_CompressedSize);
-        DEBUG_LOG(" - Uncompressed Size: " << chunk.m_UncompressedSize);
-        DEBUG_LOG(" - Size: " << blockSize);
-        DEBUG_LOG(" - Magic: " << std::string((char *)&blockMagic, 4));
-#endif
 
         // make sure the block magic is correct
         if (chunk.m_Magic != 0x4D415745) {
@@ -671,19 +655,11 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
             chunk.m_BlockData = std::move(result);
         }
 
-        // testing
-        chunks.push_back(chunk);
-
         // goto the next block
         stream.seekg((uint64_t)base_position + chunk.m_DataSize);
     }
 
     assert(output->size() == header.m_TotalUncompressedSize);
-
-#if 0
-    // testing
-    CompressArchive(&header, &chunks);
-#endif
 
     return true;
 }

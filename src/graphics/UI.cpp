@@ -315,7 +315,7 @@ void UI::RenderFileTreeView()
                     }
 
                     // context menu
-                    RenderContextMenu(filename);
+                    RenderContextMenu(archive->GetFilePath());
 
                     if (open) {
                         // draw the directory list

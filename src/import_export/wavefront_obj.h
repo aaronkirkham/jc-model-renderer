@@ -16,8 +16,9 @@ public:
     std::vector<const char*> GetInputExtensions() override final { return { ".rbm" }; }
     const char* GetOutputExtension() override final { return ".obj"; }
 
-    void Export(const fs::path& filename, const std::any& input, const fs::path& to, ImportExportFinishedCallback callback) override final
+    void Export(const fs::path& filename, const fs::path& to, ImportExportFinishedCallback callback) override final
     {
+#if 0
         DEBUG_LOG("Wavefront_Obj::Export");
 
         auto& buffer = std::any_cast<FileBuffer>(input);
@@ -87,6 +88,7 @@ public:
         if (callback) {
             callback();
         }
+#endif
     }
 };
 
