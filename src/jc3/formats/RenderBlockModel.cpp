@@ -150,13 +150,6 @@ end:
     return parse_success;
 }
 
-void RenderBlockModel::FileReadCallback(const fs::path& filename, const FileBuffer& data)
-{
-    auto rbm = RenderBlockModel::make(filename);
-    assert(rbm);
-    rbm->Parse(data);
-}
-
 void RenderBlockModel::Draw(RenderContext_t* context)
 {
     auto largest_scale = 0.0f;
@@ -193,6 +186,13 @@ void RenderBlockModel::Draw(RenderContext_t* context)
     if (g_DrawBoundingBoxes) {
         DebugRenderer::Get()->DrawBBox(m_BoundingBox.m_Min * largest_scale, m_BoundingBox.m_Max * largest_scale, { 1, 0, 0, 1 });
     }
+}
+
+void RenderBlockModel::ReadFileCallback(const fs::path& filename, const FileBuffer& data)
+{
+    auto rbm = RenderBlockModel::make(filename);
+    assert(rbm);
+    rbm->Parse(data);
 }
 
 void RenderBlockModel::Load(const fs::path& filename)

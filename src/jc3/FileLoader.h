@@ -14,6 +14,7 @@
 
 using ReadFileCallback = std::function<void(bool success, FileBuffer data)>;
 using FileTypeCallback = std::function<void(const fs::path& filename, FileBuffer data)>;
+using FileSaveCallback = std::function<bool(const fs::path& filename, const fs::path& directory)>;
 
 enum ReadFileFlags : uint8_t {
     SKIP_TEXTURE_LOADER = 1,
@@ -30,6 +31,7 @@ private:
 
     // file types
     std::unordered_map<std::string, std::vector<FileTypeCallback>> m_FileTypeCallbacks;
+    std::unordered_map<std::string, std::vector<FileSaveCallback>> m_SaveFileCallbacks;
 
     // batch reading
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::vector<ReadFileCallback>>> m_Batches;
@@ -55,8 +57,8 @@ public:
     // stream archive
     std::unique_ptr<StreamArchive_t> ReadStreamArchive(const FileBuffer& buffer) noexcept;
     std::unique_ptr<StreamArchive_t> ReadStreamArchive(const fs::path& filename) noexcept;
-    void CompressArchive(JustCause3::AvalancheArchive::Header* header, std::vector<JustCause3::AvalancheArchive::Chunk>* chunks) noexcept;
-    void CompressArchive(StreamArchive_t* archive) noexcept;
+    void CompressArchive(std::ostream& stream, JustCause3::AvalancheArchive::Header* header, std::vector<JustCause3::AvalancheArchive::Chunk>* chunks) noexcept;
+    void CompressArchive(std::ostream& stream, StreamArchive_t* archive) noexcept;
     bool DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept;
 
     // textures
@@ -73,6 +75,7 @@ public:
     std::tuple<std::string, std::string, uint32_t> LocateFileInDictionary(const fs::path& filename) noexcept;
     DirectoryList* GetDirectoryList() { return m_FileList.get(); }
 
-    // file read callbacks
-    void RegisterReadCallback(const std::vector<std::string>& filetypes, FileTypeCallback fn);
+    // file callbacks
+    void RegisterReadCallback(const std::vector<std::string>& extensions, FileTypeCallback fn);
+    void RegisterSaveCallback(const std::vector<std::string>& extensions, FileSaveCallback fn);
 };

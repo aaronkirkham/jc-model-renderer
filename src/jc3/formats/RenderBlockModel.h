@@ -26,7 +26,7 @@ public:
 
     virtual std::string GetFactoryKey() const { return m_Filename.string(); }
 
-    static void FileReadCallback(const fs::path& filename, const FileBuffer& data);
+    static void ReadFileCallback(const fs::path& filename, const FileBuffer& data);
     static void Load(const fs::path& filename);
     static void LoadFromRuntimeContainer(const fs::path& filename, std::shared_ptr<RuntimeContainer> rc);
 

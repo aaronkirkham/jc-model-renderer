@@ -37,8 +37,47 @@ void AvalancheArchive::AddFile(const fs::path& filename, const FileBuffer& data)
     assert(m_StreamArchive);
     assert(m_FileList);
 
-    m_StreamArchive->AddFile(filename.string(), data);
-    m_FileList->Add(filename.string());
+    // replace backslashes
+    auto name = filename.string();
+    std::replace(name.begin(), name.end(), '\\', '/');
+
+    m_StreamArchive->AddFile(name, data);
+    m_FileList->Add(name);
+    m_HasUnsavedChanged = true;
+}
+
+void AvalancheArchive::AddDirectory(const fs::path& filename, const fs::path& root)
+{
+    // TODO: only add files which are a supported format
+    // generic textures, models, etc
+
+    if (fs::is_directory(filename)) {
+        for (const auto& f : fs::directory_iterator(filename)) {
+            AddDirectory(f.path(), root);
+        }
+    }
+    else {
+        // TEMP (no relative/lexically_relative in experimental::fs, but moving to ::filesystem seems to break things)
+        std::filesystem::path fn(filename);
+        std::filesystem::path r(root);
+
+        // strip the root directory from the path
+        auto name = fn.lexically_relative(r).string();
+
+        const auto size = fs::file_size(filename);
+
+        DEBUG_LOG(filename);
+
+        FileBuffer buffer;
+        buffer.resize(size);
+        std::ifstream stream(filename, std::ios::binary);
+        assert(!stream.fail());
+        stream.read((char *)buffer.data(), size);
+        stream.close();
+
+        // TODO: read the file
+        AddFile(name, buffer);
+    }
 }
 
 bool AvalancheArchive::HasFile(const fs::path& filename)
@@ -50,7 +89,29 @@ bool AvalancheArchive::HasFile(const fs::path& filename)
     return find_it != m_StreamArchive->m_Files.end();
 }
 
-void AvalancheArchive::FileReadCallback(const fs::path& filename, const FileBuffer& data)
+void AvalancheArchive::ReadFileCallback(const fs::path& filename, const FileBuffer& data)
 {
     AvalancheArchive::make(filename, data);
+}
+
+bool AvalancheArchive::SaveFileCallback(const fs::path& filename, const fs::path& directory)
+{
+    DEBUG_LOG("AvalancheArchive::SaveFileCallback");
+
+    auto archive = AvalancheArchive::get(filename.string());
+    if (archive) {
+        assert(archive->m_StreamArchive);
+
+        const auto& path = directory / filename.filename();
+        std::ofstream stream(path, std::ios::binary);
+
+        assert(!stream.fail());
+
+        FileLoader::Get()->CompressArchive(stream, archive->m_StreamArchive.get());
+        stream.close();
+
+        return true;
+    }
+
+    return false;
 }

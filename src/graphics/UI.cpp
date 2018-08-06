@@ -485,8 +485,19 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra)
     if (ImGui::BeginPopupContextItem("Context Menu")) {
         // general save file
         if (ImGui::Selectable(ICON_FA_FLOPPY_O "  Save file...")) {
-            UI::Get()->Events().SaveFileRequest(filename);
+            Window::Get()->ShowFolderSelection("Select a folder to save the file to.", [&](const fs::path& selected) {
+                UI::Get()->Events().SaveFileRequest(filename, selected);
+            });
         }
+
+#if 0
+        // general save to dropzon
+        if (ImGui::Selectable(ICON_FA_FLOPPY_O "  Save to dropzone")) {
+            DEBUG_LOG("save file request (dropzone)");
+            const auto dropzone = g_JC3Directory / "dropzone";
+            UI::Get()->Events().SaveFileRequest(filename, dropzone);
+        }
+#endif
 
         // exporters
         const auto& exporters = ImportExportManager::Get()->GetExportersForExtension(filename.extension().string());

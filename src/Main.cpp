@@ -109,8 +109,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         // do we need to select the install directory manually?
         if (g_JC3Directory.empty() || !fs::exists(g_JC3Directory)) {
             // ask the user to select their jc3 directory, we can't find it!
-            Window::Get()->ShowFolderSelection("Please select your Just Cause 3 folder.", [&](const std::string& selected) {
-                Settings::Get()->SetValue("jc3_directory", selected);
+            Window::Get()->ShowFolderSelection("Please select your Just Cause 3 folder.", [&](const fs::path& selected) {
+                Settings::Get()->SetValue("jc3_directory", selected.string());
                 g_JC3Directory = selected;
             }, [] {
                 Window::Get()->ShowMessageBox("Unable to find Just Cause 3 root directory.\n\nSome features will be disabled.");
@@ -144,6 +144,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                     if (success) {
                         AvalancheArchive::make(filename, data);
+                        // AvalancheArchive::SaveFileCallback(filename);
 
                         fs::path rbm = "models/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13_base_body_lod1.rbm";
                         RenderBlockModel::Load(rbm);
@@ -198,13 +199,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         });
 #endif
 
-        // register file type callbacks
-        FileLoader::Get()->RegisterReadCallback({ ".rbm" }, RenderBlockModel::FileReadCallback);
-        FileLoader::Get()->RegisterReadCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::FileReadCallback);
-        FileLoader::Get()->RegisterReadCallback({ ".epe" }, RuntimeContainer::FileReadCallback);
+        // register read file type callbacks
+        FileLoader::Get()->RegisterReadCallback({ ".rbm" }, RenderBlockModel::ReadFileCallback);
+        FileLoader::Get()->RegisterReadCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::ReadFileCallback);
+        FileLoader::Get()->RegisterReadCallback({ ".epe" }, RuntimeContainer::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({ ".ddsc" }, [&](const fs::path& filename, FileBuffer data) {
             TextureManager::Get()->GetTexture(filename, &data, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
         });
+
+        // register save file type callbacks
+        FileLoader::Get()->RegisterSaveCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::SaveFileCallback);
 
         // register file type context menu callbacks
         UI::Get()->RegisterContextMenuCallback(".epe", RuntimeContainer::ContextMenuUI);

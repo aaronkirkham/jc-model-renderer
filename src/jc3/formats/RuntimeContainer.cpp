@@ -156,7 +156,7 @@ std::vector<RuntimeContainerProperty*> RuntimeContainer::GetSortedProperties()
     return properties;
 }
 
-void RuntimeContainer::FileReadCallback(const fs::path& filename, const FileBuffer& data)
+void RuntimeContainer::ReadFileCallback(const fs::path& filename, const FileBuffer& data)
 {
     DEBUG_LOG("RuntimeContainer::FileReadCallback");
     DEBUG_LOG(filename);

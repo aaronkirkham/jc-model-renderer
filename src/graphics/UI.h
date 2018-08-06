@@ -9,7 +9,7 @@ class AvalancheArchive;
 struct UIEvents
 {
     ksignals::Event<void(const fs::path& file, AvalancheArchive* archive)> FileTreeItemSelected;
-    ksignals::Event<void(const fs::path& file)> SaveFileRequest;
+    ksignals::Event<void(const fs::path& file, const fs::path& directory)> SaveFileRequest;
     ksignals::Event<void(const fs::path& file, IImportExporter* exporter)> ExportFileRequest;
 };
 

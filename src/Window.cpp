@@ -206,7 +206,7 @@ int32_t Window::ShowMessageBox(const std::string& message, uint32_t type)
     return MessageBox(m_Hwnd, message.c_str(), g_WindowName, type);
 }
 
-void Window::ShowFolderSelection(const std::string& title, std::function<void(const std::string&)> fn_selected, std::function<void()> fn_cancelled)
+void Window::ShowFolderSelection(const std::string& title, std::function<void(const fs::path&)> fn_selected, std::function<void()> fn_cancelled)
 {
     TCHAR path[MAX_PATH];
 

@@ -166,43 +166,44 @@ FileLoader::FileLoader()
     });
 
     // save file
-    UI::Get()->Events().SaveFileRequest.connect([&](const fs::path& file) {
-#if 0
-        Window::Get()->ShowFolderSelection("Select a folder to save the file to.", [&, file](const std::string& selected) {
-            DEBUG_LOG("SaveFileRequest - want to save file \"" << file << "\" to \"" << selected << "\"..");
+    UI::Get()->Events().SaveFileRequest.connect([&](const fs::path& file, const fs::path& directory) {
+        DEBUG_LOG("SaveFileRequest - want to save file \"" << file << "\" to \"" << directory << "\"..");
+        bool was_handled = false;
+        // try use a handler
+        if (m_SaveFileCallbacks.find(file.extension().string()) != m_SaveFileCallbacks.end()) {
+            for (const auto& fn : m_SaveFileCallbacks[file.extension().string()]) {
+                was_handled = fn(file, directory);
+            }
+        }
 
-            std::stringstream status_text;
-            status_text << "Saving \"" << file << "\"...";
-            const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
-
-            ReadFile(file, [&, file, selected, status_text_id](bool success, FileBuffer data) {
+        // no handlers, fallback to just reading the raw data
+        if (!was_handled) {
+            DEBUG_LOG("wasn't handled, calling default handler...");
+            FileLoader::Get()->ReadFile(file, [&, file, directory](bool success, FileBuffer data) {
                 if (success) {
-                    fs::path file_with_path = selected;
-                    file_with_path /= file.filename();
+                    const auto& path = directory / file.filename();
 
-                    std::ofstream file(file_with_path, std::ios::binary);
-                    file.write((char *)data.data(), data.size());
-                    file.close();
-
-                    UI::Get()->PopStatusText(status_text_id);
+                    // write the file data
+                    std::ofstream stream(path, std::ios::binary);
+                    if (!stream.fail()) {
+                        stream.write((char *)data.data(), data.size());
+                        stream.close();
+                        return;
+                    }
                 }
-                else {
-                    UI::Get()->PopStatusText(status_text_id);
 
-                    std::stringstream error;
-                    error << "Failed to save \"" << file.filename() << "\".";
-                    Window::Get()->ShowMessageBox(error.str());
+                std::stringstream error;
+                error << "Failed to save \"" << file.filename() << "\".";
+                Window::Get()->ShowMessageBox(error.str());
 
-                    DEBUG_LOG("[ERROR] " << error.str());
-                }
+                DEBUG_LOG("[ERROR] " << error.str());
             });
-        });
-#endif
+        }
     });
 
     // export file
     UI::Get()->Events().ExportFileRequest.connect([&](const fs::path& file, IImportExporter* exporter) {
-        Window::Get()->ShowFolderSelection("Select a folder to export the file to.", [&, file, exporter](const std::string& selected) {
+        Window::Get()->ShowFolderSelection("Select a folder to export the file to.", [&, file, exporter](const fs::path& selected) {
             DEBUG_LOG("ExportFileRequest - want to export file '" << file << "' to '" << selected << "'");
 
             auto _exporter = exporter;
@@ -495,10 +496,9 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(std::istream& st
     return result;
 }
 
-void FileLoader::CompressArchive(JustCause3::AvalancheArchive::Header* header, std::vector<JustCause3::AvalancheArchive::Chunk>* chunks) noexcept
+void FileLoader::CompressArchive(std::ostream& stream, JustCause3::AvalancheArchive::Header* header, std::vector<JustCause3::AvalancheArchive::Chunk>* chunks) noexcept
 {
-    std::ofstream stream("C:/users/aaron/desktop/main_character.bin", std::ios::binary);
-    assert(!stream.fail());
+    // write the header
     stream.write((char *)header, sizeof(JustCause3::AvalancheArchive::Header));
 
     // write all the blocks
@@ -548,11 +548,9 @@ void FileLoader::CompressArchive(JustCause3::AvalancheArchive::Header* header, s
             stream.write((char *)&PADDING_BYTE, 1);
         }
     }
-
-    stream.close();
 }
 
-void FileLoader::CompressArchive(StreamArchive_t* archive) noexcept
+void FileLoader::CompressArchive(std::ostream& stream, StreamArchive_t* archive) noexcept
 {
     assert(archive);
 
@@ -591,7 +589,7 @@ void FileLoader::CompressArchive(StreamArchive_t* archive) noexcept
         chunks.emplace_back(std::move(chunk));
     }
 
-    return CompressArchive(&header, &chunks);
+    return CompressArchive(stream, &header, &chunks);
 }
 
 bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept
@@ -1186,9 +1184,16 @@ std::tuple<std::string, std::string, uint32_t> FileLoader::LocateFileInDictionar
     return { directory_name, archive_name, _namehash };
 }
 
-void FileLoader::RegisterReadCallback(const std::vector<std::string>& filetypes, FileTypeCallback fn)
+void FileLoader::RegisterReadCallback(const std::vector<std::string>& extensions, FileTypeCallback fn)
 {
-    for (const auto& filetype : filetypes) {
-        m_FileTypeCallbacks[filetype].emplace_back(fn);
+    for (const auto& extension : extensions) {
+        m_FileTypeCallbacks[extension].emplace_back(fn);
+    }
+}
+
+void FileLoader::RegisterSaveCallback(const std::vector<std::string>& extensions, FileSaveCallback fn)
+{
+    for (const auto& extension : extensions) {
+        m_SaveFileCallbacks[extension].emplace_back(fn);
     }
 }

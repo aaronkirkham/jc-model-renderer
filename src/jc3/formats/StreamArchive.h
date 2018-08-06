@@ -123,7 +123,7 @@ struct StreamArchive_t
             m_SARCBytes.insert(m_SARCBytes.begin() + entry.m_Offset, buffer.begin(), buffer.end());
         }
 
-#if 1
+#if 0
         std::ofstream out("C:/users/aaron/desktop/packing-test.bin", std::ios::binary);
         out.write((char *)m_SARCBytes.data(), m_SARCBytes.size());
         out.close();

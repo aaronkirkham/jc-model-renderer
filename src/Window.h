@@ -64,7 +64,7 @@ public:
     bool IsMouseCpatured() const { return m_IsMouseCaptured; }
 
     int32_t ShowMessageBox(const std::string& message, uint32_t type = MB_ICONERROR | MB_OK);
-    void ShowFolderSelection(const std::string& title, std::function<void(const std::string&)> fn_selected, std::function<void()> fn_cancelled = {});
+    void ShowFolderSelection(const std::string& title, std::function<void(const fs::path&)> fn_selected, std::function<void()> fn_cancelled = {});
 
     const HWND& GetHwnd() const { return m_Hwnd; }
     bool HasFocus() const { return (GetForegroundWindow() == m_Hwnd); }
