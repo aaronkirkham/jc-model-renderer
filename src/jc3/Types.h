@@ -307,7 +307,7 @@ namespace JustCause3
         {
             uint32_t m_MagicLength;
             char m_Magic[4];
-            int32_t m_Version;
+            uint32_t m_Version;
             uint32_t m_Size;
         };
     };
@@ -465,6 +465,26 @@ namespace JustCause3
             uint32_t m_Size;
             int64_t m_NameIndex;
         };
+    }
+
+    template <typename T>
+    inline static T ALIGN_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
+    {
+        if ((value % alignment) != 0) {
+            return (value + (alignment - (value % alignment)));
+        }
+
+        return value;
+    }
+
+    template <typename T>
+    inline static uint32_t DISTANCE_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
+    {
+        if ((value % alignment) != 0) {
+            return (alignment - (value % alignment));
+        }
+
+        return 0;
     }
 };
 #pragma pack(pop)

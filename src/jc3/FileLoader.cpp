@@ -19,26 +19,6 @@
 #include <fnv1.h>
 #include <jc3/hashlittle.h>
 
-template <typename T>
-inline T ALIGN_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
-{
-    if ((value % alignment) != 0) {
-        return (value + (alignment - (value % alignment)));
-    }
-
-    return value;
-}
-
-template <typename T>
-inline uint32_t DISTANCE_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
-{
-    if ((value % alignment) != 0) {
-        return (alignment - (value % alignment));
-    }
-
-    return 0;
-}
-
 // Credit to gibbed for most of the file formats
 // http://gib.me
 
@@ -178,7 +158,6 @@ FileLoader::FileLoader()
 
         // no handlers, fallback to just reading the raw data
         if (!was_handled) {
-            DEBUG_LOG("wasn't handled, calling default handler...");
             FileLoader::Get()->ReadFile(file, [&, file, directory](bool success, FileBuffer data) {
                 if (success) {
                     const auto& path = directory / file.filename();
@@ -476,11 +455,11 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(std::istream& st
         uint32_t length;
         stream.read((char *)&length, sizeof(length));
 
-        auto filename = std::unique_ptr<char[]>(new char[length]);
+        auto filename = std::unique_ptr<char[]>(new char[length + 1]);
         stream.read(filename.get(), length);
+        filename[length] = '\0';
 
         entry.m_Filename = filename.get();
-        entry.m_Filename.resize(length);
 
         stream.read((char *)&entry.m_Offset, sizeof(entry.m_Offset));
         stream.read((char *)&entry.m_Size, sizeof(entry.m_Size));
@@ -526,7 +505,7 @@ void FileLoader::CompressArchive(std::ostream& stream, JustCause3::AvalancheArch
 
         // calculate the distance to the 16-byte boundary after we write our data
         auto pos = static_cast<uint32_t>(stream.tellp()) + JustCause3::AvalancheArchive::CHUNK_SIZE + chunk.m_CompressedSize;
-        auto padding = DISTANCE_TO_BOUNDARY(pos, 16);
+        auto padding = JustCause3::DISTANCE_TO_BOUNDARY(pos, 16);
 
         // generate the data size
         chunk.m_DataSize = (JustCause3::AvalancheArchive::CHUNK_SIZE + chunk.m_CompressedSize + padding);
@@ -864,7 +843,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const fs::pa
         }
 
         // seek to our current pos with 4-byte alignment
-        stream.seekg(ALIGN_TO_BOUNDARY(stream.tellg()));
+        stream.seekg(JustCause3::ALIGN_TO_BOUNDARY(stream.tellg()));
 
         // read all the node instances
 #if 0

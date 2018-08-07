@@ -41,8 +41,11 @@ void AvalancheArchive::AddFile(const fs::path& filename, const FileBuffer& data)
     auto name = filename.string();
     std::replace(name.begin(), name.end(), '\\', '/');
 
+    if (!m_StreamArchive->HasFile(name)) {
+        m_FileList->Add(name);
+    }
+
     m_StreamArchive->AddFile(name, data);
-    m_FileList->Add(name);
     m_HasUnsavedChanged = true;
 }
 
