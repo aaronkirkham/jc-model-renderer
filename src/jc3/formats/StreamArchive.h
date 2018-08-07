@@ -120,7 +120,7 @@ struct StreamArchive_t
             // generate the entry info
             StreamArchiveEntry_t entry;
             entry.m_Filename = filename;
-            entry.m_Offset = (last_entry.m_Offset + last_entry.m_Size);
+            entry.m_Offset = (last_entry.m_Offset + last_entry.m_Size); // TODO: what if the last entry is 0 offset???
             entry.m_Size = buffer.size();
 
             // calcaulte the aligned length

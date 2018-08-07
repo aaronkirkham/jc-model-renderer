@@ -60,6 +60,7 @@ public:
     void CompressArchive(std::ostream& stream, JustCause3::AvalancheArchive::Header* header, std::vector<JustCause3::AvalancheArchive::Chunk>* chunks) noexcept;
     void CompressArchive(std::ostream& stream, StreamArchive_t* archive) noexcept;
     bool DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept;
+    void WriteTOC(const fs::path& filename, StreamArchive_t* archive) noexcept;
 
     // textures
     void ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept;

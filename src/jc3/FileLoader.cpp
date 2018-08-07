@@ -641,6 +641,24 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
     return true;
 }
 
+void FileLoader::WriteTOC(const fs::path& filename, StreamArchive_t* archive) noexcept
+{
+    assert(archive);
+
+    std::ofstream stream(filename, std::ios::binary);
+    assert(!stream.fail());
+    for (auto& entry : archive->m_Files) {
+        auto length = static_cast<uint32_t>(entry.m_Filename.length());
+
+        stream.write((char *)&length, sizeof(uint32_t));
+        stream.write((char *)entry.m_Filename.c_str(), length);
+        stream.write((char *)&entry.m_Offset, sizeof(uint32_t));
+        stream.write((char *)&entry.m_Size, sizeof(uint32_t));
+    }
+
+    stream.close();
+}
+
 std::unique_ptr<StreamArchive_t> FileLoader::ReadStreamArchive(const FileBuffer& data) noexcept
 {
     // TODO: need to read the header, check if the archive is compressed,

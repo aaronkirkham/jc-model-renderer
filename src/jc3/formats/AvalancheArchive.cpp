@@ -104,13 +104,18 @@ bool AvalancheArchive::SaveFileCallback(const fs::path& filename, const fs::path
     auto archive = AvalancheArchive::get(filename.string());
     if (archive) {
         assert(archive->m_StreamArchive);
+        auto sarc = archive->m_StreamArchive.get();
 
-        const auto& path = directory / filename.filename();
-        std::ofstream stream(path, std::ios::binary);
+        // generate the .ee.toc
+        auto toc = filename; toc.replace_extension(".ee.toc");
+        const auto& toc_path = directory / toc.filename();
+        FileLoader::Get()->WriteTOC(toc_path, sarc);
 
+        // generate the .ee
+        const auto& ee_path = directory / filename.filename();
+        std::ofstream stream(ee_path, std::ios::binary);
         assert(!stream.fail());
-
-        FileLoader::Get()->CompressArchive(stream, archive->m_StreamArchive.get());
+        FileLoader::Get()->CompressArchive(stream, sarc);
         stream.close();
 
         return true;
