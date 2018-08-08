@@ -80,6 +80,8 @@ struct StreamArchive_t
 
                     // copy the buffer
                     std::memcpy(&temp_buffer[_entry.m_Offset], &m_SARCBytes[old_offset], _entry.m_Size);
+
+                    // TODO: before each buffer, we should do 4 byte alignment!
                 }
             }
 
@@ -94,7 +96,7 @@ struct StreamArchive_t
 
             // update the header
             auto new_size = m_Header.m_Size + entry_raw_size;
-            m_Header.m_Size = JustCause3::ALIGN_TO_BOUNDARY(new_size, 16); // TODO: confirm alignment isn't 8
+            m_Header.m_Size = JustCause3::ALIGN_TO_BOUNDARY(new_size, 16);
             std::memcpy(m_SARCBytes.data(), &m_Header, sizeof(m_Header));
 
             // calculate the next insert position
@@ -136,15 +138,13 @@ struct StreamArchive_t
             // insert the buffer
             m_SARCBytes.insert(m_SARCBytes.begin() + entry.m_Offset, buffer.begin(), buffer.end());
 
+            // TODO: before each buffer, we should do 4 byte alignment!
+
             m_Files.emplace_back(entry);
         }
 
         auto total_size = m_SARCBytes.size();
         auto final_alignment = JustCause3::DISTANCE_TO_BOUNDARY(total_size, 4);
-
-        std::stringstream ss; ss << "adding " << final_alignment << " bytes of padding...\n";
-        OutputDebugStringA(ss.str().c_str());
-
         if (final_alignment > 0) {
             m_SARCBytes.resize(total_size + final_alignment);
         }

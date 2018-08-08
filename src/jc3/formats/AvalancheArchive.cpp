@@ -104,19 +104,25 @@ bool AvalancheArchive::SaveFileCallback(const fs::path& filename, const fs::path
     auto archive = AvalancheArchive::get(filename.string());
     if (archive) {
         assert(archive->m_StreamArchive);
-        auto sarc = archive->m_StreamArchive.get();
 
-        // generate the .ee.toc
-        auto toc = filename; toc.replace_extension(".ee.toc");
-        const auto& toc_path = directory / toc.filename();
-        FileLoader::Get()->WriteTOC(toc_path, sarc);
+        std::stringstream status_text;
+        status_text << "Repacking \"" << filename.filename() << "\"...";
+        const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
 
-        // generate the .ee
-        const auto& ee_path = directory / filename.filename();
-        std::ofstream stream(ee_path, std::ios::binary);
-        assert(!stream.fail());
-        FileLoader::Get()->CompressArchive(stream, sarc);
-        stream.close();
+        std::thread([&, archive, filename, directory, status_text_id] {
+            // generate the .ee.toc
+            auto toc = filename; toc.replace_extension(".ee.toc");
+            const auto& toc_path = directory / toc.filename();
+            FileLoader::Get()->WriteTOC(toc_path, archive->m_StreamArchive.get());
+
+            // generate the .ee
+            const auto& ee_path = directory / filename.filename();
+            std::ofstream stream(ee_path, std::ios::binary);
+            FileLoader::Get()->CompressArchive(stream, archive->m_StreamArchive.get());
+            stream.close();
+
+            UI::Get()->PopStatusText(status_text_id);
+        }).detach();
 
         return true;
     }

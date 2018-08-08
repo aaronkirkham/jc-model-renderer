@@ -496,12 +496,11 @@ void FileLoader::CompressArchive(std::ostream& stream, JustCause3::AvalancheArch
         FileBuffer result;
         result.reserve(compressed_size);
         auto res = compress(result.data(), &compressed_size, chunk.m_BlockData.data(), decompressed_size);
+        assert(res == Z_OK);
 
         // store the compressed size
         chunk.m_CompressedSize = static_cast<uint32_t>(compressed_size) - 6; // remove the header and checksum from the total size
         DEBUG_LOG("actual compressed size: " << chunk.m_CompressedSize);
-
-        assert(res == Z_OK);
 
         // calculate the distance to the 16-byte boundary after we write our data
         auto pos = static_cast<uint32_t>(stream.tellp()) + JustCause3::AvalancheArchive::CHUNK_SIZE + chunk.m_CompressedSize;
@@ -533,8 +532,9 @@ void FileLoader::CompressArchive(std::ostream& stream, StreamArchive_t* archive)
 {
     assert(archive);
 
-    // TODO: support chunks. how do avalanche determine when to create a new block?
-    // there seems to be no obvious patterns with the buffer sizes
+    auto& block_data = archive->m_SARCBytes;
+    const auto num_chunks = 1 + static_cast<uint32_t>(block_data.size() / JustCause3::AvalancheArchive::MAX_CHUNK_DATA_SIZE);
+    constexpr auto max_chunk_size = JustCause3::AvalancheArchive::MAX_CHUNK_DATA_SIZE;
 
     // generate the header
     JustCause3::AvalancheArchive::Header header;
@@ -542,28 +542,41 @@ void FileLoader::CompressArchive(std::ostream& stream, StreamArchive_t* archive)
     header.m_Version = 1;
     strcpy(header.m_Magic2, "AVALANCHEARCHIVEFORMATISCOOL");
     header.m_TotalUncompressedSize = archive->m_SARCBytes.size();
-    header.m_UncompressedBufferSize = archive->m_SARCBytes.size();
-    header.m_ChunkCount = 1;
-
-    // TODO: figure out how m_UncompressedBufferSize is calculated for multiple blocks!
+    header.m_UncompressedBufferSize = num_chunks > 1 ? max_chunk_size : archive->m_SARCBytes.size();
+    header.m_ChunkCount = num_chunks;
 
     DEBUG_LOG("CompressArchive");
+    DEBUG_LOG(" - m_ChunkCount=" << header.m_ChunkCount);
     DEBUG_LOG(" - TotalUncompressedSize=" << header.m_TotalUncompressedSize);
     DEBUG_LOG(" - UncompressedBufferSize=" << header.m_UncompressedBufferSize);
 
-    auto& block_data = archive->m_SARCBytes;
-
     // generate the chunks
     std::vector<JustCause3::AvalancheArchive::Chunk> chunks;
+    uint32_t last_chunk_offset = 0;
     for (uint32_t i = 0; i < header.m_ChunkCount; ++i) {
-        // TODO: chunks should copy the block_data.begin() + offset
-
         JustCause3::AvalancheArchive::Chunk chunk;
         chunk.m_Magic = 0x4D415745;
         chunk.m_CompressedSize = 0; // NOTE: generated later
-        chunk.m_UncompressedSize = block_data.size();
         chunk.m_DataSize = 0; // NOTE: generated later
-        chunk.m_BlockData = block_data;
+
+        // generate chunks if needed
+        if (num_chunks > 1) {
+            // calculate the chunk size
+            const auto block_size = block_data.size() - last_chunk_offset;
+            auto chunk_size = block_size > max_chunk_size ? max_chunk_size % block_size : block_size;
+
+            std::vector<uint8_t> n_block_data(block_data.begin() + last_chunk_offset, block_data.begin() + last_chunk_offset + chunk_size);
+            last_chunk_offset += chunk_size;
+
+            chunk.m_UncompressedSize = chunk_size;
+            chunk.m_BlockData = std::move(n_block_data);
+        }
+        else {
+            chunk.m_UncompressedSize = block_data.size();
+            chunk.m_BlockData = block_data;
+        }
+
+        DEBUG_LOG("AAF chunk #" << i << ", UncompressedSize=" << chunk.m_UncompressedSize);
 
         chunks.emplace_back(std::move(chunk));
     }

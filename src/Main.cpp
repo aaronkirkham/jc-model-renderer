@@ -211,7 +211,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterSaveCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::SaveFileCallback);
 
         // register file type context menu callbacks
-        UI::Get()->RegisterContextMenuCallback(".epe", RuntimeContainer::ContextMenuUI);
+        UI::Get()->RegisterContextMenuCallback({ ".epe" }, RuntimeContainer::ContextMenuUI);
 
         // register importers and exporters
         ImportExportManager::Get()->Register(new import_export::Wavefront_Obj);

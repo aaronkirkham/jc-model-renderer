@@ -334,6 +334,7 @@ namespace JustCause3
         };
 
         static constexpr auto CHUNK_SIZE = (sizeof(uint32_t) * 4);
+        static constexpr auto MAX_CHUNK_DATA_SIZE = 33554432;
     };
 
     struct RBMHeader
