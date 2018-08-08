@@ -20,7 +20,7 @@ HINTS = {}
 FILELIST = {}
 WRITE_PRETTY_JSON = False
 
-print ("Generating filelist dictionary from hints...")
+print("Generating filelist dictionary from hints...")
 
 def load_hints_file(filename):
   # does the hints file exists?
@@ -40,6 +40,7 @@ for directory in os.listdir(FILELIST_PATH):
   if os.path.isdir(DIR_ABS_PATH):
     if directory != "dlc_win64":
       load_hints_file(DIR_ABS_PATH + "\\hints.txt")
+      load_hints_file(DIR_ABS_PATH + "\\generated.txt")
     else:
       for filename in os.listdir(DIR_ABS_PATH):
         FILE_ABS_PATH = os.path.join(DIR_ABS_PATH, filename)
@@ -50,6 +51,7 @@ for directory in os.listdir(FILELIST_PATH):
           FILE_ABS_PATH = os.path.join(DIR_ABS_PATH, filename)
 
         load_hints_file(FILE_ABS_PATH + "\\hints.txt")
+        load_hints_file(FILE_ABS_PATH + "\\generated.txt")
 
 print("loaded %s hints" % len(HINTS))
 
@@ -135,4 +137,4 @@ with open(OUTPUT_FILE, "w") as file:
   else:
     json.dump(FILELIST, file)
 
-print ("Finished. Wrote dictionary to '%s'." % os.path.abspath(OUTPUT_FILE))
+print("Finished. Wrote dictionary to '%s'." % os.path.abspath(OUTPUT_FILE))
