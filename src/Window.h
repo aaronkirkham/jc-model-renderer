@@ -24,8 +24,6 @@ struct WindowEvents
     ksignals::Event<void(const glm::vec2& size)> SizeChanged;
     ksignals::Event<void()> FocusLost;
     ksignals::Event<void()> FocusGained;
-    //ksignals::Event<void(const fs::path& filename)> FileDropped;
-
     ksignals::Event<void(const fs::path& filename)> DragEnter;
     ksignals::Event<void()> DragLeave;
     ksignals::Event<void()> DragDropped;
@@ -39,6 +37,8 @@ private:
     bool m_Running = true;
     HINSTANCE m_Instance = nullptr;
     HWND m_Hwnd = nullptr;
+    bool m_IsResizing = false;
+    std::chrono::high_resolution_clock::time_point m_TimeSinceResize;
     bool m_IsMouseCaptured = false;
     std::unique_ptr<DropTarget> m_DragDrop = nullptr;
 
@@ -55,6 +55,11 @@ public:
 
     bool Frame();
     void Run();
+
+    void StartResize() {
+        m_IsResizing = true;
+        m_TimeSinceResize = std::chrono::high_resolution_clock::now();
+    }
 
     glm::vec2 GetSize() const;
     glm::vec2 GetPosition() const;

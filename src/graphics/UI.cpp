@@ -11,6 +11,7 @@
 #include <graphics/Camera.h>
 
 #include <jc3/FileLoader.h>
+#include <Jc3/RenderBlockFactory.h>
 #include <jc3/formats/AvalancheArchive.h>
 #include <jc3/formats/RenderBlockModel.h>
 #include <jc3/formats/RuntimeContainer.h>
@@ -159,7 +160,7 @@ void UI::Render()
         ImGui::OpenPopup("About");
     }
     else if (g_ShowBackgroundColourPicker) {
-        ImGui::OpenPopup("BGColPicker");
+        ImGui::OpenPopup("Background Colour Picker");
     }
 
     // About
@@ -189,12 +190,12 @@ void UI::Render()
     }
 
     // Background colour picker
-    if (ImGui::BeginPopupModal("BGColPicker", &g_ShowBackgroundColourPicker, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove)))
+    if (ImGui::BeginPopupModal("Background Colour Picker", &g_ShowBackgroundColourPicker, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove)))
     {
         ImGui::SetWindowSize({ 400, 400 });
 
         auto col = Renderer::Get()->GetClearColour();
-        if (ImGui::ColorPicker3("bg col", glm::value_ptr(col))) {
+        if (ImGui::ColorPicker3("Colour", glm::value_ptr(col))) {
             Renderer::Get()->SetClearColour(col);
         }
 
@@ -221,7 +222,7 @@ void UI::Render()
 
     // Status
     ImGui::SetNextWindowBgAlpha(0.0f);
-    ImGui::SetNextWindowSize({ 500, window_size.y });
+    ImGui::SetNextWindowSize({ window_size.x, window_size.y });
     ImGui::Begin("Status", nullptr, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings));
     {
         const auto size = ImGui::GetWindowSize();
@@ -271,7 +272,6 @@ void UI::Render()
 // TODO: move the texture view stuff into here.
 void UI::RenderFileTreeView()
 {
-    static std::string switch_to_tab = "";
     const auto& window_size = Window::Get()->GetSize();
 
     // render the archive directory list
@@ -284,9 +284,9 @@ void UI::RenderFileTreeView()
         ImGui::BeginTabBar("Directory List Tabs", (ImGuiTabBarFlags_NoReorder | ImGuiTabBarFlags_SizingPolicyEqual));
         {
             // switch active tab if we need to
-            if (!switch_to_tab.empty()) {
-                ImGui::SetTabItemSelected(switch_to_tab.c_str());
-                switch_to_tab.clear();
+            if (!m_TabToSwitch.empty()) {
+                ImGui::SetTabItemSelected(m_TabToSwitch.c_str());
+                m_TabToSwitch.clear();
             }
 
             // file explorer tab
@@ -315,7 +315,7 @@ void UI::RenderFileTreeView()
                     }
 
                     // context menu
-                    RenderContextMenu(archive->GetFilePath());
+                    RenderContextMenu(archive->GetFilePath(), 0, CTX_ARCHIVE);
 
                     if (open) {
                         // draw the directory list
@@ -329,6 +329,10 @@ void UI::RenderFileTreeView()
                         std::lock_guard<std::recursive_mutex> _lk{ AvalancheArchive::InstancesMutex };
                         it = AvalancheArchive::Instances.erase(it);
                         TextureManager::Get()->Flush();
+
+                        if (AvalancheArchive::Instances.size() == 0) {
+                            m_TabToSwitch = "File Explorer";
+                        }
   
                         continue;
                     }
@@ -345,8 +349,8 @@ void UI::RenderFileTreeView()
                     const auto& filename = (*it).second->GetFileName();
 
                     // render the current model info
-                    bool is_open = true;
-                    if (ImGui::CollapsingHeader(filename.c_str(), &is_open)) {
+                    bool is_not_closed = true;
+                    if (ImGui::CollapsingHeader(filename.c_str(), &is_not_closed)) {
                         uint32_t render_block_index = 0;
                         for (auto& render_block : (*it).second->GetRenderBlocks()) {
                             // TODO: highlight the current render block when hovering over the ui
@@ -425,7 +429,7 @@ void UI::RenderFileTreeView()
 
                                         // context menu
                                         if (is_loaded) {
-                                            RenderContextMenu(path, ImGui::GetColumnIndex());
+                                            RenderContextMenu(path, ImGui::GetColumnIndex(), CTX_TEXTURE);
                                         }
 
                                         ImGui::EndGroup();
@@ -446,7 +450,7 @@ void UI::RenderFileTreeView()
                     }
 
                     // if the close button was pressed, delete the model
-                    if (!is_open) {
+                    if (!is_not_closed) {
                         std::lock_guard<std::recursive_mutex> _lk{ RenderBlockModel::InstancesMutex };
                         it = RenderBlockModel::Instances.erase(it);
 
@@ -474,7 +478,7 @@ void UI::RenderSpinner(const std::string& str)
     ImGui::Text(str.c_str());
 }
 
-void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra)
+void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra, uint32_t flags)
 {
     std::stringstream unique_id;
     unique_id << "context-menu-" << filename << "-" << unique_id_extra;
@@ -484,7 +488,7 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra)
 
     if (ImGui::BeginPopupContextItem("Context Menu")) {
         // general save file
-        if (ImGui::Selectable(ICON_FA_FLOPPY_O "  Save file...")) {
+        if (ImGui::Selectable(ICON_FA_FLOPPY_O "  Save file")) {
             Window::Get()->ShowFolderSelection("Select a folder to save the file to.", [&](const fs::path& selected) {
                 UI::Get()->Events().SaveFileRequest(filename, selected);
             });
@@ -512,6 +516,14 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra)
                 ImGui::EndMenu();
             }
         }
+
+#if 0
+        // archive specific stuff
+        if (flags & CTX_FILE && flags & CTX_ARCHIVE) {
+            if (ImGui::Selectable(ICON_FA_TIMES_CIRCLE_O "  Delete file")) {
+            }
+        }
+#endif
 
         // custom context menus
         auto it = m_ContextMenuCallbacks.find(filename.extension().string());
@@ -541,4 +553,11 @@ void UI::PopStatusText(uint64_t id)
 {
     std::lock_guard<std::recursive_mutex> _lk{ m_StatusTextsMutex };
     m_StatusTexts.erase(id);
+}
+
+void UI::RegisterContextMenuCallback(const std::vector<std::string>& extensions, ContextMenuCallback fn)
+{
+    for (const auto& extension : extensions) {
+        m_ContextMenuCallbacks[extension] = fn;
+    }
 }

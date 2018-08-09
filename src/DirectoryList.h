@@ -155,7 +155,7 @@ public:
                     }
 
                     // context menu
-                    UI::Get()->RenderContextMenu(file_path);
+                    UI::Get()->RenderContextMenu(file_path, 0, archive ? CTX_FILE | CTX_ARCHIVE : CTX_FILE);
                 }
             }
         }

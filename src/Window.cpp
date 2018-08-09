@@ -7,57 +7,28 @@
 #include <shlobj.h>
 #include <shellapi.h>
 
+#include <jc3/formats/AvalancheArchive.h>
+
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
 {
-    static bool m_IsResizing = false;
-    static std::chrono::high_resolution_clock::time_point m_ResizeTime;
-
-    // handle the resize
-    if (m_IsResizing) {
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - m_ResizeTime);
-        if (duration.count() > 50) {
-            m_IsResizing = false;
-            Window::Get()->Events().SizeChanged(Window::Get()->GetSize());
-        }
-    }
-
     // pass input to imgui first
     if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam)) {
         return 1;
     }
 
     switch (message) {
-        // resize handler
     case WM_SIZE:
-        m_IsResizing = true;
-        m_ResizeTime = std::chrono::high_resolution_clock::now();
+        Window::Get()->StartResize();
         break;
 
-        // focus gained handler
     case WM_SETFOCUS:
         Window::Get()->Events().FocusGained();
         break;
 
-        // focus lost handler
     case WM_KILLFOCUS:
         Window::Get()->Events().FocusLost();
         break;
-
-        // file drop handler
-    case WM_DROPFILES: {
-#if 0
-        const auto drop = reinterpret_cast<HDROP>(wParam);
-        char file[MAX_PATH] = { 0 };
-
-        if (DragQueryFile(drop, 0, file, MAX_PATH) != 0) {
-            Window::Get()->Events().FileDropped(file);
-            DragFinish(drop);
-        }
-#endif
-
-        break;
-    }
 
     case WM_CLOSE:
         DestroyWindow(hwnd);
@@ -108,7 +79,6 @@ bool Window::Initialise(const HINSTANCE& instance)
     ShowCursor(true);
 
     m_DragDrop = std::make_unique<DropTarget>(m_Hwnd);
-    DragAcceptFiles(m_Hwnd, true);
 
     Input::Get()->Initialise();
 
@@ -131,6 +101,15 @@ void Window::Shutdown()
 
 bool Window::Frame()
 {
+    // handle the resize
+    if (m_IsResizing) {
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - m_TimeSinceResize);
+        if (duration.count() > 50) {
+            m_IsResizing = false;
+            Window::Get()->Events().SizeChanged(Window::Get()->GetSize());
+        }
+    }
+
     return Renderer::Get()->Render();
 }
 

@@ -104,7 +104,7 @@ TextureManager::TextureManager()
                 ImGui::Image((*it)->GetSRV(), texture_size);
 
                 // render context menus so we can save/export from this window
-                UI::Get()->RenderContextMenu((*it)->GetPath());
+                UI::Get()->RenderContextMenu((*it)->GetPath(), 0, CTX_TEXTURE);
 
                 ImGui::End();
             }

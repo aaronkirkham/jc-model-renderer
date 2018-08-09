@@ -19,6 +19,8 @@ AvalancheArchive::AvalancheArchive(const fs::path& file)
         m_FileList = std::make_unique<DirectoryList>();
         m_FileList->Parse(m_StreamArchive.get());
     });
+
+    UI::Get()->SwitchToTab("Archives");
 }
 
 AvalancheArchive::AvalancheArchive(const fs::path& filename, const FileBuffer& buffer)
@@ -33,6 +35,8 @@ AvalancheArchive::AvalancheArchive(const fs::path& filename, const FileBuffer& b
         m_FileList = std::make_unique<DirectoryList>();
         m_FileList->Parse(m_StreamArchive.get());
     });
+
+    UI::Get()->SwitchToTab("Archives");
 }
 
 void AvalancheArchive::AddFile(const fs::path& filename, const FileBuffer& data)
@@ -104,6 +108,9 @@ bool AvalancheArchive::SaveFileCallback(const fs::path& filename, const fs::path
         std::stringstream status_text;
         status_text << "Repacking \"" << filename.filename() << "\"...";
         const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
+
+        // TODO: we should read the archive filelist, grab a list of files which have offset 0 (in patches)
+        // and check if we have edited any of those files. if so we need to include it in the repack of the SARC
 
         std::thread([&, archive, filename, directory, status_text_id] {
             // generate the .ee.toc
