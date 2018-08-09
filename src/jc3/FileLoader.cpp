@@ -254,6 +254,11 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback, u
         UI::Get()->PopStatusText(status_text_id);
         return callback(true, std::move(buffer));
     }
+#ifdef DEBUG
+    else if (archive && entry.m_Offset == 0) {
+        DEBUG_LOG("NOTE: \"" << filename.filename() << "\" exists in archive but has been patched. Reading the patched version instead.");
+    }
+#endif
 
     // should we use file batching?
     if (UseBatches) {
@@ -434,8 +439,10 @@ bool FileLoader::ReadArchiveTable(const fs::path& filename, JustCause3::ArchiveT
     return true;
 }
 
-std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(std::istream& stream)
+std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(FileBuffer* sarc_buffer, FileBuffer* toc_buffer)
 {
+    std::istringstream stream(std::string{ (char *)sarc_buffer->data(), sarc_buffer->size() });
+
     JustCause3::StreamArchive::SARCHeader header;
     stream.read((char *)&header, sizeof(header));
 
@@ -447,32 +454,119 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(std::istream& st
 
     auto result = std::make_unique<StreamArchive_t>();
     result->m_Header = header;
+    result->m_UsingTOC = (toc_buffer != nullptr);
 
-    auto start_pos = stream.tellg();
-    while (true) {
-        StreamArchiveEntry_t entry;
+    // read the toc header for the filelist
+    if (toc_buffer) {
+        DEBUG_LOG("USING .ee.toc BUFFER FOR ARCHIVE FILELIST");
 
-        uint32_t length;
-        stream.read((char *)&length, sizeof(length));
+        std::istringstream toc_stream(std::string{ (char *)toc_buffer->data(), toc_buffer->size() });
+        while (static_cast<size_t>(toc_stream.tellg()) < toc_buffer->size()) {
+            StreamArchiveEntry_t entry;
 
-        auto filename = std::unique_ptr<char[]>(new char[length + 1]);
-        stream.read(filename.get(), length);
-        filename[length] = '\0';
+            uint32_t length;
+            toc_stream.read((char *)&length, sizeof(length));
 
-        entry.m_Filename = filename.get();
+            auto filename = std::unique_ptr<char[]>(new char[length + 1]);
+            toc_stream.read(filename.get(), length);
+            filename[length] = '\0';
 
-        stream.read((char *)&entry.m_Offset, sizeof(entry.m_Offset));
-        stream.read((char *)&entry.m_Size, sizeof(entry.m_Size));
+            entry.m_Filename = filename.get();
 
-        result->m_Files.emplace_back(entry);
+            toc_stream.read((char *)&entry.m_Offset, sizeof(entry.m_Offset));
+            toc_stream.read((char *)&entry.m_Size, sizeof(entry.m_Size));
 
-        auto current_pos = stream.tellg();
-        if (header.m_Size - (current_pos - start_pos) <= 15) {
-            break;
+            result->m_Files.emplace_back(entry);
+        }
+    }
+    // if we didn't pass a TOC buffer, stream the file list from the SARC header
+    else {
+        DEBUG_LOG("USING ORIGINAL FOR ARCHIVE FILELIST");
+
+        auto start_pos = stream.tellg();
+        while (true) {
+            StreamArchiveEntry_t entry;
+
+            uint32_t length;
+            stream.read((char *)&length, sizeof(length));
+
+            auto filename = std::unique_ptr<char[]>(new char[length + 1]);
+            stream.read(filename.get(), length);
+            filename[length] = '\0';
+
+            entry.m_Filename = filename.get();
+
+            stream.read((char *)&entry.m_Offset, sizeof(entry.m_Offset));
+            stream.read((char *)&entry.m_Size, sizeof(entry.m_Size));
+
+            result->m_Files.emplace_back(entry);
+
+            auto current_pos = stream.tellg();
+            if (header.m_Size - (current_pos - start_pos) <= 15) {
+                break;
+            }
         }
     }
 
     return result;
+}
+
+void FileLoader::ReadStreamArchive(const fs::path& filename, ReadArchiveCallback callback) noexcept
+{
+    if (!fs::exists(filename)) {
+        DEBUG_LOG("FileLoader::ReadStreamArchive - Input file doesn't exist");
+        return callback(nullptr);
+    }
+
+    std::ifstream compressed_buffer(filename, std::ios::binary);
+    if (compressed_buffer.fail()) {
+        DEBUG_LOG("FileLoader::ReadStreamArchive - Failed to open stream");
+        return callback(nullptr);
+    }
+
+    // TODO: need to read the header, check if the archive is compressed,
+    // then just back to the start of the stream!
+
+    FileBuffer buffer;
+    if (DecompressArchiveFromStream(compressed_buffer, &buffer)) {
+        compressed_buffer.close();
+
+        // parse the stream archive
+        auto result = ParseStreamArchive(&buffer);
+        if (result) {
+            result->m_Filename = filename;
+            result->m_SARCBytes = std::move(buffer);
+            return callback(std::move(result));
+        }
+    }
+
+    return callback(nullptr);
+}
+
+void FileLoader::ReadStreamArchive(const fs::path& filename, const FileBuffer& data, ReadArchiveCallback callback) noexcept
+{
+    auto toc_filename = filename; toc_filename.replace_extension(".ee.toc");
+    ReadFile(toc_filename, [&, filename, toc_filename, compressed_data = std::move(data), callback](bool success, FileBuffer data) {
+        // decompress the archive data
+        std::istringstream compressed_buffer(std::string{ (char*)compressed_data.data(), compressed_data.size() });
+
+        // TODO: read the magic and make sure it's actually compressed AAF
+
+        // decompress the archive data
+        FileBuffer buffer;
+        if (DecompressArchiveFromStream(compressed_buffer, &buffer)) {
+            // parse the stream archive
+            auto archive = ParseStreamArchive(&buffer, success ? &data : nullptr);
+            if (archive) {
+                archive->m_Filename = filename;
+                archive->m_SARCBytes = std::move(buffer);
+            }
+
+            return callback(std::move(archive));
+        }
+
+        return callback(nullptr);
+    });
 }
 
 void FileLoader::CompressArchive(std::ostream& stream, JustCause3::AvalancheArchive::Header* header, std::vector<JustCause3::AvalancheArchive::Chunk>* chunks) noexcept
@@ -670,62 +764,6 @@ void FileLoader::WriteTOC(const fs::path& filename, StreamArchive_t* archive) no
     }
 
     stream.close();
-}
-
-std::unique_ptr<StreamArchive_t> FileLoader::ReadStreamArchive(const FileBuffer& data) noexcept
-{
-    // TODO: need to read the header, check if the archive is compressed,
-    // then just back to the start of the stream!
-
-    // decompress the archive data
-    std::istringstream compressed_buffer(std::string{ (char*)data.data(), data.size() });
-
-    // decompress the archive data
-    FileBuffer buffer;
-    if (DecompressArchiveFromStream(compressed_buffer, &buffer)) {
-        // parse the stream archive
-        std::istringstream stream(std::string{ (char *)buffer.data(), buffer.size() });
-        auto archive = ParseStreamArchive(stream);
-        if (archive) {
-            archive->m_SARCBytes = std::move(buffer);
-            return archive;
-        }
-    }
-
-    return nullptr;
-}
-
-std::unique_ptr<StreamArchive_t> FileLoader::ReadStreamArchive(const fs::path& filename) noexcept
-{
-    if (!fs::exists(filename)) {
-        DEBUG_LOG("FileLoader::ReadStreamArchive - Input file doesn't exist");
-        return nullptr;
-    }
-
-    std::ifstream compressed_buffer(filename, std::ios::binary);
-    if (compressed_buffer.fail()) {
-        DEBUG_LOG("FileLoader::ReadStreamArchive - Failed to open stream");
-        return nullptr;
-    }
-
-    // TODO: need to read the header, check if the archive is compressed,
-    // then just back to the start of the stream!
-
-    FileBuffer buffer;
-    if (DecompressArchiveFromStream(compressed_buffer, &buffer)) {
-        compressed_buffer.close();
-
-        // parse the stream archive
-        std::istringstream stream(std::string{ (char*)buffer.data(), buffer.size() });
-        auto result = ParseStreamArchive(stream);
-        if (result) {
-            result->m_Filename = filename;
-            result->m_SARCBytes = std::move(buffer);
-            return result;
-        }
-    }
-
-    return nullptr;
 }
 
 void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept
@@ -1082,9 +1120,11 @@ std::tuple<StreamArchive_t*, StreamArchiveEntry_t> FileLoader::GetStreamArchiveF
         std::lock_guard<std::recursive_mutex> _lk{ AvalancheArchive::InstancesMutex };
         for (const auto& arc : AvalancheArchive::Instances) {
             const auto stream_arc = arc.second->GetStreamArchive();
-            for (const auto& entry : stream_arc->m_Files) {
-                if (entry.m_Filename == file || entry.m_Filename.find(file.string()) != std::string::npos) {
-                    return { stream_arc, entry };
+            if (stream_arc) {
+                for (const auto& entry : stream_arc->m_Files) {
+                    if (entry.m_Filename == file || entry.m_Filename.find(file.string()) != std::string::npos) {
+                        return { stream_arc, entry };
+                    }
                 }
             }
         }

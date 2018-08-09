@@ -11,25 +11,28 @@ AvalancheArchive::AvalancheArchive(const fs::path& file)
     : m_File(file)
 {
     // read the stream archive
-    m_StreamArchive = FileLoader::Get()->ReadStreamArchive(file);
-    assert(m_StreamArchive);
+    FileLoader::Get()->ReadStreamArchive(file, [&](std::unique_ptr<StreamArchive_t> archive) {
+        assert(archive);
+        m_StreamArchive = std::move(archive);
 
-    // parse the file list
-    m_FileList = std::make_unique<DirectoryList>();
-    m_FileList->Parse(m_StreamArchive.get());
+        // parse the file list
+        m_FileList = std::make_unique<DirectoryList>();
+        m_FileList->Parse(m_StreamArchive.get());
+    });
 }
 
 AvalancheArchive::AvalancheArchive(const fs::path& filename, const FileBuffer& buffer)
     : m_File(filename)
 {
     // read the stream archive
-    m_StreamArchive = FileLoader::Get()->ReadStreamArchive(buffer);
-    assert(m_StreamArchive);
-    m_StreamArchive->m_Filename = filename;
+    FileLoader::Get()->ReadStreamArchive(filename, std::move(buffer), [&](std::unique_ptr<StreamArchive_t> archive) {
+        assert(archive);
+        m_StreamArchive = std::move(archive);
 
-    // parse the file list
-    m_FileList = std::make_unique<DirectoryList>();
-    m_FileList->Parse(m_StreamArchive.get());
+        // parse the file list
+        m_FileList = std::make_unique<DirectoryList>();
+        m_FileList->Parse(m_StreamArchive.get());
+    });
 }
 
 void AvalancheArchive::AddFile(const fs::path& filename, const FileBuffer& data)
@@ -66,10 +69,7 @@ void AvalancheArchive::AddDirectory(const fs::path& filename, const fs::path& ro
 
         // strip the root directory from the path
         auto name = fn.lexically_relative(r).string();
-
         const auto size = fs::file_size(filename);
-
-        DEBUG_LOG(filename);
 
         FileBuffer buffer;
         buffer.resize(size);
@@ -78,7 +78,6 @@ void AvalancheArchive::AddDirectory(const fs::path& filename, const fs::path& ro
         stream.read((char *)buffer.data(), size);
         stream.close();
 
-        // TODO: read the file
         AddFile(name, buffer);
     }
 }

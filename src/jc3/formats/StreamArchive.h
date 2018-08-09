@@ -16,6 +16,7 @@ struct StreamArchive_t
     JustCause3::StreamArchive::SARCHeader m_Header;
     std::vector<uint8_t> m_SARCBytes;
     std::vector<StreamArchiveEntry_t> m_Files;
+    bool m_UsingTOC = false;
 
     void AddFile(const std::string& filename, const std::vector<uint8_t>& buffer)
     {
@@ -108,11 +109,11 @@ struct StreamArchive_t
                 if (file.m_Offset != 0) {
                     // update the current file offset
                     file.m_Offset += entry_raw_size;
-
-                    // update the entry offset
-                    m_SARCBytes.erase(m_SARCBytes.begin() + pos, m_SARCBytes.begin() + pos + sizeof(uint32_t));
-                    sarc_insert(&m_SARCBytes, pos, file.m_Offset);
                 }
+
+                // update the entry offset
+                m_SARCBytes.erase(m_SARCBytes.begin() + pos, m_SARCBytes.begin() + pos + sizeof(uint32_t));
+                sarc_insert(&m_SARCBytes, pos, file.m_Offset);
 
                 pos += (sizeof(uint32_t) + sizeof(uint32_t));
             }

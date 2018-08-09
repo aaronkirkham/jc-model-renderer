@@ -15,6 +15,7 @@
 using ReadFileCallback = std::function<void(bool success, FileBuffer data)>;
 using FileTypeCallback = std::function<void(const fs::path& filename, FileBuffer data)>;
 using FileSaveCallback = std::function<bool(const fs::path& filename, const fs::path& directory)>;
+using ReadArchiveCallback = std::function<void(std::unique_ptr<StreamArchive_t>)>;
 
 enum ReadFileFlags : uint8_t {
     SKIP_TEXTURE_LOADER = 1,
@@ -38,7 +39,7 @@ private:
     std::unordered_map<std::string, std::vector<ReadFileCallback>> m_PathBatches;
     std::recursive_mutex m_BatchesMutex;
 
-    std::unique_ptr<StreamArchive_t> ParseStreamArchive(std::istream& stream);
+    std::unique_ptr<StreamArchive_t> ParseStreamArchive(FileBuffer* sarc_buffer, FileBuffer* toc_buffer = nullptr);
 
 public:
     inline static bool UseBatches = false;
@@ -55,11 +56,13 @@ public:
     bool ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash, FileBuffer* output) noexcept;
 
     // stream archive
-    std::unique_ptr<StreamArchive_t> ReadStreamArchive(const FileBuffer& buffer) noexcept;
-    std::unique_ptr<StreamArchive_t> ReadStreamArchive(const fs::path& filename) noexcept;
+    void ReadStreamArchive(const fs::path& filename, ReadArchiveCallback callback) noexcept;
+    void ReadStreamArchive(const fs::path& filename, const FileBuffer& buffer, ReadArchiveCallback callback) noexcept;
     void CompressArchive(std::ostream& stream, JustCause3::AvalancheArchive::Header* header, std::vector<JustCause3::AvalancheArchive::Chunk>* chunks) noexcept;
     void CompressArchive(std::ostream& stream, StreamArchive_t* archive) noexcept;
     bool DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept;
+
+    // toc
     void WriteTOC(const fs::path& filename, StreamArchive_t* archive) noexcept;
 
     // textures
