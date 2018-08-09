@@ -28,11 +28,6 @@ struct StreamArchive_t
 
         // if we don't have the file, add it to the end
         if (it == m_Files.end()) {
-            // find the last entry with data in the buffer
-            auto last = std::find_if(m_Files.rbegin(), m_Files.rend(), [](const StreamArchiveEntry_t& entry) {
-                return entry.m_Offset != 0;
-            });
-
             // add a new entry
             StreamArchiveEntry_t new_entry;
             new_entry.m_Filename = filename;
