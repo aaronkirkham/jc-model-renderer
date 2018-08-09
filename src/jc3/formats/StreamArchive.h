@@ -67,15 +67,10 @@ struct StreamArchive_t
         std::memcpy(temp_buffer.data(), &m_Header, sizeof(m_Header));
 
         // update all entries
-        bool _has_wrote_entry = false;
         uint32_t current_data_offset = sizeof(JustCause3::StreamArchive::SARCHeader) + m_Header.m_Size;
         for (auto& _entry : m_Files) {
             const bool _is_the_file = _entry.m_Filename == filename;
-            if (!_has_wrote_entry && _is_the_file) {
-                _has_wrote_entry = true;
-            }
-
-            auto data_offset = _entry.m_Offset != 0 ? current_data_offset : 0;
+            const auto data_offset = _entry.m_Offset != 0 ? current_data_offset : 0;
 
             // calculate the aligned length for the entry filename
             uint32_t alignment = 0;
