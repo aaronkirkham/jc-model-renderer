@@ -84,11 +84,8 @@ void AvalancheArchive::AddDirectory(const fs::path& filename, const fs::path& ro
 
 bool AvalancheArchive::HasFile(const fs::path& filename)
 {
-    auto find_it = std::find_if(m_StreamArchive->m_Files.begin(), m_StreamArchive->m_Files.end(), [&](const StreamArchiveEntry_t& entry) {
-        return entry.m_Filename == filename || entry.m_Filename.find(filename.string()) != std::string::npos;
-    });
-
-    return find_it != m_StreamArchive->m_Files.end();
+    assert(m_StreamArchive);
+    return m_StreamArchive->HasFile(filename.string());
 }
 
 void AvalancheArchive::ReadFileCallback(const fs::path& filename, const FileBuffer& data)

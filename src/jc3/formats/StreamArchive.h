@@ -24,133 +24,94 @@ struct StreamArchive_t
             return entry.m_Filename == filename;
         });
 
-        if (it != m_Files.end()) {
-            auto& entry = (*it);
+        StreamArchiveEntry_t* entry = nullptr;
 
-            std::vector<uint8_t> temp_buffer;
-            uint64_t pos = sizeof(JustCause3::StreamArchive::SARCHeader);
+        // if we don't have the file, add it to the end
+        if (it == m_Files.end()) {
+            // find the last entry with data in the buffer
+            auto last = std::find_if(m_Files.rbegin(), m_Files.rend(), [](const StreamArchiveEntry_t& entry) {
+                return entry.m_Offset != 0;
+            });
 
-            // update the entry size
-            auto old_size = entry.m_Size;
-            auto size_diff = static_cast<int32_t>(old_size - buffer.size()); // TODO: make sure this is correct if the file is smaller!
-            entry.m_Size = buffer.size();
+            // add a new entry
+            StreamArchiveEntry_t new_entry;
+            new_entry.m_Filename = filename;
+            new_entry.m_Offset = 1; // NOTE: generated later, keep it above 0 or it will be tret as a patched file
+            new_entry.m_Size = buffer.size();
+            m_Files.emplace_back(std::move(new_entry));
 
-            // calculate the size
-            uint32_t size = 0;
-            uint32_t buffer_size = 0;
-            for (auto& _entry : m_Files) {
-                auto _entry_size = (sizeof(uint32_t) + calc_string_length(_entry.m_Filename) + sizeof(uint32_t) + sizeof(uint32_t));
-                size += _entry_size;
-
-                if (_entry.m_Offset != 0) {
-                    buffer_size += (_entry_size + _entry.m_Size);
-                }
-            }
-
-            // resize
-            temp_buffer.resize(pos + buffer_size);
-
-            // write the header
-            m_Header.m_Size = JustCause3::ALIGN_TO_BOUNDARY(size, 16);
-            std::memcpy(temp_buffer.data(), &m_Header, sizeof(m_Header));
-
-            // update all entries
-            bool _has_wrote_entry = false;
-            for (auto& _entry : m_Files) {
-                if (!_has_wrote_entry && _entry.m_Filename == filename) {
-                    _has_wrote_entry = true;
-                }
-
-                if (_entry.m_Offset != 0) {
-                    // calcaulate the aligned length
-                    uint32_t alignment = 0;
-                    auto length = calc_string_length(_entry.m_Filename, &alignment);
-
-                    // calcaulte offset, if we have already written the file data, adjust every other
-                    // offset (these files are underneath our data) by the size difference of the old and new buffer
-                    auto offset = static_cast<uint32_t>(_has_wrote_entry ? (_entry.m_Offset + size_diff) : _entry.m_Offset);
-
-                    pos = sarc_insert(&temp_buffer, pos, length);
-                    pos = sarc_insert_string(&temp_buffer, pos, _entry.m_Filename, alignment);
-                    pos = sarc_insert(&temp_buffer, pos, offset);
-                    pos = sarc_insert(&temp_buffer, pos, _entry.m_Size);
-
-                    // update the entry offset
-                    auto old_offset = _entry.m_Offset;
-                    _entry.m_Offset = offset;
-
-                    // copy the buffer
-                    std::memcpy(&temp_buffer[_entry.m_Offset], &m_SARCBytes[old_offset], _entry.m_Size);
-
-                    // TODO: before each buffer, we should do 4 byte alignment!
-                }
-            }
-
-            //
-            m_SARCBytes = std::move(temp_buffer);
-
-            // TODO: move all bytes of entries below us to their new offset
+            entry = &m_Files.back();
         }
         else {
-            // calculate the binary size of the new entry
-            const auto entry_raw_size = (sizeof(uint32_t) + calc_string_length(filename) + sizeof(uint32_t) + sizeof(uint32_t));
+            entry = &(*it);
+            entry->m_Size = buffer.size();
+        }
 
-            // update the header
-            auto new_size = m_Header.m_Size + entry_raw_size;
-            m_Header.m_Size = JustCause3::ALIGN_TO_BOUNDARY(new_size, 16);
-            std::memcpy(m_SARCBytes.data(), &m_Header, sizeof(m_Header));
+        assert(entry);
 
-            // calculate the next insert position
-            uint64_t pos = sizeof(JustCause3::StreamArchive::SARCHeader);
-            uint32_t _index = 0;
-            for (auto& file : m_Files) {
-                pos += (sizeof(uint32_t) + calc_string_length(file.m_Filename));
+        std::vector<uint8_t> temp_buffer;
+        uint64_t pos = sizeof(JustCause3::StreamArchive::SARCHeader);
 
-                if (file.m_Offset != 0) {
-                    // update the current file offset
-                    file.m_Offset += entry_raw_size;
-                }
+        // calculate the header and data size
+        uint32_t header_size = 0;
+        uint32_t data_size = 0;
+        for (auto& _entry : m_Files) {
+            auto _raw_entry_size = (sizeof(uint32_t) + calc_string_length(_entry.m_Filename) + sizeof(uint32_t) + sizeof(uint32_t));
+            header_size += _raw_entry_size;
 
-                // update the entry offset
-                m_SARCBytes.erase(m_SARCBytes.begin() + pos, m_SARCBytes.begin() + pos + sizeof(uint32_t));
-                sarc_insert(&m_SARCBytes, pos, file.m_Offset);
+            auto size = _entry.m_Offset != 0 ? _entry.m_Size : 0;
+            data_size += JustCause3::ALIGN_TO_BOUNDARY(size);
+        }
 
-                pos += (sizeof(uint32_t) + sizeof(uint32_t));
+        // update the header
+        m_Header.m_Size = JustCause3::ALIGN_TO_BOUNDARY(header_size, 16);
+
+        temp_buffer.resize(pos + m_Header.m_Size + data_size);
+
+        // write the header
+        std::memcpy(temp_buffer.data(), &m_Header, sizeof(m_Header));
+
+        // update all entries
+        bool _has_wrote_entry = false;
+        uint32_t current_data_offset = sizeof(JustCause3::StreamArchive::SARCHeader) + m_Header.m_Size;
+        for (auto& _entry : m_Files) {
+            const bool _is_the_file = _entry.m_Filename == filename;
+            if (!_has_wrote_entry && _is_the_file) {
+                _has_wrote_entry = true;
             }
 
-            auto last_entry = m_Files.back();
+            auto data_offset = _entry.m_Offset != 0 ? current_data_offset : 0;
 
-            // generate the entry info
-            StreamArchiveEntry_t entry;
-            entry.m_Filename = filename;
-            entry.m_Offset = (last_entry.m_Offset + last_entry.m_Size); // TODO: what if the last entry is 0 offset???
-            entry.m_Size = buffer.size();
-
-            // calcaulte the aligned length
+            // calculate the aligned length for the entry filename
             uint32_t alignment = 0;
-            auto length = calc_string_length(entry.m_Filename, &alignment);
+            auto length = calc_string_length(_entry.m_Filename, &alignment);
 
-            // insert the data info
-            pos = sarc_insert(&m_SARCBytes, pos, length);
-            pos = sarc_insert_string(&m_SARCBytes, pos, entry.m_Filename, alignment);
-            pos = sarc_insert(&m_SARCBytes, pos, entry.m_Offset);
-            pos = sarc_insert(&m_SARCBytes, pos, entry.m_Size);
+            // insert the entry header
+            pos = sarc_copy(&temp_buffer, pos, length);
+            pos = sarc_copy_aligned_string(&temp_buffer, pos, _entry.m_Filename, alignment);
+            pos = sarc_copy(&temp_buffer, pos, data_offset);
+            pos = sarc_copy(&temp_buffer, pos, _entry.m_Size);
 
-            // insert the buffer
-            m_SARCBytes.insert(m_SARCBytes.begin() + entry.m_Offset, buffer.begin(), buffer.end());
+            // copy the buffer data
+            if (data_offset != 0) {
+                if (!_is_the_file) {
+                    std::memcpy(&temp_buffer[data_offset], &m_SARCBytes[_entry.m_Offset], _entry.m_Size);
+                }
+                else {
+                    std::memcpy(&temp_buffer[data_offset], buffer.data(), buffer.size());
+                }
 
-            // TODO: before each buffer, we should do 4 byte alignment!
+                // update the data offset
+                _entry.m_Offset = data_offset;
+            }
 
-            m_Files.emplace_back(entry);
+            auto next_offset = current_data_offset + (data_offset != 0 ? _entry.m_Size : 0);
+            current_data_offset = JustCause3::ALIGN_TO_BOUNDARY(next_offset);
         }
 
-        auto total_size = m_SARCBytes.size();
-        auto final_alignment = JustCause3::DISTANCE_TO_BOUNDARY(total_size, 4);
-        if (final_alignment > 0) {
-            m_SARCBytes.resize(total_size + final_alignment);
-        }
+        m_SARCBytes = std::move(temp_buffer);
 
-#if 1
+#if 0
         std::ofstream out("C:/users/aaron/desktop/packing-test.bin", std::ios::binary);
         out.write((char *)m_SARCBytes.data(), m_SARCBytes.size());
         out.close();
@@ -180,20 +141,17 @@ struct StreamArchive_t
     }
 
     template <typename T>
-    size_t sarc_insert(FileBuffer* buffer, uint64_t offset, T& val) {
-        buffer->insert(buffer->begin() + offset, (uint8_t *)&val, (uint8_t *)&val + sizeof(T));
+    size_t sarc_copy(FileBuffer* buffer, uint64_t offset, T& val) {
+        std::memcpy(buffer->data() + offset, (char *)&val, sizeof(T));
         return offset + sizeof(T);
     }
 
-    // insert string into buffer with padding
-    size_t sarc_insert_string(FileBuffer* buffer, uint64_t offset, const std::string& val, uint32_t alignment) {
-        static uint8_t empty = 0x0;
+    size_t sarc_copy_aligned_string(FileBuffer* buffer, uint64_t offset, const std::string& val, uint32_t alignment) {
+        static uint8_t empty = 0;
 
-        buffer->insert(buffer->begin() + offset, val.begin(), val.end());
-        offset += val.length();
-        buffer->insert(buffer->begin() + offset, alignment, empty);
-
-        return offset + (sizeof(uint8_t) * alignment);
+        std::memcpy(buffer->data() + offset, val.data(), val.length());
+        std::memcpy(buffer->data() + offset + val.length(), &empty, alignment);
+        return offset + val.length() + (sizeof(uint8_t) * alignment);
     }
 
     // calculate string length with alignment
