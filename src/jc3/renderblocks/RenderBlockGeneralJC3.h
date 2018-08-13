@@ -125,7 +125,7 @@ public:
 #if 0
         // create the sampler states
         {
-            SamplerStateCreationParams_t params;
+            SamplerStateParams_t params;
             params.m_AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
             params.m_AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
             params.m_AddressW = D3D11_TEXTURE_ADDRESS_WRAP;

@@ -114,7 +114,7 @@ public:
 
         // create the sampler states
         {
-            SamplerStateCreationParams_t params;
+            SamplerStateParams_t params;
             params.m_AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
             params.m_AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
             params.m_AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -194,6 +194,15 @@ public:
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts);
 
         context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+
+        // toggle alpha blending
+        if ((m_Block.attributes.flags >> 2) & 1) {
+            //context->m_Renderer->SetAlphaEnabled(true);
+            //context->m_Renderer->SetBlendingEnabled(false);
+        }
+        else {
+            //context->m_Renderer->SetAlphaEnabled(false);
+        }
     }
 
     virtual void Draw(RenderContext_t* context) override final

@@ -7,8 +7,6 @@
 #include <shlobj.h>
 #include <shellapi.h>
 
-#include <jc3/formats/AvalancheArchive.h>
-
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
 {

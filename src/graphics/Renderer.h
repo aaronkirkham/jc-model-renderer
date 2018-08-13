@@ -111,6 +111,7 @@ public:
 
     void SetBlendingEnabled(bool state);
     void SetDepthEnabled(bool state);
+    void SetAlphaEnabled(bool state);
 
     void SetFillMode(D3D11_FILL_MODE mode);
     void SetCullMode(D3D11_CULL_MODE mode);
@@ -198,7 +199,7 @@ public:
     void DestroyVertexDeclaration(VertexDeclaration_t* declaration);
 
     // samplers
-    SamplerState_t* CreateSamplerState(const SamplerStateCreationParams_t& params, const char* debugName = nullptr);
+    SamplerState_t* CreateSamplerState(const SamplerStateParams_t& params, const char* debugName = nullptr);
     void DestroySamplerState(SamplerState_t* sampler);
 
     ID3D11Device* GetDevice() { return m_Device; }

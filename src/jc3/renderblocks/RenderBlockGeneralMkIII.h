@@ -190,10 +190,10 @@ public:
         }
         else {
 #endif
-            if (m_Block.attributes.flags & 0x20) {
-                __debugbreak();
-            }
-            else {
+            //if (m_Block.attributes.flags & 0x20) {
+            //    __debugbreak();
+            //}
+            //else {
                 // create the element input desc
                 D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
                     { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
@@ -203,7 +203,7 @@ public:
 
                 // create the vertex declaration
                 m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockGeneralMkIII (packed)");
-            }
+            //}
         //}
 
         // create the constant buffers
@@ -227,7 +227,7 @@ public:
 
         // create the sampler states
         {
-            // SamplerStateCreationParams_t params;
+            // SamplerStateParams_t params;
             // m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockGeneralMkIII");
         }
     }
@@ -337,7 +337,11 @@ public:
         }
         // does the block have packed vertices?
         else if (m_Block.attributes.flags & 0x20) {
-            __debugbreak();
+            //__debugbreak();
+
+            // Test model: main_character parachute!
+
+            IRenderBlock::Draw(context);
         }
         else {
             IRenderBlock::Draw(context);

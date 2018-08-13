@@ -186,7 +186,7 @@ bool Renderer::Render()
 
 void Renderer::SetupRenderStates()
 {
-    //CreateBlendState();
+    CreateBlendState();
     CreateRasterizerState();
 }
 
@@ -230,6 +230,14 @@ void Renderer::SetBlendingEnabled(bool state)
 void Renderer::SetDepthEnabled(bool state)
 {
     m_DeviceContext->OMSetDepthStencilState(state ? m_DepthStencilEnabledState : m_DepthStencilDisabledState, 1);
+}
+
+void Renderer::SetAlphaEnabled(bool state)
+{
+    if (m_RenderContext.m_AlphaEnabled != state) {
+        m_RenderContext.m_AlphaEnabled = state;
+        m_RenderContext.m_BlendIsDirty = true;
+    }
 }
 
 void Renderer::SetFillMode(D3D11_FILL_MODE mode)
@@ -464,25 +472,31 @@ void Renderer::CreateDepthStencil(const glm::vec2& size)
 
 void Renderer::CreateBlendState()
 {
-    D3D11_BLEND_DESC blendDesc;
-    ZeroMemory(&blendDesc, sizeof(blendDesc));
+    if (m_RenderContext.m_BlendIsDirty) {
+        SAFE_RELEASE(m_BlendState);
 
-    blendDesc.AlphaToCoverageEnable = false;
-    blendDesc.RenderTarget[0].BlendEnable = TRUE;
-    blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-    blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-    blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-    blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-    blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+        D3D11_BLEND_DESC blendDesc;
+        ZeroMemory(&blendDesc, sizeof(blendDesc));
 
-    auto result = m_Device->CreateBlendState(&blendDesc, &m_BlendState);
-    assert(SUCCEEDED(result));
+        blendDesc.AlphaToCoverageEnable = false;
+        blendDesc.RenderTarget[0].BlendEnable = m_RenderContext.m_BlendEnabled;
+        blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+        blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+        blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+        blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+        blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+        blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+        blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+        auto result = m_Device->CreateBlendState(&blendDesc, &m_BlendState);
+        assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-    D3D_SET_OBJECT_NAME_A(m_BlendState, "Renderer::CreateBlendState");
+        D3D_SET_OBJECT_NAME_A(m_BlendState, "Renderer::CreateBlendState");
 #endif
+
+        m_RenderContext.m_BlendIsDirty = false;
+    }
 }
 
 void Renderer::CreateRasterizerState()
@@ -676,7 +690,7 @@ void Renderer::DestroyVertexDeclaration(VertexDeclaration_t* declaration)
     }
 }
 
-SamplerState_t* Renderer::CreateSamplerState(const SamplerStateCreationParams_t& params, const char* debugName)
+SamplerState_t* Renderer::CreateSamplerState(const SamplerStateParams_t& params, const char* debugName)
 {
     auto sampler = new SamplerState_t;
 

@@ -13,7 +13,9 @@ struct RenderContext_t
     D3D11_FILL_MODE m_FillMode = D3D11_FILL_SOLID;
     D3D11_CULL_MODE m_CullMode = D3D11_CULL_BACK;
     bool m_RasterIsDirty = true;
+    bool m_BlendIsDirty = true;
     bool m_BlendEnabled = true;
+    bool m_AlphaEnabled = true;
     D3D11_BLEND m_BlendMode;
     glm::mat4 m_viewProjectionMatrix;
 };
@@ -65,7 +67,7 @@ struct SamplerState_t
     ID3D11SamplerState* m_SamplerState = nullptr;
 };
 
-struct SamplerStateCreationParams_t
+struct SamplerStateParams_t
 {
     D3D11_TEXTURE_ADDRESS_MODE m_AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
     D3D11_TEXTURE_ADDRESS_MODE m_AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
