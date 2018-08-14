@@ -76,6 +76,12 @@ public:
 
     virtual const char* GetTypeName() override final { return "RenderBlockCharacter"; }
 
+    virtual bool IsOpaque() override final
+    {
+        const auto flags = m_Block.attributes.flags;
+        return (!(flags & 0x3000) || (flags & 0x3000) == 0x2000) && !(flags & 8);
+    }
+
     virtual void Create() override final
     {
         if (m_Stride == 0x18) {
@@ -193,15 +199,35 @@ public:
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbInstanceConsts);
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts);
 
+        // set the culling mode
         context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 
         // toggle alpha blending
         if ((m_Block.attributes.flags >> 2) & 1) {
             //context->m_Renderer->SetAlphaEnabled(true);
-            //context->m_Renderer->SetBlendingEnabled(false);
+            context->m_Renderer->SetBlendingEnabled(false);
         }
         else {
             //context->m_Renderer->SetAlphaEnabled(false);
+        }
+
+        // setup blending
+        auto _flags = (m_Block.attributes.flags & 0x3000);
+        if (_flags == 0x1000) {
+            context->m_Renderer->SetBlendingEnabled(true);
+            context->m_Renderer->SetBlendingFunc(D3D11_BLEND_ONE, D3D11_BLEND_ONE, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE);
+        }
+        else if (_flags == 0x2000) {
+            if ((m_Block.attributes.flags >> 3) & 1) {
+                context->m_Renderer->SetBlendingEnabled(true);
+                context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE);
+            }
+            else {
+                context->m_Renderer->SetBlendingEnabled(false);
+            }
+        }
+        else {
+            context->m_Renderer->SetBlendingEnabled(false);
         }
     }
 

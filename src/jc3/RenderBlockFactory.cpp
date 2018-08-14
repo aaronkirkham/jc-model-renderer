@@ -5,6 +5,7 @@
 #include <jc3/renderblocks/RenderBlockBuildingJC3.h>
 #include <jc3/renderblocks/RenderBlockGeneralMkIII.h>
 #include <jc3/renderblocks/RenderBlockCarPaintMM.h>
+#include <jc3/renderblocks/RenderBlockWindow.h>
 
 IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type)
 {
@@ -15,6 +16,7 @@ IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type)
     case RB_BUILDINGJC3: return new RenderBlockBuildingJC3;
     case RB_GENERALMKIII: return new RenderBlockGeneralMkIII;
     case RB_CARPAINTMM: return new RenderBlockCarPaintMM;
+    case RB_WINDOW: return new RenderBlockWindow;
     }
     
     return nullptr;

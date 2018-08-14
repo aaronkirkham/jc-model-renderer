@@ -147,6 +147,11 @@ end:
         FileLoader::Get()->RunFileBatches();
     }
 
+    // sort by opaque items, so that transparent blocks will be under them
+    std::sort(m_RenderBlocks.begin(), m_RenderBlocks.end(), [](IRenderBlock* lhs, IRenderBlock* rhs) {
+        return lhs->IsOpaque() > rhs->IsOpaque();
+    });
+
     return parse_success;
 }
 

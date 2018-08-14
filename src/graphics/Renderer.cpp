@@ -125,7 +125,6 @@ void Renderer::Shutdown()
     DestroyBuffer(m_GlobalConstants[1]);
 
     SAFE_RELEASE(m_BlendState);
-    SAFE_RELEASE(m_SamplerState);
     SAFE_RELEASE(m_RasterizerState);
     SAFE_RELEASE(m_SwapChain);
     SAFE_RELEASE(m_DeviceContext);
@@ -224,7 +223,46 @@ void Renderer::DrawIndexed(uint32_t start_index, uint32_t index_count, IndexBuff
 
 void Renderer::SetBlendingEnabled(bool state)
 {
-    m_DeviceContext->OMSetBlendState(state ? m_BlendState : nullptr, nullptr, 0xFFFFFFFF);
+    if (m_RenderContext.m_BlendEnabled != state) {
+        m_RenderContext.m_BlendEnabled = state;
+        m_RenderContext.m_BlendIsDirty = true;
+    }
+}
+
+void Renderer::SetBlendingFunc(D3D11_BLEND source_colour, D3D11_BLEND source_alpha, D3D11_BLEND dest_colour, D3D11_BLEND dest_alpha)
+{
+    if (m_RenderContext.m_BlendSourceColour != source_colour) {
+        m_RenderContext.m_BlendSourceColour = source_colour;
+        m_RenderContext.m_BlendIsDirty = true;
+    }
+
+    if (m_RenderContext.m_BlendSourceAlpha != source_alpha) {
+        m_RenderContext.m_BlendSourceAlpha = source_alpha;
+        m_RenderContext.m_BlendIsDirty = true;
+    }
+
+    if (m_RenderContext.m_BlendDestColour != dest_colour) {
+        m_RenderContext.m_BlendDestColour = dest_colour;
+        m_RenderContext.m_BlendIsDirty = true;
+    }
+
+    if (m_RenderContext.m_BlendDestAlpha != dest_alpha) {
+        m_RenderContext.m_BlendDestAlpha = dest_alpha;
+        m_RenderContext.m_BlendIsDirty = true;
+    }
+}
+
+void Renderer::SetBlendingEq(D3D11_BLEND_OP colour, D3D11_BLEND_OP alpha)
+{
+    if (m_RenderContext.m_BlendColourEq != colour) {
+        m_RenderContext.m_BlendColourEq = colour;
+        m_RenderContext.m_BlendIsDirty = true;
+    }
+
+    if (m_RenderContext.m_BlendAlphaEq != alpha) {
+        m_RenderContext.m_BlendAlphaEq = alpha;
+        m_RenderContext.m_BlendIsDirty = true;
+    }
 }
 
 void Renderer::SetDepthEnabled(bool state)
@@ -480,12 +518,12 @@ void Renderer::CreateBlendState()
 
         blendDesc.AlphaToCoverageEnable = false;
         blendDesc.RenderTarget[0].BlendEnable = m_RenderContext.m_BlendEnabled;
-        blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-        blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-        blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-        blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-        blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-        blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+        blendDesc.RenderTarget[0].SrcBlend = m_RenderContext.m_BlendSourceColour;
+        blendDesc.RenderTarget[0].DestBlend = m_RenderContext.m_BlendDestColour;
+        blendDesc.RenderTarget[0].BlendOp = m_RenderContext.m_BlendColourEq;
+        blendDesc.RenderTarget[0].SrcBlendAlpha = m_RenderContext.m_BlendSourceAlpha;
+        blendDesc.RenderTarget[0].DestBlendAlpha = m_RenderContext.m_BlendDestAlpha;
+        blendDesc.RenderTarget[0].BlendOpAlpha = m_RenderContext.m_BlendAlphaEq;
         blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
         auto result = m_Device->CreateBlendState(&blendDesc, &m_BlendState);
@@ -494,6 +532,8 @@ void Renderer::CreateBlendState()
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
         D3D_SET_OBJECT_NAME_A(m_BlendState, "Renderer::CreateBlendState");
 #endif
+
+        m_DeviceContext->OMSetBlendState(m_BlendState, nullptr, 0xFFFFFFFF);
 
         m_RenderContext.m_BlendIsDirty = false;
     }

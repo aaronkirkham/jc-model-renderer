@@ -78,7 +78,7 @@ public:
     RuntimeContainer(uint32_t name_hash, const fs::path& filename = "");
     virtual ~RuntimeContainer();
 
-    static void Load(const fs::path& filename);
+    static void Load(const fs::path& filename, std::function<void(std::shared_ptr<RuntimeContainer>)> callback);
 
     virtual std::string GetFactoryKey() const { return m_Filename.string(); }
 

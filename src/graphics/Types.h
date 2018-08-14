@@ -16,7 +16,12 @@ struct RenderContext_t
     bool m_BlendIsDirty = true;
     bool m_BlendEnabled = true;
     bool m_AlphaEnabled = true;
-    D3D11_BLEND m_BlendMode;
+    D3D11_BLEND m_BlendSourceColour = D3D11_BLEND_SRC_ALPHA;
+    D3D11_BLEND m_BlendSourceAlpha = D3D11_BLEND_ONE;
+    D3D11_BLEND m_BlendDestColour = D3D11_BLEND_INV_SRC_ALPHA;
+    D3D11_BLEND m_BlendDestAlpha = D3D11_BLEND_ZERO;
+    D3D11_BLEND_OP m_BlendColourEq = D3D11_BLEND_OP_ADD;
+    D3D11_BLEND_OP m_BlendAlphaEq = D3D11_BLEND_OP_ADD;
     glm::mat4 m_viewProjectionMatrix;
 };
 

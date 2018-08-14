@@ -250,19 +250,22 @@ void RuntimeContainer::ContextMenuUI(const fs::path& filename)
 
         // load the runtime container
         if (!rc) {
-            Load(filename);
-            rc = get(filename.string());
+            RuntimeContainer::Load(filename, [&, filename](std::shared_ptr<RuntimeContainer> rc) {
+                RenderBlockModel::LoadFromRuntimeContainer(filename, rc);
+            });
         }
-
-        RenderBlockModel::LoadFromRuntimeContainer(filename, rc);
+        else {
+            RenderBlockModel::LoadFromRuntimeContainer(filename, rc);
+        }
     }
 }
 
-void RuntimeContainer::Load(const fs::path& filename)
+void RuntimeContainer::Load(const fs::path& filename, std::function<void(std::shared_ptr<RuntimeContainer>)> callback)
 {
-    FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
+    FileLoader::Get()->ReadFile(filename, [&, filename, callback](bool success, FileBuffer data) {
         if (success) {
-            FileLoader::Get()->ParseRuntimeContainer(filename, data);
+            auto result = FileLoader::Get()->ParseRuntimeContainer(filename, data);
+            callback(result);
         }
         else {
             DEBUG_LOG("RuntimeContainer::Load - Failed to read runtime container \"" << filename << "\".");

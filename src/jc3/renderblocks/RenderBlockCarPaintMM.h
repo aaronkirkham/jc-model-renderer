@@ -89,6 +89,7 @@ private:
     {
         glm::vec4 m_DecalIndex = glm::vec4(0);
         float m_DirtAmount = 0.0f;
+        char _pad[16];
     } m_cbDynamicObjectParams;
 
     JustCause3::RenderBlocks::CarPaintMM m_Block;
@@ -115,6 +116,11 @@ public:
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockCarPaintMM"; }
+
+    virtual bool IsOpaque() override final
+    {
+        return ~(LOWORD(m_Block.attributes.flags) >> 8) & 1;
+    }
 
     virtual void Create() override final
     {

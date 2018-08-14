@@ -60,7 +60,6 @@ private:
     ID3D11DepthStencilState* m_DepthStencilEnabledState = nullptr;
     ID3D11DepthStencilState* m_DepthStencilDisabledState = nullptr;
     ID3D11DepthStencilView* m_DepthStencilView = nullptr;
-    ID3D11SamplerState* m_SamplerState = nullptr;
     ID3D11BlendState* m_BlendState = nullptr;
 
     std::array<ConstantBuffer_t*, 2> m_GlobalConstants = { nullptr };
@@ -80,7 +79,6 @@ private:
     void CreateDepthStencil(const glm::vec2& size);
     void CreateBlendState();
     void CreateRasterizerState();
-    //void CreateSamplerState();
 
     void DestroyRenderTarget();
     void DestroyDepthStencil();
@@ -110,6 +108,9 @@ public:
     void DrawIndexed(uint32_t start_index, uint32_t index_count, IndexBuffer_t* buffer);
 
     void SetBlendingEnabled(bool state);
+    void SetBlendingFunc(D3D11_BLEND source_colour, D3D11_BLEND source_alpha, D3D11_BLEND dest_colour, D3D11_BLEND dest_alpha);
+    void SetBlendingEq(D3D11_BLEND_OP colour, D3D11_BLEND_OP alpha);
+
     void SetDepthEnabled(bool state);
     void SetAlphaEnabled(bool state);
 

@@ -163,6 +163,11 @@ public:
 
     virtual const char* GetTypeName() override final { return "RenderBlockGeneralMkIII"; }
 
+    virtual bool IsOpaque() override final
+    {
+        return ~(m_Block.attributes.flags >> 1) & 1;
+    }
+
     virtual void Create() override final
     {
         // load shaders
@@ -314,6 +319,7 @@ public:
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbMaterialConsts);
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts2);
 
+        // set the culling mode
         context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 
         // set the 2nd vertex buffers

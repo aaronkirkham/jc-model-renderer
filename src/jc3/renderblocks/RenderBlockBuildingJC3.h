@@ -36,6 +36,11 @@ public:
 
     virtual const char* GetTypeName() override final { return "RenderBlockBuildingJC3"; }
 
+    virtual bool IsOpaque() override final
+    {
+        return ~(m_Block.attributes.flags >> 1) & 1;
+    }
+
     virtual void Create() override final
     {
 #if 0

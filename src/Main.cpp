@@ -132,10 +132,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 fs::path filename = "editor/entities/gameobjects/main_character.ee";
                 FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                     if (success) {
-                        AvalancheArchive::make(filename, data);
+                        std::thread([&, filename, data] {
+                            auto archive = AvalancheArchive::make(filename, data);
 
-                        fs::path rbm = "models/jc_characters/main_characters/rico/rico_body_lod1.rbm";
-                        RenderBlockModel::Load(rbm);
+                            while (!archive->GetStreamArchive())
+                                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+                            fs::path rbm = "models/jc_characters/main_characters/rico/rico_body_lod1.rbm";
+                            RenderBlockModel::Load(rbm);
+                        }).detach();
                     }
                 });
             }
@@ -143,11 +148,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 fs::path filename = "editor/entities/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13.ee";
                 FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                     if (success) {
-                        AvalancheArchive::make(filename, data);
-                        // AvalancheArchive::SaveFileCallback(filename);
+                        std::thread([&, filename, data] {
+                            auto archive = AvalancheArchive::make(filename, data);
 
-                        fs::path rbm = "models/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13_base_body_lod1.rbm";
-                        RenderBlockModel::Load(rbm);
+                            while (!archive->GetStreamArchive())
+                                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+                            fs::path rbm = "models/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13_base_body_lod1.rbm";
+                            RenderBlockModel::Load(rbm);
+                        }).detach();
                     }
                 });
             }
@@ -166,17 +175,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 fs::path filename = "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/v4602_plane_urga_fighterbomber_debug.ee";
                 FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                     if (success) {
-                        AvalancheArchive::make(filename, data);
 
+                        std::thread([&, filename, data] {
+                            auto archive = AvalancheArchive::make(filename, data);
 
-                        fs::path epe = "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/v4602_plane_urga_fighterbomber_debug.epe";
-                        auto rc = RuntimeContainer::get(epe.string());
-                        if (!rc) {
-                            RuntimeContainer::Load(epe);
-                            rc = RuntimeContainer::get(epe.string());
-                        }
+                            while (!archive->GetStreamArchive())
+                                std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-                        RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
+                            fs::path epe = "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/v4602_plane_urga_fighterbomber_debug.epe";
+                            auto rc = RuntimeContainer::get(epe.string());
+
+                            if (rc) RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
+                            else {
+                                RuntimeContainer::Load(epe, [&, epe](std::shared_ptr<RuntimeContainer> rc) {
+                                    RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
+                                });
+                            }
+ 
+                        }).detach();
                     }
                 });
             }

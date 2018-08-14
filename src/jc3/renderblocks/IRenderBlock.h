@@ -59,6 +59,8 @@ public:
     virtual const std::vector<uint16_t>& GetIndices() { return m_Indices; }
     virtual const std::vector<float>& GetUVs() { return m_UVs; }
 
+    virtual bool IsOpaque() = 0;
+
     virtual void Create() = 0;
     virtual void Read(std::istream& file) = 0;
 

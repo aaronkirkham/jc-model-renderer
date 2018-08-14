@@ -248,14 +248,14 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback, u
 
     // check any loaded archives for the file
     const auto&[archive, entry] = GetStreamArchiveFromFile(filename);
-    if (archive && entry.m_Offset != 0) {
+    if (archive && entry.m_Offset != 0 && entry.m_Offset != -1) {
         auto buffer = archive->GetEntryBuffer(entry);
 
         UI::Get()->PopStatusText(status_text_id);
         return callback(true, std::move(buffer));
     }
 #ifdef DEBUG
-    else if (archive && entry.m_Offset == 0) {
+    else if (archive && (entry.m_Offset == 0 || entry.m_Offset == -1)) {
         DEBUG_LOG("NOTE: \"" << filename.filename() << "\" exists in archive but has been patched. Reading the patched version instead.");
     }
 #endif

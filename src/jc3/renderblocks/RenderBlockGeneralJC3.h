@@ -90,6 +90,11 @@ public:
 
     virtual const char* GetTypeName() override final { return "RenderBlockGeneralJC3"; }
 
+    virtual bool IsOpaque() override final
+    {
+        return ~(m_Block.attributes.flags >> 1) & 1;
+    }
+
     virtual void Create() override final
     {
         // load shaders

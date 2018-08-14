@@ -66,6 +66,7 @@ public:
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockCharacterSkin"; }
+    virtual bool IsOpaque() override final { return true; }
 
     virtual void Create() override final
     {
@@ -180,7 +181,17 @@ public:
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbInstanceConsts);
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts);
 
+        // set the culling mode
         context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+
+        // setup blending
+        if ((m_Block.attributes.flags >> 5) & 1) {
+            context->m_Renderer->SetBlendingEnabled(false);
+            context->m_Renderer->SetAlphaEnabled(false);
+        }
+
+        context->m_Renderer->SetBlendingEnabled(true);
+        context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE);
     }
 
     virtual void Draw(RenderContext_t* context) override final

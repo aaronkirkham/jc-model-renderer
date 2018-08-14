@@ -372,7 +372,7 @@ void UI::RenderFileTreeView()
                                 if (!block_visible) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1);
 
                                 if (ImGui::BeginPopupContextItem()) {
-                                    if (ImGui::Selectable(block_visible ? ICON_FA_STOP "  Disable Render Block" : ICON_FA_PLAY "  Enable Render Block")) {
+                                    if (ImGui::Selectable(block_visible ? ICON_FA_STOP "  Hide Render Block" : ICON_FA_PLAY "  Show Render Block")) {
                                         render_block->SetVisible(!block_visible);
                                     }
 
