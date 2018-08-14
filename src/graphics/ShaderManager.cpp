@@ -21,31 +21,29 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
         return it->second;
     }
 
-    std::stringstream file;
-    file << "../assets/shaders/" << name << ".vb";
+    fs::path file = "../assets/shaders/" + name + ".vb";
+    const auto file_size = fs::file_size(file);
 
     // read
-    std::ifstream stream(file.str(), std::ios::binary | std::ios::ate);
+    std::ifstream stream(file, std::ios::binary);
     if (stream.fail()) {
-        DEBUG_LOG("ShaderManager::GetVertexShader - couldn't open \"" << file.str() << "\".");
+        DEBUG_LOG("ShaderManager::GetVertexShader - couldn't open \"" << file << "\".");
         Window::Get()->ShowMessageBox("Couldn't open shader.", MB_ICONERROR | MB_OK);
         return nullptr;
     }
 
     // resize
-    auto size = stream.tellg();
     FileBuffer data;
-    data.resize(size);
+    data.resize(file_size);
 
     // read
-    stream.seekg(0, std::ios::beg);
-    stream.read((char *)data.data(), size);
+    stream.read((char *)data.data(), file_size);
     stream.close();
 
     // create the shader instance
     auto shader = std::make_shared<VertexShader_t>();
     shader->m_Code = std::move(data);
-    shader->m_Size = size;
+    shader->m_Size = file_size;
 
     auto result = Renderer::Get()->GetDevice()->CreateVertexShader(shader->m_Code.data(), shader->m_Size, nullptr, &shader->m_Shader);
     assert(SUCCEEDED(result));
@@ -73,31 +71,29 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
         return it->second;
     }
 
-    std::stringstream file;
-    file << "../assets/shaders/" << name << ".fb";
+    fs::path file = "../assets/shaders/" + name + ".fb";
+    const auto file_size = fs::file_size(file);
 
     // read
-    std::ifstream stream(file.str(), std::ios::binary | std::ios::ate);
+    std::ifstream stream(file, std::ios::binary);
     if (stream.fail()) {
-        DEBUG_LOG("ShaderManager::GetPixelShader - couldn't open \"" << file.str() << "\".");
+        DEBUG_LOG("ShaderManager::GetPixelShader - couldn't open \"" << file << "\".");
         Window::Get()->ShowMessageBox("Couldn't open shader.", MB_ICONERROR | MB_OK);
         return nullptr;
     }
 
     // resize
-    auto size = stream.tellg();
     FileBuffer data;
-    data.resize(size);
+    data.resize(file_size);
 
     // read
-    stream.seekg(0, std::ios::beg);
-    stream.read((char *)data.data(), size);
+    stream.read((char *)data.data(), file_size);
     stream.close();
 
     // create the shader instance
     auto shader = std::make_shared<PixelShader_t>();
     shader->m_Code = std::move(data);
-    shader->m_Size = size;
+    shader->m_Size = file_size;
 
     auto result = Renderer::Get()->GetDevice()->CreatePixelShader(shader->m_Code.data(), shader->m_Size, nullptr, &shader->m_Shader);
     assert(SUCCEEDED(result));

@@ -98,20 +98,6 @@ public:
 
         //
         memset(&m_cbMaterialConsts._unknown, 0, sizeof(m_cbMaterialConsts._unknown));
-
-#if 0
-        // create the sampler states
-        {
-            SamplerStateParams_t params;
-            params.m_AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.m_AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.m_AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.m_MinMip = 12.0f;
-            params.m_MaxMip = 13.0f;
-
-            m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCharacterSkin");
-        }
-#endif
     }
 
     virtual void Read(std::istream& stream) override final

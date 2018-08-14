@@ -44,6 +44,7 @@ struct FragmentGlobalConstants
     glm::vec4 _unknown4[63];                // 32 - 95
 };
 
+class IRenderBlock;
 class Renderer : public Singleton<Renderer>
 {
 private:
@@ -67,6 +68,9 @@ private:
     FragmentGlobalConstants m_cbFragmentGlobalConsts;
 
     glm::vec4 m_ClearColour = g_DefaultClearColour;
+
+    std::recursive_mutex m_RenderListMutex;
+    std::vector<IRenderBlock*> m_RenderList;
 
 #ifdef DEBUG
     ID3D11Debug* m_DeviceDebugger = nullptr;
@@ -200,8 +204,12 @@ public:
     void DestroyVertexDeclaration(VertexDeclaration_t* declaration);
 
     // samplers
-    SamplerState_t* CreateSamplerState(const SamplerStateParams_t& params, const char* debugName = nullptr);
+    SamplerState_t* CreateSamplerState(const D3D11_SAMPLER_DESC& params, const char* debugName = nullptr);
     void DestroySamplerState(SamplerState_t* sampler);
+
+    // render list
+    void AddToRenderList(const std::vector<IRenderBlock*>& renderblocks);
+    void RemoveFromRenderList(const std::vector<IRenderBlock*>& renderblocks);
 
     ID3D11Device* GetDevice() { return m_Device; }
     ID3D11DeviceContext* GetDeviceContext() { return m_DeviceContext; }

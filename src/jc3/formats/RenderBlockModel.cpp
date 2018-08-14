@@ -44,6 +44,10 @@ RenderBlockModel::~RenderBlockModel()
 {
     DEBUG_LOG("RenderBlockModel::~RenderBlockModel");
 
+    // remove from renderlist
+    Renderer::Get()->RemoveFromRenderList(m_RenderBlocks);
+
+    // delete the render blocks
     for (auto& render_block : m_RenderBlocks) {
         SAFE_DELETE(render_block);
     }
@@ -147,10 +151,8 @@ end:
         FileLoader::Get()->RunFileBatches();
     }
 
-    // sort by opaque items, so that transparent blocks will be under them
-    std::sort(m_RenderBlocks.begin(), m_RenderBlocks.end(), [](IRenderBlock* lhs, IRenderBlock* rhs) {
-        return lhs->IsOpaque() > rhs->IsOpaque();
-    });
+    // add to renderlist
+    Renderer::Get()->AddToRenderList(m_RenderBlocks);
 
     return parse_success;
 }
@@ -158,16 +160,7 @@ end:
 void RenderBlockModel::Draw(RenderContext_t* context)
 {
     auto largest_scale = 0.0f;
-
-    // draw all render blocks
     for (auto& render_block : m_RenderBlocks) {
-        render_block->Setup(context);
-        render_block->Draw(context);
-
-        // reset
-        context->m_Renderer->SetDefaultRenderStates();
-
-        //
         if (render_block->IsVisible()) {
             const auto scale = render_block->GetScale();
 

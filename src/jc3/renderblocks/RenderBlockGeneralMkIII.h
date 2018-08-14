@@ -229,12 +229,6 @@ public:
 
         // reset material constants
         memset(&m_cbMaterialConsts, 0, sizeof(m_cbMaterialConsts));
-
-        // create the sampler states
-        {
-            // SamplerStateParams_t params;
-            // m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockGeneralMkIII");
-        }
     }
 
     virtual void Read(std::istream& stream) override final

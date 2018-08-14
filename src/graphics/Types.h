@@ -72,16 +72,6 @@ struct SamplerState_t
     ID3D11SamplerState* m_SamplerState = nullptr;
 };
 
-struct SamplerStateParams_t
-{
-    D3D11_TEXTURE_ADDRESS_MODE m_AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-    D3D11_TEXTURE_ADDRESS_MODE m_AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-    D3D11_TEXTURE_ADDRESS_MODE m_AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-    float m_MinMip = 0.0f;
-    float m_MaxMip = 1.0f;
-    D3D11_COMPARISON_FUNC m_ZFunc = D3D11_COMPARISON_NEVER;
-};
-
 struct BoundingBox
 {
     glm::vec3 m_Min;

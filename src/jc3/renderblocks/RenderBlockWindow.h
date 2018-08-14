@@ -5,9 +5,24 @@
 #pragma pack(push, 1)
 struct WindowAttributes
 {
-    char pad[0x24];
+    union {
+        struct {
+            float SpecGloss;
+            float SpecFresnel;
+            float DiffuseRougness;
+            float TintPower;
+            float MinAlpha;
+            float UVScale;
+        };
+
+        float data[6];
+    };
+
+    glm::vec3 _unknown;
     uint32_t flags;
 };
+
+static_assert(sizeof(WindowAttributes) == 0x28, "WindowAttributes alignment is wrong!");
 
 namespace JustCause3::RenderBlocks
 {
@@ -39,12 +54,14 @@ private:
         glm::vec2 unused_;                  // [unused]
         float DamageMaskWeight;             // [unused]
         float DamageRampWeight;             // [unused]
-        float Alpha;
+        float Alpha = 1.0f;
     } m_cbMaterialConsts;
 
     JustCause3::RenderBlocks::Window m_Block;
     ConstantBuffer_t* m_VertexShaderConstants = nullptr;
     ConstantBuffer_t* m_FragmentShaderConstants = nullptr;
+
+    SamplerState_t* _test = nullptr;
 
 public:
     RenderBlockWindow() = default;
@@ -55,7 +72,7 @@ public:
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockWindow"; }
-    virtual bool IsOpaque() override final { return true; }
+    virtual bool IsOpaque() override final { return false; }
 
     virtual void Create() override final
     {
@@ -75,22 +92,27 @@ public:
 
         // create the constant buffers
         m_VertexShaderConstants = Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockWindow InstanceConsts");
-        m_FragmentShaderConstants = Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockWindow MaterialConsts");
+        m_FragmentShaderConstants = Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, 3, "RenderBlockWindow MaterialConsts");
 
         // create the sampler states
         {
-            SamplerStateParams_t params;
-            params.m_AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.m_AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.m_AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.m_MinMip = 0.0f;
-            params.m_MaxMip = 13.0f;
+            D3D11_SAMPLER_DESC params;
+            ZeroMemory(&params, sizeof(params));
+            params.Filter = D3D11_FILTER_ANISOTROPIC;
+            params.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.MipLODBias = 0.0f;
+            params.MaxAnisotropy = 2;
+            params.ComparisonFunc = D3D11_COMPARISON_NEVER;
+            params.MinLOD = 0.0f;
+            params.MaxLOD = 13.0f;
 
             m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockWindow");
-        }
 
-        //
-        memset(&m_cbMaterialConsts, 0, sizeof(m_cbMaterialConsts));
+            params.Filter = D3D11_FILTER_COMPARISON_ANISOTROPIC;
+            _test = Renderer::Get()->CreateSamplerState(params, "RenderBlockWindow _test");
+        }
     }
 
     virtual void Read(std::istream& stream) override final
@@ -134,10 +156,19 @@ public:
             // set vertex shader constants
             m_cbInstanceConsts.World = world;
             m_cbInstanceConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
+
+            // set fragment shaders constants
+            m_cbMaterialConsts.SpecGloss = m_Block.attributes.SpecGloss;
+            m_cbMaterialConsts.SpecFresnel = m_Block.attributes.SpecFresnel;
+            m_cbMaterialConsts.DiffuseRougness = m_Block.attributes.DiffuseRougness;
+            m_cbMaterialConsts.TintPower = m_Block.attributes.TintPower;
+            m_cbMaterialConsts.MinAlpha = m_Block.attributes.MinAlpha;
+            m_cbMaterialConsts.UVScale = m_Block.attributes.UVScale;
         }
 
         // set the sampler state
         context->m_Renderer->SetSamplerState(m_SamplerState, 0);
+        context->m_Renderer->SetSamplerState(_test, 15);
 
         // enable blending
         context->m_Renderer->SetBlendingEnabled(true);
@@ -181,12 +212,12 @@ public:
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 
-        ImGui::SliderFloat("Specular Gloss", &m_cbMaterialConsts.SpecGloss, 0, 1);
-        ImGui::SliderFloat("Specular Fresnel", &m_cbMaterialConsts.SpecFresnel, 0, 1);
-        ImGui::SliderFloat("Diffuse Rougness", &m_cbMaterialConsts.DiffuseRougness, 0, 1);
-        ImGui::SliderFloat("Tint Power", &m_cbMaterialConsts.TintPower, 0, 1);
-        ImGui::SliderFloat("Min Alpha", &m_cbMaterialConsts.MinAlpha, 0, 1);
-        ImGui::SliderFloat("UV Scale", &m_cbMaterialConsts.UVScale, 0, 1);
+        ImGui::SliderFloat("Specular Gloss", &m_Block.attributes.SpecGloss, 0, 1);
+        ImGui::SliderFloat("Specular Fresnel", &m_Block.attributes.SpecFresnel, 0, 1);
+        ImGui::SliderFloat("Diffuse Rougness", &m_Block.attributes.DiffuseRougness, 0, 1);
+        ImGui::SliderFloat("Tint Power", &m_Block.attributes.TintPower, 0, 1);
+        ImGui::SliderFloat("Min Alpha", &m_Block.attributes.MinAlpha, 0, 1);
+        ImGui::SliderFloat("UV Scale", &m_Block.attributes.UVScale, 0, 1);
         ImGui::SliderFloat("Alpha", &m_cbMaterialConsts.Alpha, 0, 1);
     }
 };

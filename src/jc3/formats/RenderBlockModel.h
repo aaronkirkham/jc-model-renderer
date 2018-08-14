@@ -12,12 +12,8 @@ class RenderBlockModel : public Factory<RenderBlockModel>
 {
 private:
     fs::path m_Filename = "";
-
-    std::recursive_mutex m_RenderBlocksMutex;
     std::vector<IRenderBlock*> m_RenderBlocks;
-
     std::shared_ptr<AvalancheArchive> m_ParentArchive;
-
     BoundingBox m_BoundingBox;
 
 public:

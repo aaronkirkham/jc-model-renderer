@@ -4,6 +4,7 @@
 #include <graphics/UI.h>
 #include <graphics/Camera.h>
 #include <graphics/DebugRenderer.h>
+#include <jc3/renderblocks/IRenderBlock.h>
 
 #include <Window.h>
 
@@ -30,6 +31,19 @@ Renderer::Renderer()
 
         ImGui_ImplDX11_CreateDeviceObjects();
         return true;
+    });
+
+    // draw render blocks
+    m_RenderEvents.RenderFrame.connect([this](RenderContext_t* context) {
+        std::lock_guard<decltype(m_RenderListMutex)> _lk{ m_RenderListMutex };
+        for (const auto& render_block : m_RenderList) {
+            // draw the model
+            render_block->Setup(context);
+            render_block->Draw(context);
+
+            // reset render states
+            SetDefaultRenderStates();
+        }
     });
 }
 
@@ -730,14 +744,15 @@ void Renderer::DestroyVertexDeclaration(VertexDeclaration_t* declaration)
     }
 }
 
-SamplerState_t* Renderer::CreateSamplerState(const SamplerStateParams_t& params, const char* debugName)
+SamplerState_t* Renderer::CreateSamplerState(const D3D11_SAMPLER_DESC& params, const char* debugName)
 {
     auto sampler = new SamplerState_t;
 
+#if 0
     D3D11_SAMPLER_DESC samplerDesc;
     ZeroMemory(&samplerDesc, sizeof(D3D11_SAMPLER_DESC));
 
-    samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+    samplerDesc.Filter = params.m_Filter;
     samplerDesc.AddressU = params.m_AddressU;
     samplerDesc.AddressV = params.m_AddressV;
     samplerDesc.AddressW = params.m_AddressW;
@@ -750,8 +765,9 @@ SamplerState_t* Renderer::CreateSamplerState(const SamplerStateParams_t& params,
     samplerDesc.BorderColor[3] = 1.0f;
     samplerDesc.MinLOD = -D3D11_FLOAT32_MAX;
     samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+#endif
 
-    auto result = m_Device->CreateSamplerState(&samplerDesc, &sampler->m_SamplerState);
+    auto result = m_Device->CreateSamplerState(&params, &sampler->m_SamplerState);
     assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
@@ -799,5 +815,24 @@ void Renderer::UpdateGlobalConstants()
 
         // set the shader constants
         SetPixelShaderConstants(m_GlobalConstants[1], 0, m_cbFragmentGlobalConsts);
+    }
+}
+
+void Renderer::AddToRenderList(const std::vector<IRenderBlock*>& renderblocks)
+{
+    std::lock_guard<decltype(m_RenderListMutex)> _lk{ m_RenderListMutex };
+    std::copy(renderblocks.begin(), renderblocks.end(), std::back_inserter(m_RenderList));
+
+    // sort by opaque items, so that transparent blocks will be under them
+    std::sort(m_RenderList.begin(), m_RenderList.end(), [](IRenderBlock* lhs, IRenderBlock* rhs) {
+        return lhs->IsOpaque() > rhs->IsOpaque();
+    });
+}
+
+void Renderer::RemoveFromRenderList(const std::vector<IRenderBlock*>& renderblocks)
+{
+    std::lock_guard<decltype(m_RenderListMutex)> _lk{ m_RenderListMutex };
+    for (const auto& render_block : renderblocks) {
+        m_RenderList.erase(std::remove(m_RenderList.begin(), m_RenderList.end(), render_block), m_RenderList.end());
     }
 }

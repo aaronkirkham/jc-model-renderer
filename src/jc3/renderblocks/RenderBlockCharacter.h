@@ -120,12 +120,17 @@ public:
 
         // create the sampler states
         {
-            SamplerStateParams_t params;
-            params.m_AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.m_AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.m_AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.m_MinMip = 0.0f;
-            params.m_MaxMip = 13.0f;
+            D3D11_SAMPLER_DESC params;
+            ZeroMemory(&params, sizeof(params));
+            params.Filter = D3D11_FILTER_ANISOTROPIC;
+            params.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.MipLODBias = 0.0f;
+            params.MaxAnisotropy = 8;
+            params.ComparisonFunc = D3D11_COMPARISON_NEVER;
+            params.MinLOD = 0.0f;
+            params.MaxLOD = 13.0f;
 
             m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCharacter");
         }
