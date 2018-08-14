@@ -154,6 +154,21 @@ namespace JustCause3
             };
         };
 
+        static_assert(sizeof(SPackedAttribute) == 0x20, "SPackedAttribute alignment is wrong!");
+        static_assert(sizeof(PackedVertexPosition) == 0x8, "PackedVertexPosition alignment is wrong!");
+        static_assert(sizeof(UnpackedVertexPosition) == 0xC, "UnpackedVertexPosition alignment is wrong!");
+        static_assert(sizeof(UnpackedVertexPosition2UV) == 0x28, "UnpackedVertexPosition2UV alignment is wrong!");
+        static_assert(sizeof(GeneralShortPacked) == 0x14, "GeneralShortPacked alignment is wrong!");
+        static_assert(sizeof(UnpackedVertexWithNormal1) == 0x10, "UnpackedVertexWithNormal1 alignment is wrong!");
+        static_assert(sizeof(PackedTex2UV) == 0x8, "PackedTex2UV alignment is wrong!");
+        static_assert(sizeof(UnpackedUV) == 0x8, "UnpackedUV alignment is wrong!");
+        static_assert(sizeof(UnpackedNormals) == 0x18, "UnpackedNormals alignment is wrong!");
+        static_assert(sizeof(VertexDeformPos) == 0x18, "VertexDeformPos alignment is wrong!");
+        static_assert(sizeof(VertexDeformNormal2) == 0x20, "VertexDeformNormal2 alignment is wrong!");
+        static_assert(sizeof(VertexUnknown) == 0x10, "VertexUnknown alignment is wrong!");
+        static_assert(sizeof(RenderBlockCharacter::PackedCharacterPos4Bones1UVs) == 0x18, "PackedCharacterPos4Bones1UVs alignment is wrong!");
+        static_assert(sizeof(RenderBlockCharacterSkin::PackedCharacterSkinPos4Bones1UVs) == 0x18, "PackedCharacterSkinPos4Bones1UVs alignment is wrong!");
+
         struct CDeformTable
         {
             uint16_t table[256];
@@ -299,6 +314,10 @@ namespace JustCause3
             uint16_t m_Endian;
             int32_t m_Alignment;
         };
+
+        static_assert(sizeof(VfsTabEntry) == 0xC, "VfsTabEntry alignment is wrong!");
+        static_assert(sizeof(VfsCompressedTabEntry) == 0x10, "VfsCompressedTabEntry alignment is wrong!");
+        static_assert(sizeof(TabFileHeader) == 0xC, "TabFileHeader alignment is wrong!");
     };
 
     namespace StreamArchive
@@ -310,6 +329,8 @@ namespace JustCause3
             uint32_t m_Version;
             uint32_t m_Size;
         };
+
+        static_assert(sizeof(SARCHeader) == 0x10, "SARCHeader alignment is wrong!");
     };
 
     namespace AvalancheArchive
@@ -359,6 +380,9 @@ namespace JustCause3
         char pad2[4];
     };
 
+    static_assert(sizeof(RBMHeader) == 0x35, "RBMHeader alignment is wrong!");
+    static_assert(sizeof(CSkinBatch) == 0x18, "CSkinBatch alignment is wrong!");
+
     namespace RuntimeContainer
     {
         struct Header
@@ -381,6 +405,10 @@ namespace JustCause3
             uint32_t m_Data;
             uint8_t m_Type;
         };
+
+        static_assert(sizeof(Header) == 0x8, "RuntimeContainer Header alignment is wrong!");
+        static_assert(sizeof(Node) == 0xC, "RuntimeContainer Node alignment is wrong!");
+        static_assert(sizeof(Property) == 0x9, "RuntimeContainer Property alignment is wrong!");
     };
 
     namespace AvalancheDataFormat
@@ -466,6 +494,10 @@ namespace JustCause3
             uint32_t m_Size;
             int64_t m_NameIndex;
         };
+
+        static_assert(sizeof(Header) == 0x48, "AvalancheDataFormat Header alignment is wrong!");
+        static_assert(sizeof(TypeDefinition) == 0x24, "AvalancheDataFormat TypeDefinition alignment is wrong!");
+        static_assert(sizeof(InstanceInfo) == 0x18, "AvalancheDataFormat InstanceInfo alignment is wrong!");
     }
 
     template <typename T>
