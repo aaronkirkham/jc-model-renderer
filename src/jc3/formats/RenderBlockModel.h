@@ -30,7 +30,7 @@ public:
     inline static bool LoadingFromRC = false;
     inline static std::vector<std::string> SuppressedWarnings;
 
-    void Draw(RenderContext_t* context);
+    void DrawGizmos();
 
     const std::vector<IRenderBlock*>& GetRenderBlocks() { return m_RenderBlocks; }
 

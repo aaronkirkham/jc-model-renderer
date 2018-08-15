@@ -175,7 +175,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 fs::path filename = "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/v4602_plane_urga_fighterbomber_debug.ee";
                 FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                     if (success) {
-
                         std::thread([&, filename, data] {
                             auto archive = AvalancheArchive::make(filename, data);
 
@@ -200,13 +199,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 fs::path filename = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/v0803_car_na_monstertruck_civilian_01.ee";
                 FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                     if (success) {
-                        AvalancheArchive::make(filename, data);
+                        std::thread([&, filename, data] {
+                            auto archive = AvalancheArchive::make(filename, data);
 
+                            while (!archive->GetStreamArchive())
+                                std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-//                         fs::path epe = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/v0803_car_na_monstertruck_civilian_01.epe";
-//                         FileLoader::Get()->ReadFile(epe, [&](bool success, FileBuffer data) {
-//                             RuntimeContainer::FileReadCallback(epe, data);
-//                         });
+                            fs::path epe = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/v0803_car_na_monstertruck_civilian_01.epe";
+                            auto rc = RuntimeContainer::get(epe.string());
+
+                            if (rc) RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
+                            else {
+                                RuntimeContainer::Load(epe, [&, epe](std::shared_ptr<RuntimeContainer> rc) {
+                                    RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
+                                });
+                            }
+
+                        }).detach();
                     }
                 });
             }
@@ -262,8 +271,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
             }
             ImGui::End();
 
+            // draw gizmos
             for (const auto& model : RenderBlockModel::Instances) {
-                model.second->Draw(context);
+                model.second->DrawGizmos();
             }
         });
 

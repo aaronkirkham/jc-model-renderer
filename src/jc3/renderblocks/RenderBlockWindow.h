@@ -52,8 +52,8 @@ private:
         float MinAlpha;
         float UVScale;
         glm::vec2 unused_;                  // [unused]
-        float DamageMaskWeight;             // [unused]
-        float DamageRampWeight;             // [unused]
+        float DamageMaskWeight = 1.0f;      // [unused]
+        float DamageRampWeight = 0.5f;      // [unused]
         float Alpha = 1.0f;
     } m_cbMaterialConsts;
 
@@ -69,6 +69,7 @@ public:
     {
         Renderer::Get()->DestroyBuffer(m_VertexShaderConstants);
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants);
+        Renderer::Get()->DestroySamplerState(_test);
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockWindow"; }
@@ -110,6 +111,8 @@ public:
 
             m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockWindow");
 
+            // TODO: find out what the game is actually doing
+            // couldn't find anything related to slot 15 in the RenderBlockWindow stuff
             params.Filter = D3D11_FILTER_COMPARISON_ANISOTROPIC;
             _test = Renderer::Get()->CreateSamplerState(params, "RenderBlockWindow _test");
         }
@@ -215,7 +218,7 @@ public:
         ImGui::SliderFloat("Specular Gloss", &m_Block.attributes.SpecGloss, 0, 1);
         ImGui::SliderFloat("Specular Fresnel", &m_Block.attributes.SpecFresnel, 0, 1);
         ImGui::SliderFloat("Diffuse Rougness", &m_Block.attributes.DiffuseRougness, 0, 1);
-        ImGui::SliderFloat("Tint Power", &m_Block.attributes.TintPower, 0, 1);
+        ImGui::SliderFloat("Tint Power", &m_Block.attributes.TintPower, 0, 10);
         ImGui::SliderFloat("Min Alpha", &m_Block.attributes.MinAlpha, 0, 1);
         ImGui::SliderFloat("UV Scale", &m_Block.attributes.UVScale, 0, 1);
         ImGui::SliderFloat("Alpha", &m_cbMaterialConsts.Alpha, 0, 1);

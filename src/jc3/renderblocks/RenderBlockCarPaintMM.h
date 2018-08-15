@@ -2,6 +2,7 @@
 
 #include <StdInc.h>
 #include <jc3/renderblocks/IRenderBlock.h>
+#include <gtc/type_ptr.hpp>
 
 #pragma pack(push, 1)
 struct CarPaintMMAttributes
@@ -93,7 +94,7 @@ private:
     } m_cbDynamicObjectParams;
 
     JustCause3::RenderBlocks::CarPaintMM m_Block;
-    JustCause3::Vertex::CDeformTable m_DeformTable;
+    JustCause3::CDeformTable m_DeformTable;
     std::string m_ShaderName = "carpaintmm";
     std::array<VertexBuffer_t*, 2> m_VertexBufferData = { nullptr };
     std::array<ConstantBuffer_t*, 3> m_VertexShaderConstants = { nullptr };
@@ -203,19 +204,7 @@ public:
         stream.read((char *)&m_cbDynamicMaterialParams, sizeof(CarPaintDynamicMaterialParams));
 
         // read the deform table
-        {
-            uint32_t deformTable[256];
-            stream.read((char *)&deformTable, sizeof(deformTable));
-
-            for (uint32_t i = 0; i < 256; ++i) {
-                const auto data = deformTable[i];
-
-                m_DeformTable.table[i] = data;
-                if (data != -1 && m_DeformTable.size < i) {
-                    m_DeformTable.size = i;
-                }
-            }
-        }
+        ReadDeformTable(stream, &m_DeformTable);
 
         // read the materials
         ReadMaterials(stream);
@@ -225,14 +214,14 @@ public:
             std::vector<UnpackedVertexWithNormal1> vertices;
             ReadVertexBuffer<UnpackedVertexWithNormal1>(stream, &m_VertexBuffer, &vertices);
 
+            std::vector<UnpackedNormals> vertices_data;
+            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData[0], &vertices_data);
+
             for (const auto& vertex : vertices) {
                 m_Vertices.emplace_back(vertex.x);
                 m_Vertices.emplace_back(vertex.y);
                 m_Vertices.emplace_back(vertex.z);
             }
-
-            std::vector<UnpackedNormals> vertices_data;
-            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData[0], &vertices_data);
 
             for (const auto& data : vertices_data) {
                 m_UVs.emplace_back(data.u0);
@@ -248,14 +237,14 @@ public:
             std::vector<VertexDeformPos> vertices;
             ReadVertexBuffer<VertexDeformPos>(stream, &m_VertexBuffer, &vertices);
 
+            std::vector<VertexDeformNormal2> vertices_data;
+            ReadVertexBuffer<VertexDeformNormal2>(stream, &m_VertexBufferData[0], &vertices_data);
+
             for (const auto& vertex : vertices) {
                 m_Vertices.emplace_back(vertex.x);
                 m_Vertices.emplace_back(vertex.y);
                 m_Vertices.emplace_back(vertex.z);
             }
-
-            std::vector<VertexDeformNormal2> vertices_data;
-            ReadVertexBuffer<VertexDeformNormal2>(stream, &m_VertexBufferData[0], &vertices_data);
 
             for (const auto& data : vertices_data) {
                 m_UVs.emplace_back(data.u0);
@@ -268,14 +257,14 @@ public:
             std::vector<UnpackedVertexPosition> vertices;
             ReadVertexBuffer<UnpackedVertexPosition>(stream, &m_VertexBuffer, &vertices);
 
+            std::vector<UnpackedNormals> vertices_data;
+            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData[0], &vertices_data);
+
             for (const auto& vertex : vertices) {
                 m_Vertices.emplace_back(vertex.x);
                 m_Vertices.emplace_back(vertex.y);
                 m_Vertices.emplace_back(vertex.z);
             }
-
-            std::vector<UnpackedNormals> vertices_data;
-            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData[0], &vertices_data);
 
             for (const auto& data : vertices_data) {
                 m_UVs.emplace_back(data.u0);
@@ -330,7 +319,7 @@ public:
         }
 
         // set the sampler states
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; ++i) {
             context->m_Renderer->SetSamplerState(m_SamplerState, i);
         }
 
@@ -343,6 +332,7 @@ public:
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[2], 7, m_cbDynamicObjectParams);
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[3], 8, m_cbRBIInfo);
 
+        // set the culling mode
         context->m_Renderer->SetCullMode(static_cast<D3D11_CULL_MODE>(~(m_Block.attributes.flags >> 6) & 2 | 1));
 
         // set the 2nd and 3rd vertex buffers
@@ -417,7 +407,7 @@ public:
 
         ImGui::Text("Dynamic Material Params");
         ImGui::Separator();
-        ImGui::SliderFloat4("R", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorR), 0, 1);
+        ImGui::ColorEdit3("Colour", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorR));
         ImGui::SliderFloat4("G", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorG), 0, 1);
         ImGui::SliderFloat4("B", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorB), 0, 1);
         ImGui::SliderFloat("Specular Gloss Override", &m_cbDynamicMaterialParams.m_SpecularGlossOverride, 0, 1);

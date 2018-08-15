@@ -17,6 +17,7 @@ namespace JustCause3
             float colourExtent;
             uint8_t colour[4];
         };
+        static_assert(sizeof(SPackedAttribute) == 0x20, "SPackedAttribute alignment is wrong!");
 
         struct PackedVertexPosition
         {
@@ -25,6 +26,7 @@ namespace JustCause3
             int16_t z;
             int16_t pad;
         };
+        static_assert(sizeof(PackedVertexPosition) == 0x8, "PackedVertexPosition alignment is wrong!");
 
         struct UnpackedVertexPosition
         {
@@ -32,6 +34,7 @@ namespace JustCause3
             float y;
             float z;
         };
+        static_assert(sizeof(UnpackedVertexPosition) == 0xC, "UnpackedVertexPosition alignment is wrong!");
 
         struct UnpackedVertexPosition2UV
         {
@@ -46,6 +49,7 @@ namespace JustCause3
             float t;
             float col;
         };
+        static_assert(sizeof(UnpackedVertexPosition2UV) == 0x28, "UnpackedVertexPosition2UV alignment is wrong!");
 
         struct GeneralShortPacked
         {
@@ -57,6 +61,7 @@ namespace JustCause3
             float t;
             float col;
         };
+        static_assert(sizeof(GeneralShortPacked) == 0x14, "GeneralShortPacked alignment is wrong!");
 
         struct UnpackedVertexWithNormal1
         {
@@ -65,6 +70,7 @@ namespace JustCause3
             float z;
             float n;
         };
+        static_assert(sizeof(UnpackedVertexWithNormal1) == 0x10, "UnpackedVertexWithNormal1 alignment is wrong!");
 
         struct PackedTex2UV
         {
@@ -73,12 +79,14 @@ namespace JustCause3
             int16_t u1;
             int16_t v1;
         };
+        static_assert(sizeof(PackedTex2UV) == 0x8, "PackedTex2UV alignment is wrong!");
 
         struct UnpackedUV
         {
             float u;
             float v;
         };
+        static_assert(sizeof(UnpackedUV) == 0x8, "UnpackedUV alignment is wrong!");
 
         struct UnpackedNormals
         {
@@ -89,6 +97,7 @@ namespace JustCause3
             float n;
             float t;
         };
+        static_assert(sizeof(UnpackedNormals) == 0x18, "UnpackedNormals alignment is wrong!");
 
         struct VertexDeformPos
         {
@@ -101,6 +110,7 @@ namespace JustCause3
             int16_t wi2;
             int16_t wi3;
         };
+        static_assert(sizeof(VertexDeformPos) == 0x18, "VertexDeformPos alignment is wrong!");
 
         struct VertexDeformNormal2
         {
@@ -113,6 +123,7 @@ namespace JustCause3
             float dn;
             float dt;
         };
+        static_assert(sizeof(VertexDeformNormal2) == 0x20, "VertexDeformNormal2 alignment is wrong!");
 
         struct VertexUnknown
         {
@@ -121,6 +132,7 @@ namespace JustCause3
             float z;
             float w;
         };
+        static_assert(sizeof(VertexUnknown) == 0x10, "VertexUnknown alignment is wrong!");
 
         namespace RenderBlockCharacter
         {
@@ -136,6 +148,7 @@ namespace JustCause3
                 int16_t v0;
                 uint32_t tangent_space;
             };
+            static_assert(sizeof(PackedCharacterPos4Bones1UVs) == 0x18, "PackedCharacterPos4Bones1UVs alignment is wrong!");
         };
 
         namespace RenderBlockCharacterSkin
@@ -152,27 +165,7 @@ namespace JustCause3
                 int16_t v0;
                 uint32_t tangent_space;
             };
-        };
-
-        static_assert(sizeof(SPackedAttribute) == 0x20, "SPackedAttribute alignment is wrong!");
-        static_assert(sizeof(PackedVertexPosition) == 0x8, "PackedVertexPosition alignment is wrong!");
-        static_assert(sizeof(UnpackedVertexPosition) == 0xC, "UnpackedVertexPosition alignment is wrong!");
-        static_assert(sizeof(UnpackedVertexPosition2UV) == 0x28, "UnpackedVertexPosition2UV alignment is wrong!");
-        static_assert(sizeof(GeneralShortPacked) == 0x14, "GeneralShortPacked alignment is wrong!");
-        static_assert(sizeof(UnpackedVertexWithNormal1) == 0x10, "UnpackedVertexWithNormal1 alignment is wrong!");
-        static_assert(sizeof(PackedTex2UV) == 0x8, "PackedTex2UV alignment is wrong!");
-        static_assert(sizeof(UnpackedUV) == 0x8, "UnpackedUV alignment is wrong!");
-        static_assert(sizeof(UnpackedNormals) == 0x18, "UnpackedNormals alignment is wrong!");
-        static_assert(sizeof(VertexDeformPos) == 0x18, "VertexDeformPos alignment is wrong!");
-        static_assert(sizeof(VertexDeformNormal2) == 0x20, "VertexDeformNormal2 alignment is wrong!");
-        static_assert(sizeof(VertexUnknown) == 0x10, "VertexUnknown alignment is wrong!");
-        static_assert(sizeof(RenderBlockCharacter::PackedCharacterPos4Bones1UVs) == 0x18, "PackedCharacterPos4Bones1UVs alignment is wrong!");
-        static_assert(sizeof(RenderBlockCharacterSkin::PackedCharacterSkinPos4Bones1UVs) == 0x18, "PackedCharacterSkinPos4Bones1UVs alignment is wrong!");
-
-        struct CDeformTable
-        {
-            uint16_t table[256];
-            uint8_t size;
+            static_assert(sizeof(PackedCharacterSkinPos4Bones1UVs) == 0x18, "PackedCharacterSkinPos4Bones1UVs alignment is wrong!");
         };
 
         template <typename T>
@@ -289,6 +282,8 @@ namespace JustCause3
             uint32_t m_Size;
         };
 
+        static_assert(sizeof(VfsTabEntry) == 0xC, "VfsTabEntry alignment is wrong!");
+
         struct VfsCompressedTabEntry
         {
             uint32_t m_Hash;
@@ -296,6 +291,8 @@ namespace JustCause3
             uint32_t m_Size;
             uint32_t m_DecompressedSize;
         };
+
+        static_assert(sizeof(VfsCompressedTabEntry) == 0x10, "VfsCompressedTabEntry alignment is wrong!");
 
         struct VfsArchive
         {
@@ -315,8 +312,6 @@ namespace JustCause3
             int32_t m_Alignment;
         };
 
-        static_assert(sizeof(VfsTabEntry) == 0xC, "VfsTabEntry alignment is wrong!");
-        static_assert(sizeof(VfsCompressedTabEntry) == 0x10, "VfsCompressedTabEntry alignment is wrong!");
         static_assert(sizeof(TabFileHeader) == 0xC, "TabFileHeader alignment is wrong!");
     };
 
@@ -371,6 +366,8 @@ namespace JustCause3
         uint32_t m_Flags;
     };
 
+    static_assert(sizeof(RBMHeader) == 0x35, "RBMHeader alignment is wrong!");
+
     struct CSkinBatch
     {
         int16_t *m_BatchLookup;
@@ -380,8 +377,15 @@ namespace JustCause3
         char pad2[4];
     };
 
-    static_assert(sizeof(RBMHeader) == 0x35, "RBMHeader alignment is wrong!");
     static_assert(sizeof(CSkinBatch) == 0x18, "CSkinBatch alignment is wrong!");
+
+    struct CDeformTable
+    {
+        uint16_t table[256];
+        uint8_t size = 0;
+    };
+
+    static_assert(sizeof(CDeformTable) == 0x201, "CDeformTable alignment is wrong!");
 
     namespace RuntimeContainer
     {

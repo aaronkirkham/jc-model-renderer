@@ -1,21 +1,23 @@
 #include <jc3/RenderBlockFactory.h>
-#include <jc3/renderblocks/RenderBlockGeneralJC3.h>
+#include <jc3/renderblocks/RenderBlockBuildingJC3.h>
+#include <jc3/renderblocks/RenderBlockCarLight.h>
+#include <jc3/renderblocks/RenderBlockCarPaintMM.h>
 #include <jc3/renderblocks/RenderBlockCharacter.h>
 #include <jc3/renderblocks/RenderBlockCharacterSkin.h>
-#include <jc3/renderblocks/RenderBlockBuildingJC3.h>
+#include <jc3/renderblocks/RenderBlockGeneralJC3.h>
 #include <jc3/renderblocks/RenderBlockGeneralMkIII.h>
-#include <jc3/renderblocks/RenderBlockCarPaintMM.h>
 #include <jc3/renderblocks/RenderBlockWindow.h>
 
 IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type)
 {
     switch (type) {
-    case RB_GENERALJC3: return new RenderBlockGeneralJC3;
+    case RB_BUILDINGJC3: return new RenderBlockBuildingJC3;
+    case RB_CARLIGHT: return new RenderBlockCarLight;
+    case RB_CARPAINTMM: return new RenderBlockCarPaintMM;
     case RB_CHARACTER: return new RenderBlockCharacter;
     case RB_CHARACTERSKIN: return new RenderBlockCharacterSkin;
-    case RB_BUILDINGJC3: return new RenderBlockBuildingJC3;
+    case RB_GENERALJC3: return new RenderBlockGeneralJC3;
     case RB_GENERALMKIII: return new RenderBlockGeneralMkIII;
-    case RB_CARPAINTMM: return new RenderBlockCarPaintMM;
     case RB_WINDOW: return new RenderBlockWindow;
     }
     

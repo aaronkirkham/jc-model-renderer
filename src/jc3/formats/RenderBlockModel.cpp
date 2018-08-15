@@ -157,7 +157,7 @@ end:
     return parse_success;
 }
 
-void RenderBlockModel::Draw(RenderContext_t* context)
+void RenderBlockModel::DrawGizmos()
 {
     auto largest_scale = 0.0f;
     for (auto& render_block : m_RenderBlocks) {
@@ -182,7 +182,16 @@ void RenderBlockModel::Draw(RenderContext_t* context)
 
     // draw bounding boxes
     if (g_DrawBoundingBoxes) {
-        DebugRenderer::Get()->DrawBBox(m_BoundingBox.m_Min * largest_scale, m_BoundingBox.m_Max * largest_scale, { 1, 0, 0, 1 });
+        auto mouse_pos = Input::Get()->GetMouseWorldPosition();
+
+        Ray ray(mouse_pos, { 0, 0, 1 });
+        float distance = 0.0f;
+        auto intersects = m_BoundingBox.Intersect(ray, &distance);
+
+        static auto red = glm::vec4{ 1, 0, 0, 1 };
+        static auto green = glm::vec4{ 0, 1, 0, 1 };
+
+        DebugRenderer::Get()->DrawBBox(m_BoundingBox.GetMin(), m_BoundingBox.GetMax(), intersects ? green : red);
     }
 }
 

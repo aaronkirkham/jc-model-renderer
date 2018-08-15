@@ -187,6 +187,21 @@ public:
         }
     }
 
+    void ReadDeformTable(std::istream& stream, JustCause3::CDeformTable* deform_table)
+    {
+        uint32_t deformTable[256];
+        stream.read((char *)&deformTable, sizeof(deformTable));
+
+        for (uint32_t i = 0; i < 256; ++i) {
+            const auto data = deformTable[i];
+
+            deform_table->table[i] = data;
+            if (data != -1 && deform_table->size < i) {
+                deform_table->size = i;
+            }
+        }
+    }
+
     void DrawSkinBatches(RenderContext_t* context)
     {
         if (!m_Visible) return;
