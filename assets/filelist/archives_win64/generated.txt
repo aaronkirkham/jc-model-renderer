@@ -926,8 +926,3 @@ dlc/sky_fortress/editor/entities/jc_weapons/05_stationary/w505_sam_eden_heavycon
 dlc/sky_fortress/editor/entities/jc_weapons/05_stationary/w505_sam_eden_heavycontroldrone/w505_sam_eden_heavycontroldrone_norockets.ee.toc
 dlc/v0805_sportmech/editor/entities/jc_vehicles/01_land/v0806_car_na_sportmech/v0806_car_na_sportmech_01.ee.toc
 dlc/w901_scorpiongun/editor/entities/jc_weapons/99_dlc/w901_scorpiongun/w901_scorpiongun.ee.toc
-editor/entities/gameobjects/main_character.ee.fmod_guids.toc
-editor/entities/jc_characters/animals/dog/dog.ee.fmod_guids.toc
-editor/entities/jc_environments/props/military/compound/military_hesco_cluster_01_small.ee.fmod_guids.toc
-editor/entities/jc_environments/structures/industrial/stairs_a/industrial_stair_railing_40_deg.ee.fmod_guids.toc
-editor/entities/jc_environments/structures/military/checkpoint_a/checkpoint_a_barrel_water.ee.fmod_guids.toc

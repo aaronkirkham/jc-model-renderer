@@ -26,9 +26,10 @@ with open(DICTIONARY) as file:
   data = json.load(file)
   for k, v in data.items():
     archive = v['path'][0]
+    filename, extension = os.path.splitext(k)
 
     # generate the .toc names
-    if ".ee" in k and not ".toc" in k:
+    if extension == ".ee":
       toc_name = k + '.toc'
       toc_name_hash = lookup3.hashlittle(toc_name)
       GENERATED_FILELIST.append(toc_name)
@@ -40,7 +41,7 @@ with open(DICTIONARY) as file:
       TOCS_OFFSETS_TO_READ[archive].append({ 'name': toc_name, 'name_hash': toc_name_hash })
 
     # tocs to read
-    if ".toc" in k:
+    if extension == ".toc":
       if not archive in TOCS_OFFSETS_TO_READ:
         TOCS_OFFSETS_TO_READ[archive] = []
         TOCS_TO_READ[archive] = []
@@ -100,7 +101,7 @@ for k, v in TOCS_TO_READ.items():
         size = struct.unpack('I', file.read(4))[0]
 
         # we only care about patched files
-        if offset == 0:
+        if offset == 0 or offset == -1:
           PATCHED_FILELIST.append(filename)
 
         current_offset = (current_offset + 4 + length + 4 + 4)
