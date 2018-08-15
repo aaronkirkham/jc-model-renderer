@@ -7,7 +7,7 @@
 #include <jc3/formats/StreamArchive.h>
 
 #include <imgui.h>
-#include <graphics/imgui/fonts/fontawesome_icons.h>
+#include <graphics/imgui/fonts/fontawesome5_icons.h>
 #include <graphics/UI.h>
 
 class DirectoryList
@@ -40,6 +40,16 @@ private:
                 current["/"].emplace_back(str);
             }
         }
+    }
+
+    inline const char* filetype_icon(const fs::path& extension)
+    {
+        if (extension == ".ee" || extension == ".bl" || extension == ".nl" || extension == ".fl") return ICON_FA_FILE_ARCHIVE;
+        else if (extension == ".dds" || extension == ".ddsc" || extension == ".hmddsc") return ICON_FA_FILE_IMAGE;
+        else if (extension == ".bank") return ICON_FA_FILE_AUDIO;
+        else if (extension == ".bikc") return ICON_FA_FILE_VIDEO;
+
+        return ICON_FA_FILE;
     }
 
 public:
@@ -127,26 +137,25 @@ public:
             }
             else {
                 for (auto& leaf : *current) {
-                    auto filename = leaf.get<std::string>();
-                    auto is_archive = (filename.find(".ee") != std::string::npos || filename.find(".bl") != std::string::npos || filename.find(".nl") != std::string::npos);
+                    auto filename = fs::path(leaf.get<std::string>());
+                    ImGui::TreeNodeEx(filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen), "%s  %s", filetype_icon(filename.extension()), filename.string().c_str());
 
-                    ImGui::TreeNodeEx(filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen), "%s %s", is_archive ? ICON_FA_FILE_ARCHIVE_O : ICON_FA_FILE_O, filename.c_str());
-
-                    std::string file_path;
+                    auto prev_path = fs::path(prev);
+                    fs::path file_path;
 
                     if (prev.length() == 0) {
                         file_path = filename;
                     }
                     else if (prev.length() == 1) {
-                        file_path = prev + filename;
+                        file_path = prev_path.string() + filename.string();
                     }
                     else {
-                        file_path = prev + "/" + filename;
+                        file_path = prev_path / filename;
                     }
 
                     // tooltips
                     if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip(filename.c_str());
+                        ImGui::SetTooltip(filename.string().c_str());
                     }
 
                     // fire file selected events

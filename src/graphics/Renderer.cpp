@@ -21,20 +21,21 @@ Renderer::Renderer()
 
         ImGui_ImplDX11_InvalidateDeviceObjects();
 
-        DestroyRenderTarget();
+        DestroyRenderTargets();
         DestroyDepthStencil();
 
         m_SwapChain->ResizeBuffers(0, static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y), DXGI_FORMAT_UNKNOWN, 0);
 
         CreateDepthStencil(size);
         CreateRenderTarget(size);
+        CreateGBuffer(size);
 
         ImGui_ImplDX11_CreateDeviceObjects();
         return true;
     });
 
     // draw render blocks
-    m_RenderEvents.RenderFrame.connect([this](RenderContext_t* context) {
+    m_RenderEvents.PreRender.connect([this](RenderContext_t* context) {
         std::lock_guard<decltype(m_RenderListMutex)> _lk{ m_RenderListMutex };
         for (const auto& render_block : m_RenderList) {
             // draw the model
@@ -86,6 +87,7 @@ bool Renderer::Initialise(const HWND& hwnd)
     CreateRasterizerState();
     CreateDepthStencil(size);
     CreateRenderTarget(size);
+    CreateGBuffer(size);
     CreateBlendState();
 
     // create vertex shader global constants
@@ -120,23 +122,22 @@ void Renderer::Shutdown()
 
     TextureManager::Get()->Shutdown();
     ShaderManager::Get()->Shutdown();
-    Camera::Get()->Shutdown();
 
     if (m_SwapChain) {
         m_SwapChain->SetFullscreenState(false, nullptr);
     }
 
-    ImGui_ImplDX11_Shutdown();
-    ImGui_ImplWin32_Shutdown();
-    ImGui::DestroyContext();
-
     m_DeviceContext->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
     m_DeviceContext->RSSetState(nullptr);
 
-    DestroyRenderTarget();
+    DestroyRenderTargets();
     DestroyDepthStencil();
     DestroyBuffer(m_GlobalConstants[0]);
     DestroyBuffer(m_GlobalConstants[1]);
+
+    ImGui_ImplDX11_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
 
     SAFE_RELEASE(m_BlendState);
     SAFE_RELEASE(m_RasterizerState);
@@ -162,17 +163,16 @@ bool Renderer::Render()
 
     // begin scene
     {
-        for (auto& render_target : m_RenderTargetView) {
-            if (render_target) {
-                m_DeviceContext->ClearRenderTargetView(render_target, glm::value_ptr(m_ClearColour));
-            }
+        // clear back buffer
+        m_DeviceContext->ClearRenderTargetView(m_BackBuffer, glm::value_ptr(m_ClearColour));
+
+        // clear gbuffer
+        for (const auto& rt : m_GBuffer) {
+            if (rt) m_DeviceContext->ClearRenderTargetView(rt, glm::value_ptr(m_ClearColour));
         }
 
         m_DeviceContext->ClearDepthStencilView(m_DepthStencilView, (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL), 1.0f, 0);
     }
-
-    // Begin the 2d renderer
-    DebugRenderer::Get()->Begin(&m_RenderContext);
 
     // update the camera
     Camera::Get()->Update(&m_RenderContext);
@@ -180,19 +180,27 @@ bool Renderer::Render()
     // update global constants
     UpdateGlobalConstants();
 
-    //
-    m_RenderEvents.RenderFrame(&m_RenderContext);
+    // g buffer
+    {
+        m_DeviceContext->OMSetRenderTargets(m_GBuffer.size(), &m_GBuffer[0], m_DepthStencilView);
+        SetDepthEnabled(true);
 
-    SetDepthEnabled(false);
+        m_RenderEvents.PreRender(&m_RenderContext);
+        SetDepthEnabled(false);
+    }
 
-    // Render UI
+    // activate back buffer
+    m_DeviceContext->OMSetRenderTargets(1, &m_BackBuffer, m_DepthStencilView);
+
+    // render ui
     UI::Get()->Render();
+
+    m_RenderEvents.PostRender(&m_RenderContext);
 
     // end scene
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-    SetDepthEnabled(true);
     m_SwapChain->Present(1, 0);
     return true;
 }
@@ -311,92 +319,21 @@ void Renderer::SetCullMode(D3D11_CULL_MODE mode)
 void Renderer::CreateRenderTarget(const glm::vec2& size)
 {
     // create back buffer render target
-    {
-        ID3D11Texture2D* back_buffer = nullptr;
-        auto result = m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back_buffer));
-        assert(SUCCEEDED(result));
+    ID3D11Texture2D* back_buffer = nullptr;
+    auto result = m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back_buffer));
+    assert(SUCCEEDED(result));
 
-        result = m_Device->CreateRenderTargetView(back_buffer, nullptr, &m_RenderTargetView[0]);
-        assert(SUCCEEDED(result));
+    result = m_Device->CreateRenderTargetView(back_buffer, nullptr, &m_BackBuffer);
+    assert(SUCCEEDED(result));
 
-        SAFE_RELEASE(back_buffer);
-
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
-        D3D_SET_OBJECT_NAME_A(m_RenderTargetView[0], "Renderer Back Buffer");
-#endif
-    }
-
-    // create normals render target
-    {
-        auto normalsTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Normals texture");
-        assert(normalsTex);
-
-        auto result = m_Device->CreateRenderTargetView(normalsTex, nullptr, &m_RenderTargetView[1]);
-        assert(SUCCEEDED(result));
-
-        D3D11_SHADER_RESOURCE_VIEW_DESC desc;
-        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        desc.Texture2D = { 0, static_cast<UINT>(-1) };
-        result = m_Device->CreateShaderResourceView(normalsTex, &desc, &m_RenderTargetResourceView[0]);
-        assert(SUCCEEDED(result));
-
-        SAFE_RELEASE(normalsTex);
+    SAFE_RELEASE(back_buffer);
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-        D3D_SET_OBJECT_NAME_A(m_RenderTargetView[1], "Renderer Normal Buffer");
-        D3D_SET_OBJECT_NAME_A(m_RenderTargetResourceView[0], "Renderer Normal Buffer SRV");
+    D3D_SET_OBJECT_NAME_A(m_BackBuffer, "Renderer Back Buffer");
 #endif
-    }
-
-    // create metallic render target
-    {
-        auto metallicTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Metallic texture");
-        assert(metallicTex);
-
-        auto result = m_Device->CreateRenderTargetView(metallicTex, nullptr, &m_RenderTargetView[2]);
-        assert(SUCCEEDED(result));
-
-        D3D11_SHADER_RESOURCE_VIEW_DESC desc;
-        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        desc.Texture2D = { 0, static_cast<UINT>(-1) };
-        result = m_Device->CreateShaderResourceView(metallicTex, &desc, &m_RenderTargetResourceView[1]);
-        assert(SUCCEEDED(result));
-
-        SAFE_RELEASE(metallicTex);
-
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
-        D3D_SET_OBJECT_NAME_A(m_RenderTargetView[2], "Renderer Metallic Buffer");
-        D3D_SET_OBJECT_NAME_A(m_RenderTargetResourceView[1], "Renderer Metallic Buffer SRV");
-#endif
-    }
-
-    // create unknown render target
-    {
-        auto unknownTex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Unknown texture");
-        assert(unknownTex);
-
-        auto result = m_Device->CreateRenderTargetView(unknownTex, nullptr, &m_RenderTargetView[3]);
-        assert(SUCCEEDED(result));
-
-        D3D11_SHADER_RESOURCE_VIEW_DESC desc;
-        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        desc.Texture2D = { 0, static_cast<UINT>(-1) };
-        result = m_Device->CreateShaderResourceView(unknownTex, &desc, &m_RenderTargetResourceView[2]);
-        assert(SUCCEEDED(result));
-
-        SAFE_RELEASE(unknownTex);
-
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
-        D3D_SET_OBJECT_NAME_A(m_RenderTargetView[3], "Renderer Unknown Buffer");
-        D3D_SET_OBJECT_NAME_A(m_RenderTargetResourceView[2], "Renderer Unknown Buffer SRV");
-#endif
-    }
 
     // set the render target
-    m_DeviceContext->OMSetRenderTargets(4, &m_RenderTargetView[0], m_DepthStencilView);
+    m_DeviceContext->OMSetRenderTargets(1, &m_BackBuffer, m_DepthStencilView);
 
     // create the viewport
     {
@@ -409,6 +346,93 @@ void Renderer::CreateRenderTarget(const glm::vec2& size)
         viewport.TopLeftY = 0;
 
         m_DeviceContext->RSSetViewports(1, &viewport);
+    }
+}
+
+void Renderer::CreateGBuffer(const glm::vec2& size)
+{
+    // create diffuse render target
+    {
+        auto tex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Diffuse texture");
+        auto result = m_Device->CreateRenderTargetView(tex, nullptr, &m_GBuffer[0]);
+        assert(SUCCEEDED(result));
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        desc.Texture2D = { 0, static_cast<UINT>(-1) };
+        result = m_Device->CreateShaderResourceView(tex, &desc, &m_GBufferSRV[0]);
+        assert(SUCCEEDED(result));
+
+        SAFE_RELEASE(tex);
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+        D3D_SET_OBJECT_NAME_A(m_GBuffer[0], "Renderer GBuffer (Diffuse)");
+        D3D_SET_OBJECT_NAME_A(m_GBufferSRV[0], "Renderer GBuffer SRV (Diffuse)");
+#endif
+    }
+
+    // create normals render target
+    {
+        auto tex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Normals texture");
+        auto result = m_Device->CreateRenderTargetView(tex, nullptr, &m_GBuffer[1]);
+        assert(SUCCEEDED(result));
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        desc.Texture2D = { 0, static_cast<UINT>(-1) };
+        result = m_Device->CreateShaderResourceView(tex, &desc, &m_GBufferSRV[1]);
+        assert(SUCCEEDED(result));
+
+        SAFE_RELEASE(tex);
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+        D3D_SET_OBJECT_NAME_A(m_GBuffer[1], "Renderer GBuffer (Normals)");
+        D3D_SET_OBJECT_NAME_A(m_GBufferSRV[1], "Renderer GBuffer SRV (Normals)");
+#endif
+    }
+
+    // create metallic render target
+    {
+        auto tex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Metallic texture");
+        auto result = m_Device->CreateRenderTargetView(tex, nullptr, &m_GBuffer[2]);
+        assert(SUCCEEDED(result));
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        desc.Texture2D = { 0, static_cast<UINT>(-1) };
+        result = m_Device->CreateShaderResourceView(tex, &desc, &m_GBufferSRV[2]);
+        assert(SUCCEEDED(result));
+
+        SAFE_RELEASE(tex);
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+        D3D_SET_OBJECT_NAME_A(m_GBuffer[2], "Renderer GBuffer (Metallic)");
+        D3D_SET_OBJECT_NAME_A(m_GBufferSRV[2], "Renderer GBuffer SRV (Metallic)");
+#endif
+    }
+
+    // create unknown render target
+    {
+        auto tex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Unknown texture");
+        auto result = m_Device->CreateRenderTargetView(tex, nullptr, &m_GBuffer[3]);
+        assert(SUCCEEDED(result));
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        desc.Texture2D = { 0, static_cast<UINT>(-1) };
+        result = m_Device->CreateShaderResourceView(tex, &desc, &m_GBufferSRV[3]);
+        assert(SUCCEEDED(result));
+
+        SAFE_RELEASE(tex);
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+        D3D_SET_OBJECT_NAME_A(m_GBuffer[3], "Renderer GBuffer (Unknown)");
+        D3D_SET_OBJECT_NAME_A(m_GBufferSRV[3], "Renderer GBuffer SRV (Unknown)");
+#endif
     }
 }
 
@@ -578,18 +602,17 @@ void Renderer::CreateRasterizerState()
     }
 }
 
-void Renderer::DestroyRenderTarget()
+void Renderer::DestroyRenderTargets()
 {
-    ID3D11RenderTargetView* null_targets[4] = { nullptr };
-    m_DeviceContext->OMSetRenderTargets(4, null_targets, nullptr);
+    ID3D11RenderTargetView* null_targets[5] = { nullptr };
+    m_DeviceContext->OMSetRenderTargets(5, null_targets, nullptr);
 
-    for (auto& resource_view : m_RenderTargetResourceView) {
-        SAFE_RELEASE(resource_view);
-    }
+    // free gbuffer
+    for (auto& srv : m_GBufferSRV) SAFE_RELEASE(srv);
+    for (auto& rt : m_GBuffer) SAFE_RELEASE(rt);
 
-    for (auto& render_target : m_RenderTargetView) {
-        SAFE_RELEASE(render_target);
-    }
+    // free back buffer
+    SAFE_RELEASE(m_BackBuffer);
 }
 
 void Renderer::DestroyDepthStencil()
@@ -747,26 +770,6 @@ void Renderer::DestroyVertexDeclaration(VertexDeclaration_t* declaration)
 SamplerState_t* Renderer::CreateSamplerState(const D3D11_SAMPLER_DESC& params, const char* debugName)
 {
     auto sampler = new SamplerState_t;
-
-#if 0
-    D3D11_SAMPLER_DESC samplerDesc;
-    ZeroMemory(&samplerDesc, sizeof(D3D11_SAMPLER_DESC));
-
-    samplerDesc.Filter = params.m_Filter;
-    samplerDesc.AddressU = params.m_AddressU;
-    samplerDesc.AddressV = params.m_AddressV;
-    samplerDesc.AddressW = params.m_AddressW;
-    samplerDesc.MipLODBias = 0.0f;
-    samplerDesc.MaxAnisotropy = 1;
-    samplerDesc.ComparisonFunc = params.m_ZFunc;
-    samplerDesc.BorderColor[0] = 1.0f;
-    samplerDesc.BorderColor[1] = 1.0f;
-    samplerDesc.BorderColor[2] = 1.0f;
-    samplerDesc.BorderColor[3] = 1.0f;
-    samplerDesc.MinLOD = -D3D11_FLOAT32_MAX;
-    samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-#endif
-
     auto result = m_Device->CreateSamplerState(&params, &sampler->m_SamplerState);
     assert(SUCCEEDED(result));
 

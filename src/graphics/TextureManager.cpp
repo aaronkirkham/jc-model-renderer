@@ -4,7 +4,7 @@
 #include <jc3/FileLoader.h>
 #include <fnv1.h>
 
-#include <graphics/imgui/fonts/fontawesome_icons.h>
+#include <graphics/imgui/fonts/fontawesome5_icons.h>
 
 #include <graphics/UI.h>
 
@@ -87,7 +87,7 @@ TextureManager::TextureManager()
     m_MissingTexture = std::make_unique<Texture>("missing-texture.dds");
     m_MissingTexture->LoadFromFile("../assets/missing-texture.dds");
 
-    Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
+    Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {
         const auto& window_size = Window::Get()->GetSize();
         const auto aspect_ratio = (window_size.x / window_size.y);
 
@@ -95,7 +95,7 @@ TextureManager::TextureManager()
             bool open = true;
 
             std::stringstream ss;
-            ss << ICON_FA_PICTURE_O << "  " << (*it)->GetPath();
+            ss << ICON_FA_FILE_IMAGE << "  " << (*it)->GetPath();
 
             if (ImGui::Begin(ss.str().c_str(), &open, (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))) {
                 const auto width = ImGui::GetWindowWidth();

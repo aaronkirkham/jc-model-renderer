@@ -21,6 +21,8 @@ enum ContextMenuFlags {
 
 using ContextMenuCallback = std::function<void(const fs::path& filename)>;
 
+struct ImDrawList;
+struct BoundingBox;
 class UI : public Singleton<UI>
 {
 private:
@@ -30,11 +32,14 @@ private:
     std::map<uint64_t, std::string> m_StatusTexts;
     std::map<std::string, ContextMenuCallback> m_ContextMenuCallbacks;
     std::string m_TabToSwitch = "";
+    uint8_t m_CurrentActiveGBuffer = 0;
+
+    ImDrawList* m_SceneDrawList = nullptr;
 
     void RenderFileTreeView();
 
 public:
-    UI() = default;
+    UI();
     virtual ~UI() = default;
 
     virtual UIEvents& Events() { return m_UIEvents; }
@@ -49,4 +54,8 @@ public:
     void SwitchToTab(const std::string& tab) { m_TabToSwitch = tab; }
 
     void RegisterContextMenuCallback(const std::vector<std::string>& extensions, ContextMenuCallback fn);
+
+#undef DrawText
+    void DrawText(const std::string& text, const glm::vec3& position, const glm::vec4& colour, bool center);
+    void DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour);
 };

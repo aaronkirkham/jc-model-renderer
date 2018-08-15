@@ -72,6 +72,20 @@ struct SamplerState_t
     ID3D11SamplerState* m_SamplerState = nullptr;
 };
 
+struct Ray
+{
+    glm::vec3 m_Origin;
+    glm::vec3 m_Direction;
+    glm::vec3 m_InvDirection;
+
+    Ray(const glm::vec3& origin, const glm::vec3& direction)
+        : m_Origin(origin),
+        m_Direction(direction)
+    {
+        m_InvDirection = (1.0f / direction);
+    }
+};
+
 struct BoundingBox
 {
     glm::vec3 m_Min;
@@ -103,5 +117,56 @@ struct BoundingBox
     inline glm::vec3 GetSize() const
     {
         return ((m_Max * m_Scale) - (m_Min * m_Scale));
+    }
+
+    inline glm::vec3 GetMin() const
+    {
+        return (m_Min * m_Scale);
+    }
+
+    inline glm::vec3 GetMax() const
+    {
+        return (m_Max * m_Scale);
+    }
+
+    /*
+    // If line is parallel and outsite the box it is not possible to intersect
+    if (direction.x == 0.0f && (origin.x < min(leftBottom.x, rightTop.x) || origin.x > max(leftBottom.x, rightTop.x)))
+    return false;
+
+    if (direction.y == 0.0f && (origin.y < min(leftBottom.y, rightTop.y) || origin.y > max(leftBottom.y, rightTop.y)))
+    return false;
+
+    if (direction.z == 0.0f && (origin.z < min(leftBottom.z, rightTop.z) || origin.z > max(leftBottom.z, rightTop.z)))
+    return false;
+    */
+
+    bool Intersect(const Ray& ray, float* distance) const
+    {
+        const auto min = (m_Min * m_Scale);
+        const auto max = (m_Max * m_Scale);
+
+        auto t1 = (min.x - ray.m_Origin.x) * ray.m_InvDirection.x;
+        auto t2 = (max.x - ray.m_Origin.x) * ray.m_InvDirection.x;
+        auto t3 = (min.y - ray.m_Origin.y) * ray.m_InvDirection.y;
+        auto t4 = (max.y - ray.m_Origin.y) * ray.m_InvDirection.y;
+        auto t5 = (min.z - ray.m_Origin.z) * ray.m_InvDirection.z;
+        auto t6 = (max.z - ray.m_Origin.z) * ray.m_InvDirection.z;
+
+        auto tmin = std::max(std::max(std::min(t1, t2), std::min(t3, t4)), std::min(t5, t6));
+        auto tmax = std::min(std::min(std::max(t1, t2), std::max(t3, t4)), std::max(t5, t6));
+
+        if (tmax < 0) {
+            *distance = tmax;
+            return false;
+        }
+
+        if (tmin > tmax) {
+            *distance = tmax;
+            return false;
+        }
+
+        *distance = tmin;
+        return true;
     }
 };

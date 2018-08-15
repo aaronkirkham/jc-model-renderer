@@ -9,16 +9,6 @@
 
 void Input::Initialise()
 {
-#if 0
-    Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
-        glm::vec3 window_center = glm::vec3(Window::Get()->GetCenterPoint(), 1);
-        glm::vec3 window_center_world;
-        Camera::Get()->ScreenToWorld(window_center, &window_center_world);
-
-        DebugRenderer::Get()->DrawLine(window_center_world, m_MouseWorldPosition, { 1, 0, 0, 1 });
-    });
-#endif
-
     // reset all keys if we lose window focus
     Window::Get()->Events().FocusLost.connect([&] {
         std::fill(m_KeyboardState.begin(), m_KeyboardState.end(), false);
@@ -68,7 +58,7 @@ bool Input::HandleMessage(MSG* event)
         m_InputEvents.MousePress(message, position);
 
         m_LastClickPosition = position;
-        Camera::Get()->ScreenToWorld({ position.x, position.y, 1 }, &m_LastClickWorldPosition);
+        Camera::Get()->MouseToWorld(position, &m_LastClickWorldPosition);
     }
     else if (message == WM_MOUSEMOVE)
     {
@@ -76,7 +66,7 @@ bool Input::HandleMessage(MSG* event)
         m_InputEvents.MouseMove((m_MousePosition - position));
 
         m_MousePosition = position;
-        Camera::Get()->ScreenToWorld(glm::vec3{ position.x, position.y, 1 }, &m_MouseWorldPosition);
+        Camera::Get()->MouseToWorld(position, &m_MouseWorldPosition);
     }
     else if (message == WM_MOUSEWHEEL)
     {

@@ -5,7 +5,7 @@
 #include <imgui_tabs.h>
 #include <json.hpp>
 
-#include <graphics/imgui/fonts/fontawesome_icons.h>
+#include <graphics/imgui/fonts/fontawesome5_icons.h>
 #include <graphics/imgui/imgui_rotate.h>
 #include <graphics/imgui/imgui_tabscrollcontent.h>
 #include <graphics/Camera.h>
@@ -31,7 +31,6 @@ extern fs::path g_JC3Directory;
 
 static bool g_ShowAllArchiveContents = false;
 static bool g_ShowAboutWindow = false;
-static bool g_ShowBackgroundColourPicker = false;
 
 #ifdef DEBUG
 static bool g_CheckForUpdatesEnabled = false;
@@ -42,32 +41,34 @@ static bool g_CheckForUpdatesEnabled = true;
 static bool _is_dragging = false;
 static fs::path _dragdrop_filename = "";
 
+UI::UI()
+{
+    Window::Get()->Events().DragEnter.connect([&](const fs::path& filename) {
+        _is_dragging = true;
+        _dragdrop_filename = filename;
+
+        ImGuiIO& io = ImGui::GetIO();
+        io.MouseDown[0] = true;
+    });
+
+    Window::Get()->Events().DragLeave.connect([&] {
+        _is_dragging = false;
+
+        ImGuiIO& io = ImGui::GetIO();
+        io.MouseDown[0] = false;
+    });
+
+    Window::Get()->Events().DragDropped.connect([&] {
+        _is_dragging = false;
+
+        ImGuiIO& io = ImGui::GetIO();
+        io.MouseDown[0] = false;
+    });
+}
+
 void UI::Render()
 {
-    static std::once_flag _flag;
-    std::call_once(_flag, [&] {
-        Window::Get()->Events().DragEnter.connect([&](const fs::path& filename) {
-            _is_dragging = true;
-            _dragdrop_filename = filename;
-
-            ImGuiIO& io = ImGui::GetIO();
-            io.MouseDown[0] = true;
-        });
-
-        Window::Get()->Events().DragLeave.connect([&] {
-            _is_dragging = false;
-
-            ImGuiIO& io = ImGui::GetIO();
-            io.MouseDown[0] = false;
-        });
-
-        Window::Get()->Events().DragDropped.connect([&] {
-            _is_dragging = false;
-
-            ImGuiIO& io = ImGui::GetIO();
-            io.MouseDown[0] = false;
-        });
-    });
+    const auto& window_size = Window::Get()->GetSize();
 
     if (_is_dragging) {
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern)) {
@@ -80,50 +81,68 @@ void UI::Render()
         }
     }
 
-    const auto& window_size = Window::Get()->GetSize();
-
+    // main menu bar
     if (ImGui::BeginMainMenuBar())
     {
         m_MainMenuBarHeight = ImGui::GetWindowHeight();
 
+        // file
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem(ICON_FA_FOLDER "  Select JC3 path")) {
-            }
-
-            if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit")) {
-                // TODO: change me
-                TerminateProcess(GetCurrentProcess(), 0);
-            }
+            if (ImGui::MenuItem(ICON_FA_FOLDER "  Select JC3 path")) SelectJustCause3Directory();
+            if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit")) Window::Get()->BeginShutdown();
 
             ImGui::EndMenu();
         }
 
+        // renderer
         if (ImGui::BeginMenu("Renderer"))
         {
+            if (ImGui::BeginMenu("Render Target")) {
+                if (ImGui::MenuItem("Diffuse", nullptr, m_CurrentActiveGBuffer == 0)) m_CurrentActiveGBuffer = 0;
+                if (ImGui::MenuItem("Normal", nullptr, m_CurrentActiveGBuffer == 1)) m_CurrentActiveGBuffer = 1;
+                if (ImGui::MenuItem("Metallic", nullptr, m_CurrentActiveGBuffer == 2)) m_CurrentActiveGBuffer = 2;
+                if (ImGui::MenuItem("Unknown", nullptr, m_CurrentActiveGBuffer == 3)) m_CurrentActiveGBuffer = 3;
+
+                ImGui::EndMenu();
+            }
+
             static bool wireframe = false;
-            if (ImGui::Checkbox("Wireframe", &wireframe)) {
+            if (ImGui::MenuItem("Wireframe", nullptr, wireframe)) {
+                wireframe = !wireframe;
                 Renderer::Get()->SetFillMode(wireframe ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID);
             }
 
-            if (ImGui::Checkbox("Show bounding boxes", &g_DrawBoundingBoxes)) {
+            if (ImGui::MenuItem(ICON_FA_VECTOR_SQUARE "  Show Bounding Boxes", nullptr, g_DrawBoundingBoxes)) {
+                g_DrawBoundingBoxes = !g_DrawBoundingBoxes;
                 Settings::Get()->SetValue("draw_bounding_boxes", g_DrawBoundingBoxes);
             }
 
-            if (ImGui::Checkbox("Show model labels", &g_ShowModelLabels)) {
+            if (ImGui::MenuItem(ICON_FA_FONT "  Show Model Labels", nullptr, g_ShowModelLabels)) {
+                g_ShowModelLabels = !g_ShowModelLabels;
                 Settings::Get()->SetValue("show_model_labels", g_ShowModelLabels);
             }
 
-            if (ImGui::Button("Background colour")) {
-                g_ShowBackgroundColourPicker = !g_ShowBackgroundColourPicker;
+            if (ImGui::BeginMenu(ICON_FA_EYE_DROPPER "  Background")) {
+                auto clear_colour = Renderer::Get()->GetClearColour();
+                if (ImGui::ColorPicker3("Colour", glm::value_ptr(clear_colour))) {
+                    Renderer::Get()->SetClearColour(clear_colour);
+                }
+
+                if (ImGui::Button("Reset To Default")) {
+                    Renderer::Get()->SetClearColour(g_DefaultClearColour);
+                }
+
+                ImGui::EndMenu();
             }
 
             ImGui::EndMenu();
         }
 
+        // camera
         if (ImGui::BeginMenu("Camera"))
         {
-            if (ImGui::BeginMenu("Focus On", RenderBlockModel::Instances.size() != 0)) {
+            if (ImGui::BeginMenu(ICON_FA_CAMERA "  Focus On", RenderBlockModel::Instances.size() != 0)) {
                 for (const auto& model : RenderBlockModel::Instances) {
                     if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
                         Camera::Get()->FocusOn(model.second.get());
@@ -136,17 +155,18 @@ void UI::Render()
             ImGui::EndMenu();
         }
 
+        // help
         if (ImGui::BeginMenu("Help"))
         {
             if (ImGui::MenuItem(ICON_FA_INFO_CIRCLE "  About")) {
                 g_ShowAboutWindow = !g_ShowAboutWindow;
             }
 
-            if (ImGui::MenuItem(ICON_FA_REFRESH  "  Check for updates", nullptr, false, g_CheckForUpdatesEnabled)) {
+            if (ImGui::MenuItem(ICON_FA_SYNC "  Check for updates", nullptr, false, g_CheckForUpdatesEnabled)) {
                 CheckForUpdates(true);
             }
 
-            if (ImGui::MenuItem(ICON_FA_GITHUB "  View on GitHub")) {
+            if (ImGui::MenuItem(ICON_FA_EXTERNAL_LINK_ALT "  View on GitHub")) {
                 ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc3-rbm-renderer", nullptr, nullptr, SW_SHOWNORMAL);
             }
 
@@ -156,12 +176,8 @@ void UI::Render()
         ImGui::EndMainMenuBar();
     }
 
-    if (g_ShowAboutWindow) {
-        ImGui::OpenPopup("About");
-    }
-    else if (g_ShowBackgroundColourPicker) {
-        ImGui::OpenPopup("Background Colour Picker");
-    }
+    // open the about popup
+    if (g_ShowAboutWindow) ImGui::OpenPopup("About");
 
     // About
     if (ImGui::BeginPopupModal("About", &g_ShowAboutWindow, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove)))
@@ -189,36 +205,36 @@ void UI::Render()
         ImGui::EndPopup();
     }
 
-    // Background colour picker
-    if (ImGui::BeginPopupModal("Background Colour Picker", &g_ShowBackgroundColourPicker, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove)))
-    {
-        ImGui::SetWindowSize({ 400, 400 });
-
-        auto col = Renderer::Get()->GetClearColour();
-        if (ImGui::ColorPicker3("Colour", glm::value_ptr(col))) {
-            Renderer::Get()->SetClearColour(col);
-        }
-
-        if (ImGui::Button("Reset To Default")) {
-            Renderer::Get()->SetClearColour(g_DefaultClearColour);
-        }
-
-        ImGui::EndPopup();
-    }
-
-    // Scene rendering
-    // TODO: once ImGui has support for viewports/tabs/docking some of the UI will change a bit
+    // TODO: docking/tabs/viewport stuff
     // https://github.com/ocornut/imgui/issues/1542
     // https://github.com/ocornut/imgui/issues/261
 
+    const auto scene_window_size = glm::vec2{ (window_size.x - DIRECTORY_LIST_WIDTH), (window_size.y - m_MainMenuBarHeight) };
+    ImGui::SetNextWindowBgAlpha(0.0f);
+    ImGui::SetNextWindowPos({ 0, m_MainMenuBarHeight });
+    ImGui::SetNextWindowSize({ scene_window_size.x, scene_window_size.y });
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
+
+    // draw scene view
+    if (ImGui::Begin("Scene", nullptr, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar))) {
+        // update camera projection if needed
+        Camera::Get()->UpdateWindowSize(scene_window_size);
+
+        m_SceneDrawList = ImGui::GetWindowDrawList();
+
+        ImGui::Image(Renderer::Get()->GetGBufferSRV(m_CurrentActiveGBuffer), ImGui::GetWindowSize());
+        ImGui::End();
+    }
+
+    ImGui::PopStyleVar();
+
     // Stats
     ImGui::SetNextWindowBgAlpha(0.0f);
-    ImGui::Begin("Stats", nullptr, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings));
-    {
-        ImGui::SetWindowPos({ 10, (window_size.y - 35 - 24) });
+    ImGui::SetNextWindowPos({ 10, (window_size.y - 35 - 24) });
+    if (ImGui::Begin("Stats", nullptr, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings))) {
         ImGui::Text("%.01f fps (%.02f ms) (%.0f x %.0f)", ImGui::GetIO().Framerate, (1000.0f / ImGui::GetIO().Framerate), window_size.x, window_size.y);
+        ImGui::End();
     }
-    ImGui::End();
 
     // Status
     ImGui::SetNextWindowBgAlpha(0.0f);
@@ -276,9 +292,9 @@ void UI::RenderFileTreeView()
 
     // render the archive directory list
     ImGui::SetNextWindowBgAlpha(1.0f);
-    ImGui::Begin("Archive Directory List", nullptr, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar));
+    ImGui::Begin("Archive Directory List", nullptr, (ImGuiWindowFlags_ResizeFromAnySide | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar));
     {
-        ImGui::SetWindowPos({ window_size.x - DIRECTORY_LIST_WIDTH, m_MainMenuBarHeight });
+        ImGui::SetWindowPos({ (window_size.x - DIRECTORY_LIST_WIDTH), m_MainMenuBarHeight });
         ImGui::SetWindowSize({ DIRECTORY_LIST_WIDTH, (window_size.y - m_MainMenuBarHeight) });
 
         ImGui::BeginTabBar("Directory List Tabs", (ImGuiTabBarFlags_NoReorder | ImGuiTabBarFlags_SizingPolicyEqual));
@@ -389,7 +405,7 @@ void UI::RenderFileTreeView()
                                 // draw render block ui
                                 render_block->DrawUI();
 
-                                ImGui::Text(ICON_FA_PICTURE_O "  Textures");
+                                ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
 
                                 // draw render block textures
                                 const auto& textures = render_block->GetTextures();
@@ -488,7 +504,7 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra, u
 
     if (ImGui::BeginPopupContextItem("Context Menu")) {
         // general save file
-        if (ImGui::Selectable(ICON_FA_FLOPPY_O "  Save file")) {
+        if (ImGui::Selectable(ICON_FA_SAVE "  Save file")) {
             Window::Get()->ShowFolderSelection("Select a folder to save the file to.", [&](const fs::path& selected) {
                 UI::Get()->Events().SaveFileRequest(filename, selected);
             });
@@ -559,5 +575,46 @@ void UI::RegisterContextMenuCallback(const std::vector<std::string>& extensions,
 {
     for (const auto& extension : extensions) {
         m_ContextMenuCallbacks[extension] = fn;
+    }
+}
+
+void UI::DrawText(const std::string& text, const glm::vec3& position, const glm::vec4& colour, bool center)
+{
+    assert(m_SceneDrawList);
+
+    glm::vec3 screen;
+    if (Camera::Get()->WorldToScreen(position, &screen)) {
+        if (center) {
+            const auto text_size = ImGui::CalcTextSize(text.c_str());
+            m_SceneDrawList->AddText(ImVec2{ (screen.x - (text_size.x / 2)), (screen.y - (text_size.y / 2)) }, ImColor{ colour.x, colour.y, colour.z, colour.a }, text.c_str());
+        }
+        else {
+            m_SceneDrawList->AddText(ImVec2{ screen.x, screen.y }, ImColor{ colour.x, colour.y, colour.z, colour.a }, text.c_str());
+        }
+    }
+}
+
+void UI::DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour)
+{
+    assert(m_SceneDrawList);
+
+    glm::vec3 box[2] = { bb.GetMin(), bb.GetMax() };
+    ImVec2 points[8];
+
+    for (auto i = 0; i < 8; ++i) {
+        const auto world = glm::vec3{ box[(i ^ (i >> 1)) & 1].x, box[(i >> 1) & 1].y, box[(i >> 2) & 1].z };
+
+        glm::vec3 screen;
+        Camera::Get()->WorldToScreen(world, &screen);
+
+        points[i] = { screen.x, screen.y };
+    }
+
+    const auto col = ImColor{ colour.x, colour.y, colour.z, colour.a };
+
+    for (auto i = 0; i < 4; ++i) {
+        m_SceneDrawList->AddLine(points[i], points[(i + 1) & 3], col);
+        m_SceneDrawList->AddLine(points[4 + i], points[4 + ((i + 1) & 3)], col);
+        m_SceneDrawList->AddLine(points[i], points[4 + i], col);
     }
 }

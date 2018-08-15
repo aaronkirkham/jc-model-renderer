@@ -59,6 +59,17 @@ void CheckForUpdates(bool show_no_update_messagebox)
     }).detach();
 }
 
+void SelectJustCause3Directory()
+{
+    // ask the user to select their jc3 directory, we can't find it!
+    Window::Get()->ShowFolderSelection("Please select your Just Cause 3 folder.", [&](const fs::path& selected) {
+        Settings::Get()->SetValue("jc3_directory", selected.string());
+        g_JC3Directory = selected;
+    }, [] {
+        Window::Get()->ShowMessageBox("Unable to find Just Cause 3 root directory.\n\nSome features will be disabled.");
+    });
+}
+
 #ifndef DEBUG
 LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS* exception_pointers);
 #endif
@@ -226,14 +237,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
         // register read file type callbacks
         FileLoader::Get()->RegisterReadCallback({ ".rbm" }, RenderBlockModel::ReadFileCallback);
-        FileLoader::Get()->RegisterReadCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::ReadFileCallback);
+        FileLoader::Get()->RegisterReadCallback({ ".ee", ".bl", ".nl", ".fl" }, AvalancheArchive::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({ ".epe" }, RuntimeContainer::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({ ".ddsc" }, [&](const fs::path& filename, FileBuffer data) {
             TextureManager::Get()->GetTexture(filename, &data, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
         });
 
         // register save file type callbacks
-        FileLoader::Get()->RegisterSaveCallback({ ".ee", ".bl", ".nl" }, AvalancheArchive::SaveFileCallback);
+        FileLoader::Get()->RegisterSaveCallback({ ".ee", ".bl", ".nl", ".fl" }, AvalancheArchive::SaveFileCallback);
 
         // register file type context menu callbacks
         UI::Get()->RegisterContextMenuCallback({ ".epe" }, RuntimeContainer::ContextMenuUI);
@@ -244,7 +255,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         ImportExportManager::Get()->Register(new import_export::AvalancheArchive);
 
         //
-        Renderer::Get()->Events().RenderFrame.connect([&](RenderContext_t* context) {
+        Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {
             //std::lock_guard<std::recursive_mutex> _lk{ RenderBlockModel::InstancesMutex };
 
             ImGui::SetNextWindowBgAlpha(0.0f);

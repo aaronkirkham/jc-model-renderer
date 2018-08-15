@@ -11,7 +11,7 @@
 #include <graphics/Camera.h>
 #include <graphics/DebugRenderer.h>
 #include <graphics/UI.h>
-#include <graphics/imgui/fonts/fontawesome_icons.h>
+#include <graphics/imgui/fonts/fontawesome5_icons.h>
 
 #include <Input.h>
 
@@ -177,7 +177,7 @@ void RenderBlockModel::DrawGizmos()
     // draw filename label
     if (g_ShowModelLabels) {
         static auto white = glm::vec4{ 1, 1, 1, 0.6 };
-        DebugRenderer::Get()->DrawText(m_Filename.filename().string(), m_BoundingBox.GetCenter(), white, true);
+        UI::Get()->DrawText(m_Filename.filename().string(), m_BoundingBox.GetCenter(), white, true);
     }
 
     // draw bounding boxes
@@ -191,7 +191,9 @@ void RenderBlockModel::DrawGizmos()
         static auto red = glm::vec4{ 1, 0, 0, 1 };
         static auto green = glm::vec4{ 0, 1, 0, 1 };
 
-        DebugRenderer::Get()->DrawBBox(m_BoundingBox.GetMin(), m_BoundingBox.GetMax(), intersects ? green : red);
+        UI::Get()->DrawBoundingBox(m_BoundingBox, red);
+
+        //DebugRenderer::Get()->DrawBBox(m_BoundingBox.GetMin(), m_BoundingBox.GetMax(), intersects ? green : red);
     }
 }
 

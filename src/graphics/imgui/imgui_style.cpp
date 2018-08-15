@@ -1,6 +1,7 @@
 #include <imgui.h>
 #include <imgui_tabs.h>
-#include <graphics/imgui/fonts/fontawesome.h>
+#include <graphics/imgui/fonts/fontawesome5.h>
+#include <graphics/imgui/fonts/fontawesome5_icons.h>
 #include <graphics/imgui/fonts/roboto_medium.h>
 
 // https://gist.github.com/ongamex/4ee36fb23d6c527939d0f4ba72144d29
@@ -62,7 +63,7 @@ void SetupImGuiStyle()
     io.Fonts->AddFontFromMemoryCompressedBase85TTF(roboto_medium_compressed_data, 15.0f);
 
     // merge in icons from Font Awesome
-    static const ImWchar icons_ranges[] = { 0xf000, 0xf2e0, 0 };
+    static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
     ImFontConfig icons_config; icons_config.MergeMode = true; icons_config.PixelSnapH = true;
-    io.Fonts->AddFontFromMemoryCompressedTTF(fontawesome_compressed_data, fontawesome_compressed_size, 12.0f, &icons_config, icons_ranges);
+    io.Fonts->AddFontFromMemoryCompressedTTF(fontawesome_5_compressed_data, fontawesome_5_compressed_size, 12.0f, &icons_config, icons_ranges);
 }

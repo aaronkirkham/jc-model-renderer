@@ -13,7 +13,7 @@ public:
 
     ImportExportType GetType() override final { return IE_TYPE_EXPORTER; }
     const char* GetName() override final { return "Avalanche Archive"; }
-    std::vector<const char*> GetInputExtensions() override final { return { ".ee", ".bl", ".nl" }; }
+    std::vector<const char*> GetInputExtensions() override final { return { ".ee", ".bl", ".nl", ".fl" }; }
     const char* GetOutputExtension() override final { return "/"; }
 
     void WriteArchiveFiles(const fs::path& path, ::AvalancheArchive* archive) {

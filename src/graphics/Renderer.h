@@ -15,7 +15,8 @@ static auto g_DefaultClearColour = glm::vec4{ 0.15f, 0.15f, 0.15f, 1.0f };
 
 struct RenderEvents
 {
-    ksignals::Event<void(RenderContext_t*)> RenderFrame;
+    ksignals::Event<void(RenderContext_t*)> PreRender;
+    ksignals::Event<void(RenderContext_t*)> PostRender;
 };
 
 struct VertexGlobalConstants
@@ -54,8 +55,9 @@ private:
     ID3D11Device* m_Device = nullptr;
     ID3D11DeviceContext* m_DeviceContext = nullptr;
     IDXGISwapChain* m_SwapChain = nullptr;
-    std::array<ID3D11RenderTargetView*, 4> m_RenderTargetView = { nullptr };
-    std::array<ID3D11ShaderResourceView*, 3> m_RenderTargetResourceView = { nullptr };
+    ID3D11RenderTargetView* m_BackBuffer = nullptr;
+    std::array<ID3D11RenderTargetView*, 4> m_GBuffer = { nullptr };
+    std::array<ID3D11ShaderResourceView*, 4> m_GBufferSRV = { nullptr };
     ID3D11RasterizerState* m_RasterizerState = nullptr;
     ID3D11Texture2D* m_DepthTexture = nullptr;
     ID3D11DepthStencilState* m_DepthStencilEnabledState = nullptr;
@@ -80,11 +82,12 @@ private:
 
     void CreateDevice(const HWND& hwnd, const glm::vec2& size);
     void CreateRenderTarget(const glm::vec2& size);
+    void CreateGBuffer(const glm::vec2& size);
     void CreateDepthStencil(const glm::vec2& size);
     void CreateBlendState();
     void CreateRasterizerState();
 
-    void DestroyRenderTarget();
+    void DestroyRenderTargets();
     void DestroyDepthStencil();
 
     void UpdateGlobalConstants();
@@ -214,4 +217,5 @@ public:
     ID3D11Device* GetDevice() { return m_Device; }
     ID3D11DeviceContext* GetDeviceContext() { return m_DeviceContext; }
     IDXGISwapChain* GetSwapChain() { return m_SwapChain; }
+    ID3D11ShaderResourceView* GetGBufferSRV(uint8_t index) { return m_GBufferSRV[index]; }
 };

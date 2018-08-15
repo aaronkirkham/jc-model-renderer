@@ -14,6 +14,7 @@ private:
     bool m_IsTranslatingView = false;
     bool m_IsRotatingView = false;
 
+    glm::vec2 m_LastWindowSize = glm::vec2(0);
     float m_FOV = 45.0f;
     float m_NearClip = 0.1f;
     float m_FarClip = 10000.0f;
@@ -24,14 +25,14 @@ private:
 
 public:
     Camera();
-    virtual ~Camera();
-
-    void Shutdown();
+    virtual ~Camera() = default;
 
     void Update(RenderContext_t* context);
+    void UpdateWindowSize(const glm::vec2& size);
 
-    void WorldToScreen(const glm::vec3& world, glm::vec3* screen);
+    bool WorldToScreen(const glm::vec3& world, glm::vec3* screen);
     void ScreenToWorld(const glm::vec3& screen, glm::vec3* world);
+    void MouseToWorld(const glm::vec2& mouse, glm::vec3* world);
 
     void FocusOn(RenderBlockModel* model);
 

@@ -52,6 +52,7 @@ public:
 
     bool Initialise(const HINSTANCE& hInstance);
     void Shutdown();
+    void BeginShutdown() { m_Running = false; }
 
     bool Frame();
     void Run();

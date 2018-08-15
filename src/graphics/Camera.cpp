@@ -17,21 +17,13 @@ static auto SpeedMultiplier = [](float value) {
 Camera::Camera()
 {
     const auto window = Window::Get();
-    const auto window_size = window->GetSize();
+    const auto& window_size = window->GetSize();
 
     m_Projection = glm::perspectiveFovLH(glm::radians(m_FOV), window_size.x, window_size.y, m_NearClip, m_FarClip);
     m_Viewport = glm::vec4{ 0, 0, window_size.x, window_size.y };
 
     m_Position = glm::vec3(0, 3, -10);
     m_Rotation = glm::vec3(0, 0, 0);
-
-    // rebuild projection matrix if the window is resized
-    window->Events().SizeChanged.connect([&](const glm::vec2& size) {
-        if (size.x != 0 && size.y != 0) {
-            m_Projection = glm::perspectiveFovLH(glm::radians(m_FOV), size.x, size.y, m_NearClip, m_FarClip);
-            m_Viewport = glm::vec4{ 0, 0, size.x, size.y };
-        }
-    });
 
     // handle window losing focus
     window->Events().FocusLost.connect([&] {
@@ -120,15 +112,6 @@ Camera::Camera()
     });
 }
 
-Camera::~Camera()
-{
-    Shutdown();
-}
-
-void Camera::Shutdown()
-{
-}
-
 void Camera::Update(RenderContext_t* context)
 {
     // calculate the view matrix
@@ -146,20 +129,47 @@ void Camera::Update(RenderContext_t* context)
     context->m_viewProjectionMatrix = m_ViewProjection;
 }
 
-void Camera::WorldToScreen(const glm::vec3& world, glm::vec3* screen)
+void Camera::UpdateWindowSize(const glm::vec2& size)
+{
+    if (size.x > 0 && size.y > 0 && m_LastWindowSize != size) {
+        m_Projection = glm::perspectiveFovLH(glm::radians(m_FOV), size.x, size.y, m_NearClip, m_FarClip);
+        m_Viewport = glm::vec4{ 0, 0, size.x, size.y };
+
+        m_LastWindowSize = size;
+    }
+}
+
+bool Camera::WorldToScreen(const glm::vec3& world, glm::vec3* screen)
 {
     *screen = glm::project(world, m_View, m_Projection, m_Viewport);
 
     // glm uses the bottom of the window, so we need to take that into account
-    const auto window_size = Window::Get()->GetSize();
-    screen->y = (window_size.y - screen->y);
+    screen->y = (m_LastWindowSize.y - screen->y);
+
+    return (screen->z < 1.0f);
 }
 
 void Camera::ScreenToWorld(const glm::vec3& screen, glm::vec3* world)
 {
     // glm uses the bottom of the window, so we need to take that into account
-    const auto window_size = Window::Get()->GetSize();
-    *world = glm::unProject({ screen.x, window_size.y - screen.y, screen.z }, m_View, m_Projection, m_Viewport);
+    *world = glm::unProject({ screen.x, m_LastWindowSize.y - screen.y, screen.z }, m_View, m_Projection, m_Viewport);
+}
+
+template <typename T>
+T lerp(const T& start, const T& end, float percent)
+{
+    return (start + percent * (end - start));
+}
+
+void Camera::MouseToWorld(const glm::vec2& mouse, glm::vec3* world)
+{
+#undef near
+#undef far
+
+    const auto near = glm::unProject({ mouse.x, m_LastWindowSize.y - mouse.y, 0 }, m_View, m_Projection, m_Viewport);
+    const auto far = glm::unProject({ mouse.x, m_LastWindowSize.y - mouse.y, 1 }, m_View, m_Projection, m_Viewport);
+
+    *world = lerp(near, far, (0.0f - near.z) / (far.z - near.z));
 }
 
 void Camera::FocusOn(RenderBlockModel* model)

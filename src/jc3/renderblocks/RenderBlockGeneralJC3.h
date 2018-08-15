@@ -243,7 +243,7 @@ public:
         ImGui::SliderFloat("Emissive", &m_Block.attributes.emmissive, 0.0f, 10.0f);
         ImGui::SliderFloat("Diffuse Wrap", &m_Block.attributes.diffuseWrap, 0.0f, 10.0f);
         ImGui::SliderFloat("Specular Fresnel", &m_Block.attributes.specularFresnel, 0.0f, 10.0f);
-        ImGui::SliderFloat4("Diffuse Modulator", glm::value_ptr(m_Block.attributes.diffuseModulator), 0.0f, 1.0f);
+        ImGui::ColorPicker3("Diffuse Modulator", glm::value_ptr(m_Block.attributes.diffuseModulator));
         ImGui::SliderFloat("Unknown #1", &m_Block.attributes._unknown, 0.0f, 10.0f);
         ImGui::SliderFloat("Unknown #2", &m_Block.attributes._unknown2, 0.0f, 10.0f);
         ImGui::SliderFloat("Unknown #3", &m_Block.attributes._unknown3, 0.0f, 10.0f);

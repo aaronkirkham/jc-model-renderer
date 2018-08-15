@@ -23,6 +23,7 @@
 #include <version.h>
 
 void CheckForUpdates(bool show_no_update_messagebox = false);
+void SelectJustCause3Directory();
 
 namespace fs = std::experimental::filesystem;
 using json = nlohmann::json;
