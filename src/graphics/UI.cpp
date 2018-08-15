@@ -317,7 +317,7 @@ void UI::RenderFileTreeView()
                     // context menu
                     RenderContextMenu(archive->GetFilePath(), 0, CTX_ARCHIVE);
 
-                    if (open) {
+                    if (open && archive->GetDirectoryList()) {
                         // draw the directory list
                         ImGui::PushID(filename.string().c_str());
                         archive->GetDirectoryList()->Draw(archive.get());
