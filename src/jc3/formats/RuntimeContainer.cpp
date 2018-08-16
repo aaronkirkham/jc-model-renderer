@@ -46,34 +46,35 @@ RuntimeContainer::~RuntimeContainer()
     m_Containers.clear();
 }
 
-void RuntimeContainer::GenerateNamesIfNeeded()
+void RuntimeContainer::GenerateBetterNames()
 {
+    std::stringstream ss;
+    const auto _class = GetProperty("_class", false);
+    const auto _name = GetProperty("name", false);
+
+    if (_class) {
+        ss << _class->GetValue<std::string>();
+        if (_name) ss << " (";
+    }
+
+    if (_name) {
+        ss << _name->GetValue<std::string>();
+        if (_class) ss << ")";
+    }
+
     if (m_Name.empty()) {
-        std::stringstream ss;
-        const auto _class = GetProperty("_class");
-        const auto _name = GetProperty("name");
-
-        if (_class) {
-            ss << _class->GetValue<std::string>();
-
-            if (_name) ss << " (";
-        }
-
-        if (_name) {
-            ss << _name->GetValue<std::string>();
-
-            if (_class) ss << ")";
-        }
-
         m_Name = ss.str();
+    }
+    else if (!ss.str().empty()) {
+        m_Name = ss.str() + " (" + m_Name + ")";
     }
 
     for (const auto& container : m_Containers) {
-        container->GenerateNamesIfNeeded();
+        container->GenerateBetterNames();
     }
 }
 
-RuntimeContainerProperty* RuntimeContainer::GetProperty(uint32_t name_hash)
+RuntimeContainerProperty* RuntimeContainer::GetProperty(uint32_t name_hash, bool include_children)
 {
     // find the property
     for (auto& prop : m_Properties) {
@@ -82,23 +83,25 @@ RuntimeContainerProperty* RuntimeContainer::GetProperty(uint32_t name_hash)
         }
     }
 
-    // try find the property in child containers
-    for (auto& container : m_Containers) {
-        auto prop = container->GetProperty(name_hash);
-        if (prop) {
-            return prop;
+    if (include_children) {
+        // try find the property in child containers
+        for (auto& container : m_Containers) {
+            auto prop = container->GetProperty(name_hash);
+            if (prop) {
+                return prop;
+            }
         }
     }
 
     return nullptr;
 }
 
-RuntimeContainerProperty* RuntimeContainer::GetProperty(const std::string& name)
+RuntimeContainerProperty* RuntimeContainer::GetProperty(const std::string& name, bool include_children)
 {
-    return GetProperty(hashlittle(name.c_str()));
+    return GetProperty(hashlittle(name.c_str()), include_children);
 }
 
-RuntimeContainer* RuntimeContainer::GetContainer(uint32_t name_hash)
+RuntimeContainer* RuntimeContainer::GetContainer(uint32_t name_hash, bool include_children)
 {
     // find the container
     for (auto& container : m_Containers) {
@@ -106,19 +109,21 @@ RuntimeContainer* RuntimeContainer::GetContainer(uint32_t name_hash)
             return container;
         }
 
-        // if the container has a child we're looking for, use that
-        auto child_container = container->GetContainer(name_hash);
-        if (child_container) {
-            return child_container;
+        if (include_children) {
+            // if the container has a child we're looking for, use that
+            auto child_container = container->GetContainer(name_hash);
+            if (child_container) {
+                return child_container;
+            }
         }
     }
 
     return nullptr;
 }
 
-RuntimeContainer* RuntimeContainer::GetContainer(const std::string& name)
+RuntimeContainer* RuntimeContainer::GetContainer(const std::string& name, bool include_children)
 {
-    return GetContainer(hashlittle(name.c_str()));
+    return GetContainer(hashlittle(name.c_str()), include_children);
 }
 
 std::vector<RuntimeContainer*> RuntimeContainer::GetAllContainers(const std::string& class_name)
@@ -187,7 +192,7 @@ void RuntimeContainer::DrawUI(uint8_t depth)
             }
 
             case RTPC_TYPE_STRING: {
-                auto value = std::any_cast<std::string>(prop->GetValue());
+                auto& value = std::any_cast<std::string>(prop->GetValue());
                 std::vector<char> buf(value.begin(), value.end());
                 if (ImGui::InputText(prop->GetName().c_str(), buf.data(), value.size())) {
 
@@ -196,7 +201,7 @@ void RuntimeContainer::DrawUI(uint8_t depth)
             }
 
             case RTPC_TYPE_VEC2: {
-                auto value = std::any_cast<glm::vec2>(prop->GetValue());
+                auto& value = std::any_cast<glm::vec2>(prop->GetValue());
                 if (ImGui::InputFloat2(prop->GetName().c_str(), &value.x)) {
                     prop->SetValue(glm::vec2{ value.x, value.y });
                 }
@@ -204,7 +209,7 @@ void RuntimeContainer::DrawUI(uint8_t depth)
             }
 
             case RTPC_TYPE_VEC3: {
-                auto value = std::any_cast<glm::vec3>(prop->GetValue());
+                auto& value = std::any_cast<glm::vec3>(prop->GetValue());
                 if (ImGui::InputFloat3(prop->GetName().c_str(), &value.x)) {
                     prop->SetValue(glm::vec3{ value.x, value.y, value.z });
                 }
@@ -212,7 +217,7 @@ void RuntimeContainer::DrawUI(uint8_t depth)
             }
 
             case RTPC_TYPE_VEC4: {
-                auto value = std::any_cast<glm::vec4>(prop->GetValue());
+                auto& value = std::any_cast<glm::vec4>(prop->GetValue());
                 if (ImGui::InputFloat4(prop->GetName().c_str(), &value.x)) {
                     prop->SetValue(glm::vec4{ value.x, value.y, value.z, value.w });
                 }
@@ -220,7 +225,7 @@ void RuntimeContainer::DrawUI(uint8_t depth)
             }
 
             case RTPC_TYPE_MAT4X4: {
-                auto value = prop->GetValue<glm::mat4>();
+                auto& value = prop->GetValue<glm::mat4>();
                 ImGui::Text(prop->GetName().c_str());
                 ImGui::InputFloat4("m0", &value[0][0]);
                 ImGui::InputFloat4("m1", &value[1][0]);

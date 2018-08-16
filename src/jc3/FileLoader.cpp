@@ -1073,7 +1073,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const fs::pa
     }
 
     // generate container names if needed
-    root_container->GenerateNamesIfNeeded();
+    root_container->GenerateBetterNames();
 
     return root_container;
 }

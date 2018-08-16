@@ -82,7 +82,7 @@ public:
 
     virtual std::string GetFactoryKey() const { return m_Filename.string(); }
 
-    void GenerateNamesIfNeeded();
+    void GenerateBetterNames();
 
     void AddProperty(RuntimeContainerProperty* prop) { m_Properties.emplace_back(prop); }
     void AddContainer(RuntimeContainer* cont) { m_Containers.emplace_back(cont); };
@@ -96,11 +96,11 @@ public:
     const std::string& GetName() const { return m_Name; }
     uint32_t GetNameHash() const { return m_NameHash; }
 
-    RuntimeContainerProperty* GetProperty(uint32_t name_hash);
-    RuntimeContainerProperty* GetProperty(const std::string& name);
+    RuntimeContainerProperty* GetProperty(uint32_t name_hash, bool include_children = true);
+    RuntimeContainerProperty* GetProperty(const std::string& name, bool include_children = true);
 
-    RuntimeContainer* GetContainer(uint32_t name_hash);
-    RuntimeContainer* GetContainer(const std::string& name);
+    RuntimeContainer* GetContainer(uint32_t name_hash, bool include_children = true);
+    RuntimeContainer* GetContainer(const std::string& name, bool include_children = true);
 
     std::vector<RuntimeContainer*> GetAllContainers(const std::string& class_name);
 

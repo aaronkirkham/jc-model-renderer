@@ -220,6 +220,10 @@ void Renderer::SetDefaultRenderStates()
     // reset all samplers
     ID3D11SamplerState* nullSamplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT] = { nullptr };
     m_DeviceContext->PSSetSamplers(0, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, nullSamplers);
+
+    // reset blending
+    SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ZERO);
+    SetBlendingEq(D3D11_BLEND_OP_ADD, D3D11_BLEND_OP_ADD);
 }
 
 void Renderer::Draw(uint32_t first_vertex, uint32_t vertex_count)
