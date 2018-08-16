@@ -774,6 +774,11 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
             return callback(false, {});
         }
 
+        // generic DDS handler
+        if (filename.extension() == ".dds") {
+            return callback(true, std::move(data));
+        }
+
         std::istringstream stream(std::string{ (char *)data.data(), data.size() });
 
         // read the texture data

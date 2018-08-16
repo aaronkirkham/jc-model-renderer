@@ -239,7 +239,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterReadCallback({ ".rbm" }, RenderBlockModel::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({ ".ee", ".bl", ".nl", ".fl" }, AvalancheArchive::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({ ".epe" }, RuntimeContainer::ReadFileCallback);
-        FileLoader::Get()->RegisterReadCallback({ ".ddsc" }, [&](const fs::path& filename, FileBuffer data) {
+        FileLoader::Get()->RegisterReadCallback({ ".dds", ".ddsc" }, [&](const fs::path& filename, FileBuffer data) {
             TextureManager::Get()->GetTexture(filename, &data, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
         });
 
