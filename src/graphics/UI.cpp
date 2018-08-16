@@ -23,8 +23,6 @@
 #include <atomic>
 #include <shellapi.h>
 
-#define DIRECTORY_LIST_WIDTH 400
-
 extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;
 extern fs::path g_JC3Directory;
@@ -209,16 +207,18 @@ void UI::Render()
     // https://github.com/ocornut/imgui/issues/1542
     // https://github.com/ocornut/imgui/issues/261
 
-    const auto scene_window_size = glm::vec2{ (window_size.x - DIRECTORY_LIST_WIDTH), (window_size.y - m_MainMenuBarHeight) };
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::SetNextWindowPos({ 0, m_MainMenuBarHeight });
-    ImGui::SetNextWindowSize({ scene_window_size.x, scene_window_size.y });
+    ImGui::SetNextWindowSize({ window_size.x - m_SidebarWidth, window_size.y - m_MainMenuBarHeight });
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
 
     // draw scene view
-    if (ImGui::Begin("Scene", nullptr, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar))) {
+    if (ImGui::Begin("Scene", nullptr, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar))) {
+        const auto& size = ImGui::GetWindowSize();
+        m_SceneWidth = size.x;
+
         // update camera projection if needed
-        Camera::Get()->UpdateWindowSize(scene_window_size);
+        Camera::Get()->UpdateWindowSize({ size.x, size.y });
 
         m_SceneDrawList = ImGui::GetWindowDrawList();
 
@@ -227,6 +227,9 @@ void UI::Render()
     }
 
     ImGui::PopStyleVar();
+
+    // file tree view
+    RenderFileTreeView();
 
     // Stats
     ImGui::SetNextWindowBgAlpha(0.0f);
@@ -242,27 +245,23 @@ void UI::Render()
     ImGui::Begin("Status", nullptr, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings));
     {
         const auto size = ImGui::GetWindowSize();
-        ImGui::SetWindowPos({ ((window_size.x - DIRECTORY_LIST_WIDTH) - size.x - 10), (window_size.y - size.y - 10) });
+        ImGui::SetWindowPos({ ((window_size.x - m_SidebarWidth) - size.x - 10), (window_size.y - size.y - 10) });
 
-        static const auto item_spacing = 24.0f;
+        static constexpr auto ITEM_SPACING = 24.0f;
         uint32_t current_index = 0;
 
-        std::lock_guard<std::recursive_mutex> _lk{ m_StatusTextsMutex };
-
         // render all status texts
+        std::lock_guard<std::recursive_mutex> _lk{ m_StatusTextsMutex };
         for (const auto& status : m_StatusTexts) {
             const auto& text_size = ImGui::CalcTextSize(status.second.c_str());
 
-            ImGui::SetCursorPos({ (size.x - text_size.x - 25), (window_size.y - 20 - (item_spacing * current_index)) });
+            ImGui::SetCursorPos({ (size.x - text_size.x - 25), (window_size.y - 20 - (ITEM_SPACING * current_index)) });
             RenderSpinner(status.second);
 
             ++current_index;
         }
     }
     ImGui::End();
-
-    // file tree view
-    RenderFileTreeView();
 
     // render runtime container stuff
     for (auto it = RuntimeContainer::Instances.begin(); it != RuntimeContainer::Instances.end(); ) {
@@ -292,10 +291,18 @@ void UI::RenderFileTreeView()
 
     // render the archive directory list
     ImGui::SetNextWindowBgAlpha(1.0f);
+    ImGui::SetNextWindowPos({ m_SceneWidth, m_MainMenuBarHeight });
+    ImGui::SetNextWindowSizeConstraints({ MIN_SIDEBAR_WIDTH, (window_size.y - m_MainMenuBarHeight) }, { window_size.x / 2, (window_size.y - m_MainMenuBarHeight) });
+
+    // hide resize grip
+    // TODO: can probably remove if we can use the NoResize flag with ResizeFromAnySize
+    ImGui::PushStyleColor(ImGuiCol_ResizeGrip, { 0, 0, 0, 0 });
+    ImGui::PushStyleColor(ImGuiCol_ResizeGripHovered, { 0, 0, 0, 0 });
+    ImGui::PushStyleColor(ImGuiCol_ResizeGripActive, { 0, 0, 0, 0 });
+
     ImGui::Begin("Archive Directory List", nullptr, (ImGuiWindowFlags_ResizeFromAnySide | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar));
     {
-        ImGui::SetWindowPos({ (window_size.x - DIRECTORY_LIST_WIDTH), m_MainMenuBarHeight });
-        ImGui::SetWindowSize({ DIRECTORY_LIST_WIDTH, (window_size.y - m_MainMenuBarHeight) });
+        m_SidebarWidth = ImGui::GetWindowSize().x;
 
         ImGui::BeginTabBar("Directory List Tabs", (ImGuiTabBarFlags_NoReorder | ImGuiTabBarFlags_SizingPolicyEqual));
         {
@@ -482,6 +489,8 @@ void UI::RenderFileTreeView()
         ImGui::EndTabBar();
     }
     ImGui::End();
+
+    ImGui::PopStyleColor(3);
 }
 
 void UI::RenderSpinner(const std::string& str)

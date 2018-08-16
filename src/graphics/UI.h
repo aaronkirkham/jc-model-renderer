@@ -21,6 +21,8 @@ enum ContextMenuFlags {
 
 using ContextMenuCallback = std::function<void(const fs::path& filename)>;
 
+static constexpr auto MIN_SIDEBAR_WIDTH = 400.0f;
+
 struct ImDrawList;
 struct BoundingBox;
 class UI : public Singleton<UI>
@@ -35,6 +37,8 @@ private:
     uint8_t m_CurrentActiveGBuffer = 0;
 
     ImDrawList* m_SceneDrawList = nullptr;
+    float m_SceneWidth = 0.0f;
+    float m_SidebarWidth = MIN_SIDEBAR_WIDTH;
 
     void RenderFileTreeView();
 
