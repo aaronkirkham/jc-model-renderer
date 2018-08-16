@@ -3,7 +3,6 @@
 	{
 		'target_name': 'zlib',
 		'type': 'static_library',
-		'include_dirs': ['vendor/zlib'],
 		'defines': [
 			'DEF_WBITS=-15',
 		],
@@ -12,13 +11,14 @@
 				'DisableSpecificWarnings': ['4267'],
 			},
 		},
+		'include_dirs': ['vendor/zlib'],
 		'sources': [
-            '<!@pymod_do_main(glob-files vendor/zlib/*.c)',
+			'<!@pymod_do_main(glob-files vendor/zlib/*.c)',
 			'<!@pymod_do_main(glob-files vendor/zlib/*.h)',
 		],
-        'direct_dependent_settings': {
-            'include_dirs': ['vendor/zlib'],
-         },
+		'direct_dependent_settings': {
+			'include_dirs': ['vendor/zlib'],
+		},
 	}
 	]
 }

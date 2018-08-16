@@ -38,7 +38,26 @@ bool Texture::LoadFromBuffer(const FileBuffer& buffer)
 
     // create the dds texture resources
     auto result = DirectX::CreateDDSTextureFromMemory(Renderer::Get()->GetDevice(), buffer.data(), buffer.size(), &m_Texture, &m_SRV);
-    //assert(SUCCEEDED(result));
+
+    // get the texture size
+    if (SUCCEEDED(result)) {
+        ID3D11Texture2D* _tex = nullptr;
+        result = m_Texture->QueryInterface(&_tex);
+        assert(SUCCEEDED(result));
+
+        D3D11_TEXTURE2D_DESC desc;
+        _tex->GetDesc(&desc);
+        _tex->Release();
+
+        m_Size = { desc.Width, desc.Height };
+
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+        auto& fn = m_Filename.filename().string();
+        D3D_SET_OBJECT_NAME_A(m_Texture, fn.c_str());
+        fn += " (SRV)";
+        D3D_SET_OBJECT_NAME_A(m_Texture, fn.c_str());
+#endif
+    }
 
     // store the buffer
     m_Buffer = std::move(buffer);
@@ -88,30 +107,39 @@ TextureManager::TextureManager()
     m_MissingTexture->LoadFromFile("../assets/missing-texture.dds");
 
     Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {
-        const auto& window_size = Window::Get()->GetSize();
-        const auto aspect_ratio = (window_size.x / window_size.y);
-
-        for (auto it = m_RenderingTextures.begin(); it != m_RenderingTextures.end();) {
+        for (auto it = m_PreviewTextures.begin(); it != m_PreviewTextures.end();) {
             bool open = true;
+            const auto texture = (*it);
 
             std::stringstream ss;
-            ss << ICON_FA_FILE_IMAGE << "  " << (*it)->GetPath();
+            ss << ICON_FA_FILE_IMAGE << "  " << texture->GetPath();
 
+            // maintain aspect ratio
+            ImGui::SetNextWindowSizeConstraints({ 128, 128 }, { FLT_MAX, FLT_MAX }, [](ImGuiSizeCallbackData* data) {
+                data->DesiredSize = { std::max(data->DesiredSize.x, data->DesiredSize.y), std::max(data->DesiredSize.x, data->DesiredSize.y) };
+            });
+
+            // draw window
+            ImGui::SetNextWindowSize({ 512, 512 }, ImGuiCond_Appearing);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
             if (ImGui::Begin(ss.str().c_str(), &open, (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))) {
-                const auto width = ImGui::GetWindowWidth();
-                const auto texture_size = ImVec2(width, (width / aspect_ratio));
+                ImGui::PopStyleVar();
 
-                ImGui::Image((*it)->GetSRV(), texture_size);
+                const auto titlebar_size = ImGui::GetCursorPosY();
+                const auto& w_size = ImGui::GetWindowSize();
+
+                ImGui::Image(texture->GetSRV(), { w_size.x, w_size.y - titlebar_size });
 
                 // render context menus so we can save/export from this window
-                UI::Get()->RenderContextMenu((*it)->GetPath(), 0, CTX_TEXTURE);
+                UI::Get()->RenderContextMenu(texture->GetPath(), 0, CTX_TEXTURE);
 
                 ImGui::End();
             }
+            else ImGui::PopStyleVar();
 
             // close button pressed
             if (!open) {
-                it = m_RenderingTextures.erase(it);
+                it = m_PreviewTextures.erase(it);
                 Flush();
                 continue;
             }
@@ -124,7 +152,7 @@ TextureManager::TextureManager()
 void TextureManager::Shutdown()
 {
     Empty();
-    m_RenderingTextures.clear();
+    m_PreviewTextures.clear();
     m_MissingTexture = nullptr;
 }
 
@@ -173,7 +201,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, Fi
     auto it = m_Textures.find(key);
     if (it != m_Textures.end()) {
         if (flags & IS_UI_RENDERABLE) {
-            m_RenderingTextures.emplace_back(it->second);
+            m_PreviewTextures.emplace_back(it->second);
         }
 
         return it->second;
@@ -187,7 +215,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, Fi
         }
 
         if (flags & IS_UI_RENDERABLE) {
-            m_RenderingTextures.emplace_back(m_Textures[key]);
+            m_PreviewTextures.emplace_back(m_Textures[key]);
         }
 
         return m_Textures[key];
@@ -247,6 +275,13 @@ void TextureManager::Empty()
 {
     m_Textures.clear();
     m_LastUsedTextures.clear();
+}
+
+void TextureManager::PreviewTexture(std::shared_ptr<Texture> texture)
+{
+    if (std::find(m_PreviewTextures.begin(), m_PreviewTextures.end(), texture) == m_PreviewTextures.end()) {
+        m_PreviewTextures.emplace_back(texture);
+    }
 }
 
 DDS_PIXELFORMAT TextureManager::GetPixelFormat(DXGI_FORMAT format)

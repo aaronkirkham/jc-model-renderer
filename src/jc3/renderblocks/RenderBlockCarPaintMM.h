@@ -408,8 +408,8 @@ public:
         ImGui::Text("Dynamic Material Params");
         ImGui::Separator();
         ImGui::ColorEdit3("Colour", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorR));
-        ImGui::SliderFloat4("G", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorG), 0, 1);
-        ImGui::SliderFloat4("B", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorB), 0, 1);
+        ImGui::ColorEdit3("Tint G", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorG));
+        ImGui::ColorEdit3("Tint B", glm::value_ptr(m_cbDynamicMaterialParams.m_TintColorB));
         ImGui::SliderFloat("Specular Gloss Override", &m_cbDynamicMaterialParams.m_SpecularGlossOverride, 0, 1);
         ImGui::SliderFloat("Metallic Override", &m_cbDynamicMaterialParams.m_MetallicOverride, 0, 1);
         ImGui::SliderFloat("Clear Coat Override", &m_cbDynamicMaterialParams.m_ClearCoatOverride, 0, 1);

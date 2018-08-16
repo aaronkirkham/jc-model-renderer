@@ -450,6 +450,11 @@ void UI::RenderFileTreeView()
                                             ImGui::SetTooltip(path.filename().string().c_str());
                                         }
 
+                                        // open texture preview
+                                        if (is_loaded && ImGui::IsItemClicked()) {
+                                            TextureManager::Get()->PreviewTexture(texture);
+                                        }
+
                                         // context menu
                                         if (is_loaded) {
                                             RenderContextMenu(path, ImGui::GetColumnIndex(), CTX_TEXTURE);

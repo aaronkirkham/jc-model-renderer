@@ -10,6 +10,7 @@
 		'defines': [
 			'WIN32_LEAN_AND_MEAN',
 			'CPPHTTPLIB_ZLIB_SUPPORT',
+			'_SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING',
 		],
 		'msvs_configuration_attributes': {
 			'CharacterSet': '0',

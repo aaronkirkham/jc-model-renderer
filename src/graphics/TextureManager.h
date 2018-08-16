@@ -11,6 +11,7 @@ private:
     ID3D11Resource* m_Texture = nullptr;
     ID3D11ShaderResourceView* m_SRV = nullptr;
     fs::path m_Filename = "";
+    glm::vec2 m_Size = glm::vec2(0);
     FileBuffer m_Buffer;
 
 public:
@@ -21,12 +22,13 @@ public:
     bool LoadFromFile(const fs::path& filename);
     void Use(uint32_t slot);
 
-    bool IsLoaded() { return (m_Texture != nullptr && m_SRV != nullptr); }
+    bool IsLoaded() const { return (m_Texture != nullptr && m_SRV != nullptr); }
     const fs::path& GetPath() { return m_Filename; }
 
     ID3D11Resource* GetResource() { return m_Texture; }
     ID3D11ShaderResourceView* GetSRV() { return m_SRV; }
 
+    const glm::vec2& GetSize() const { return m_Size; }
     const FileBuffer& GetBuffer() { return m_Buffer; }
 };
 
@@ -36,7 +38,7 @@ private:
     std::unordered_map<uint32_t, std::shared_ptr<Texture>> m_Textures;
     std::vector<uint32_t> m_LastUsedTextures;
     std::unique_ptr<Texture> m_MissingTexture;
-    std::vector<std::shared_ptr<Texture>> m_RenderingTextures;
+    std::vector<std::shared_ptr<Texture>> m_PreviewTextures;
 
 public:
     enum TextureCreateFlags
@@ -59,6 +61,8 @@ public:
     void Flush();
     void Delete(std::shared_ptr<Texture> texture);
     void Empty();
+
+    void PreviewTexture(std::shared_ptr<Texture> texture);
 
     static DDS_PIXELFORMAT GetPixelFormat(DXGI_FORMAT format);
 

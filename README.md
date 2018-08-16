@@ -1,12 +1,9 @@
-## Just Cause 3 Render Block Model (.rbm) Renderer
-A small application to preview Just Cause 3's Render Block Model files without the need for external tools. Load an archive and select the file you want to view, you can do fancy things like rotate the model, replace textures and even export the model to another format.
-
-Currently you are unable to replace any models and repack the archives. This is a feature that will be added soon&trade;.
+## Just Cause 3 Render Block Model Renderer
+An application to preview Just Cause 3's Render Block Model files without the need for external tools. Open an archive and select the file you want to preview. You can do things like change model attributes, replace textures and even export to a different format.
 
 <p align="center"><img src="https://kirkh.am/jc3-rbm-renderer/window2.png" alt="Just Cause 3 Render Block Model Renderer Main Window" title="Render Block Model Renderer - Main Window"></p>
 
 ### Build Requirements
-If you want to compile the code yourself for any reason, here are a few things you'll need.
  - Visual Studio 2017.3 or later
  - Python 2.7
  

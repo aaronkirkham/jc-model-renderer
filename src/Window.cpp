@@ -3,6 +3,10 @@
 #include <graphics/Renderer.h>
 #include <examples/imgui_impl_win32.h>
 
+#include <jc3/formats/RuntimeContainer.h>
+#include <jc3/formats/RenderBlockModel.h>
+#include <jc3/formats/AvalancheArchive.h>
+
 #include <sstream>
 #include <shlobj.h>
 #include <shellapi.h>
@@ -86,6 +90,11 @@ bool Window::Initialise(const HINSTANCE& instance)
 void Window::Shutdown()
 {
     m_Running = false;
+
+    // clear factories
+    RuntimeContainer::Instances.clear();
+    RenderBlockModel::Instances.clear();
+    AvalancheArchive::Instances.clear();
 
     Renderer::Get()->Shutdown();
 
