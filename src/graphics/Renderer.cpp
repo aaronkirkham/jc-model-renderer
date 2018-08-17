@@ -141,12 +141,12 @@ void Renderer::Shutdown()
 
     SAFE_RELEASE(m_BlendState);
     SAFE_RELEASE(m_RasterizerState);
-    SAFE_RELEASE(m_SwapChain);
     SAFE_RELEASE(m_DeviceContext);
     SAFE_RELEASE(m_Device);
+    SAFE_RELEASE(m_SwapChain);
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-    m_DeviceDebugger->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+    m_DeviceDebugger->ReportLiveDeviceObjects(D3D11_RLDO_IGNORE_INTERNAL);
 #endif
 
 #ifdef DEBUG
@@ -167,8 +167,9 @@ bool Renderer::Render()
         m_DeviceContext->ClearRenderTargetView(m_BackBuffer, glm::value_ptr(m_ClearColour));
 
         // clear gbuffer
+        static float _black[4] = { 0, 0, 0, 0 };
         for (const auto& rt : m_GBuffer) {
-            if (rt) m_DeviceContext->ClearRenderTargetView(rt, glm::value_ptr(m_ClearColour));
+            if (rt) m_DeviceContext->ClearRenderTargetView(rt, _black);
         }
 
         m_DeviceContext->ClearDepthStencilView(m_DepthStencilView, (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL), 1.0f, 0);
@@ -214,11 +215,11 @@ void Renderer::SetupRenderStates()
 void Renderer::SetDefaultRenderStates()
 {
     // reset all shader resources
-    ID3D11ShaderResourceView* nullViews[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = { nullptr };
+    static ID3D11ShaderResourceView* nullViews[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = { nullptr };
     m_DeviceContext->PSSetShaderResources(0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, nullViews);
 
     // reset all samplers
-    ID3D11SamplerState* nullSamplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT] = { nullptr };
+    static ID3D11SamplerState* nullSamplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT] = { nullptr };
     m_DeviceContext->PSSetSamplers(0, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, nullSamplers);
 
     // reset blending
@@ -397,9 +398,9 @@ void Renderer::CreateGBuffer(const glm::vec2& size)
 #endif
     }
 
-    // create metallic render target
+    // create properties render target
     {
-        auto tex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Metallic texture");
+        auto tex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Properties texture");
         auto result = m_Device->CreateRenderTargetView(tex, nullptr, &m_GBuffer[2]);
         assert(SUCCEEDED(result));
 
@@ -413,14 +414,14 @@ void Renderer::CreateGBuffer(const glm::vec2& size)
         SAFE_RELEASE(tex);
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-        D3D_SET_OBJECT_NAME_A(m_GBuffer[2], "Renderer GBuffer (Metallic)");
-        D3D_SET_OBJECT_NAME_A(m_GBufferSRV[2], "Renderer GBuffer SRV (Metallic)");
+        D3D_SET_OBJECT_NAME_A(m_GBuffer[2], "Renderer GBuffer (Properties)");
+        D3D_SET_OBJECT_NAME_A(m_GBufferSRV[2], "Renderer GBuffer SRV (Properties)");
 #endif
     }
 
-    // create unknown render target
+    // create properties ex render target
     {
-        auto tex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Unknown texture");
+        auto tex = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "PropertiesEx texture");
         auto result = m_Device->CreateRenderTargetView(tex, nullptr, &m_GBuffer[3]);
         assert(SUCCEEDED(result));
 
@@ -434,8 +435,8 @@ void Renderer::CreateGBuffer(const glm::vec2& size)
         SAFE_RELEASE(tex);
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-        D3D_SET_OBJECT_NAME_A(m_GBuffer[3], "Renderer GBuffer (Unknown)");
-        D3D_SET_OBJECT_NAME_A(m_GBufferSRV[3], "Renderer GBuffer SRV (Unknown)");
+        D3D_SET_OBJECT_NAME_A(m_GBuffer[3], "Renderer GBuffer (PropertiesEx)");
+        D3D_SET_OBJECT_NAME_A(m_GBufferSRV[3], "Renderer GBuffer SRV (PropertiesEx)");
 #endif
     }
 }
@@ -608,7 +609,7 @@ void Renderer::CreateRasterizerState()
 
 void Renderer::DestroyRenderTargets()
 {
-    ID3D11RenderTargetView* null_targets[5] = { nullptr };
+    static ID3D11RenderTargetView* null_targets[5] = { nullptr };
     m_DeviceContext->OMSetRenderTargets(5, null_targets, nullptr);
 
     // free gbuffer

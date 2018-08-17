@@ -99,8 +99,8 @@ void UI::Render()
             if (ImGui::BeginMenu("Render Target")) {
                 if (ImGui::MenuItem("Diffuse", nullptr, m_CurrentActiveGBuffer == 0)) m_CurrentActiveGBuffer = 0;
                 if (ImGui::MenuItem("Normal", nullptr, m_CurrentActiveGBuffer == 1)) m_CurrentActiveGBuffer = 1;
-                if (ImGui::MenuItem("Metallic", nullptr, m_CurrentActiveGBuffer == 2)) m_CurrentActiveGBuffer = 2;
-                if (ImGui::MenuItem("Unknown", nullptr, m_CurrentActiveGBuffer == 3)) m_CurrentActiveGBuffer = 3;
+                if (ImGui::MenuItem("Properties", nullptr, m_CurrentActiveGBuffer == 2)) m_CurrentActiveGBuffer = 2;
+                if (ImGui::MenuItem("PropertiesEx", nullptr, m_CurrentActiveGBuffer == 3)) m_CurrentActiveGBuffer = 3;
 
                 ImGui::EndMenu();
             }
