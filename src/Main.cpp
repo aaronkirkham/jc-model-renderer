@@ -62,7 +62,7 @@ void CheckForUpdates(bool show_no_update_messagebox)
 void SelectJustCause3Directory()
 {
     // ask the user to select their jc3 directory, we can't find it!
-    Window::Get()->ShowFolderSelection("Please select your Just Cause 3 folder.", [&](const fs::path& selected) {
+    Window::Get()->ShowFolderSelection("Please select your Just Cause 3 install folder.", [&](const fs::path& selected) {
         Settings::Get()->SetValue("jc3_directory", selected.string());
         g_JC3Directory = selected;
     }, [] {
@@ -119,13 +119,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
     if (Window::Get()->Initialise(hInstance)) {
         // do we need to select the install directory manually?
         if (g_JC3Directory.empty() || !fs::exists(g_JC3Directory)) {
-            // ask the user to select their jc3 directory, we can't find it!
-            Window::Get()->ShowFolderSelection("Please select your Just Cause 3 folder.", [&](const fs::path& selected) {
-                Settings::Get()->SetValue("jc3_directory", selected.string());
-                g_JC3Directory = selected;
-            }, [] {
-                Window::Get()->ShowMessageBox("Unable to find Just Cause 3 root directory.\n\nSome features will be disabled.");
-            });
+            SelectJustCause3Directory();
         }
 
 #ifndef DEBUG
