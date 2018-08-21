@@ -98,6 +98,23 @@ public:
 
         //
         memset(&m_cbMaterialConsts._unknown, 0, sizeof(m_cbMaterialConsts._unknown));
+
+        // create the sampler states
+        {
+            D3D11_SAMPLER_DESC params;
+            ZeroMemory(&params, sizeof(params));
+            params.Filter = D3D11_FILTER_ANISOTROPIC;
+            params.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.MipLODBias = 0.0f;
+            params.MaxAnisotropy = 8;
+            params.ComparisonFunc = D3D11_COMPARISON_NEVER;
+            params.MinLOD = 0.0f;
+            params.MaxLOD = 13.0f;
+
+            m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCharacterSkin");
+        }
     }
 
     virtual void Read(std::istream& stream) override final
@@ -161,6 +178,13 @@ public:
             // set fragment shader constants
             //
         }
+
+        // set the sampler states
+        context->m_Renderer->SetSamplerState(m_SamplerState, 0);
+        context->m_Renderer->SetSamplerState(m_SamplerState, 1);
+        context->m_Renderer->SetSamplerState(m_SamplerState, 2);
+        context->m_Renderer->SetSamplerState(m_SamplerState, 3);
+        context->m_Renderer->SetSamplerState(m_SamplerState, 4);
 
         // set the constant buffers
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbLocalConsts);

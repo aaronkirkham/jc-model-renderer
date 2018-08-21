@@ -199,6 +199,14 @@ public:
             //
         }
 
+        // set the sampler states
+        context->m_Renderer->SetSamplerState(m_SamplerState, 0);
+        context->m_Renderer->SetSamplerState(m_SamplerState, 1);
+        context->m_Renderer->SetSamplerState(m_SamplerState, 2);
+        context->m_Renderer->SetSamplerState(m_SamplerState, 3);
+        context->m_Renderer->SetSamplerState(m_SamplerState, 4);
+        context->m_Renderer->SetSamplerState(m_SamplerState, 9);
+
         // set the constant buffers
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbLocalConsts);
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbInstanceConsts);
