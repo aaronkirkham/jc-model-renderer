@@ -96,7 +96,7 @@ void UI::Render()
         // renderer
         if (ImGui::BeginMenu("Renderer"))
         {
-            if (ImGui::BeginMenu("Render Target")) {
+            if (ImGui::BeginMenu("Visualize")) {
                 if (ImGui::MenuItem("Diffuse", nullptr, m_CurrentActiveGBuffer == 0)) m_CurrentActiveGBuffer = 0;
                 if (ImGui::MenuItem("Normal", nullptr, m_CurrentActiveGBuffer == 1)) m_CurrentActiveGBuffer = 1;
                 if (ImGui::MenuItem("Properties", nullptr, m_CurrentActiveGBuffer == 2)) m_CurrentActiveGBuffer = 2;
