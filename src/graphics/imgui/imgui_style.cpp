@@ -18,6 +18,8 @@ void SetupImGuiStyle()
     style.ItemSpacing.y = 6.0f;
     style.WindowBorderSize = 0.0f;
 
+    io.ConfigResizeWindowsFromEdges = true;
+
     style.Colors[ImGuiCol_Text] = ImVec4(0.73f, 0.73f, 0.73f, 1.00f);
     style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
     style.Colors[ImGuiCol_WindowBg] = ImVec4(0.26f, 0.26f, 0.26f, 0.95f);

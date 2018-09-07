@@ -300,7 +300,7 @@ void UI::RenderFileTreeView()
     ImGui::PushStyleColor(ImGuiCol_ResizeGripHovered, { 0, 0, 0, 0 });
     ImGui::PushStyleColor(ImGuiCol_ResizeGripActive, { 0, 0, 0, 0 });
 
-    ImGui::Begin("Archive Directory List", nullptr, (ImGuiWindowFlags_ResizeFromAnySide | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar));
+    ImGui::Begin("Archive Directory List", nullptr, (ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar));
     {
         m_SidebarWidth = ImGui::GetWindowSize().x;
 
