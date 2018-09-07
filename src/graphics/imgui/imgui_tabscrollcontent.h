@@ -7,6 +7,7 @@ namespace ImGuiCustom
         // disabled style
         if (flags & ImGuiItemFlags_Disabled) ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 
+        // TODO: tab items should not be clickable when disabled flag is set.
         auto res = ImGui::TabItem(label, p_open, flags);
 
         // disabled style
