@@ -55,7 +55,7 @@ FileLoader::FileLoader()
                 const auto& key = it.key();
                 const auto& data = it.value();
 
-                const auto namehash = static_cast<uint32_t>(std::stoul(data["namehash"].get<std::string>(), nullptr, 16));
+                const auto namehash = static_cast<uint32_t>(std::stoul(data["hash"].get<std::string>(), nullptr, 16));
 
                 std::vector<std::string> paths;
                 for (const auto& path : data["path"]) {

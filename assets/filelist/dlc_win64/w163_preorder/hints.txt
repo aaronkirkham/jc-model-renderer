@@ -1,5 +1,0 @@
-dlc/w163_preorder/w163_preorder.dlcinstallinfo
-dlc/w163_preorder/w163_preorder_world.bin
-dlc/w163_preorder/settings/spawn_weapon_defs.bin
-dlc/w163_preorder/profile/item.onlinec
-dlc/w163_preorder/profile/online.stringlookup

@@ -1,3 +1,0 @@
-dlc/skin_flame/locations/character/rico/character_rico_upgrades_skin_flame.bl
-dlc/skin_flame/skin_flame.dlcinstallinfo
-dlc/skin_flame/skin_flame_world.bin

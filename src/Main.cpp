@@ -109,6 +109,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         if (ReadRegistryKeyString(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam", "SteamPath", steam_path, MAX_PATH)) {
             g_JC3Directory = fs::path(steam_path) / "steamapps" / "common" / "Just Cause 3";
 
+            // TODO: Parse C:/Program Files (x86)/Steam/steamapps/libraryfolders.vdf to check all library folders for the game location
+
             // if the directory exists, save the settings now
             if (fs::exists(g_JC3Directory)) {
                 Settings::Get()->SetValue("jc3_directory", g_JC3Directory.string());
@@ -127,7 +129,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         CheckForUpdates();
 #endif
 
-#if 1
+#ifdef DEBUG
         Input::Get()->Events().KeyUp.connect([](uint32_t key) {
             if (key == VK_F1) {
                 //FileLoader::Get()->LocateFileInDictionary("models/jc_environments/props/animation_prop/textures/bucket_dif.hmddsc");

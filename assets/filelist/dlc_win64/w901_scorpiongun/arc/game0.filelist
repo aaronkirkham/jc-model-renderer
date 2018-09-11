@@ -1,0 +1,9 @@
+; 8/8 (100%)
+dlc/w901_scorpiongun/editor/entities/jc_weapons/99_dlc/w901_scorpiongun/w901_scorpiongun.ee
+dlc/w901_scorpiongun/profile/item.onlinec
+dlc/w901_scorpiongun/profile/online.stringlookup
+dlc/w901_scorpiongun/settings/spawn_weapon_defs.bin
+dlc/w901_scorpiongun/sound/fmod_banks/dlc_scorpion_gun.bank
+dlc/w901_scorpiongun/w901_scorpiongun.dlcinstallinfo
+dlc/w901_scorpiongun/w901_scorpiongun_real.dlcinstallinfo
+dlc/w901_scorpiongun/w901_scorpiongun_world.bin

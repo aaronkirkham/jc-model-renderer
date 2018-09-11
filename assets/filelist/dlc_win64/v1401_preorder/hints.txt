@@ -1,5 +1,0 @@
-dlc/v1401_preorder/v1401_preorder.dlcinstallinfo
-dlc/v1401_preorder/v1401_preorder_world.bin
-dlc/v1401_preorder/settings/spawn_boat_defs.bin
-dlc/v1401_preorder/profile/item.onlinec
-dlc/v1401_preorder/profile/online.stringlookup
