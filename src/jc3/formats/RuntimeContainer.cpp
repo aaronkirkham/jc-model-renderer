@@ -4,6 +4,7 @@
 #include <jc3/hashlittle.h>
 #include <glm.hpp>
 #include <jc3/formats/RenderBlockModel.h>
+#include <misc/stl/imgui_stl.h>
 
 std::recursive_mutex Factory<RuntimeContainer>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<RuntimeContainer>> Factory<RuntimeContainer>::Instances;
@@ -193,9 +194,8 @@ void RuntimeContainer::DrawUI(uint8_t depth)
 
             case RTPC_TYPE_STRING: {
                 auto& value = std::any_cast<std::string>(prop->GetValue());
-                std::vector<char> buf(value.begin(), value.end());
-                if (ImGui::InputText(prop->GetName().c_str(), buf.data(), value.size())) {
-
+                if (ImGui::InputText(prop->GetName().c_str(), &value)) {
+                    prop->SetValue(value);
                 }
                 break;
             }
@@ -231,6 +231,36 @@ void RuntimeContainer::DrawUI(uint8_t depth)
                 ImGui::InputFloat4("m1", &value[1][0]);
                 ImGui::InputFloat4("m2", &value[2][0]);
                 ImGui::InputFloat4("m3", &value[3][0]);
+                break;
+            }
+
+            case RTPC_TYPE_LIST_INTEGERS: {
+                auto& values = prop->GetValue<std::vector<int32_t>>();
+                ImGui::Text(prop->GetName().c_str());
+                ImGui::Text(RuntimeContainerProperty::GetTypeName(prop->GetType()).c_str());
+                for (auto& value : values) {
+                    ImGui::InputInt(".", &value);
+                }
+                break;
+            }
+
+            case RTPC_TYPE_LIST_FLOATS: {
+                auto& values = prop->GetValue<std::vector<float>>();
+                ImGui::Text(prop->GetName().c_str());
+                ImGui::Text(RuntimeContainerProperty::GetTypeName(prop->GetType()).c_str());
+                for (auto& value : values) {
+                    ImGui::InputFloat(".", &value);
+                }
+                break;
+            }
+
+            case RTPC_TYPE_LIST_BYTES: {
+                auto& values = prop->GetValue<std::vector<uint8_t>>();
+                ImGui::Text(prop->GetName().c_str());
+                ImGui::Text(RuntimeContainerProperty::GetTypeName(prop->GetType()).c_str());
+                //for (auto& value : values) {
+                    //ImGui::InputInt(".", &value);
+                //}
                 break;
             }
             }

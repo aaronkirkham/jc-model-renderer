@@ -23,6 +23,8 @@
 			'vendor/imgui/examples/imgui_impl_win32.h',
 			'vendor/imgui/examples/imgui_impl_dx11.cpp',
 			'vendor/imgui/examples/imgui_impl_dx11.h',
+			'vendor/imgui/misc/stl/imgui_stl.cpp',
+			'vendor/imgui/misc/stl/imgui_stl.h',
 		],
 		'direct_dependent_settings': {
 			'include_dirs': ['vendor/imgui', 'vendor/imgui/examples'],

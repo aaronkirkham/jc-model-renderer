@@ -33,7 +33,7 @@ private:
     std::recursive_mutex m_StatusTextsMutex;
     std::map<uint64_t, std::string> m_StatusTexts;
     std::map<std::string, ContextMenuCallback> m_ContextMenuCallbacks;
-    std::string m_TabToSwitch = "";
+    std::string m_TabToSwitch = "File Explorer";
     uint8_t m_CurrentActiveGBuffer = 0;
 
     ImDrawList* m_SceneDrawList = nullptr;

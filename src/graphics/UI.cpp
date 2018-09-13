@@ -93,6 +93,20 @@ void UI::Render()
             ImGui::EndMenu();
         }
 
+#if 0
+        if (ImGui::BeginMenu("Create"))
+        {
+            if (ImGui::MenuItem("Render Block Model")) {
+            }
+
+            if (ImGui::MenuItem("Avalanche Archive")) {
+                AvalancheArchive::make("test.ee", false);
+            }
+
+            ImGui::EndMenu();
+        }
+#endif
+
         // renderer
         if (ImGui::BeginMenu("Renderer"))
         {
@@ -184,7 +198,7 @@ void UI::Render()
 
         static int32_t current_version[3] = { VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION };
 
-        ImGui::Text("Just Cause 3 Render Block Model (.rbm) Renderer");
+        ImGui::Text("Just Cause 3 Render Block Model Renderer");
         ImGui::Text("Version %d.%d.%d", current_version[0], current_version[1], current_version[2]);
         ImGui::Text("https://github.com/aaronkirkham/jc3-rbm-renderer");
 
@@ -372,8 +386,13 @@ void UI::RenderFileTreeView()
                     const auto& filename = (*it).second->GetFileName();
 
                     // render the current model info
-                    bool is_not_closed = true;
-                    if (ImGui::CollapsingHeader(filename.c_str(), &is_not_closed)) {
+                    bool is_still_open = true;
+                    auto open = ImGui::CollapsingHeader(filename.c_str(), &is_still_open);
+
+                    // context menu
+                    RenderContextMenu(filename);
+
+                    if (open) {
                         uint32_t render_block_index = 0;
                         for (auto& render_block : (*it).second->GetRenderBlocks()) {
                             // TODO: highlight the current render block when hovering over the ui
@@ -478,7 +497,7 @@ void UI::RenderFileTreeView()
                     }
 
                     // if the close button was pressed, delete the model
-                    if (!is_not_closed) {
+                    if (!is_still_open) {
                         std::lock_guard<std::recursive_mutex> _lk{ RenderBlockModel::InstancesMutex };
                         it = RenderBlockModel::Instances.erase(it);
 
