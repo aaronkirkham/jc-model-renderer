@@ -7,3 +7,9 @@ near_distance_fade
 specular_multiplier
 is_spot_light
 user_type
+SoundLayerOneShot
+SoundLayerFadeInTime
+SoundLayerFadeOutTime
+SoundLayerEnergy
+RetriggerTime
+UpdateParamsFirstFrameOnly

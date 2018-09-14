@@ -7,6 +7,11 @@
 
 void ShaderManager::Shutdown()
 {
+    Empty();
+}
+
+void ShaderManager::Empty()
+{
     m_VertexShaders.clear();
     m_PixelShaders.clear();
 }

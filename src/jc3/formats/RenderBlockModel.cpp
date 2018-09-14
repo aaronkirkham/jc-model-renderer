@@ -197,7 +197,7 @@ void RenderBlockModel::DrawGizmos()
     }
 }
 
-void RenderBlockModel::ReadFileCallback(const fs::path& filename, const FileBuffer& data)
+void RenderBlockModel::ReadFileCallback(const fs::path& filename, const FileBuffer& data, bool external)
 {
     auto rbm = RenderBlockModel::make(filename);
     assert(rbm);

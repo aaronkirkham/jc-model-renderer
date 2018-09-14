@@ -140,7 +140,6 @@ std::vector<RuntimeContainer*> RuntimeContainer::GetAllContainers(const std::str
         result.emplace_back(this);
     }
 
-
     for (const auto& child : m_Containers) {
         auto r = child->GetAllContainers(class_name);
         std::copy(r.begin(), r.end(), std::back_inserter(result));
@@ -162,7 +161,7 @@ std::vector<RuntimeContainerProperty*> RuntimeContainer::GetSortedProperties()
     return properties;
 }
 
-void RuntimeContainer::ReadFileCallback(const fs::path& filename, const FileBuffer& data)
+void RuntimeContainer::ReadFileCallback(const fs::path& filename, const FileBuffer& data, bool external)
 {
     DEBUG_LOG("RuntimeContainer::FileReadCallback");
     DEBUG_LOG(filename);
@@ -261,6 +260,19 @@ void RuntimeContainer::DrawUI(uint8_t depth)
                 //for (auto& value : values) {
                     //ImGui::InputInt(".", &value);
                 //}
+                break;
+            }
+
+            case RTPC_TYPE_OBJECT_ID: {
+                auto& value = prop->GetValue<std::pair<uint32_t, uint32_t>>();
+                if (ImGui::InputScalarN(prop->GetName().c_str(), ImGuiDataType_U32, (void *)&value.first, 2)) {
+                    prop->SetValue(std::make_pair(value.first, value.second));
+                }
+
+                break;
+            }
+
+            case RTPC_TYPE_EVENTS: {
                 break;
             }
             }

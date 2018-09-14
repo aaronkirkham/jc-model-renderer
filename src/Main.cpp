@@ -234,9 +234,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         // register read file type callbacks
         FileLoader::Get()->RegisterReadCallback({ ".rbm" }, RenderBlockModel::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({ ".ee", ".bl", ".nl", ".fl" }, AvalancheArchive::ReadFileCallback);
-        FileLoader::Get()->RegisterReadCallback({ ".epe" }, RuntimeContainer::ReadFileCallback);
-        FileLoader::Get()->RegisterReadCallback({ ".dds", ".ddsc" }, [&](const fs::path& filename, FileBuffer data) {
+        FileLoader::Get()->RegisterReadCallback({ ".epe", ".blo" }, RuntimeContainer::ReadFileCallback);
+        FileLoader::Get()->RegisterReadCallback({ ".dds", ".ddsc" }, [&](const fs::path& filename, FileBuffer data, bool external) {
+            // parse the compressed texture if the file was loaded from an external source
+            if (external && filename.extension() == ".ddsc") {
+                FileBuffer out;
+                if (FileLoader::Get()->ParseCompressedTexture(&data, &out)) {
+                    TextureManager::Get()->GetTexture(filename, &out, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
+                    return true;
+                }
+            }
+
             TextureManager::Get()->GetTexture(filename, &data, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
+            return true;
         });
 
         // register save file type callbacks
@@ -274,7 +284,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 }
 
                 ImGui::SetWindowPos({ 10, (window_size.y - 35) });
-                ImGui::Text("Models: %d, Vertices: %d, Indices: %d, Triangles: %d, Textures: %d", RenderBlockModel::Instances.size(), vertices, indices, triangles, TextureManager::Get()->GetCacheSize());
+                ImGui::Text("Models: %d, Vertices: %d, Indices: %d, Triangles: %d, Textures: %d, Shaders: %d", RenderBlockModel::Instances.size(), vertices, indices, triangles, TextureManager::Get()->GetCacheSize(), ShaderManager::Get()->GetCacheSize());
             }
             ImGui::End();
 

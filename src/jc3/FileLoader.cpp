@@ -83,9 +83,8 @@ FileLoader::FileLoader()
 
     // TODO: move the events to a better location?
 
-#if 0
     // handle file drops
-    Window::Get()->Events().FileDropped.connect([&](const fs::path& file) {
+    Window::Get()->Events().UnhandledDragDropped.connect([&](const fs::path& file) {
         // do we have a registered callback for this file type?
         if (m_FileTypeCallbacks.find(file.extension().string()) != m_FileTypeCallbacks.end()) {
             const auto size = fs::file_size(file);
@@ -101,7 +100,7 @@ FileLoader::FileLoader()
 
             // run the callback handlers
             for (const auto& fn : m_FileTypeCallbacks[file.extension().string()]) {
-                fn(file, data);
+                fn(file, data, true);
             }
         }
         else {
@@ -113,7 +112,6 @@ FileLoader::FileLoader()
             DEBUG_LOG("[ERROR] Unknown file type \"" << file << "\".");
         }
     });
-#endif
 
     // trigger the file type callbacks
     UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& file, AvalancheArchive* archive) {
@@ -122,7 +120,7 @@ FileLoader::FileLoader()
             ReadFile(file, [&, file](bool success, FileBuffer data) {
                 if (success) {
                     for (const auto& fn : m_FileTypeCallbacks[file.extension().string()]) {
-                        fn(file, data);
+                        fn(file, data, false);
                     }
                 }
                 else {
@@ -458,7 +456,7 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(FileBuffer* sarc
 
     // read the toc header for the filelist
     if (toc_buffer) {
-        DEBUG_LOG("USING .ee.toc BUFFER FOR ARCHIVE FILELIST");
+        DEBUG_LOG("USING .toc BUFFER FOR ARCHIVE FILELIST");
 
         std::istringstream toc_stream(std::string{ (char *)toc_buffer->data(), toc_buffer->size() });
         while (static_cast<size_t>(toc_stream.tellg()) < toc_buffer->size()) {
@@ -545,7 +543,8 @@ void FileLoader::ReadStreamArchive(const fs::path& filename, ReadArchiveCallback
 
 void FileLoader::ReadStreamArchive(const fs::path& filename, const FileBuffer& data, ReadArchiveCallback callback) noexcept
 {
-    auto toc_filename = filename; toc_filename.replace_extension(".ee.toc");
+    auto toc_filename = filename;
+    toc_filename += ".toc";
     ReadFile(toc_filename, [&, filename, toc_filename, compressed_data = std::move(data), callback](bool success, FileBuffer data) {
         // decompress the archive data
         std::istringstream compressed_buffer(std::string{ (char*)compressed_data.data(), compressed_data.size() });
@@ -818,6 +817,10 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
             std::memcpy(&out.front() + sizeof(DDS_MAGIC), (char *)&header, sizeof(DDS_HEADER));
         }
 
+        // TODO: convert texture to valid format.
+        // the game will convert some textures if the surface format is over 0x3E8
+        // this is the reason why some textures will fail to load (charactereyescube_v2/v3)
+
         // if we need to load the source file, request it
         if (load_source) {
             auto source_filename = filename;
@@ -853,6 +856,82 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
 
         return callback(true, std::move(out));
     }, SKIP_TEXTURE_LOADER);
+}
+
+bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) noexcept
+{
+    std::istringstream stream(std::string{ (char *)data->data(), data->size() });
+
+    // read the texture data
+    JustCause3::AvalancheTexture texture;
+    stream.read((char *)&texture, sizeof(JustCause3::AvalancheTexture));
+
+    // ensure the header magic is correct
+    if (texture.m_Magic != 0x58545641) {
+        DEBUG_LOG("ParseCompressedTexture -> invalid magic");
+        return false;
+    }
+
+    // find the best stream to use
+    auto&[stream_index, load_source] = JustCause3::FindBestTexture(&texture, true);
+
+    // find the rank
+    auto rank = JustCause3::GetHighestTextureRank(&texture, stream_index);
+
+    //
+    outData->resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + texture.m_Streams[stream_index].m_Size);
+
+    // write the DDS header block to the output
+    {
+        DDS_HEADER header;
+        ZeroMemory(&header, sizeof(header));
+        header.size = sizeof(DDS_HEADER);
+        header.flags = (0x1007 | 0x20000);
+        header.width = texture.m_Width >> rank;
+        header.height = texture.m_Height >> rank;
+        header.depth = texture.m_Depth;
+        header.mipMapCount = 1;
+        header.ddspf = TextureManager::GetPixelFormat(texture.m_Format);
+        header.caps = (8 | 0x1000);
+
+        // write the magic and header
+        std::memcpy(&outData->front(), (char *)&DDS_MAGIC, sizeof(DDS_MAGIC));
+        std::memcpy(&outData->front() + sizeof(DDS_MAGIC), (char *)&header, sizeof(DDS_HEADER));
+    }
+
+    // read the texture data
+    stream.seekg(texture.m_Streams[stream_index].m_Offset);
+    stream.read((char *)outData->data() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER), texture.m_Streams[stream_index].m_Size);
+
+    return true;
+}
+
+void FileLoader::WriteRuntimeContainer(RuntimeContainer* runtime_container) noexcept
+{
+    assert(runtime_container);
+
+    // generate the header
+    JustCause3::RuntimeContainer::Header header;
+    strncpy(header.m_Magic, "RTPC", 4);
+    header.m_Version = 1;
+
+    const auto& properties = runtime_container->GetProperties();
+    const auto& instances = runtime_container->GetContainers();
+
+    // create the root node
+    JustCause3::RuntimeContainer::Node rootNode;
+    rootNode.m_NameHash = runtime_container->GetNameHash();
+    rootNode.m_DataOffset = 0;
+    rootNode.m_PropertyCount = properties.size();
+    rootNode.m_InstanceCount = instances.size();
+
+    // create the properties
+    for (const auto& prop : properties) {
+        JustCause3::RuntimeContainer::Property _prop;
+        _prop.m_NameHash = prop->GetNameHash();
+        //_prop.m_Data = 
+        _prop.m_Type = static_cast<uint8_t>(prop->GetType());
+    }
 }
 
 std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const fs::path& filename, const FileBuffer& buffer) noexcept

@@ -7,18 +7,24 @@
 std::recursive_mutex Factory<AvalancheArchive>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<AvalancheArchive>> Factory<AvalancheArchive>::Instances;
 
-AvalancheArchive::AvalancheArchive(const fs::path& file)
+AvalancheArchive::AvalancheArchive(const fs::path& file, bool load_from_archive)
     : m_File(file)
 {
-    // read the stream archive
-    FileLoader::Get()->ReadStreamArchive(file, [&](std::unique_ptr<StreamArchive_t> archive) {
-        assert(archive);
-        m_StreamArchive = std::move(archive);
+    if (load_from_archive) {
+        // read the stream archive
+        FileLoader::Get()->ReadStreamArchive(file, [&](std::unique_ptr<StreamArchive_t> archive) {
+            assert(archive);
+            m_StreamArchive = std::move(archive);
 
-        // parse the file list
+            // parse the file list
+            m_FileList = std::make_unique<DirectoryList>();
+            m_FileList->Parse(m_StreamArchive.get());
+        });
+    }
+    else {
+        m_StreamArchive = std::make_unique<StreamArchive_t>(file);
         m_FileList = std::make_unique<DirectoryList>();
-        m_FileList->Parse(m_StreamArchive.get());
-    });
+    }
 
     UI::Get()->SwitchToTab("Archives");
 }
@@ -92,7 +98,7 @@ bool AvalancheArchive::HasFile(const fs::path& filename)
     return m_StreamArchive->HasFile(filename.string());
 }
 
-void AvalancheArchive::ReadFileCallback(const fs::path& filename, const FileBuffer& data)
+void AvalancheArchive::ReadFileCallback(const fs::path& filename, const FileBuffer& data, bool external)
 {
     AvalancheArchive::make(filename, data);
 }

@@ -56,13 +56,13 @@ private:
     JustCause3::RenderBlocks::Character m_Block;
     ConstantBuffer_t* m_VertexShaderConstants = nullptr;
     std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = { nullptr };
-    int64_t m_Stride = 0;
+    int32_t m_Stride = 0;
 
-    int64_t GetStride() const
+    /*int64_t GetStride() const
     {
         static const int32_t strides[] = { 0x18, 0x1C, 0x20, 0x20, 0x24, 0x28 };
         return strides[3 * ((m_Block.attributes.flags >> 1) & 1) + ((m_Block.attributes.flags >> 5) & 1) + ((m_Block.attributes.flags >> 4) & 1)];
-    }
+    }*/
 
 public:
     RenderBlockCharacter() = default;
@@ -84,10 +84,12 @@ public:
 
     virtual void Create() override final
     {
-        if (m_Stride == 0x18) {
-            // load shaders
+        m_PixelShader = ShaderManager::Get()->GetPixelShader("character");
+
+        switch (m_Stride) {
+            // 4bones1uv
+        case 0: {
             m_VertexShader = ShaderManager::Get()->GetVertexShader("character");
-            m_PixelShader = ShaderManager::Get()->GetPixelShader("character");
 
             // create the element input desc
             D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
@@ -99,10 +101,107 @@ public:
             };
 
             // create the vertex declaration
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacter (Stride 0x18)");
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacter (4bones1uv)");
+            break;
         }
-        else {
-            __debugbreak();
+
+            // 4bones2uvs
+        case 1: {
+            m_VertexShader = ShaderManager::Get()->GetVertexShader("character2uvs");
+
+            // create the element input desc
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacter (4bones2uvs)");
+            break;
+        }
+
+            // 4bones3uvs
+        case 2: {
+            m_VertexShader = ShaderManager::Get()->GetVertexShader("character3uvs");
+
+            // create the element input desc
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   5,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(), "RenderBlockCharacter (4bones3uvs)");
+            break;
+        }
+
+            // 8bones1uv
+        case 3: {
+            m_VertexShader = ShaderManager::Get()->GetVertexShader("character8");
+
+            // create the element input desc
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(), "RenderBlockCharacter (8bones1uv)");
+            break;
+        }
+
+            // 8bones2uvs
+        case 4: {
+            m_VertexShader = ShaderManager::Get()->GetVertexShader("character82uvs");
+
+            // create the element input desc
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(), "RenderBlockCharacter (8bones3uvs)");
+            break;
+        }
+
+            // 8bones3uvs
+        case 5: {
+            m_VertexShader = ShaderManager::Get()->GetVertexShader("character83uvs");
+
+            // create the element input desc
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   5,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 8, m_VertexShader.get(), "RenderBlockCharacter (8bones3uvs)");
+            break;
+        }
         }
 
         // create the constant buffer
@@ -148,29 +247,45 @@ public:
         ReadMaterials(stream);
 
         // get the vertices stride
-        m_Stride = GetStride();
-
-#ifdef DEBUG
-        int game_using_vertex_decl = 3 * ((m_Block.attributes.flags >> 1) & 1) + ((m_Block.attributes.flags >> 4) & 1) + ((m_Block.attributes.flags >> 5) & 1);
-        game_using_vertex_decl = game_using_vertex_decl;
-#endif
+        m_Stride = (3 * ((m_Block.attributes.flags >> 1) & 1) + ((m_Block.attributes.flags >> 5) & 1) + ((m_Block.attributes.flags >> 4) & 1));
 
         // read vertex data
-        if (m_Stride == 0x18) {
-            std::vector<PackedCharacterPos4Bones1UVs> vertices;
-            ReadVertexBuffer<PackedCharacterPos4Bones1UVs>(stream, &m_VertexBuffer, &vertices);
+        switch (m_Stride) {
+        case 0: {
+            std::vector<Packed4Bones1UV> vertices;
+            ReadVertexBuffer<Packed4Bones1UV>(stream, &m_VertexBuffer, &vertices);
+            break;
         }
-        else if (m_Stride == 0x1C) {
-            __debugbreak();
+
+        case 1: {
+            std::vector<Packed4Bones2UVs> vertices;
+            ReadVertexBuffer<Packed4Bones2UVs>(stream, &m_VertexBuffer, &vertices);
+            break;
         }
-        else if (m_Stride == 0x20) {
-            __debugbreak();
+
+        case 2: {
+            std::vector<Packed4Bones3UVs> vertices;
+            ReadVertexBuffer<Packed4Bones3UVs>(stream, &m_VertexBuffer, &vertices);
+            break;
         }
-        else if (m_Stride == 0x24) {
-            __debugbreak();
+                
+        case 3: {
+            std::vector<Packed8Bones1UV> vertices;
+            ReadVertexBuffer<Packed8Bones1UV>(stream, &m_VertexBuffer, &vertices);
+            break;
         }
-        else if (m_Stride == 0x28) {
-            __debugbreak();
+
+        case 4: {
+            std::vector<Packed8Bones2UVs> vertices;
+            ReadVertexBuffer<Packed8Bones2UVs>(stream, &m_VertexBuffer, &vertices);
+            break;
+        }
+
+        case 5: {
+            std::vector<Packed8Bones3UVs> vertices;
+            ReadVertexBuffer<Packed8Bones3UVs>(stream, &m_VertexBuffer, &vertices);
+            break;
+        }
         }
 
         // read skin batch

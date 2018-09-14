@@ -87,7 +87,7 @@ public:
     void AddProperty(RuntimeContainerProperty* prop) { m_Properties.emplace_back(prop); }
     void AddContainer(RuntimeContainer* cont) { m_Containers.emplace_back(cont); };
 
-    static void ReadFileCallback(const fs::path& filename, const FileBuffer& data);
+    static void ReadFileCallback(const fs::path& filename, const FileBuffer& data, bool external);
     void DrawUI(uint8_t depth = 0);
     static void ContextMenuUI(const fs::path& filename);
 

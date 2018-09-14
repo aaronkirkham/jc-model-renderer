@@ -12,11 +12,40 @@ struct StreamArchiveEntry_t
 
 struct StreamArchive_t
 {
-    fs::path m_Filename;
+    fs::path m_Filename = "";
     JustCause3::StreamArchive::SARCHeader m_Header;
     std::vector<uint8_t> m_SARCBytes;
     std::vector<StreamArchiveEntry_t> m_Files;
     bool m_UsingTOC = false;
+
+    StreamArchive_t()
+    {
+        strncpy(m_Header.m_Magic, "SARC", 4);
+        m_Header.m_MagicLength = 4;
+        m_Header.m_Size = 0; // todo
+        m_Header.m_Version = 2;
+
+        m_SARCBytes.resize(sizeof(m_Header));
+        std::memcpy(m_SARCBytes.data(), &m_Header, sizeof(m_Header));
+    }
+
+    StreamArchive_t(const fs::path& filename)
+    {
+        m_Filename = filename;
+        strncpy(m_Header.m_Magic, "SARC", 4);
+        m_Header.m_MagicLength = 4;
+        m_Header.m_Size = 0; // todo
+        m_Header.m_Version = 2;
+
+        m_SARCBytes.resize(sizeof(m_Header));
+        std::memcpy(m_SARCBytes.data(), &m_Header, sizeof(m_Header));
+
+#if 0
+        std::ofstream out("C:/users/aaron/desktop/test.bin", std::ios::binary);
+        out.write((char *)m_SARCBytes.data(), m_SARCBytes.size());
+        out.close();
+#endif
+    }
 
     void AddFile(const std::string& filename, const std::vector<uint8_t>& buffer)
     {

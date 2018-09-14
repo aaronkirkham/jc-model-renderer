@@ -47,13 +47,13 @@ private:
     JustCause3::RenderBlocks::CharacterSkin m_Block;
     ConstantBuffer_t* m_VertexShaderConstants = nullptr;
     std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = { nullptr };
-    int64_t m_Stride = 0;
+    int32_t m_Stride = 0;
 
-    int64_t GetStride() const
+    /*int64_t GetStride() const
     {
         static const int32_t strides[] = { 0x18, 0x1C, 0x20, 0x20, 0x24, 0x28 };
         return strides[3 * ((m_Block.attributes.flags >> 2) & 1) + ((m_Block.attributes.flags >> 1) & 1) + ((m_Block.attributes.flags >> 4) & 1)];
-    }
+    }*/
 
 public:
     RenderBlockCharacterSkin() = default;
@@ -70,21 +70,125 @@ public:
 
     virtual void Create() override final
     {
-        // load shaders
-        m_VertexShader = ShaderManager::Get()->GetVertexShader("characterskin");
         m_PixelShader = ShaderManager::Get()->GetPixelShader("characterskin");
 
-        // create the element input desc
-        D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-            { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   4,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-        };
+        switch (m_Stride) {
+            // 4bones1uv
+        case 0: {
+            m_VertexShader = ShaderManager::Get()->GetVertexShader("characterskin");
 
-        // create the vertex declaration
-        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacterSkin");
+            // create the element input desc
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacterSkin (4bones1uv)");
+            break;
+        }
+
+            // 4bones2uvs
+        case 1: {
+            m_VertexShader = ShaderManager::Get()->GetVertexShader("characterskin2uvs");
+
+            // create the element input desc
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacterSkin (4bones2uvs)");
+            break;
+        }
+
+            // 4bones3uvs
+        case 2: {
+            m_VertexShader = ShaderManager::Get()->GetVertexShader("characterskin3uvs");
+
+            // create the element input desc
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   5,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(), "RenderBlockCharacterSkin (4bones3uvs)");
+            break;
+        }
+
+            // 8bones1uv
+        case 3: {
+            m_VertexShader = ShaderManager::Get()->GetVertexShader("characterskin8");
+
+            // create the element input desc
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(), "RenderBlockCharacterSkin (8bones1uv)");
+            break;
+        }
+
+            // 8bones2uvs
+        case 4: {
+            m_VertexShader = ShaderManager::Get()->GetVertexShader("characterskin82uvs");
+
+            // create the element input desc
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(), "RenderBlockCharacterSkin (8bones3uvs)");
+            break;
+        }
+
+            // 8bones3uvs
+        case 5: {
+            m_VertexShader = ShaderManager::Get()->GetVertexShader("characterskin83uvs");
+
+            // create the element input desc
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   5,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 8, m_VertexShader.get(), "RenderBlockCharacterSkin (8bones3uvs)");
+            break;
+        }
+        }
 
         // create the constant buffer
         m_VertexShaderConstants = Renderer::Get()->CreateConstantBuffer(m_cbLocalConsts, "RenderBlockCharacterSkin cbLocalConsts");
@@ -120,7 +224,7 @@ public:
     virtual void Read(std::istream& stream) override final
     {
         using namespace JustCause3::Vertex;
-        using namespace JustCause3::Vertex::RenderBlockCharacterSkin;
+        using namespace JustCause3::Vertex::RenderBlockCharacter;
 
         // read the block header
         stream.read((char *)&m_Block, sizeof(m_Block));
@@ -129,27 +233,51 @@ public:
         ReadMaterials(stream);
 
         // get the vertices stride
-        m_Stride = GetStride();
-
-#ifdef DEBUG
-        int game_using_vertex_decl = 3 * ((m_Block.attributes.flags >> 2) & 1) + ((m_Block.attributes.flags >> 1) & 1) + ((m_Block.attributes.flags >> 4) & 1);
-        game_using_vertex_decl = game_using_vertex_decl;
-#endif
+        m_Stride = (3 * ((m_Block.attributes.flags >> 2) & 1) + ((m_Block.attributes.flags >> 1) & 1) + ((m_Block.attributes.flags >> 4) & 1));
 
         // read vertex data
-        // TODO: need to implement the different vertex types depending on the flags above (GetStride).
-        // The stride should be the size of the struct we read from.
-        {
-            std::vector<PackedCharacterSkinPos4Bones1UVs> vertices;
-            ReadVertexBuffer<PackedCharacterSkinPos4Bones1UVs>(stream, &m_VertexBuffer, &vertices);
+        switch (m_Stride) {
+            // 4bones1uv
+        case 0: {
+            std::vector<Packed4Bones1UV> vertices;
+            ReadVertexBuffer<Packed4Bones1UV>(stream, &m_VertexBuffer, &vertices);
+            break;
+        }
 
-            for (const auto& vertex : vertices) {
-                m_Vertices.emplace_back(unpack(vertex.x));
-                m_Vertices.emplace_back(unpack(vertex.y));
-                m_Vertices.emplace_back(unpack(vertex.z));
-                m_UVs.emplace_back(unpack(vertex.u0));
-                m_UVs.emplace_back(unpack(vertex.v0));
-            }
+            // 4bones2uvs
+        case 1: {
+            std::vector<Packed4Bones2UVs> vertices;
+            ReadVertexBuffer<Packed4Bones2UVs>(stream, &m_VertexBuffer, &vertices);
+            break;
+        }
+
+            // 4bones3uvs
+        case 2: {
+            std::vector<Packed4Bones3UVs> vertices;
+            ReadVertexBuffer<Packed4Bones3UVs>(stream, &m_VertexBuffer, &vertices);
+            break;
+        }
+
+            // 8bones1uv
+        case 3: {
+            std::vector<Packed8Bones1UV> vertices;
+            ReadVertexBuffer<Packed8Bones1UV>(stream, &m_VertexBuffer, &vertices);
+            break;
+        }
+
+            // 8bones2uvs
+        case 4: {
+            std::vector<Packed8Bones2UVs> vertices;
+            ReadVertexBuffer<Packed8Bones2UVs>(stream, &m_VertexBuffer, &vertices);
+            break;
+        }
+
+            // 8bones3uvs
+        case 5: {
+            std::vector<Packed8Bones3UVs> vertices;
+            ReadVertexBuffer<Packed8Bones3UVs>(stream, &m_VertexBuffer, &vertices);
+            break;
+        }
         }
 
         // read skin batch

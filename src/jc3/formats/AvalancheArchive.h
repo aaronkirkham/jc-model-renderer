@@ -15,7 +15,7 @@ private:
     bool m_HasUnsavedChanged = false;
 
 public:
-    AvalancheArchive(const fs::path& file);
+    AvalancheArchive(const fs::path& file, bool load_from_archive = true);
     AvalancheArchive(const fs::path& filename, const FileBuffer& buffer);
     virtual ~AvalancheArchive() = default;
 
@@ -25,7 +25,7 @@ public:
     void AddDirectory(const fs::path& filename, const fs::path& root = "");
     bool HasFile(const fs::path& filename);
 
-    static void ReadFileCallback(const fs::path& filename, const FileBuffer& data);
+    static void ReadFileCallback(const fs::path& filename, const FileBuffer& data, bool external);
     static bool SaveFileCallback(const fs::path& filename, const fs::path& directory);
 
     StreamArchive_t* GetStreamArchive() { return m_StreamArchive.get(); }

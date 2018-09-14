@@ -136,36 +136,107 @@ namespace JustCause3
 
         namespace RenderBlockCharacter
         {
-            struct PackedCharacterPos4Bones1UVs
+            struct Packed4Bones1UV
             {
                 int16_t x;
                 int16_t y;
                 int16_t z;
-                int16_t dummy;
+                int16_t padding;
                 uint8_t w0[4];
                 uint8_t i0[4];
-                int16_t u0;
-                int16_t v0;
-                uint32_t tangent_space;
+                uint16_t u0;
+                uint16_t v0;
+                uint32_t tangent;
             };
-            static_assert(sizeof(PackedCharacterPos4Bones1UVs) == 0x18, "PackedCharacterPos4Bones1UVs alignment is wrong!");
-        };
+            static_assert(sizeof(Packed4Bones1UV) == 0x18, "Packed4Bones1UV alignment is wrong!");
 
-        namespace RenderBlockCharacterSkin
-        {
-            struct PackedCharacterSkinPos4Bones1UVs
+            struct Packed4Bones2UVs
             {
                 int16_t x;
                 int16_t y;
                 int16_t z;
-                int16_t dummy;
+                int16_t padding;
                 uint8_t w0[4];
                 uint8_t i0[4];
-                int16_t u0;
-                int16_t v0;
-                uint32_t tangent_space;
+                uint16_t u0;
+                uint16_t v0;
+                uint16_t u1;
+                uint16_t v1;
+                uint32_t tangent;
             };
-            static_assert(sizeof(PackedCharacterSkinPos4Bones1UVs) == 0x18, "PackedCharacterSkinPos4Bones1UVs alignment is wrong!");
+            static_assert(sizeof(Packed4Bones2UVs) == 0x1C, "Packed4Bones2UVs alignment is wrong!");
+
+            struct Packed4Bones3UVs
+            {
+                int16_t x;
+                int16_t y;
+                int16_t z;
+                int16_t padding;
+                uint8_t w0[4];
+                uint8_t i0[4];
+                uint16_t u0;
+                uint16_t v0;
+                uint16_t u1;
+                uint16_t v1;
+                uint16_t u2;
+                uint16_t v2;
+                uint32_t tangent;
+            };
+            static_assert(sizeof(Packed4Bones3UVs) == 0x20, "Packed4Bones3UVs alignment is wrong!");
+
+            struct Packed8Bones1UV
+            {
+                int16_t x;
+                int16_t y;
+                int16_t z;
+                int16_t padding;
+                uint8_t w0[4];
+                uint8_t i0[4];
+                uint8_t w1[4];
+                uint8_t i1[4];
+                uint16_t u0;
+                uint16_t v0;
+                uint32_t tangent;
+            };
+            static_assert(sizeof(Packed8Bones1UV) == 0x20, "Packed8Bones1UV alignment is wrong!");
+
+            struct Packed8Bones2UVs
+            {
+                int16_t x;
+                int16_t y;
+                int16_t z;
+                int16_t padding;
+                uint8_t w0[4];
+                uint8_t i0[4];
+                uint8_t w1[4];
+                uint8_t i1[4];
+                uint16_t u0;
+                uint16_t v0;
+                uint16_t u1;
+                uint16_t v1;
+                uint32_t tangent;
+            };
+            static_assert(sizeof(Packed8Bones2UVs) == 0x24, "Packed8Bones2UVs alignment is wrong!");
+
+            struct Packed8Bones3UVs
+            {
+                int16_t x;
+                int16_t y;
+                int16_t z;
+                int16_t padding;
+                uint8_t w0[4];
+                uint8_t i0[4];
+                uint8_t w1[4];
+                uint8_t i1[4];
+                uint16_t u0;
+                uint16_t v0;
+                uint16_t u1;
+                uint16_t v1;
+                uint16_t u2;
+                uint16_t v2;
+                uint32_t tangent;
+            };
+            static_assert(sizeof(Packed8Bones3UVs) == 0x28, "Packed8Bones3UVs alignment is wrong!");
         };
 
         template <typename T>
@@ -251,7 +322,7 @@ namespace JustCause3
         return rank;
     }
 
-    static std::tuple<uint8_t, bool> FindBestTexture(AvalancheTexture* texture) {
+    static std::tuple<uint8_t, bool> FindBestTexture(AvalancheTexture* texture, bool ignore_external = false) {
         uint8_t biggest = 0;
         uint8_t stream_index = 0;
         bool load_source = false;
@@ -263,7 +334,7 @@ namespace JustCause3
             if (stream.m_Size == 0) continue;
 
             // find the biggest stream index
-            if (stream.m_IsSource || (!stream.m_IsSource && stream.m_Size > biggest)) {
+            if ((!ignore_external && stream.m_IsSource) || (!stream.m_IsSource && stream.m_Size > biggest)) {
                 biggest = stream.m_Size;
                 stream_index = i;
                 load_source = stream.m_IsSource;

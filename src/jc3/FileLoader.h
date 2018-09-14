@@ -13,7 +13,7 @@
 #include <functional>
 
 using ReadFileCallback = std::function<void(bool success, FileBuffer data)>;
-using FileTypeCallback = std::function<void(const fs::path& filename, FileBuffer data)>;
+using FileTypeCallback = std::function<void(const fs::path& filename, FileBuffer data, bool external)>;
 using FileSaveCallback = std::function<bool(const fs::path& filename, const fs::path& directory)>;
 using ReadArchiveCallback = std::function<void(std::unique_ptr<StreamArchive_t>)>;
 
@@ -67,8 +67,10 @@ public:
 
     // textures
     void ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept;
+    bool ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) noexcept;
 
     // runtime containers
+    void WriteRuntimeContainer(RuntimeContainer* runtime_container) noexcept;
     std::shared_ptr<RuntimeContainer> ParseRuntimeContainer(const fs::path& filename, const FileBuffer& buffer) noexcept;
 
     // shader bundles

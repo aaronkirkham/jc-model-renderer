@@ -61,6 +61,11 @@ UI::UI()
 
         ImGuiIO& io = ImGui::GetIO();
         io.MouseDown[0] = false;
+
+        // if nothing handled the drag drop payload, pass it back to the window events
+        if (!ImGui::IsDragDropPayloadBeingAccepted()) {
+            Window::Get()->Events().UnhandledDragDropped(_dragdrop_filename);
+        }
     });
 }
 
@@ -365,7 +370,10 @@ void UI::RenderFileTreeView()
                     if (!is_still_open) {
                         std::lock_guard<std::recursive_mutex> _lk{ AvalancheArchive::InstancesMutex };
                         it = AvalancheArchive::Instances.erase(it);
+
+                        // flush texture and shader manager
                         TextureManager::Get()->Flush();
+                        ShaderManager::Get()->Empty();
 
                         if (AvalancheArchive::Instances.size() == 0) {
                             m_TabToSwitch = "File Explorer";

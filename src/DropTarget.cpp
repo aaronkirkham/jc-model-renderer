@@ -35,8 +35,6 @@ HRESULT DropTarget::DragEnter(IDataObject* data_object, DWORD key_stae, POINTL c
         SetFocus(m_Hwnd);
         Window::Get()->Events().DragEnter(file);
 
-        DEBUG_LOG("DragEnter " << file);
-
         ReleaseStgMedium(&stgm);
     }
 
@@ -45,20 +43,17 @@ HRESULT DropTarget::DragEnter(IDataObject* data_object, DWORD key_stae, POINTL c
 
 HRESULT DropTarget::DragLeave()
 {
-    DEBUG_LOG("DragLeave");
     Window::Get()->Events().DragLeave();
     return S_OK;
 }
 
 HRESULT DropTarget::DragOver(DWORD key_state, POINTL cursor_position, DWORD* effect)
 {
-    //DEBUG_LOG("DragOver");
     return S_OK;
 }
 
 HRESULT DropTarget::Drop(IDataObject* data_object, DWORD key_state, POINTL cursor_position, DWORD* effect)
 {
-    DEBUG_LOG("Drop");
     Window::Get()->Events().DragDropped();
     return S_OK;
 }

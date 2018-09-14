@@ -16,6 +16,10 @@ public:
 
     void Shutdown();
 
+    void Empty();
+
     std::shared_ptr<VertexShader_t> GetVertexShader(const std::string& name);
     std::shared_ptr<PixelShader_t> GetPixelShader(const std::string& name);
+
+    std::size_t GetCacheSize() { return m_VertexShaders.size() + m_PixelShaders.size(); }
 };
