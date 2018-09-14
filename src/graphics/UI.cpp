@@ -325,12 +325,6 @@ void UI::RenderFileTreeView()
 
         ImGui::BeginTabBar("Directory List Tabs", (ImGuiTabBarFlags_NoReorder | ImGuiTabBarFlags_SizingPolicyEqual));
         {
-            // switch active tab if we need to
-            if (!m_TabToSwitch.empty()) {
-                ImGui::SetTabItemSelected(m_TabToSwitch.c_str());
-                m_TabToSwitch.clear();
-            }
-
             // file explorer tab
             if (ImGuiCustom::TabItemScroll("File Explorer")) {
                 FileLoader::Get()->GetDirectoryList()->Draw(nullptr);
@@ -516,6 +510,12 @@ void UI::RenderFileTreeView()
                 }
 
                 ImGuiCustom::EndTabItemScroll();
+            }
+       
+            // switch active tab if we need to
+            if (!m_TabToSwitch.empty()) {
+                ImGui::SetTabItemSelected(m_TabToSwitch.c_str());
+                m_TabToSwitch.clear();
             }
         }
         ImGui::EndTabBar();
