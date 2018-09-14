@@ -1,7 +1,7 @@
 ## Just Cause 3 Render Block Model Renderer
 An application to preview Just Cause 3's Render Block Model files without the need for external tools. Open an archive and select the file you want to preview. You can do things like change model attributes, replace textures and even export to a different format.
 
-<p align="center"><img src="https://kirkh.am/jc3-rbm-renderer/window2.png" alt="Just Cause 3 Render Block Model Renderer Main Window" title="Render Block Model Renderer - Main Window"></p>
+<p align="center"><img src="https://kirkh.am/jc3-rbm-renderer/window3.png" alt="Just Cause 3 Render Block Model Renderer Main Window" title="Render Block Model Renderer - Main Window"></p>
 
 ### Build Requirements
  - Visual Studio 2017.3 or later
