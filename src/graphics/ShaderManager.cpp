@@ -1,7 +1,7 @@
-#include <graphics/ShaderManager.h>
-#include <graphics/Renderer.h>
 #include <Window.h>
 #include <fnv1.h>
+#include <graphics/Renderer.h>
+#include <graphics/ShaderManager.h>
 
 #include <streambuf>
 
@@ -19,14 +19,14 @@ void ShaderManager::Empty()
 std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string& name)
 {
     auto filename = (name + ".vb");
-    auto key = fnv_1_32::hash(filename.c_str(), filename.length());
+    auto key      = fnv_1_32::hash(filename.c_str(), filename.length());
 
     auto it = m_VertexShaders.find(key);
     if (it != std::end(m_VertexShaders)) {
         return it->second;
     }
 
-    fs::path file = "../assets/shaders/" + name + ".vb";
+    fs::path   file      = "../assets/shaders/" + name + ".vb";
     const auto file_size = fs::file_size(file);
 
     // read
@@ -42,15 +42,16 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
     data.resize(file_size);
 
     // read
-    stream.read((char *)data.data(), file_size);
+    stream.read((char*)data.data(), file_size);
     stream.close();
 
     // create the shader instance
-    auto shader = std::make_shared<VertexShader_t>();
+    auto shader    = std::make_shared<VertexShader_t>();
     shader->m_Code = std::move(data);
     shader->m_Size = file_size;
 
-    auto result = Renderer::Get()->GetDevice()->CreateVertexShader(shader->m_Code.data(), shader->m_Size, nullptr, &shader->m_Shader);
+    auto result = Renderer::Get()->GetDevice()->CreateVertexShader(shader->m_Code.data(), shader->m_Size, nullptr,
+                                                                   &shader->m_Shader);
     assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
@@ -69,14 +70,14 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
 std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& name)
 {
     auto filename = (name + ".fb");
-    auto key = fnv_1_32::hash(filename.c_str(), filename.length());
+    auto key      = fnv_1_32::hash(filename.c_str(), filename.length());
 
     auto it = m_PixelShaders.find(key);
     if (it != std::end(m_PixelShaders)) {
         return it->second;
     }
 
-    fs::path file = "../assets/shaders/" + name + ".fb";
+    fs::path   file      = "../assets/shaders/" + name + ".fb";
     const auto file_size = fs::file_size(file);
 
     // read
@@ -92,15 +93,16 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
     data.resize(file_size);
 
     // read
-    stream.read((char *)data.data(), file_size);
+    stream.read((char*)data.data(), file_size);
     stream.close();
 
     // create the shader instance
-    auto shader = std::make_shared<PixelShader_t>();
+    auto shader    = std::make_shared<PixelShader_t>();
     shader->m_Code = std::move(data);
     shader->m_Size = file_size;
 
-    auto result = Renderer::Get()->GetDevice()->CreatePixelShader(shader->m_Code.data(), shader->m_Size, nullptr, &shader->m_Shader);
+    auto result = Renderer::Get()->GetDevice()->CreatePixelShader(shader->m_Code.data(), shader->m_Size, nullptr,
+                                                                  &shader->m_Shader);
     assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS

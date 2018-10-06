@@ -3,6 +3,6 @@
 #include <graphics/ShaderManager.h>
 #include <jc3/Types.h>
 
-#include <graphics/Camera.h>
-#include <Window.h>
 #include <Input.h>
+#include <Window.h>
+#include <graphics/Camera.h>

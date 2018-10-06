@@ -1,8 +1,8 @@
-#include <graphics/TextureManager.h>
-#include <graphics/Renderer.h>
 #include <Window.h>
-#include <jc3/FileLoader.h>
 #include <fnv1.h>
+#include <graphics/Renderer.h>
+#include <graphics/TextureManager.h>
+#include <jc3/FileLoader.h>
 
 #include <graphics/imgui/fonts/fontawesome5_icons.h>
 
@@ -37,19 +37,20 @@ bool Texture::LoadFromBuffer(const FileBuffer& buffer)
     SAFE_RELEASE(m_Texture);
 
     // create the dds texture resources
-    auto result = DirectX::CreateDDSTextureFromMemory(Renderer::Get()->GetDevice(), buffer.data(), buffer.size(), &m_Texture, &m_SRV);
+    auto result = DirectX::CreateDDSTextureFromMemory(Renderer::Get()->GetDevice(), buffer.data(), buffer.size(),
+                                                      &m_Texture, &m_SRV);
 
     // get the texture size
     if (SUCCEEDED(result)) {
         ID3D11Texture2D* _tex = nullptr;
-        result = m_Texture->QueryInterface(&_tex);
+        result                = m_Texture->QueryInterface(&_tex);
         assert(SUCCEEDED(result));
 
         D3D11_TEXTURE2D_DESC desc;
         _tex->GetDesc(&desc);
         _tex->Release();
 
-        m_Size = { desc.Width, desc.Height };
+        m_Size = {desc.Width, desc.Height};
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
         auto& fn = m_Filename.filename().string();
@@ -67,7 +68,8 @@ bool Texture::LoadFromBuffer(const FileBuffer& buffer)
         return false;
     }
 
-    DEBUG_LOG("Texture::Create - '" << m_Filename.filename().string() << "', m_Texture=" << m_Texture << ", SRV=" << m_SRV);
+    DEBUG_LOG("Texture::Create - '" << m_Filename.filename().string() << "', m_Texture=" << m_Texture
+                                    << ", SRV=" << m_SRV);
 
     return SUCCEEDED(result);
 }
@@ -86,7 +88,7 @@ bool Texture::LoadFromFile(const fs::path& filename)
 
     FileBuffer buffer;
     buffer.resize(size);
-    stream.read((char *)buffer.data(), size);
+    stream.read((char*)buffer.data(), size);
 
     DEBUG_LOG("Texture::LoadFromFile - Read " << size << " bytes from " << filename.filename().string());
 
@@ -108,34 +110,36 @@ TextureManager::TextureManager()
 
     Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {
         for (auto it = m_PreviewTextures.begin(); it != m_PreviewTextures.end();) {
-            bool open = true;
+            bool       open    = true;
             const auto texture = (*it);
 
             std::stringstream ss;
             ss << ICON_FA_FILE_IMAGE << "  " << texture->GetPath();
 
             // maintain aspect ratio
-            ImGui::SetNextWindowSizeConstraints({ 128, 128 }, { FLT_MAX, FLT_MAX }, [](ImGuiSizeCallbackData* data) {
-                data->DesiredSize = { std::max(data->DesiredSize.x, data->DesiredSize.y), std::max(data->DesiredSize.x, data->DesiredSize.y) };
+            ImGui::SetNextWindowSizeConstraints({128, 128}, {FLT_MAX, FLT_MAX}, [](ImGuiSizeCallbackData* data) {
+                data->DesiredSize = {std::max(data->DesiredSize.x, data->DesiredSize.y),
+                                     std::max(data->DesiredSize.x, data->DesiredSize.y)};
             });
 
             // draw window
-            ImGui::SetNextWindowSize({ 512, 512 }, ImGuiCond_Appearing);
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
-            if (ImGui::Begin(ss.str().c_str(), &open, (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))) {
+            ImGui::SetNextWindowSize({512, 512}, ImGuiCond_Appearing);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {0, 0});
+            if (ImGui::Begin(ss.str().c_str(), &open,
+                             (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))) {
                 ImGui::PopStyleVar();
 
-                const auto titlebar_size = ImGui::GetCursorPosY();
-                const auto& w_size = ImGui::GetWindowSize();
+                const auto  titlebar_size = ImGui::GetCursorPosY();
+                const auto& w_size        = ImGui::GetWindowSize();
 
-                ImGui::Image(texture->GetSRV(), { w_size.x, w_size.y - titlebar_size });
+                ImGui::Image(texture->GetSRV(), {w_size.x, w_size.y - titlebar_size});
 
                 // render context menus so we can save/export from this window
                 UI::Get()->RenderContextMenu(texture->GetPath(), 0, CTX_TEXTURE);
 
                 ImGui::End();
-            }
-            else ImGui::PopStyleVar();
+            } else
+                ImGui::PopStyleVar();
 
             // close button pressed
             if (!open) {
@@ -159,7 +163,7 @@ void TextureManager::Shutdown()
 std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, uint8_t flags)
 {
     auto name = filename.filename().stem().string();
-    auto key = fnv_1_32::hash(name.c_str(), name.length());
+    auto key  = fnv_1_32::hash(name.c_str(), name.length());
 
     if (std::find(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key) == m_LastUsedTextures.end()) {
         m_LastUsedTextures.emplace_back(key);
@@ -191,7 +195,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, ui
 std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, FileBuffer* buffer, uint8_t flags)
 {
     auto name = filename.filename().stem().string();
-    auto key = fnv_1_32::hash(name.c_str(), name.length());
+    auto key  = fnv_1_32::hash(name.c_str(), name.length());
 
     if (std::find(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key) == m_LastUsedTextures.end()) {
         m_LastUsedTextures.emplace_back(key);
@@ -227,7 +231,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, Fi
 bool TextureManager::HasTexture(const fs::path& filename)
 {
     auto name = filename.filename().stem().string();
-    auto key = fnv_1_32::hash(name.c_str(), name.length());
+    auto key  = fnv_1_32::hash(name.c_str(), name.length());
 
     return (m_Textures.find(key) != m_Textures.end());
 }
@@ -249,8 +253,7 @@ void TextureManager::Flush()
 
             m_Textures.erase(texture);
             it = m_LastUsedTextures.erase(it);
-        }
-        else {
+        } else {
             ++it;
         }
     }
@@ -265,9 +268,10 @@ void TextureManager::Flush()
 void TextureManager::Delete(std::shared_ptr<Texture> texture)
 {
     auto name = texture->GetPath().filename().stem().string();
-    auto key = fnv_1_32::hash(name.c_str(), name.length());
+    auto key  = fnv_1_32::hash(name.c_str(), name.length());
 
-    m_LastUsedTextures.erase(std::remove(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key), m_LastUsedTextures.end());
+    m_LastUsedTextures.erase(std::remove(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key),
+                             m_LastUsedTextures.end());
     m_Textures.erase(key);
 }
 
@@ -289,59 +293,58 @@ DDS_PIXELFORMAT TextureManager::GetPixelFormat(DXGI_FORMAT format)
     DDS_PIXELFORMAT pixelFormat;
     pixelFormat.size = 32;
 
-    switch (format)
-    {
-    case DXGI_FORMAT_BC1_UNORM: {
-        pixelFormat.flags = DDS_FOURCC;
-        pixelFormat.RGBBitCount = 0;
-        pixelFormat.RBitMask = 0;
-        pixelFormat.GBitMask = 0;
-        pixelFormat.BBitMask = 0;
-        pixelFormat.ABitMask = 0;
-        pixelFormat.fourCC = 0x31545844; // DXT1
-        break;
-    }
+    switch (format) {
+        case DXGI_FORMAT_BC1_UNORM: {
+            pixelFormat.flags       = DDS_FOURCC;
+            pixelFormat.RGBBitCount = 0;
+            pixelFormat.RBitMask    = 0;
+            pixelFormat.GBitMask    = 0;
+            pixelFormat.BBitMask    = 0;
+            pixelFormat.ABitMask    = 0;
+            pixelFormat.fourCC      = 0x31545844; // DXT1
+            break;
+        }
 
-    case DXGI_FORMAT_BC2_UNORM: {
-        pixelFormat.flags = DDS_FOURCC;
-        pixelFormat.RGBBitCount = 0;
-        pixelFormat.RBitMask = 0;
-        pixelFormat.GBitMask = 0;
-        pixelFormat.BBitMask = 0;
-        pixelFormat.ABitMask = 0;
-        pixelFormat.fourCC = 0x33545844; // DXT3
-        break;
-    }
+        case DXGI_FORMAT_BC2_UNORM: {
+            pixelFormat.flags       = DDS_FOURCC;
+            pixelFormat.RGBBitCount = 0;
+            pixelFormat.RBitMask    = 0;
+            pixelFormat.GBitMask    = 0;
+            pixelFormat.BBitMask    = 0;
+            pixelFormat.ABitMask    = 0;
+            pixelFormat.fourCC      = 0x33545844; // DXT3
+            break;
+        }
 
-    case DXGI_FORMAT_BC3_UNORM: {
-        pixelFormat.flags = DDS_FOURCC;
-        pixelFormat.RGBBitCount = 0;
-        pixelFormat.RBitMask = 0;
-        pixelFormat.GBitMask = 0;
-        pixelFormat.BBitMask = 0;
-        pixelFormat.ABitMask = 0;
-        pixelFormat.fourCC = 0x35545844; // DXT5
-        break;
-    }
+        case DXGI_FORMAT_BC3_UNORM: {
+            pixelFormat.flags       = DDS_FOURCC;
+            pixelFormat.RGBBitCount = 0;
+            pixelFormat.RBitMask    = 0;
+            pixelFormat.GBitMask    = 0;
+            pixelFormat.BBitMask    = 0;
+            pixelFormat.ABitMask    = 0;
+            pixelFormat.fourCC      = 0x35545844; // DXT5
+            break;
+        }
 
-    case DXGI_FORMAT_R8G8B8A8_UNORM: {
-        pixelFormat.flags = (DDS_RGB | DDS_ALPHA);
-        pixelFormat.RGBBitCount = 32; // A8B8G8R8
-        pixelFormat.RBitMask = 0x00FF0000;
-        pixelFormat.GBitMask = 0x0000FF00;
-        pixelFormat.BBitMask = 0x000000FF;
-        pixelFormat.ABitMask = 0xFF000000;
-        pixelFormat.fourCC = 0;
-        break;
-    }
+        case DXGI_FORMAT_R8G8B8A8_UNORM: {
+            pixelFormat.flags       = (DDS_RGB | DDS_ALPHA);
+            pixelFormat.RGBBitCount = 32; // A8B8G8R8
+            pixelFormat.RBitMask    = 0x00FF0000;
+            pixelFormat.GBitMask    = 0x0000FF00;
+            pixelFormat.BBitMask    = 0x000000FF;
+            pixelFormat.ABitMask    = 0xFF000000;
+            pixelFormat.fourCC      = 0;
+            break;
+        }
 
-    case DXGI_FORMAT_R8_UNORM:
-    case DXGI_FORMAT_BC4_UNORM:
-    case DXGI_FORMAT_BC5_UNORM:
-    case DXGI_FORMAT_BC7_UNORM: {
-        pixelFormat.fourCC = 0x30315844;
-        break;
-    }
+        case DXGI_FORMAT_R8_UNORM:
+        case DXGI_FORMAT_BC4_UNORM:
+        case DXGI_FORMAT_BC5_UNORM:
+        case DXGI_FORMAT_BC7_UNORM: {
+            pixelFormat.fourCC = 0x30315844;
+            break;
+        }
     }
 
     return pixelFormat;

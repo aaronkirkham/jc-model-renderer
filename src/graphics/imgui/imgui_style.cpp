@@ -1,5 +1,4 @@
 #include <imgui.h>
-#include <imgui_tabs.h>
 #include <graphics/imgui/fonts/fontawesome5.h>
 #include <graphics/imgui/fonts/fontawesome5_icons.h>
 #include <graphics/imgui/fonts/roboto_medium.h>
@@ -17,6 +16,8 @@ void SetupImGuiStyle()
     style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
     style.ItemSpacing.y = 6.0f;
     style.WindowBorderSize = 0.0f;
+
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
     io.ConfigResizeWindowsFromEdges = true;
 
@@ -59,6 +60,9 @@ void SetupImGuiStyle()
     style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
     style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.32f, 0.52f, 0.65f, 1.00f);
     style.Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(0.20f, 0.20f, 0.20f, 0.50f);
+    style.Colors[ImGuiCol_Tab] = ImVec4(0.21f, 0.21f, 0.21f, 1.00f);
+    style.Colors[ImGuiCol_TabActive] = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
+    style.Colors[ImGuiCol_TabHovered] = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
 
     // add default font
     //io.Fonts->AddFontDefault();

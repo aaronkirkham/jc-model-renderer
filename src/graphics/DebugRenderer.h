@@ -1,12 +1,12 @@
 #pragma once
 
 #include <StdInc.h>
-#include <singleton.h>
 #include <graphics/Types.h>
+#include <singleton.h>
 
 class DebugRenderer : public Singleton<DebugRenderer>
 {
-public:
-    DebugRenderer() = default;
+  public:
+    DebugRenderer()          = default;
     virtual ~DebugRenderer() = default;
 };

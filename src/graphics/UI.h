@@ -1,22 +1,28 @@
 #pragma once
 
 #include <StdInc.h>
-#include <singleton.h>
 #include <memory.h>
+#include <singleton.h>
 
 class IImportExporter;
 class AvalancheArchive;
-struct UIEvents
-{
+struct UIEvents {
     ksignals::Event<void(const fs::path& file, AvalancheArchive* archive)> FileTreeItemSelected;
     ksignals::Event<void(const fs::path& file, const fs::path& directory)> SaveFileRequest;
     ksignals::Event<void(const fs::path& file, IImportExporter* exporter)> ExportFileRequest;
 };
 
 enum ContextMenuFlags {
-    CTX_FILE            = (1 << 0),
-    CTX_ARCHIVE         = (1 << 1),
-    CTX_TEXTURE         = (1 << 2),
+    CTX_FILE    = (1 << 0),
+    CTX_ARCHIVE = (1 << 1),
+    CTX_TEXTURE = (1 << 2),
+};
+
+enum TreeViewTab {
+    TAB_FILE_EXPLORER,
+    TAB_ARCHIVES,
+    TAB_MODELS,
+    TAB_TOTAL,
 };
 
 using ContextMenuCallback = std::function<void(const fs::path& filename)>;
@@ -27,35 +33,41 @@ struct ImDrawList;
 struct BoundingBox;
 class UI : public Singleton<UI>
 {
-private:
-    UIEvents m_UIEvents;
-    float m_MainMenuBarHeight = 0.0f;
-    std::recursive_mutex m_StatusTextsMutex;
-    std::map<uint64_t, std::string> m_StatusTexts;
+  private:
+    UIEvents                                   m_UIEvents;
+    float                                      m_MainMenuBarHeight = 0.0f;
+    std::recursive_mutex                       m_StatusTextsMutex;
+    std::map<uint64_t, std::string>            m_StatusTexts;
     std::map<std::string, ContextMenuCallback> m_ContextMenuCallbacks;
-    std::string m_TabToSwitch = "File Explorer";
-    uint8_t m_CurrentActiveGBuffer = 0;
+    TreeViewTab                                m_TabToSwitch          = TAB_FILE_EXPLORER;
+    uint8_t                                    m_CurrentActiveGBuffer = 0;
 
     ImDrawList* m_SceneDrawList = nullptr;
-    float m_SceneWidth = 0.0f;
-    float m_SidebarWidth = MIN_SIDEBAR_WIDTH;
+    float       m_SceneWidth    = 0.0f;
+    float       m_SidebarWidth  = MIN_SIDEBAR_WIDTH;
 
     void RenderFileTreeView();
 
-public:
+  public:
     UI();
     virtual ~UI() = default;
 
-    virtual UIEvents& Events() { return m_UIEvents; }
+    virtual UIEvents& Events()
+    {
+        return m_UIEvents;
+    }
 
     void Render();
     void RenderSpinner(const std::string& str);
     void RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra = 0, uint32_t flags = 0);
 
     uint64_t PushStatusText(const std::string& str);
-    void PopStatusText(uint64_t id);
+    void     PopStatusText(uint64_t id);
 
-    void SwitchToTab(const std::string& tab) { m_TabToSwitch = tab; }
+    void SwitchToTab(const TreeViewTab tab)
+    {
+        m_TabToSwitch = tab;
+    }
 
     void RegisterContextMenuCallback(const std::vector<std::string>& extensions, ContextMenuCallback fn);
 

@@ -1,17 +1,16 @@
-#include <graphics/UI.h>
-#include <Window.h>
 #include <Settings.h>
+#include <Window.h>
+#include <graphics/UI.h>
 #include <imgui.h>
-#include <imgui_tabs.h>
 #include <json.hpp>
 
+#include <graphics/Camera.h>
 #include <graphics/imgui/fonts/fontawesome5_icons.h>
 #include <graphics/imgui/imgui_rotate.h>
 #include <graphics/imgui/imgui_tabscrollcontent.h>
-#include <graphics/Camera.h>
 
-#include <jc3/FileLoader.h>
 #include <Jc3/RenderBlockFactory.h>
+#include <jc3/FileLoader.h>
 #include <jc3/formats/AvalancheArchive.h>
 #include <jc3/formats/RenderBlockModel.h>
 #include <jc3/formats/RuntimeContainer.h>
@@ -23,12 +22,12 @@
 #include <atomic>
 #include <shellapi.h>
 
-extern bool g_DrawBoundingBoxes;
-extern bool g_ShowModelLabels;
+extern bool     g_DrawBoundingBoxes;
+extern bool     g_ShowModelLabels;
 extern fs::path g_JC3Directory;
 
 static bool g_ShowAllArchiveContents = false;
-static bool g_ShowAboutWindow = false;
+static bool g_ShowAboutWindow        = false;
 
 #ifdef DEBUG
 static bool g_CheckForUpdatesEnabled = false;
@@ -36,30 +35,30 @@ static bool g_CheckForUpdatesEnabled = false;
 static bool g_CheckForUpdatesEnabled = true;
 #endif
 
-static bool _is_dragging = false;
+static bool     _is_dragging       = false;
 static fs::path _dragdrop_filename = "";
 
 UI::UI()
 {
     Window::Get()->Events().DragEnter.connect([&](const fs::path& filename) {
-        _is_dragging = true;
+        _is_dragging       = true;
         _dragdrop_filename = filename;
 
-        ImGuiIO& io = ImGui::GetIO();
+        ImGuiIO& io     = ImGui::GetIO();
         io.MouseDown[0] = true;
     });
 
     Window::Get()->Events().DragLeave.connect([&] {
         _is_dragging = false;
 
-        ImGuiIO& io = ImGui::GetIO();
+        ImGuiIO& io     = ImGui::GetIO();
         io.MouseDown[0] = false;
     });
 
     Window::Get()->Events().DragDropped.connect([&] {
         _is_dragging = false;
 
-        ImGuiIO& io = ImGui::GetIO();
+        ImGuiIO& io     = ImGui::GetIO();
         io.MouseDown[0] = false;
 
         // if nothing handled the drag drop payload, pass it back to the window events
@@ -85,15 +84,15 @@ void UI::Render()
     }
 
     // main menu bar
-    if (ImGui::BeginMainMenuBar())
-    {
+    if (ImGui::BeginMainMenuBar()) {
         m_MainMenuBarHeight = ImGui::GetWindowHeight();
 
         // file
-        if (ImGui::BeginMenu("File"))
-        {
-            if (ImGui::MenuItem(ICON_FA_FOLDER "  Select JC3 path")) SelectJustCause3Directory();
-            if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit")) Window::Get()->BeginShutdown();
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem(ICON_FA_FOLDER "  Select JC3 path"))
+                SelectJustCause3Directory();
+            if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit"))
+                Window::Get()->BeginShutdown();
 
             ImGui::EndMenu();
         }
@@ -113,13 +112,16 @@ void UI::Render()
 #endif
 
         // renderer
-        if (ImGui::BeginMenu("Renderer"))
-        {
+        if (ImGui::BeginMenu("Renderer")) {
             if (ImGui::BeginMenu("Visualize")) {
-                if (ImGui::MenuItem("Diffuse", nullptr, m_CurrentActiveGBuffer == 0)) m_CurrentActiveGBuffer = 0;
-                if (ImGui::MenuItem("Normal", nullptr, m_CurrentActiveGBuffer == 1)) m_CurrentActiveGBuffer = 1;
-                if (ImGui::MenuItem("Properties", nullptr, m_CurrentActiveGBuffer == 2)) m_CurrentActiveGBuffer = 2;
-                if (ImGui::MenuItem("PropertiesEx", nullptr, m_CurrentActiveGBuffer == 3)) m_CurrentActiveGBuffer = 3;
+                if (ImGui::MenuItem("Diffuse", nullptr, m_CurrentActiveGBuffer == 0))
+                    m_CurrentActiveGBuffer = 0;
+                if (ImGui::MenuItem("Normal", nullptr, m_CurrentActiveGBuffer == 1))
+                    m_CurrentActiveGBuffer = 1;
+                if (ImGui::MenuItem("Properties", nullptr, m_CurrentActiveGBuffer == 2))
+                    m_CurrentActiveGBuffer = 2;
+                if (ImGui::MenuItem("PropertiesEx", nullptr, m_CurrentActiveGBuffer == 3))
+                    m_CurrentActiveGBuffer = 3;
 
                 ImGui::EndMenu();
             }
@@ -157,8 +159,7 @@ void UI::Render()
         }
 
         // camera
-        if (ImGui::BeginMenu("Camera"))
-        {
+        if (ImGui::BeginMenu("Camera")) {
             if (ImGui::BeginMenu(ICON_FA_CAMERA "  Focus On", RenderBlockModel::Instances.size() != 0)) {
                 for (const auto& model : RenderBlockModel::Instances) {
                     if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
@@ -173,8 +174,7 @@ void UI::Render()
         }
 
         // help
-        if (ImGui::BeginMenu("Help"))
-        {
+        if (ImGui::BeginMenu("Help")) {
             if (ImGui::MenuItem(ICON_FA_INFO_CIRCLE "  About")) {
                 g_ShowAboutWindow = !g_ShowAboutWindow;
             }
@@ -184,24 +184,25 @@ void UI::Render()
             }
 
             if (ImGui::MenuItem(ICON_FA_EXTERNAL_LINK_ALT "  View on GitHub")) {
-                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc3-rbm-renderer", nullptr, nullptr, SW_SHOWNORMAL);
+                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc3-rbm-renderer", nullptr, nullptr,
+                              SW_SHOWNORMAL);
             }
 
             ImGui::EndMenu();
         }
-        
+
         ImGui::EndMainMenuBar();
     }
 
     // open the about popup
-    if (g_ShowAboutWindow) ImGui::OpenPopup("About");
+    if (g_ShowAboutWindow)
+        ImGui::OpenPopup("About");
 
     // About
-    if (ImGui::BeginPopupModal("About", &g_ShowAboutWindow, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove)))
-    {
-        ImGui::SetWindowSize({ 400, 400 });
+    if (ImGui::BeginPopupModal("About", &g_ShowAboutWindow, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))) {
+        ImGui::SetWindowSize({400, 400});
 
-        static int32_t current_version[3] = { VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION };
+        static int32_t current_version[3] = {VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
         ImGui::Text("Just Cause 3 Render Block Model Renderer");
         ImGui::Text("Version %d.%d.%d", current_version[0], current_version[1], current_version[2]);
@@ -211,33 +212,42 @@ void UI::Render()
 
         ImGui::BeginChild("Scrolling", {}, true);
 
-        ImGui::TextWrapped("Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\n"
+        ImGui::TextWrapped(
+            "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and "
+            "associated documentation files (the \"Software\"), to deal in the Software without restriction, including "
+            "without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell "
+            "copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the "
+            "following conditions:\n\n"
 
-            "The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\n"
+            "The above copyright notice and this permission notice shall be included in all copies or substantial "
+            "portions of the Software.\n\n"
 
-            "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.");
+            "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT "
+            "LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO "
+            "EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER "
+            "IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR "
+            "THE USE OR OTHER DEALINGS IN THE SOFTWARE.");
 
         ImGui::EndChild();
 
         ImGui::EndPopup();
     }
 
-    // TODO: docking/tabs/viewport stuff
-    // https://github.com/ocornut/imgui/issues/1542
-    // https://github.com/ocornut/imgui/issues/261
-
     ImGui::SetNextWindowBgAlpha(0.0f);
-    ImGui::SetNextWindowPos({ 0, m_MainMenuBarHeight });
-    ImGui::SetNextWindowSize({ window_size.x - m_SidebarWidth, window_size.y - m_MainMenuBarHeight });
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
+    ImGui::SetNextWindowPos({0, m_MainMenuBarHeight});
+    ImGui::SetNextWindowSize({window_size.x - m_SidebarWidth, window_size.y - m_MainMenuBarHeight});
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0, 0});
 
     // draw scene view
-    if (ImGui::Begin("Scene", nullptr, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar))) {
+    if (ImGui::Begin("Scene", nullptr,
+                     (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs
+                      | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings
+                      | ImGuiWindowFlags_NoTitleBar))) {
         const auto& size = ImGui::GetWindowSize();
-        m_SceneWidth = size.x;
+        m_SceneWidth     = size.x;
 
         // update camera projection if needed
-        Camera::Get()->UpdateWindowSize({ size.x, size.y });
+        Camera::Get()->UpdateWindowSize({size.x, size.y});
 
         m_SceneDrawList = ImGui::GetWindowDrawList();
 
@@ -252,29 +262,34 @@ void UI::Render()
 
     // Stats
     ImGui::SetNextWindowBgAlpha(0.0f);
-    ImGui::SetNextWindowPos({ 10, (window_size.y - 35 - 24) });
-    if (ImGui::Begin("Stats", nullptr, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings))) {
-        ImGui::Text("%.01f fps (%.02f ms) (%.0f x %.0f)", ImGui::GetIO().Framerate, (1000.0f / ImGui::GetIO().Framerate), window_size.x, window_size.y);
+    ImGui::SetNextWindowPos({10, (window_size.y - 35 - 24)});
+    if (ImGui::Begin("Stats", nullptr,
+                     (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs
+                      | ImGuiWindowFlags_NoSavedSettings))) {
+        ImGui::Text("%.01f fps (%.02f ms) (%.0f x %.0f)", ImGui::GetIO().Framerate,
+                    (1000.0f / ImGui::GetIO().Framerate), window_size.x, window_size.y);
         ImGui::End();
     }
 
     // Status
     ImGui::SetNextWindowBgAlpha(0.0f);
-    ImGui::SetNextWindowSize({ window_size.x, window_size.y });
-    ImGui::Begin("Status", nullptr, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings));
+    ImGui::SetNextWindowSize({window_size.x, window_size.y});
+    ImGui::Begin("Status", nullptr,
+                 (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoScrollbar
+                  | ImGuiWindowFlags_NoSavedSettings));
     {
         const auto size = ImGui::GetWindowSize();
-        ImGui::SetWindowPos({ ((window_size.x - m_SidebarWidth) - size.x - 10), (window_size.y - size.y - 10) });
+        ImGui::SetWindowPos({((window_size.x - m_SidebarWidth) - size.x - 10), (window_size.y - size.y - 10)});
 
-        static constexpr auto ITEM_SPACING = 24.0f;
-        uint32_t current_index = 0;
+        static constexpr auto ITEM_SPACING  = 24.0f;
+        uint32_t              current_index = 0;
 
         // render all status texts
-        std::lock_guard<std::recursive_mutex> _lk{ m_StatusTextsMutex };
+        std::lock_guard<std::recursive_mutex> _lk{m_StatusTextsMutex};
         for (const auto& status : m_StatusTexts) {
             const auto& text_size = ImGui::CalcTextSize(status.second.c_str());
 
-            ImGui::SetCursorPos({ (size.x - text_size.x - 25), (window_size.y - 20 - (ITEM_SPACING * current_index)) });
+            ImGui::SetCursorPos({(size.x - text_size.x - 25), (window_size.y - 20 - (ITEM_SPACING * current_index))});
             RenderSpinner(status.second);
 
             ++current_index;
@@ -283,7 +298,7 @@ void UI::Render()
     ImGui::End();
 
     // render runtime container stuff
-    for (auto it = RuntimeContainer::Instances.begin(); it != RuntimeContainer::Instances.end(); ) {
+    for (auto it = RuntimeContainer::Instances.begin(); it != RuntimeContainer::Instances.end();) {
         std::stringstream ss;
         ss << "Runtime Container Editor - ";
         ss << (*it).second->GetFileName().filename();
@@ -296,10 +311,10 @@ void UI::Render()
         }
 
         if (!open) {
-            std::lock_guard<std::recursive_mutex> _lk{ RuntimeContainer::InstancesMutex };
+            std::lock_guard<std::recursive_mutex> _lk{RuntimeContainer::InstancesMutex};
             it = RuntimeContainer::Instances.erase(it);
-        }
-        else ++it;
+        } else
+            ++it;
     }
 }
 
@@ -310,36 +325,43 @@ void UI::RenderFileTreeView()
 
     // render the archive directory list
     ImGui::SetNextWindowBgAlpha(1.0f);
-    ImGui::SetNextWindowPos({ m_SceneWidth, m_MainMenuBarHeight });
-    ImGui::SetNextWindowSizeConstraints({ MIN_SIDEBAR_WIDTH, (window_size.y - m_MainMenuBarHeight) }, { window_size.x / 2, (window_size.y - m_MainMenuBarHeight) });
+    ImGui::SetNextWindowPos({m_SceneWidth, m_MainMenuBarHeight});
+    ImGui::SetNextWindowSizeConstraints({MIN_SIDEBAR_WIDTH, (window_size.y - m_MainMenuBarHeight)},
+                                        {window_size.x / 2, (window_size.y - m_MainMenuBarHeight)});
 
     // hide resize grip
     // TODO: can probably remove if we can use the NoResize flag with ResizeFromAnySize
-    ImGui::PushStyleColor(ImGuiCol_ResizeGrip, { 0, 0, 0, 0 });
-    ImGui::PushStyleColor(ImGuiCol_ResizeGripHovered, { 0, 0, 0, 0 });
-    ImGui::PushStyleColor(ImGuiCol_ResizeGripActive, { 0, 0, 0, 0 });
+    ImGui::PushStyleColor(ImGuiCol_ResizeGrip, {0, 0, 0, 0});
+    ImGui::PushStyleColor(ImGuiCol_ResizeGripHovered, {0, 0, 0, 0});
+    ImGui::PushStyleColor(ImGuiCol_ResizeGripActive, {0, 0, 0, 0});
 
-    ImGui::Begin("Archive Directory List", nullptr, (ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar));
+    ImGui::Begin("Tree View", nullptr,
+                 (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse
+                  | ImGuiWindowFlags_NoSavedSettings));
     {
         m_SidebarWidth = ImGui::GetWindowSize().x;
 
-        ImGui::BeginTabBar("Directory List Tabs", (ImGuiTabBarFlags_NoReorder | ImGuiTabBarFlags_SizingPolicyEqual));
+        ImGui::BeginTabBar("Directory List Tabs");
         {
             // file explorer tab
-            if (ImGuiCustom::TabItemScroll("File Explorer")) {
+            if (ImGuiCustom::TabItemScroll("File Explorer", m_TabToSwitch == TAB_FILE_EXPLORER)) {
                 FileLoader::Get()->GetDirectoryList()->Draw(nullptr);
                 ImGuiCustom::EndTabItemScroll();
+                if (m_TabToSwitch == TAB_FILE_EXPLORER) {
+                    m_TabToSwitch = TAB_TOTAL;
+                }
             }
 
             // archives
-            if (ImGuiCustom::TabItemScroll("Archives", nullptr, AvalancheArchive::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
-                for (auto it = AvalancheArchive::Instances.begin(); it != AvalancheArchive::Instances.end(); ) {
-                    const auto& archive = (*it).second;
+            if (ImGuiCustom::TabItemScroll("Archives", m_TabToSwitch == TAB_ARCHIVES, nullptr,
+                                           AvalancheArchive::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
+                for (auto it = AvalancheArchive::Instances.begin(); it != AvalancheArchive::Instances.end();) {
+                    const auto& archive  = (*it).second;
                     const auto& filename = archive->GetFilePath().filename();
 
                     // render the current directory
                     bool is_still_open = true;
-                    auto open = ImGui::CollapsingHeader(filename.string().c_str(), &is_still_open);
+                    auto open          = ImGui::CollapsingHeader(filename.string().c_str(), &is_still_open);
 
                     // drag drop target
                     if (ImGui::BeginDragDropTarget()) {
@@ -362,7 +384,7 @@ void UI::RenderFileTreeView()
 
                     // if the close button was pressed, delete the archive
                     if (!is_still_open) {
-                        std::lock_guard<std::recursive_mutex> _lk{ AvalancheArchive::InstancesMutex };
+                        std::lock_guard<std::recursive_mutex> _lk{AvalancheArchive::InstancesMutex};
                         it = AvalancheArchive::Instances.erase(it);
 
                         // flush texture and shader manager
@@ -370,9 +392,9 @@ void UI::RenderFileTreeView()
                         ShaderManager::Get()->Empty();
 
                         if (AvalancheArchive::Instances.size() == 0) {
-                            m_TabToSwitch = "File Explorer";
+                            m_TabToSwitch = TAB_FILE_EXPLORER;
                         }
-  
+
                         continue;
                     }
 
@@ -380,16 +402,20 @@ void UI::RenderFileTreeView()
                 }
 
                 ImGuiCustom::EndTabItemScroll();
+                if (m_TabToSwitch == TAB_ARCHIVES) {
+                    m_TabToSwitch = TAB_TOTAL;
+                }
             }
 
             // render blocks
-            if (ImGuiCustom::TabItemScroll("Models", nullptr, RenderBlockModel::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
-                for (auto it = RenderBlockModel::Instances.begin(); it != RenderBlockModel::Instances.end(); ) {
+            if (ImGuiCustom::TabItemScroll("Models", m_TabToSwitch == TAB_MODELS, nullptr,
+                                           RenderBlockModel::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
+                for (auto it = RenderBlockModel::Instances.begin(); it != RenderBlockModel::Instances.end();) {
                     const auto& filename = (*it).second->GetFileName();
 
                     // render the current model info
                     bool is_still_open = true;
-                    auto open = ImGui::CollapsingHeader(filename.c_str(), &is_still_open);
+                    auto open          = ImGui::CollapsingHeader(filename.c_str(), &is_still_open);
 
                     // context menu
                     RenderContextMenu(filename);
@@ -406,24 +432,28 @@ void UI::RenderFileTreeView()
 
                             // make the things transparent if the block isn't rendering
                             const auto block_visible = render_block->IsVisible();
-                            if (!block_visible) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.35f);
+                            if (!block_visible)
+                                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.35f);
 
                             // current block header
                             const auto render_block_open = ImGui::TreeNode(block_label.str().c_str());
 
                             // block context menu
                             {
-                                if (!block_visible) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1);
+                                if (!block_visible)
+                                    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1);
 
                                 if (ImGui::BeginPopupContextItem()) {
-                                    if (ImGui::Selectable(block_visible ? ICON_FA_STOP "  Hide Render Block" : ICON_FA_PLAY "  Show Render Block")) {
+                                    if (ImGui::Selectable(block_visible ? ICON_FA_STOP "  Hide Render Block"
+                                                                        : ICON_FA_PLAY "  Show Render Block")) {
                                         render_block->SetVisible(!block_visible);
                                     }
 
                                     ImGui::EndPopup();
                                 }
 
-                                if (!block_visible) ImGui::PopStyleVar();
+                                if (!block_visible)
+                                    ImGui::PopStyleVar();
                             }
 
                             // render the current render block info
@@ -442,28 +472,28 @@ void UI::RenderFileTreeView()
 
                                     // draw textures
                                     for (const auto& texture : textures) {
-                                        const auto is_loaded = texture->IsLoaded();
-                                        const auto& path = texture->GetPath();
+                                        const auto  is_loaded = texture->IsLoaded();
+                                        const auto& path      = texture->GetPath();
 
-                                        auto window_size = Window::Get()->GetSize();
+                                        auto window_size  = Window::Get()->GetSize();
                                         auto aspect_ratio = (window_size.x / window_size.y);
 
-                                        auto width = ImGui::GetWindowWidth() / ImGui::GetColumnsCount();
+                                        auto width        = ImGui::GetWindowWidth() / ImGui::GetColumnsCount();
                                         auto texture_size = ImVec2(width, (width / aspect_ratio));
 
                                         // draw the texture name
                                         if (is_loaded) {
                                             ImGui::Text(path.filename().string().c_str());
-                                        }
-                                        else {
-                                            static auto red = ImVec4{ 1, 0, 0, 1 };
+                                        } else {
+                                            static auto red = ImVec4{1, 0, 0, 1};
                                             ImGui::TextColored(red, path.filename().string().c_str());
                                         }
 
                                         ImGui::BeginGroup();
 
                                         // draw the texture image
-                                        auto srv = is_loaded ? texture->GetSRV() : TextureManager::Get()->GetMissingTexture()->GetSRV();
+                                        auto srv = is_loaded ? texture->GetSRV()
+                                                             : TextureManager::Get()->GetMissingTexture()->GetSRV();
                                         ImGui::Image(srv, texture_size);
 
                                         // tooltip
@@ -492,7 +522,8 @@ void UI::RenderFileTreeView()
                                 ImGui::TreePop();
                             }
 
-                            if (!block_visible) ImGui::PopStyleVar();
+                            if (!block_visible)
+                                ImGui::PopStyleVar();
 
                             ++render_block_index;
                         }
@@ -500,22 +531,19 @@ void UI::RenderFileTreeView()
 
                     // if the close button was pressed, delete the model
                     if (!is_still_open) {
-                        std::lock_guard<std::recursive_mutex> _lk{ RenderBlockModel::InstancesMutex };
+                        std::lock_guard<std::recursive_mutex> _lk{RenderBlockModel::InstancesMutex};
                         it = RenderBlockModel::Instances.erase(it);
 
                         continue;
                     }
-                    
+
                     ++it;
                 }
 
                 ImGuiCustom::EndTabItemScroll();
-            }
-       
-            // switch active tab if we need to
-            if (!m_TabToSwitch.empty()) {
-                ImGui::SetTabItemSelected(m_TabToSwitch.c_str());
-                m_TabToSwitch.clear();
+                if (m_TabToSwitch == TAB_MODELS) {
+                    m_TabToSwitch = TAB_TOTAL;
+                }
             }
         }
         ImGui::EndTabBar();
@@ -588,7 +616,6 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra, u
             (*it).second(filename);
         }
 
-
         ImGui::EndPopup();
     }
 
@@ -598,17 +625,17 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra, u
 
 uint64_t UI::PushStatusText(const std::string& str)
 {
-    static std::atomic_uint64_t unique_ids = { 0 };
-    auto id = ++unique_ids;
+    static std::atomic_uint64_t unique_ids = {0};
+    auto                        id         = ++unique_ids;
 
-    std::lock_guard<std::recursive_mutex> _lk{ m_StatusTextsMutex };
+    std::lock_guard<std::recursive_mutex> _lk{m_StatusTextsMutex};
     m_StatusTexts[id] = std::move(str);
     return id;
 }
 
 void UI::PopStatusText(uint64_t id)
 {
-    std::lock_guard<std::recursive_mutex> _lk{ m_StatusTextsMutex };
+    std::lock_guard<std::recursive_mutex> _lk{m_StatusTextsMutex};
     m_StatusTexts.erase(id);
 }
 
@@ -627,10 +654,11 @@ void UI::DrawText(const std::string& text, const glm::vec3& position, const glm:
     if (Camera::Get()->WorldToScreen(position, &screen)) {
         if (center) {
             const auto text_size = ImGui::CalcTextSize(text.c_str());
-            m_SceneDrawList->AddText(ImVec2{ (screen.x - (text_size.x / 2)), (screen.y - (text_size.y / 2)) }, ImColor{ colour.x, colour.y, colour.z, colour.a }, text.c_str());
-        }
-        else {
-            m_SceneDrawList->AddText(ImVec2{ screen.x, screen.y }, ImColor{ colour.x, colour.y, colour.z, colour.a }, text.c_str());
+            m_SceneDrawList->AddText(ImVec2{(screen.x - (text_size.x / 2)), (screen.y - (text_size.y / 2))},
+                                     ImColor{colour.x, colour.y, colour.z, colour.a}, text.c_str());
+        } else {
+            m_SceneDrawList->AddText(ImVec2{screen.x, screen.y}, ImColor{colour.x, colour.y, colour.z, colour.a},
+                                     text.c_str());
         }
     }
 }
@@ -639,19 +667,19 @@ void UI::DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour)
 {
     assert(m_SceneDrawList);
 
-    glm::vec3 box[2] = { bb.GetMin(), bb.GetMax() };
-    ImVec2 points[8];
+    glm::vec3 box[2] = {bb.GetMin(), bb.GetMax()};
+    ImVec2    points[8];
 
     for (auto i = 0; i < 8; ++i) {
-        const auto world = glm::vec3{ box[(i ^ (i >> 1)) & 1].x, box[(i >> 1) & 1].y, box[(i >> 2) & 1].z };
+        const auto world = glm::vec3{box[(i ^ (i >> 1)) & 1].x, box[(i >> 1) & 1].y, box[(i >> 2) & 1].z};
 
         glm::vec3 screen;
         Camera::Get()->WorldToScreen(world, &screen);
 
-        points[i] = { screen.x, screen.y };
+        points[i] = {screen.x, screen.y};
     }
 
-    const auto col = ImColor{ colour.x, colour.y, colour.z, colour.a };
+    const auto col = ImColor{colour.x, colour.y, colour.z, colour.a};
 
     for (auto i = 0; i < 4; ++i) {
         m_SceneDrawList->AddLine(points[i], points[(i + 1) & 3], col);

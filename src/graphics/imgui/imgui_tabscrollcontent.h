@@ -2,13 +2,17 @@
 
 namespace ImGuiCustom
 {
-    bool TabItemScroll(const char* label, bool* p_open = nullptr, ImGuiTabItemFlags flags = 0)
+    bool TabItemScroll(const char* label, bool selected = false, bool* p_open = nullptr, ImGuiTabItemFlags flags = 0)
     {
+        if (selected) {
+            flags |= ImGuiTabItemFlags_SetSelected;
+        }
+
         // disabled style
         if (flags & ImGuiItemFlags_Disabled) ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 
         // TODO: tab items should not be clickable when disabled flag is set.
-        auto res = ImGui::TabItem(label, p_open, flags);
+        auto res = ImGui::BeginTabItem(label, p_open, flags);
 
         // disabled style
         if (flags & ImGuiItemFlags_Disabled) ImGui::PopStyleColor();
@@ -30,5 +34,6 @@ namespace ImGuiCustom
     {
         ImGui::EndChild();
         ImGui::PopStyleColor();
+        ImGui::EndTabItem();
     }
 };
