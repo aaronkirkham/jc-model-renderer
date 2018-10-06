@@ -8,16 +8,16 @@
 
 static constexpr auto g_WindowName = "JC3 Render Block Model Renderer";
 
-#ifdef DEBUG
+//#ifdef DEBUG
 #define DEBUG_LOG(s)                                    \
 {                                                       \
     std::stringstream ss_;                              \
     ss_ << s << std::endl;                              \
     OutputDebugStringA(ss_.str().c_str());              \
 }
-#else
-#define DEBUG_LOG(s)
-#endif
+//#else
+//#define DEBUG_LOG(s)
+//#endif
 
 struct WindowEvents
 {

@@ -129,7 +129,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         CheckForUpdates();
 #endif
 
-#ifdef DEBUG
+#if 1
         Input::Get()->Events().KeyUp.connect([](uint32_t key) {
             if (key == VK_F1) {
                 //FileLoader::Get()->LocateFileInDictionary("models/jc_environments/props/animation_prop/textures/bucket_dif.hmddsc");
@@ -227,6 +227,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 });
             }
             else if (key == VK_F7) {
+                fs::path filename = "editor/entities/gameobjects/main_character.epe";
+                RuntimeContainer::Load(filename, [&](std::shared_ptr<RuntimeContainer> rc) {
+                    FileLoader::Get()->WriteRuntimeContainer(rc.get());
+                });
             }
         });
 #endif

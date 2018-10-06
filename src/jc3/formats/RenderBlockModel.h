@@ -26,7 +26,7 @@ public:
     static void Load(const fs::path& filename);
     static void LoadFromRuntimeContainer(const fs::path& filename, std::shared_ptr<RuntimeContainer> rc);
 
-    bool Parse(const FileBuffer& data);
+    bool Parse(const FileBuffer& data, bool add_to_render_list = true);
     inline static bool LoadingFromRC = false;
     inline static std::vector<std::string> SuppressedWarnings;
 

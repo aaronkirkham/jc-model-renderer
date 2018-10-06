@@ -304,6 +304,7 @@ void UI::Render()
         ss << (*it).second->GetFileName().filename();
 
         bool open = true;
+        ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
         if (ImGui::Begin(ss.str().c_str(), &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings)) {
             (*it).second->DrawUI();
 
@@ -411,14 +412,15 @@ void UI::RenderFileTreeView()
             if (ImGuiCustom::TabItemScroll("Models", m_TabToSwitch == TAB_MODELS, nullptr,
                                            RenderBlockModel::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
                 for (auto it = RenderBlockModel::Instances.begin(); it != RenderBlockModel::Instances.end();) {
-                    const auto& filename = (*it).second->GetFileName();
+                    const auto& filename_with_path = (*it).second->GetPath();
+                    const auto& filename           = (*it).second->GetFileName();
 
                     // render the current model info
                     bool is_still_open = true;
                     auto open          = ImGui::CollapsingHeader(filename.c_str(), &is_still_open);
 
                     // context menu
-                    RenderContextMenu(filename);
+                    RenderContextMenu(filename_with_path);
 
                     if (open) {
                         uint32_t render_block_index = 0;

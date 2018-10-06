@@ -53,7 +53,7 @@ RenderBlockModel::~RenderBlockModel()
     }
 }
 
-bool RenderBlockModel::Parse(const FileBuffer& data)
+bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
 {
     std::istringstream stream(std::string{ (char*)data.data(), data.size() });
 
@@ -152,8 +152,10 @@ end:
     }
 
     // add to renderlist
-    Renderer::Get()->AddToRenderList(m_RenderBlocks);
-
+    if (add_to_render_list) {
+        Renderer::Get()->AddToRenderList(m_RenderBlocks);
+    }
+   
     return parse_success;
 }
 

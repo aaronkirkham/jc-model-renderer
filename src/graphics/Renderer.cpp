@@ -679,6 +679,8 @@ VertexBuffer_t* Renderer::CreateVertexBuffer(const void* data, uint32_t count, u
     buffer->m_ElementCount  = count;
     buffer->m_ElementStride = stride;
     buffer->m_Usage         = usage;
+    buffer->m_Data.resize(count * stride);
+    std::memcpy(buffer->m_Data.data(), data, count * stride);
 
     D3D11_BUFFER_DESC desc;
     ZeroMemory(&desc, sizeof(desc));
@@ -713,6 +715,8 @@ IndexBuffer_t* Renderer::CreateIndexBuffer(const void* data, uint32_t count, D3D
     buffer->m_ElementCount  = count;
     buffer->m_ElementStride = sizeof(uint16_t);
     buffer->m_Usage         = usage;
+    buffer->m_Data.resize(count * buffer->m_ElementStride);
+    std::memcpy(buffer->m_Data.data(), data, count * buffer->m_ElementStride);
 
     D3D11_BUFFER_DESC desc;
     ZeroMemory(&desc, sizeof(desc));

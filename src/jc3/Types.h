@@ -136,6 +136,8 @@ namespace JustCause3
 
         namespace RenderBlockCharacter
         {
+            static const int32_t VertexStrides[] = { 0x18, 0x1C, 0x20, 0x20, 0x24, 0x28 };
+
             struct Packed4Bones1UV
             {
                 int16_t x;

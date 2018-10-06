@@ -25,8 +25,9 @@ struct RenderContext_t {
 };
 
 struct IBuffer_t {
-    ID3D11Buffer*             m_Buffer        = nullptr;
-    ID3D11ShaderResourceView* m_SRV           = nullptr;
+    ID3D11Buffer*             m_Buffer = nullptr;
+    ID3D11ShaderResourceView* m_SRV    = nullptr;
+    std::vector<uint8_t>      m_Data;
     uint32_t                  m_ElementCount  = 0;
     uint32_t                  m_ElementStride = 0;
     D3D11_USAGE               m_Usage         = D3D11_USAGE_DEFAULT;

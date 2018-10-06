@@ -1,81 +1,75 @@
 #pragma once
 
 #include <StdInc.h>
-#include <jc3/renderblocks/IRenderBlock.h>
 #include <gtc/type_ptr.hpp>
+#include <jc3/renderblocks/IRenderBlock.h>
 
 #pragma pack(push, 1)
-struct GeneralJC3Attributes
-{
-    float depthBias;
-    float specularGloss;
-    float reflectivity;
-    float emmissive;
-    float diffuseWrap;
-    float specularFresnel;
-    glm::vec4 diffuseModulator;
-    float _unknown;
-    float _unknown2;
-    float _unknown3;
+struct GeneralJC3Attributes {
+    float                                depthBias;
+    float                                specularGloss;
+    float                                reflectivity;
+    float                                emmissive;
+    float                                diffuseWrap;
+    float                                specularFresnel;
+    glm::vec4                            diffuseModulator;
+    float                                _unknown;
+    float                                _unknown2;
+    float                                _unknown3;
     JustCause3::Vertex::SPackedAttribute packed;
-    uint32_t flags;
+    uint32_t                             flags;
 };
 
 namespace JustCause3::RenderBlocks
 {
-    struct GeneralJC3
-    {
-        uint8_t version;
-        GeneralJC3Attributes attributes;
-    };
+struct GeneralJC3 {
+    uint8_t              version;
+    GeneralJC3Attributes attributes;
 };
+}; // namespace JustCause3::RenderBlocks
 #pragma pack(pop)
 
 class RenderBlockGeneralJC3 : public IRenderBlock
 {
-private:
-    struct cbVertexInstanceConsts
-    {
+  private:
+    struct cbVertexInstanceConsts {
         glm::mat4 viewProjection;
         glm::mat4 world;
-        char _pad[0x20];
-        char _pad2[0x10];
+        char      _pad[0x20];
+        char      _pad2[0x10];
         glm::vec4 colour;
         glm::vec4 _unknown[3];
         glm::vec4 _thing;
     } m_cbVertexInstanceConsts;
 
-    struct cbVertexMaterialConsts
-    {
+    struct cbVertexMaterialConsts {
         glm::vec4 data;
         glm::vec2 uv0Extent;
         glm::vec2 uv1Extent;
     } m_cbVertexMaterialConsts;
 
-    struct cbFragmentMaterialConsts
-    {
-        float specularGloss;
-        float reflectivity;
-        float _unknown;
-        float specularFresnel;
+    struct cbFragmentMaterialConsts {
+        float     specularGloss;
+        float     reflectivity;
+        float     _unknown;
+        float     specularFresnel;
         glm::vec4 diffuseModulator;
-        float _unknown2;
-        float _unknown3;
-        float _unknown4;
-        float _unknown5;
+        float     _unknown2;
+        float     _unknown3;
+        float     _unknown4;
+        float     _unknown5;
     } m_cbFragmentMaterialConsts;
 
-    struct cbFragmentInstanceConsts
-    {
+    struct cbFragmentInstanceConsts {
         glm::vec4 colour;
     } m_cbFragmentInstanceConsts;
 
     JustCause3::RenderBlocks::GeneralJC3 m_Block;
-    VertexBuffer_t* m_VertexBufferData = nullptr;
-    std::array<ConstantBuffer_t*, 2> m_VertexShaderConstants = { nullptr };
-    std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = { nullptr };
+    VertexBuffer_t*                      m_VertexBufferData        = nullptr;
+    std::array<ConstantBuffer_t*, 2>     m_VertexShaderConstants   = {nullptr};
+    std::array<ConstantBuffer_t*, 2>     m_FragmentShaderConstants = {nullptr};
 
-public:
+  public:
     RenderBlockGeneralJC3() = default;
     virtual ~RenderBlockGeneralJC3()
     {
@@ -88,7 +82,10 @@ public:
             Renderer::Get()->DestroyBuffer(fsc);
     }
 
-    virtual const char* GetTypeName() override final { return "RenderBlockGeneralJC3"; }
+    virtual const char* GetTypeName() override final
+    {
+        return "RenderBlockGeneralJC3";
+    }
 
     virtual bool IsOpaque() override final
     {
@@ -99,33 +96,44 @@ public:
     {
         // load shaders
         m_VertexShader = ShaderManager::Get()->GetVertexShader("generaljc3");
-        m_PixelShader = ShaderManager::Get()->GetPixelShader("generaljc3");
+        m_PixelShader  = ShaderManager::Get()->GetPixelShader("generaljc3");
 
         // create the input desc
         if (m_Block.attributes.packed.format != 1) {
             D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                { "POSITION",   0,  DXGI_FORMAT_R32G32B32_FLOAT,        0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   0,  DXGI_FORMAT_R32G32B32A32_FLOAT,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   1,  DXGI_FORMAT_R32G32B32_FLOAT,        0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,
+                 D3D11_INPUT_PER_VERTEX_DATA, 0},
+                {"TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,
+                 D3D11_INPUT_PER_VERTEX_DATA, 0},
+                {"TEXCOORD", 1, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,
+                 D3D11_INPUT_PER_VERTEX_DATA, 0},
             };
 
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockGeneralJC3 (unpacked)");
-        }
-        else {
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
+                                                                           "RenderBlockGeneralJC3 (unpacked)");
+        } else {
             D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   1,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                {"POSITION", 0, DXGI_FORMAT_R16G16B16A16_SNORM, 0, D3D11_APPEND_ALIGNED_ELEMENT,
+                 D3D11_INPUT_PER_VERTEX_DATA, 0},
+                {"TEXCOORD", 0, DXGI_FORMAT_R16G16B16A16_SNORM, 1, D3D11_APPEND_ALIGNED_ELEMENT,
+                 D3D11_INPUT_PER_VERTEX_DATA, 0},
+                {"TEXCOORD", 1, DXGI_FORMAT_R32G32B32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT,
+                 D3D11_INPUT_PER_VERTEX_DATA, 0},
             };
 
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockGeneralJC3 (packed)");
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
+                                                                           "RenderBlockGeneralJC3 (packed)");
         }
 
         // create the constant buffer
-        m_VertexShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbVertexInstanceConsts, "RenderBlockGeneralJC3 cbVertexInstanceConsts");
-        m_VertexShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbVertexMaterialConsts, "RenderBlockGeneralJC3 m_cbVertexMaterialConsts");
-        m_FragmentShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbFragmentMaterialConsts, "RenderBlockGeneralJC3 cbFragmentMaterialConsts");
-        m_FragmentShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbFragmentInstanceConsts, "RenderBlockGeneralJC3 cbFragmentInstanceConsts");
+        m_VertexShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(
+            m_cbVertexInstanceConsts, "RenderBlockGeneralJC3 cbVertexInstanceConsts");
+        m_VertexShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(
+            m_cbVertexMaterialConsts, "RenderBlockGeneralJC3 m_cbVertexMaterialConsts");
+        m_FragmentShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(
+            m_cbFragmentMaterialConsts, "RenderBlockGeneralJC3 cbFragmentMaterialConsts");
+        m_FragmentShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(
+            m_cbFragmentInstanceConsts, "RenderBlockGeneralJC3 cbFragmentInstanceConsts");
     }
 
     virtual void Read(std::istream& stream) override final
@@ -133,7 +141,7 @@ public:
         using namespace JustCause3::Vertex;
 
         // read the block header
-        stream.read((char *)&m_Block, sizeof(m_Block));
+        stream.read((char*)&m_Block, sizeof(m_Block));
 
         // read the materials
         ReadMaterials(stream);
@@ -157,8 +165,7 @@ public:
 
                 // TODO: uv1
             }
-        }
-        else {
+        } else {
             std::vector<PackedVertexPosition> vertices;
             ReadVertexBuffer<PackedVertexPosition>(stream, &m_VertexBuffer, &vertices);
 
@@ -167,7 +174,7 @@ public:
 
             for (auto i = 0; i < vertices.size(); ++i) {
                 auto& vertex = vertices[i];
-                auto& data = vertices_data[i];
+                auto& data   = vertices_data[i];
 
                 m_Vertices.emplace_back(unpack(vertex.x));
                 m_Vertices.emplace_back(unpack(vertex.y));
@@ -185,7 +192,8 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
-        if (!m_Visible) return;
+        if (!m_Visible)
+            return;
 
         IRenderBlock::Setup(context);
 
@@ -195,19 +203,19 @@ public:
 
             // set vertex shader constants
             m_cbVertexInstanceConsts.viewProjection = context->m_viewProjectionMatrix;
-            m_cbVertexInstanceConsts.world = glm::scale(glm::mat4(1), { scale, scale, scale });
-            m_cbVertexInstanceConsts.colour = glm::vec4(1, 1, 1, 1);
-            m_cbVertexInstanceConsts._thing = glm::vec4(0, 1, 2, 1);
-            m_cbVertexMaterialConsts.data = { m_Block.attributes.depthBias, m_Block.attributes._unknown3, 0, 0 };
+            m_cbVertexInstanceConsts.world          = glm::scale(glm::mat4(1), {scale, scale, scale});
+            m_cbVertexInstanceConsts.colour         = glm::vec4(1, 1, 1, 1);
+            m_cbVertexInstanceConsts._thing         = glm::vec4(0, 1, 2, 1);
+            m_cbVertexMaterialConsts.data      = {m_Block.attributes.depthBias, m_Block.attributes._unknown3, 0, 0};
             m_cbVertexMaterialConsts.uv0Extent = m_Block.attributes.packed.uv0Extent;
             m_cbVertexMaterialConsts.uv1Extent = m_Block.attributes.packed.uv1Extent;
-            
+
             // set fragment shader constants
-            m_cbFragmentMaterialConsts.specularGloss = m_Block.attributes.specularGloss;
-            m_cbFragmentMaterialConsts.reflectivity = m_Block.attributes.reflectivity;
-            m_cbFragmentMaterialConsts.specularFresnel = m_Block.attributes.specularFresnel;
+            m_cbFragmentMaterialConsts.specularGloss    = m_Block.attributes.specularGloss;
+            m_cbFragmentMaterialConsts.reflectivity     = m_Block.attributes.reflectivity;
+            m_cbFragmentMaterialConsts.specularFresnel  = m_Block.attributes.specularFresnel;
             m_cbFragmentMaterialConsts.diffuseModulator = m_Block.attributes.diffuseModulator;
-            m_cbFragmentInstanceConsts.colour = glm::vec4(1, 1, 1, 0);
+            m_cbFragmentInstanceConsts.colour           = glm::vec4(1, 1, 1, 0);
         }
 
         // set the constant buffers
@@ -227,12 +235,38 @@ public:
 
     virtual void DrawUI() override final
     {
-        static std::array flag_labels = {
-            "Disable Culling", "", "", "", "", "", "", "",
-            "", "", "", "", "", "", "", "",
-            "", "", "", "", "", "", "", "",
-            "", "", "", "", "", "", "", ""
-        };
+        static std::array flag_labels = {"Disable Culling",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         ""};
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 

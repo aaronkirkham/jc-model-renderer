@@ -58,12 +58,6 @@ private:
     std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = { nullptr };
     int32_t m_Stride = 0;
 
-    /*int64_t GetStride() const
-    {
-        static const int32_t strides[] = { 0x18, 0x1C, 0x20, 0x20, 0x24, 0x28 };
-        return strides[3 * ((m_Block.attributes.flags >> 1) & 1) + ((m_Block.attributes.flags >> 5) & 1) + ((m_Block.attributes.flags >> 4) & 1)];
-    }*/
-
 public:
     RenderBlockCharacter() = default;
     virtual ~RenderBlockCharacter()
@@ -250,43 +244,7 @@ public:
         m_Stride = (3 * ((m_Block.attributes.flags >> 1) & 1) + ((m_Block.attributes.flags >> 5) & 1) + ((m_Block.attributes.flags >> 4) & 1));
 
         // read vertex data
-        switch (m_Stride) {
-        case 0: {
-            std::vector<Packed4Bones1UV> vertices;
-            ReadVertexBuffer<Packed4Bones1UV>(stream, &m_VertexBuffer, &vertices);
-            break;
-        }
-
-        case 1: {
-            std::vector<Packed4Bones2UVs> vertices;
-            ReadVertexBuffer<Packed4Bones2UVs>(stream, &m_VertexBuffer, &vertices);
-            break;
-        }
-
-        case 2: {
-            std::vector<Packed4Bones3UVs> vertices;
-            ReadVertexBuffer<Packed4Bones3UVs>(stream, &m_VertexBuffer, &vertices);
-            break;
-        }
-                
-        case 3: {
-            std::vector<Packed8Bones1UV> vertices;
-            ReadVertexBuffer<Packed8Bones1UV>(stream, &m_VertexBuffer, &vertices);
-            break;
-        }
-
-        case 4: {
-            std::vector<Packed8Bones2UVs> vertices;
-            ReadVertexBuffer<Packed8Bones2UVs>(stream, &m_VertexBuffer, &vertices);
-            break;
-        }
-
-        case 5: {
-            std::vector<Packed8Bones3UVs> vertices;
-            ReadVertexBuffer<Packed8Bones3UVs>(stream, &m_VertexBuffer, &vertices);
-            break;
-        }
-        }
+        ReadVertexBuffer(stream, &m_VertexBuffer, VertexStrides[m_Stride]);
 
         // read skin batch
         ReadSkinBatch(stream);

@@ -908,6 +908,9 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
 
 void FileLoader::WriteRuntimeContainer(RuntimeContainer* runtime_container) noexcept
 {
+    std::ofstream stream("C:/users/aaron/desktop/rtpc.bin", std::ios::binary);
+    assert(!stream.fail());
+
     assert(runtime_container);
 
     // generate the header
@@ -915,22 +918,75 @@ void FileLoader::WriteRuntimeContainer(RuntimeContainer* runtime_container) noex
     strncpy(header.m_Magic, "RTPC", 4);
     header.m_Version = 1;
 
-    const auto& properties = runtime_container->GetProperties();
-    const auto& instances = runtime_container->GetContainers();
+    stream.write((char *)&header, sizeof(header));
 
-    // create the root node
-    JustCause3::RuntimeContainer::Node rootNode;
-    rootNode.m_NameHash = runtime_container->GetNameHash();
-    rootNode.m_DataOffset = 0;
-    rootNode.m_PropertyCount = properties.size();
-    rootNode.m_InstanceCount = instances.size();
+    // get the inital write offset (header + root node)
+    auto offset = static_cast<uint32_t>(sizeof(JustCause3::RuntimeContainer::Header) + sizeof(JustCause3::RuntimeContainer::Node));
 
-    // create the properties
-    for (const auto& prop : properties) {
-        JustCause3::RuntimeContainer::Property _prop;
-        _prop.m_NameHash = prop->GetNameHash();
-        //_prop.m_Data = 
-        _prop.m_Type = static_cast<uint8_t>(prop->GetType());
+    std::queue<RuntimeContainer*> instanceQueue;
+    instanceQueue.push(runtime_container);
+
+    while (!instanceQueue.empty()) {
+        const auto& container = instanceQueue.front();
+
+        const auto& properties = container->GetProperties();
+        const auto& instances = container->GetContainers();
+
+        // write the current node
+        JustCause3::RuntimeContainer::Node _node;
+        _node.m_NameHash = container->GetNameHash();
+        _node.m_DataOffset = offset;
+        _node.m_PropertyCount = properties.size();
+        _node.m_InstanceCount = instances.size();
+
+        stream.write((char *)&_node, sizeof(_node));
+
+        auto _child_offset = offset + static_cast<uint32_t>(sizeof(JustCause3::RuntimeContainer::Property) * _node.m_PropertyCount);
+
+        // calculate the property and instance write offsets
+        const auto property_offset = offset;
+        const auto child_offset = JustCause3::ALIGN_TO_BOUNDARY(_child_offset);
+        const auto prop_data_offset = child_offset + (sizeof(JustCause3::RuntimeContainer::Node) * _node.m_InstanceCount);
+
+        // write all the properties
+#if 0
+        stream.seekp(prop_data_offset);
+        DEBUG_LOG("seek to " << prop_data_offset << " to write properties...");
+        for (const auto& prop : properties) {
+            if (prop->GetType() == PropertyType::RTPC_TYPE_INTEGER || prop->GetType() == PropertyType::RTPC_TYPE_FLOAT) {
+            }
+            else if (prop->GetType() == PropertyType::RTPC_TYPE_STRING) {
+            }
+            else {
+            }
+
+            JustCause3::RuntimeContainer::Property _prop;
+            _prop.m_NameHash = prop->GetNameHash();
+            _prop.m_Data = 0;
+            _prop.m_Type = static_cast<uint8_t>(prop->GetType());
+
+            stream.write((char *)&_prop, sizeof(_prop));
+        }
+#endif
+
+        stream.seekp(property_offset);
+        for (const auto& prop : properties) {
+            if (prop->GetType() == PropertyType::RTPC_TYPE_INTEGER) {
+                auto val = prop->GetValue<int32_t>();
+                stream.write((char *)&val, sizeof(val));
+            }
+            else if (prop->GetType() == PropertyType::RTPC_TYPE_FLOAT) {
+                auto val = prop->GetValue<float>();
+                stream.write((char *)&val, sizeof(val));
+            }
+        }
+
+        // queue all the child nodes
+        for (const auto& child : instances) {
+            instanceQueue.push(child);
+        }
+
+        instanceQueue.pop();
     }
 }
 
@@ -967,18 +1023,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const fs::pa
 
         stream.seekg(item.m_DataOffset);
 
-#if 0
-        DEBUG_LOG(" ====== NODE ======");
-        DEBUG_LOG("  - m_NameHash: 0x" << std::setw(4) << std::hex << item.m_NameHash << " (" << NameHashLookup::GetName(item.m_NameHash) << ")");
-        DEBUG_LOG("  - m_PropertyCount: " << item.m_PropertyCount);
-        DEBUG_LOG("  - m_InstanceCount: " << item.m_InstanceCount << " (queue: " << instanceQueue.size() << ")");
-        DEBUG_LOG("  - m_DataOffset: " << item.m_DataOffset << " (current: " << stream.tellg() << ")");
-#endif
-
         // read all the node properties
-#if 0
-        DEBUG_LOG("   > PROPERTIES");
-#endif
         for (uint16_t i = 0; i < item.m_PropertyCount; ++i) {
             JustCause3::RuntimeContainer::Property prop;
             stream.read((char *)&prop, sizeof(prop));
@@ -989,19 +1034,12 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const fs::pa
 
                 propertyQueue.push({ container_property, prop });
             }
-
-#if 0
-            DEBUG_LOG("    - m_NameHash: 0x" << std::setw(4) << std::hex << prop.m_NameHash << " (" << DebugNameHash(prop.m_NameHash) << ")" << ", m_Type: " << RuntimeContainerProperty::GetTypeName(prop.m_Type));
-#endif
         }
 
         // seek to our current pos with 4-byte alignment
         stream.seekg(JustCause3::ALIGN_TO_BOUNDARY(stream.tellg()));
 
         // read all the node instances
-#if 0
-        DEBUG_LOG("   > INSTANCES");
-#endif
         for (uint16_t i = 0; i < item.m_InstanceCount; ++i) {
             JustCause3::RuntimeContainer::Node node;
             stream.read((char *)&node, sizeof(node));
@@ -1010,12 +1048,6 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const fs::pa
             if (current_container) {
                 current_container->AddContainer(next_container);
             }
-
-#if 0
-            DEBUG_LOG("    - m_NameHash: 0x" << std::setw(4) << std::hex << node.m_NameHash << " (" << DebugNameHash(node.m_NameHash) << ")");
-            DEBUG_LOG("    - m_DataOffset: " << node.m_DataOffset);
-            DEBUG_LOG("    -----------------------");
-#endif
 
             instanceQueue.push({ next_container, node });
         }

@@ -1,16 +1,16 @@
 #pragma once
 
-#include <singleton.h>
 #include <import_export/IImportExporter.h>
+#include <singleton.h>
 #include <vector>
 
 class ImportExportManager : public Singleton<ImportExportManager>
 {
-private:
+  private:
     std::vector<IImportExporter*> m_Items;
 
-public:
-    ImportExportManager() = default;
+  public:
+    ImportExportManager()          = default;
     virtual ~ImportExportManager() = default;
 
     void Register(IImportExporter* ie)

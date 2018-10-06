@@ -1,30 +1,26 @@
 #pragma once
 
 #include <any>
+#include <fstream>
 #include <functional>
 #include <thread>
-#include <fstream>
 
-enum ImportExportType {
-    IE_TYPE_IMPORTER = 0,
-    IE_TYPE_EXPORTER,
-    IE_TYPE_BOTH
-};
+enum ImportExportType { IE_TYPE_IMPORTER = 0, IE_TYPE_EXPORTER, IE_TYPE_BOTH };
 
 class RenderBlockModel;
 class IImportExporter
 {
-public:
+  public:
     using ImportExportFinishedCallback = std::function<void(bool)>;
 
-public:
-    IImportExporter() = default;
+  public:
+    IImportExporter()          = default;
     virtual ~IImportExporter() = default;
 
-    virtual ImportExportType GetType() = 0;
-    virtual const char* GetName() = 0;
+    virtual ImportExportType         GetType()            = 0;
+    virtual const char*              GetName()            = 0;
     virtual std::vector<const char*> GetInputExtensions() = 0;
-    virtual const char* GetOutputExtension() = 0;
+    virtual const char*              GetOutputExtension() = 0;
 
     // NOTE: callback can be nullptr! remember to check this correctly in overrides of this function!
     virtual void Export(const fs::path& filename, const fs::path& to, ImportExportFinishedCallback callback = {}) = 0;
@@ -44,7 +40,7 @@ public:
         DEBUG_LOG("IImportExporter::WriteBufferToFile - writing " << file);
 
         // write the buffer and finish
-        stream.write((char *)&buffer->front(), buffer->size());
+        stream.write((char*)&buffer->front(), buffer->size());
         stream.close();
         return true;
     }

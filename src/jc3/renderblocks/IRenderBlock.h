@@ -121,6 +121,17 @@ public:
         *outBuffer = Renderer::Get()->CreateVertexBuffer(outVertices->data(), count, stride, D3D11_USAGE_DEFAULT, "IRenderBlock Vertex Buffer");
     }
 
+    void ReadVertexBuffer(std::istream& stream, VertexBuffer_t** outBuffer, uint32_t stride)
+    {
+        uint32_t count;
+        stream.read((char *)&count, sizeof(count));
+
+        auto buffer = std::make_unique<char[]>(count * stride);
+        stream.read((char *)buffer.get(), (count * stride));
+
+        *outBuffer = Renderer::Get()->CreateVertexBuffer(buffer.get(), count, stride, D3D11_USAGE_DEFAULT, "IRenderBlock Vertex Buffer");
+    }
+
     void ReadIndexBuffer(std::istream& stream, IndexBuffer_t** outBuffer)
     {
         uint32_t count;
@@ -147,7 +158,7 @@ public:
                 continue;
             }
 
-            auto filename = std::unique_ptr<char[]>(new char[length + 1]);
+            auto filename = std::make_unique<char[]>(length + 1);
             stream.read(filename.get(), length);
             filename[length] = '\0';
 
