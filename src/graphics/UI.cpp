@@ -305,7 +305,7 @@ void UI::Render()
 
         bool open = true;
         ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
-        if (ImGui::Begin(ss.str().c_str(), &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings)) {
+        if (ImGui::Begin(ss.str().c_str(), &open, (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking))) {
             (*it).second->DrawUI();
 
             ImGui::End();
@@ -338,11 +338,11 @@ void UI::RenderFileTreeView()
 
     ImGui::Begin("Tree View", nullptr,
                  (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse
-                  | ImGuiWindowFlags_NoSavedSettings));
+                  | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking));
     {
         m_SidebarWidth = ImGui::GetWindowSize().x;
 
-        ImGui::BeginTabBar("Directory List Tabs");
+        ImGui::BeginTabBar("Tree View Tabs");
         {
             // file explorer tab
             if (ImGuiCustom::TabItemScroll("File Explorer", m_TabToSwitch == TAB_FILE_EXPLORER)) {

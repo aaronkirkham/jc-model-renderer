@@ -41,7 +41,7 @@ class Wavefront_Obj : public IImportExporter
         // TODO: split each render block into it's own file. each block should also write either a JSON file or binary
         // file containing block shader settings
         for (const auto& block : model->GetRenderBlocks()) {
-            out_stream << "# " << block->GetTypeName() << std::endl;
+            out_stream << "g " << block->GetTypeName() << std::endl;
 
             // vertices
             const auto& vertices = block->GetVertices();
@@ -72,17 +72,14 @@ class Wavefront_Obj : public IImportExporter
             }
 
             // materials
-            // for (const auto& texture : block->GetTextures()) {
-            //    auto& filename = texture->GetPath().stem();
+            const auto& textures = block->GetTextures();
+            
+            // only diffuse texture for now
+            out_stream << "newmtl " << textures[0]->GetPath().stem() << std::endl;
+            out_stream << "map_Kd " << textures[0]->GetPath().stem() << ".dds" << std::endl;
+            out_stream << "usemtl " << textures[0]->GetPath().stem() << std::endl;
 
-            //    out_stream << "newmtl " << filename.string() << std::endl;
-            //    out_stream << "map_Kd " << filename.string() << ".dds" << std::endl;
-            //    out_stream << "usemtl " << filename.string() << std::endl << std::endl;
-            //}
-
-            //out_stream << "newmtl racing_arrows_dif" << std::endl
-            //           << "map_Kd racing_arrows_dif.dds" << std::endl
-            //           << "usemtl racing_arrows_dif" << std::endl;
+            out_stream << std::endl;
         }
     }
 

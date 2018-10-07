@@ -1,40 +1,40 @@
 #pragma once
 
-#include <jc3/Types.h>
+#include <graphics/Renderer.h>
 #include <graphics/ShaderManager.h>
 #include <graphics/TextureManager.h>
 #include <graphics/Types.h>
-#include <graphics/Renderer.h>
 #include <graphics/imgui/imgui_bitfield.h>
+#include <jc3/Types.h>
 
 class IRenderBlock
 {
-protected:
-    bool m_Visible = true;
+  protected:
+    bool  m_Visible       = true;
     float m_ScaleModifier = 1.0f;
 
-    VertexBuffer_t* m_VertexBuffer = nullptr;
-    IndexBuffer_t* m_IndexBuffer = nullptr;
-    std::shared_ptr<VertexShader_t> m_VertexShader = nullptr;
-    std::shared_ptr<PixelShader_t> m_PixelShader = nullptr;
-    VertexDeclaration_t* m_VertexDeclaration = nullptr;
-    SamplerState_t* m_SamplerState = nullptr;
+    VertexBuffer_t*                 m_VertexBuffer      = nullptr;
+    IndexBuffer_t*                  m_IndexBuffer       = nullptr;
+    std::shared_ptr<VertexShader_t> m_VertexShader      = nullptr;
+    std::shared_ptr<PixelShader_t>  m_PixelShader       = nullptr;
+    VertexDeclaration_t*            m_VertexDeclaration = nullptr;
+    SamplerState_t*                 m_SamplerState      = nullptr;
 
-    std::vector<fs::path> m_Materials;
+    std::vector<fs::path>                 m_Materials;
     std::vector<std::shared_ptr<Texture>> m_Textures;
-    std::vector<JustCause3::CSkinBatch> m_SkinBatches;
+    std::vector<JustCause3::CSkinBatch>   m_SkinBatches;
 
     // used by the exporter stuff, vertices are unpacked by the renders blocks
-    std::vector<float> m_Vertices;
+    std::vector<float>    m_Vertices;
     std::vector<uint16_t> m_Indices;
-    std::vector<float> m_UVs;
+    std::vector<float>    m_UVs;
 
-public:
+  public:
     IRenderBlock() = default;
     virtual ~IRenderBlock()
     {
         m_VertexShader = nullptr;
-        m_PixelShader = nullptr;
+        m_PixelShader  = nullptr;
 
         Renderer::Get()->DestroyBuffer(m_VertexBuffer);
         Renderer::Get()->DestroyBuffer(m_IndexBuffer);
@@ -49,24 +49,52 @@ public:
 
     virtual const char* GetTypeName() = 0;
 
-    virtual void SetVisible(bool visible) { m_Visible = visible; }
-    virtual bool IsVisible() { return m_Visible; }
-    virtual float GetScale() { return m_ScaleModifier; }
-    virtual VertexBuffer_t* GetVertexBuffer() { return m_VertexBuffer; }
-    virtual IndexBuffer_t* GetIndexBuffer() { return m_IndexBuffer; }
-    virtual const std::vector<std::shared_ptr<Texture>>& GetTextures() { return m_Textures; }
-    virtual const std::vector<float>& GetVertices() { return m_Vertices; }
-    virtual const std::vector<uint16_t>& GetIndices() { return m_Indices; }
-    virtual const std::vector<float>& GetUVs() { return m_UVs; }
+    virtual void SetVisible(bool visible)
+    {
+        m_Visible = visible;
+    }
+    virtual bool IsVisible()
+    {
+        return m_Visible;
+    }
+    virtual float GetScale()
+    {
+        return m_ScaleModifier;
+    }
+    virtual VertexBuffer_t* GetVertexBuffer()
+    {
+        return m_VertexBuffer;
+    }
+    virtual IndexBuffer_t* GetIndexBuffer()
+    {
+        return m_IndexBuffer;
+    }
+    virtual const std::vector<std::shared_ptr<Texture>>& GetTextures()
+    {
+        return m_Textures;
+    }
+    virtual const std::vector<float>& GetVertices()
+    {
+        return m_Vertices;
+    }
+    virtual const std::vector<uint16_t>& GetIndices()
+    {
+        return m_Indices;
+    }
+    virtual const std::vector<float>& GetUVs()
+    {
+        return m_UVs;
+    }
 
     virtual bool IsOpaque() = 0;
 
-    virtual void Create() = 0;
+    virtual void Create()                 = 0;
     virtual void Read(std::istream& file) = 0;
 
     virtual void Setup(RenderContext_t* context)
     {
-        if (!m_Visible) return;
+        if (!m_Visible)
+            return;
 
         assert(m_VertexShader);
         assert(m_PixelShader);
@@ -97,12 +125,12 @@ public:
 
     virtual void Draw(RenderContext_t* context)
     {
-        if (!m_Visible) return;
+        if (!m_Visible)
+            return;
 
         if (m_IndexBuffer) {
             context->m_Renderer->DrawIndexed(0, m_IndexBuffer->m_ElementCount, m_IndexBuffer);
-        }
-        else {
+        } else {
             context->m_Renderer->Draw(0, (m_VertexBuffer->m_ElementCount / 3));
         }
     }
@@ -113,46 +141,49 @@ public:
         auto stride = static_cast<uint32_t>(sizeof(T));
 
         uint32_t count;
-        stream.read((char *)&count, sizeof(count));
+        stream.read((char*)&count, sizeof(count));
 
         outVertices->resize(count);
-        stream.read((char *)outVertices->data(), (count * stride));
+        stream.read((char*)outVertices->data(), (count * stride));
 
-        *outBuffer = Renderer::Get()->CreateVertexBuffer(outVertices->data(), count, stride, D3D11_USAGE_DEFAULT, "IRenderBlock Vertex Buffer");
+        *outBuffer = Renderer::Get()->CreateVertexBuffer(outVertices->data(), count, stride, D3D11_USAGE_DEFAULT,
+                                                         "IRenderBlock Vertex Buffer");
     }
 
     void ReadVertexBuffer(std::istream& stream, VertexBuffer_t** outBuffer, uint32_t stride)
     {
         uint32_t count;
-        stream.read((char *)&count, sizeof(count));
+        stream.read((char*)&count, sizeof(count));
 
         auto buffer = std::make_unique<char[]>(count * stride);
-        stream.read((char *)buffer.get(), (count * stride));
+        stream.read((char*)buffer.get(), (count * stride));
 
-        *outBuffer = Renderer::Get()->CreateVertexBuffer(buffer.get(), count, stride, D3D11_USAGE_DEFAULT, "IRenderBlock Vertex Buffer");
+        *outBuffer = Renderer::Get()->CreateVertexBuffer(buffer.get(), count, stride, D3D11_USAGE_DEFAULT,
+                                                         "IRenderBlock Vertex Buffer");
     }
 
     void ReadIndexBuffer(std::istream& stream, IndexBuffer_t** outBuffer)
     {
         uint32_t count;
-        stream.read((char *)&count, sizeof(count));
+        stream.read((char*)&count, sizeof(count));
 
         m_Indices.resize(count);
-        stream.read((char *)m_Indices.data(), (count * sizeof(uint16_t)));
+        stream.read((char*)m_Indices.data(), (count * sizeof(uint16_t)));
 
-        *outBuffer = Renderer::Get()->CreateIndexBuffer(m_Indices.data(), count, D3D11_USAGE_DEFAULT, "IRenderBlock Index Buffer");
+        *outBuffer = Renderer::Get()->CreateIndexBuffer(m_Indices.data(), count, D3D11_USAGE_DEFAULT,
+                                                        "IRenderBlock Index Buffer");
     }
 
     void ReadMaterials(std::istream& stream)
     {
         uint32_t count;
-        stream.read((char *)&count, sizeof(count));
+        stream.read((char*)&count, sizeof(count));
 
         m_Materials.reserve(count);
 
         for (uint32_t i = 0; i < count; ++i) {
             uint32_t length;
-            stream.read((char *)&length, sizeof(length));
+            stream.read((char*)&length, sizeof(length));
 
             if (length == 0) {
                 continue;
@@ -172,26 +203,26 @@ public:
         }
 
         uint32_t unknown[4];
-        stream.read((char *)&unknown, sizeof(unknown));
+        stream.read((char*)&unknown, sizeof(unknown));
     }
 
     void ReadSkinBatch(std::istream& stream)
     {
         uint32_t count;
-        stream.read((char *)&count, sizeof(count));
+        stream.read((char*)&count, sizeof(count));
         m_SkinBatches.reserve(count);
 
         for (uint32_t i = 0; i < count; ++i) {
             JustCause3::CSkinBatch batch;
 
-            stream.read((char *)&batch.m_Size, sizeof(batch.m_Size));
-            stream.read((char *)&batch.m_Offset, sizeof(batch.m_Offset));
-            stream.read((char *)&batch.m_BatchSize, sizeof(batch.m_BatchSize));
+            stream.read((char*)&batch.m_Size, sizeof(batch.m_Size));
+            stream.read((char*)&batch.m_Offset, sizeof(batch.m_Offset));
+            stream.read((char*)&batch.m_BatchSize, sizeof(batch.m_BatchSize));
 
             // allocate the batch lookup
             if (batch.m_BatchSize != 0) {
                 batch.m_BatchLookup = new int16_t[batch.m_BatchSize];
-                stream.read((char *)batch.m_BatchLookup, sizeof(int16_t) * batch.m_BatchSize);
+                stream.read((char*)batch.m_BatchLookup, sizeof(int16_t) * batch.m_BatchSize);
             }
 
             m_SkinBatches.emplace_back(batch);
@@ -201,7 +232,7 @@ public:
     void ReadDeformTable(std::istream& stream, JustCause3::CDeformTable* deform_table)
     {
         uint32_t deformTable[256];
-        stream.read((char *)&deformTable, sizeof(deformTable));
+        stream.read((char*)&deformTable, sizeof(deformTable));
 
         for (uint32_t i = 0; i < 256; ++i) {
             const auto data = deformTable[i];
@@ -215,7 +246,8 @@ public:
 
     void DrawSkinBatches(RenderContext_t* context)
     {
-        if (!m_Visible) return;
+        if (!m_Visible)
+            return;
 
         for (const auto& batch : m_SkinBatches) {
             context->m_Renderer->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);

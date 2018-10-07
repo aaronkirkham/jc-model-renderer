@@ -114,7 +114,7 @@ TextureManager::TextureManager()
             const auto texture = (*it);
 
             std::stringstream ss;
-            ss << ICON_FA_FILE_IMAGE << "  " << texture->GetPath();
+            ss << ICON_FA_FILE_IMAGE << "  " << texture->GetPath().stem();
 
             // maintain aspect ratio
             ImGui::SetNextWindowSizeConstraints({128, 128}, {FLT_MAX, FLT_MAX}, [](ImGuiSizeCallbackData* data) {
@@ -125,8 +125,9 @@ TextureManager::TextureManager()
             // draw window
             ImGui::SetNextWindowSize({512, 512}, ImGuiCond_Appearing);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {0, 0});
-            if (ImGui::Begin(ss.str().c_str(), &open,
-                             (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))) {
+            if (ImGui::Begin(
+                    ss.str().c_str(), &open,
+                    (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking))) {
                 ImGui::PopStyleVar();
 
                 const auto  titlebar_size = ImGui::GetCursorPosY();

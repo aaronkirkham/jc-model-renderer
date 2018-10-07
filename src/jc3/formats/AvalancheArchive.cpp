@@ -1,10 +1,10 @@
-#include <jc3/formats/AvalancheArchive.h>
-#include <jc3/FileLoader.h>
-#include <jc3/formats/RenderBlockModel.h>
 #include <Window.h>
 #include <graphics/UI.h>
+#include <jc3/FileLoader.h>
+#include <jc3/formats/AvalancheArchive.h>
+#include <jc3/formats/RenderBlockModel.h>
 
-std::recursive_mutex Factory<AvalancheArchive>::InstancesMutex;
+std::recursive_mutex                                  Factory<AvalancheArchive>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<AvalancheArchive>> Factory<AvalancheArchive>::Instances;
 
 AvalancheArchive::AvalancheArchive(const fs::path& file, bool load_from_archive)
@@ -20,10 +20,9 @@ AvalancheArchive::AvalancheArchive(const fs::path& file, bool load_from_archive)
             m_FileList = std::make_unique<DirectoryList>();
             m_FileList->Parse(m_StreamArchive.get());
         });
-    }
-    else {
+    } else {
         m_StreamArchive = std::make_unique<StreamArchive_t>(file);
-        m_FileList = std::make_unique<DirectoryList>();
+        m_FileList      = std::make_unique<DirectoryList>();
     }
 
     UI::Get()->SwitchToTab(TAB_ARCHIVES);
@@ -71,21 +70,20 @@ void AvalancheArchive::AddDirectory(const fs::path& filename, const fs::path& ro
         for (const auto& f : fs::directory_iterator(filename)) {
             AddDirectory(f.path(), root);
         }
-    }
-    else {
+    } else {
         // TEMP (no relative/lexically_relative in experimental::fs, but moving to ::filesystem seems to break things)
         std::filesystem::path fn(filename);
         std::filesystem::path r(root);
 
         // strip the root directory from the path
-        auto name = fn.lexically_relative(r).string();
+        auto       name = fn.lexically_relative(r).string();
         const auto size = fs::file_size(filename);
 
         FileBuffer buffer;
         buffer.resize(size);
         std::ifstream stream(filename, std::ios::binary);
         assert(!stream.fail());
-        stream.read((char *)buffer.data(), size);
+        stream.read((char*)buffer.data(), size);
         stream.close();
 
         AddFile(name, buffer);
@@ -120,18 +118,20 @@ bool AvalancheArchive::SaveFileCallback(const fs::path& filename, const fs::path
 
         std::thread([&, archive, filename, directory, status_text_id] {
             // generate the .ee.toc
-            auto toc = filename; toc.replace_extension(".ee.toc");
+            auto toc = filename;
+            toc.replace_extension(".ee.toc");
             const auto& toc_path = directory / toc.filename();
             FileLoader::Get()->WriteTOC(toc_path, archive->m_StreamArchive.get());
 
             // generate the .ee
-            const auto& ee_path = directory / filename.filename();
+            const auto&   ee_path = directory / filename.filename();
             std::ofstream stream(ee_path, std::ios::binary);
             FileLoader::Get()->CompressArchive(stream, archive->m_StreamArchive.get());
             stream.close();
 
             UI::Get()->PopStatusText(status_text_id);
-        }).detach();
+        })
+            .detach();
 
         return true;
     }

@@ -3,8 +3,7 @@
 #include <jc3/renderblocks/IRenderBlock.h>
 
 #pragma pack(push, 1)
-struct WindowAttributes
-{
+struct WindowAttributes {
     union {
         struct {
             float SpecGloss;
@@ -19,51 +18,48 @@ struct WindowAttributes
     };
 
     glm::vec3 _unknown;
-    uint32_t flags;
+    uint32_t  flags;
 };
 
 static_assert(sizeof(WindowAttributes) == 0x28, "WindowAttributes alignment is wrong!");
 
 namespace JustCause3::RenderBlocks
 {
-    struct Window
-    {
-        uint8_t version;
-        WindowAttributes attributes;
-    };
+struct Window {
+    uint8_t          version;
+    WindowAttributes attributes;
 };
+}; // namespace JustCause3::RenderBlocks
 #pragma pack(pop)
 
 class RenderBlockWindow : public IRenderBlock
 {
-private:
-    struct cbInstanceConsts
-    {
+  private:
+    struct cbInstanceConsts {
         glm::mat4 World;
         glm::mat4 WorldViewProjection;
     } m_cbInstanceConsts;
 
-    struct cbMaterialConsts
-    {
-        float SpecGloss;
-        float SpecFresnel;
-        float DiffuseRougness;
-        float TintPower;
-        float MinAlpha;
-        float UVScale;
-        glm::vec2 unused_;                  // [unused]
-        float DamageMaskWeight = 1.0f;      // [unused]
-        float DamageRampWeight = 0.5f;      // [unused]
-        float Alpha = 1.0f;
+    struct cbMaterialConsts {
+        float     SpecGloss;
+        float     SpecFresnel;
+        float     DiffuseRougness;
+        float     TintPower;
+        float     MinAlpha;
+        float     UVScale;
+        glm::vec2 unused_;                 // [unused]
+        float     DamageMaskWeight = 1.0f; // [unused]
+        float     DamageRampWeight = 0.5f; // [unused]
+        float     Alpha            = 1.0f;
     } m_cbMaterialConsts;
 
     JustCause3::RenderBlocks::Window m_Block;
-    ConstantBuffer_t* m_VertexShaderConstants = nullptr;
-    ConstantBuffer_t* m_FragmentShaderConstants = nullptr;
+    ConstantBuffer_t*                m_VertexShaderConstants   = nullptr;
+    ConstantBuffer_t*                m_FragmentShaderConstants = nullptr;
 
     SamplerState_t* _test = nullptr;
 
-public:
+  public:
     RenderBlockWindow() = default;
     virtual ~RenderBlockWindow()
     {
@@ -72,49 +68,61 @@ public:
         Renderer::Get()->DestroySamplerState(_test);
     }
 
-    virtual const char* GetTypeName() override final { return "RenderBlockWindow"; }
-    virtual bool IsOpaque() override final { return false; }
+    virtual const char* GetTypeName() override final
+    {
+        return "RenderBlockWindow";
+    }
+    virtual bool IsOpaque() override final
+    {
+        return false;
+    }
 
     virtual void Create() override final
     {
         // load shaders
         m_VertexShader = ShaderManager::Get()->GetVertexShader("window");
-        m_PixelShader = ShaderManager::Get()->GetPixelShader("window");
+        m_PixelShader  = ShaderManager::Get()->GetPixelShader("window");
 
         // create the element input desc
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-            { "POSITION",   0,  DXGI_FORMAT_R32G32B32_FLOAT,        0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   0,  DXGI_FORMAT_R32G32B32A32_FLOAT,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   1,  DXGI_FORMAT_R32G32B32_FLOAT,        0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
+             0},
+            {"TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,
+             D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 1, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
+             0},
         };
 
         // create the vertex declaration
-        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockWindow");
+        m_VertexDeclaration =
+            Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockWindow");
 
         // create the constant buffers
-        m_VertexShaderConstants = Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockWindow InstanceConsts");
-        m_FragmentShaderConstants = Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, 3, "RenderBlockWindow MaterialConsts");
+        m_VertexShaderConstants =
+            Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockWindow InstanceConsts");
+        m_FragmentShaderConstants =
+            Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, 3, "RenderBlockWindow MaterialConsts");
 
         // create the sampler states
         {
             D3D11_SAMPLER_DESC params;
             ZeroMemory(&params, sizeof(params));
-            params.Filter = D3D11_FILTER_ANISOTROPIC;
-            params.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.MipLODBias = 0.0f;
-            params.MaxAnisotropy = 2;
+            params.Filter         = D3D11_FILTER_ANISOTROPIC;
+            params.AddressU       = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressV       = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressW       = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.MipLODBias     = 0.0f;
+            params.MaxAnisotropy  = 2;
             params.ComparisonFunc = D3D11_COMPARISON_NEVER;
-            params.MinLOD = 0.0f;
-            params.MaxLOD = 13.0f;
+            params.MinLOD         = 0.0f;
+            params.MaxLOD         = 13.0f;
 
             m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockWindow");
 
             // TODO: find out what the game is actually doing
             // couldn't find anything related to slot 15 in the RenderBlockWindow stuff
             params.Filter = D3D11_FILTER_COMPARISON_ANISOTROPIC;
-            _test = Renderer::Get()->CreateSamplerState(params, "RenderBlockWindow _test");
+            _test         = Renderer::Get()->CreateSamplerState(params, "RenderBlockWindow _test");
         }
     }
 
@@ -123,7 +131,7 @@ public:
         using namespace JustCause3::Vertex;
 
         // read block data
-        stream.read((char *)&m_Block, sizeof(m_Block));
+        stream.read((char*)&m_Block, sizeof(m_Block));
 
         // read materials
         ReadMaterials(stream);
@@ -137,8 +145,8 @@ public:
                 m_Vertices.emplace_back(vertex.x);
                 m_Vertices.emplace_back(vertex.y);
                 m_Vertices.emplace_back(vertex.z);
-                m_UVs.emplace_back(vertex.u0);
-                m_UVs.emplace_back(vertex.v0);
+                m_UVs.emplace_back(vertex.u0 * m_Block.attributes.UVScale);
+                m_UVs.emplace_back(vertex.v0 * m_Block.attributes.UVScale);
             }
         }
 
@@ -148,7 +156,8 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
-        if (!m_Visible) return;
+        if (!m_Visible)
+            return;
 
         IRenderBlock::Setup(context);
 
@@ -157,16 +166,16 @@ public:
             static const auto world = glm::mat4(1);
 
             // set vertex shader constants
-            m_cbInstanceConsts.World = world;
+            m_cbInstanceConsts.World               = world;
             m_cbInstanceConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
 
             // set fragment shaders constants
-            m_cbMaterialConsts.SpecGloss = m_Block.attributes.SpecGloss;
-            m_cbMaterialConsts.SpecFresnel = m_Block.attributes.SpecFresnel;
+            m_cbMaterialConsts.SpecGloss       = m_Block.attributes.SpecGloss;
+            m_cbMaterialConsts.SpecFresnel     = m_Block.attributes.SpecFresnel;
             m_cbMaterialConsts.DiffuseRougness = m_Block.attributes.DiffuseRougness;
-            m_cbMaterialConsts.TintPower = m_Block.attributes.TintPower;
-            m_cbMaterialConsts.MinAlpha = m_Block.attributes.MinAlpha;
-            m_cbMaterialConsts.UVScale = m_Block.attributes.UVScale;
+            m_cbMaterialConsts.TintPower       = m_Block.attributes.TintPower;
+            m_cbMaterialConsts.MinAlpha        = m_Block.attributes.MinAlpha;
+            m_cbMaterialConsts.UVScale         = m_Block.attributes.UVScale;
         }
 
         // set the sampler state
@@ -175,7 +184,8 @@ public:
 
         // enable blending
         context->m_Renderer->SetBlendingEnabled(true);
-        context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_INV_DEST_ALPHA, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE);
+        context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_INV_DEST_ALPHA,
+                                             D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE);
         context->m_Renderer->SetBlendingEq(D3D11_BLEND_OP_ADD, D3D11_BLEND_OP_ADD);
 
         // enable depth
@@ -193,7 +203,8 @@ public:
 
     virtual void Draw(RenderContext_t* context) override final
     {
-        if (!m_Visible) return;
+        if (!m_Visible)
+            return;
 
         if (!(m_Block.attributes.flags & 1)) {
             context->m_Renderer->SetCullMode(D3D11_CULL_FRONT);
@@ -206,12 +217,38 @@ public:
 
     virtual void DrawUI() override final
     {
-        static std::array flag_labels = {
-            "Disable Culling", "", "", "", "", "", "", "",
-            "", "", "", "", "", "", "", "",
-            "", "", "", "", "", "", "", "",
-            "", "", "", "", "", "", "", ""
-        };
+        static std::array flag_labels = {"Disable Culling",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         ""};
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 

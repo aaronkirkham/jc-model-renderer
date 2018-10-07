@@ -1,44 +1,65 @@
 #pragma once
 
+#include <Factory.h>
 #include <StdInc.h>
 #include <jc3/renderblocks/IRenderBlock.h>
-#include <mutex>
 #include <memory>
-#include <Factory.h>
+#include <mutex>
 
 class AvalancheArchive;
 class RuntimeContainer;
 class RenderBlockModel : public Factory<RenderBlockModel>
 {
-private:
-    fs::path m_Filename = "";
-    std::vector<IRenderBlock*> m_RenderBlocks;
+  private:
+    fs::path                          m_Filename = "";
+    std::vector<IRenderBlock*>        m_RenderBlocks;
     std::shared_ptr<AvalancheArchive> m_ParentArchive;
-    BoundingBox m_BoundingBox;
+    BoundingBox                       m_BoundingBox;
 
-public:
+  public:
     RenderBlockModel(const fs::path& filename);
     virtual ~RenderBlockModel();
 
-    virtual std::string GetFactoryKey() const { return m_Filename.string(); }
+    virtual std::string GetFactoryKey() const
+    {
+        return m_Filename.string();
+    }
 
     static void ReadFileCallback(const fs::path& filename, const FileBuffer& data, bool external);
     static void Load(const fs::path& filename);
     static void LoadFromRuntimeContainer(const fs::path& filename, std::shared_ptr<RuntimeContainer> rc);
 
-    bool Parse(const FileBuffer& data, bool add_to_render_list = true);
-    inline static bool LoadingFromRC = false;
+    bool                                   Parse(const FileBuffer& data, bool add_to_render_list = true);
+    inline static bool                     LoadingFromRC = false;
     inline static std::vector<std::string> SuppressedWarnings;
 
     void DrawGizmos();
 
-    const std::vector<IRenderBlock*>& GetRenderBlocks() { return m_RenderBlocks; }
+    const std::vector<IRenderBlock*>& GetRenderBlocks()
+    {
+        return m_RenderBlocks;
+    }
 
-    std::string GetFileName() { return m_Filename.filename().string(); }
-    std::string GetFilePath() { return m_Filename.parent_path().string(); }
-    const fs::path& GetPath() { return m_Filename; }
+    std::string GetFileName()
+    {
+        return m_Filename.filename().string();
+    }
+    std::string GetFilePath()
+    {
+        return m_Filename.parent_path().string();
+    }
+    const fs::path& GetPath()
+    {
+        return m_Filename;
+    }
 
-    BoundingBox* GetBoundingBox() { return &m_BoundingBox; }
+    BoundingBox* GetBoundingBox()
+    {
+        return &m_BoundingBox;
+    }
 
-    AvalancheArchive* GetParentArchive() { return m_ParentArchive.get(); }
+    AvalancheArchive* GetParentArchive()
+    {
+        return m_ParentArchive.get();
+    }
 };

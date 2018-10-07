@@ -1,17 +1,17 @@
-#include <jc3/formats/RenderBlockModel.h>
-#include <jc3/formats/AvalancheArchive.h>
-#include <jc3/formats/RuntimeContainer.h>
-#include <jc3/RenderBlockFactory.h>
 #include <jc3/FileLoader.h>
+#include <jc3/RenderBlockFactory.h>
+#include <jc3/formats/AvalancheArchive.h>
+#include <jc3/formats/RenderBlockModel.h>
+#include <jc3/formats/RuntimeContainer.h>
 
 #include <Window.h>
 
-#include <imgui.h>
-#include <graphics/Renderer.h>
 #include <graphics/Camera.h>
 #include <graphics/DebugRenderer.h>
+#include <graphics/Renderer.h>
 #include <graphics/UI.h>
 #include <graphics/imgui/fonts/fontawesome5_icons.h>
+#include <imgui.h>
 
 #include <Input.h>
 
@@ -20,7 +20,7 @@
 extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;
 
-std::recursive_mutex Factory<RenderBlockModel>::InstancesMutex;
+std::recursive_mutex                                  Factory<RenderBlockModel>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<RenderBlockModel>> Factory<RenderBlockModel>::Instances;
 
 RenderBlockModel::RenderBlockModel(const fs::path& filename)
@@ -28,7 +28,7 @@ RenderBlockModel::RenderBlockModel(const fs::path& filename)
 {
     // find the parent archive
     // TODO: better way.
-    std::lock_guard<std::recursive_mutex> _lk{ AvalancheArchive::InstancesMutex };
+    std::lock_guard<std::recursive_mutex> _lk{AvalancheArchive::InstancesMutex};
     for (const auto& archive : AvalancheArchive::Instances) {
         if (archive.second->HasFile(filename)) {
             m_ParentArchive = archive.second;
@@ -55,23 +55,24 @@ RenderBlockModel::~RenderBlockModel()
 
 bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
 {
-    std::istringstream stream(std::string{ (char*)data.data(), data.size() });
+    std::istringstream stream(std::string{(char*)data.data(), data.size()});
 
     bool parse_success = true;
-        
+
     // read the model header
     JustCause3::RBMHeader header;
-    stream.read((char *)&header, sizeof(header));
+    stream.read((char*)&header, sizeof(header));
 
     // ensure the header magic is correct
-    if (strncmp((char *)&header.m_Magic, "RBMDL", 5) != 0) {
+    if (strncmp((char*)&header.m_Magic, "RBMDL", 5) != 0) {
         DEBUG_LOG("RenderBlockModel::Parse - Invalid file header. Input file probably isn't a RenderBlockModel file.");
 
         parse_success = false;
         goto end;
     }
 
-    DEBUG_LOG("RenderBlockModel v" << header.m_VersionMajor << "." << header.m_VersionMinor << "." << header.m_VersionRevision);
+    DEBUG_LOG("RenderBlockModel v" << header.m_VersionMajor << "." << header.m_VersionMinor << "."
+                                   << header.m_VersionRevision);
     DEBUG_LOG(" - m_NumberOfBlocks=" << header.m_NumberOfBlocks);
 
     m_RenderBlocks.reserve(header.m_NumberOfBlocks);
@@ -86,12 +87,13 @@ bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
     }
 
     // use file batches
-    if (!LoadingFromRC) FileLoader::UseBatches = true;
+    if (!LoadingFromRC)
+        FileLoader::UseBatches = true;
 
     // read all the blocks
     for (uint32_t i = 0; i < header.m_NumberOfBlocks; ++i) {
         uint32_t hash;
-        stream.read((char *)&hash, sizeof(uint32_t));
+        stream.read((char*)&hash, sizeof(uint32_t));
 
         const auto render_block = RenderBlockFactory::CreateRenderBlock(hash);
         if (render_block) {
@@ -99,7 +101,7 @@ bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
             render_block->Create();
 
             uint32_t checksum;
-            stream.read((char *)&checksum, sizeof(uint32_t));
+            stream.read((char*)&checksum, sizeof(uint32_t));
 
             // did we read the block correctly?
             if (checksum != 0x89ABCDEF) {
@@ -110,21 +112,23 @@ bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
             }
 
             m_RenderBlocks.emplace_back(render_block);
-        }
-        else {
-            DEBUG_LOG("[WARNING] RenderBlockModel::Parse - Unknown render block. \"" << RenderBlockFactory::GetRenderBlockName(hash) << "\" - " << std::setw(4) << std::hex << hash);
+        } else {
+            DEBUG_LOG("[WARNING] RenderBlockModel::Parse - Unknown render block. \""
+                      << RenderBlockFactory::GetRenderBlockName(hash) << "\" - " << std::setw(4) << std::hex << hash);
 
             if (LoadingFromRC) {
                 std::stringstream error;
-                error << "\"RenderBlock" << RenderBlockFactory::GetRenderBlockName(hash) << "\" (0x" << std::uppercase << std::setw(4) << std::hex << hash << ") is not yet supported.\n";
+                error << "\"RenderBlock" << RenderBlockFactory::GetRenderBlockName(hash) << "\" (0x" << std::uppercase
+                      << std::setw(4) << std::hex << hash << ") is not yet supported.\n";
 
-                if (std::find(SuppressedWarnings.begin(), SuppressedWarnings.end(), error.str()) == SuppressedWarnings.end()) {
+                if (std::find(SuppressedWarnings.begin(), SuppressedWarnings.end(), error.str())
+                    == SuppressedWarnings.end()) {
                     SuppressedWarnings.emplace_back(error.str());
                 }
-            }
-            else {
+            } else {
                 std::stringstream error;
-                error << "\"RenderBlock" << RenderBlockFactory::GetRenderBlockName(hash) << "\" (0x" << std::uppercase << std::setw(4) << std::hex << hash << ") is not yet supported.\n\n";
+                error << "\"RenderBlock" << RenderBlockFactory::GetRenderBlockName(hash) << "\" (0x" << std::uppercase
+                      << std::setw(4) << std::hex << hash << ") is not yet supported.\n\n";
                 error << "A model might still be rendered, but some parts of it may be missing.";
 
                 Window::Get()->ShowMessageBox(error.str(), MB_ICONINFORMATION | MB_OK);
@@ -141,8 +145,7 @@ bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
     }
 
 end:
-    if (parse_success) {
-    }
+    if (parse_success) {}
 
     // if we are not loading from a runtime container, run the batches now
     if (!LoadingFromRC) {
@@ -155,7 +158,7 @@ end:
     if (add_to_render_list) {
         Renderer::Get()->AddToRenderList(m_RenderBlocks);
     }
-   
+
     return parse_success;
 }
 
@@ -178,7 +181,7 @@ void RenderBlockModel::DrawGizmos()
 
     // draw filename label
     if (g_ShowModelLabels) {
-        static auto white = glm::vec4{ 1, 1, 1, 0.6 };
+        static auto white = glm::vec4{1, 1, 1, 0.6};
         UI::Get()->DrawText(m_Filename.filename().string(), m_BoundingBox.GetCenter(), white, true);
     }
 
@@ -186,16 +189,16 @@ void RenderBlockModel::DrawGizmos()
     if (g_DrawBoundingBoxes) {
         auto mouse_pos = Input::Get()->GetMouseWorldPosition();
 
-        Ray ray(mouse_pos, { 0, 0, 1 });
-        float distance = 0.0f;
-        auto intersects = m_BoundingBox.Intersect(ray, &distance);
+        Ray   ray(mouse_pos, {0, 0, 1});
+        float distance   = 0.0f;
+        auto  intersects = m_BoundingBox.Intersect(ray, &distance);
 
-        static auto red = glm::vec4{ 1, 0, 0, 1 };
-        static auto green = glm::vec4{ 0, 1, 0, 1 };
+        static auto red   = glm::vec4{1, 0, 0, 1};
+        static auto green = glm::vec4{0, 1, 0, 1};
 
         UI::Get()->DrawBoundingBox(m_BoundingBox, red);
 
-        //DebugRenderer::Get()->DrawBBox(m_BoundingBox.GetMin(), m_BoundingBox.GetMax(), intersects ? green : red);
+        // DebugRenderer::Get()->DrawBBox(m_BoundingBox.GetMin(), m_BoundingBox.GetMax(), intersects ? green : red);
     }
 }
 
@@ -213,8 +216,7 @@ void RenderBlockModel::Load(const fs::path& filename)
             auto rbm = RenderBlockModel::make(filename);
             assert(rbm);
             rbm->Parse(data);
-        }
-        else {
+        } else {
             DEBUG_LOG("RenderBlockModel::Load - Failed to read model \"" << filename << "\".");
         }
     });
@@ -225,14 +227,14 @@ void RenderBlockModel::LoadFromRuntimeContainer(const fs::path& filename, std::s
     assert(rc);
 
     auto path = filename.parent_path().string();
-    path = path.replace(path.find("editor\\entities"), strlen("editor\\entities"), "models");
+    path      = path.replace(path.find("editor\\entities"), strlen("editor\\entities"), "models");
 
     std::thread([&, rc, path] {
-        FileLoader::UseBatches = true;
+        FileLoader::UseBatches          = true;
         RenderBlockModel::LoadingFromRC = true;
 
         for (const auto& container : rc->GetAllContainers("CPartProp")) {
-            auto name = container->GetProperty("name");
+            auto name     = container->GetProperty("name");
             auto filename = std::any_cast<std::string>(name->GetValue());
             filename += "_lod1.rbm";
 
@@ -244,7 +246,7 @@ void RenderBlockModel::LoadFromRuntimeContainer(const fs::path& filename, std::s
         }
 
         RenderBlockModel::LoadingFromRC = false;
-        FileLoader::UseBatches = false;
+        FileLoader::UseBatches          = false;
         FileLoader::Get()->RunFileBatches();
 
         std::stringstream error;
@@ -254,5 +256,6 @@ void RenderBlockModel::LoadFromRuntimeContainer(const fs::path& filename, std::s
 
         error << "\nA model might still be rendered, but some parts of it may be missing.";
         Window::Get()->ShowMessageBox(error.str(), MB_ICONINFORMATION | MB_OK);
-    }).detach();
+    })
+        .detach();
 }

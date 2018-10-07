@@ -1,76 +1,70 @@
 #pragma once
 
-#include <jc3/renderblocks/IRenderBlock.h>
 #include <gtc/type_ptr.hpp>
+#include <jc3/renderblocks/IRenderBlock.h>
 
 #pragma pack(push, 1)
-struct CarLightAttributes
-{
-    float _unused;
-    float specularGloss;
-    float reflectivity;
-    char _pad[16];
-    float specularFresnel;
+struct CarLightAttributes {
+    float     _unused;
+    float     specularGloss;
+    float     reflectivity;
+    char      _pad[16];
+    float     specularFresnel;
     glm::vec4 diffuseModulator;
     glm::vec2 tilingUV;
-    uint32_t flags;
+    uint32_t  flags;
 };
 
 static_assert(sizeof(CarLightAttributes) == 0x3C, "CarLightAttributes alignment is wrong!");
 
 namespace JustCause3::RenderBlocks
 {
-    struct CarLight
-    {
-        uint8_t version;
-        CarLightAttributes attributes;
-    };
+struct CarLight {
+    uint8_t            version;
+    CarLightAttributes attributes;
 };
+}; // namespace JustCause3::RenderBlocks
 #pragma pack(pop)
 
 class RenderBlockCarLight : public IRenderBlock
 {
-private:
-    struct RBIInfo
-    {
+  private:
+    struct RBIInfo {
         glm::mat4 ModelWorldMatrix;
-        glm::mat4 ModelWorldMatrixPrev;     // [unused]
+        glm::mat4 ModelWorldMatrixPrev; // [unused]
         glm::vec4 ModelDiffuseColor = glm::vec4(1);
-        glm::vec4 ModelAmbientColor;        // [unused]
-        glm::vec4 ModelSpecularColor;       // [unused]
-        glm::vec4 ModelEmissiveColor;       // [unused]
-        glm::vec4 ModelDebugColor;          // [unused]
+        glm::vec4 ModelAmbientColor;  // [unused]
+        glm::vec4 ModelSpecularColor; // [unused]
+        glm::vec4 ModelEmissiveColor; // [unused]
+        glm::vec4 ModelDebugColor;    // [unused]
     } m_cbRBIInfo;
 
-    struct InstanceConsts
-    {
+    struct InstanceConsts {
         float IsDeformed = 0.0f;
-        float _pad[3];                      // [unused]
+        float _pad[3]; // [unused]
     } m_cbInstanceConsts;
 
-    struct DeformConsts
-    {
+    struct DeformConsts {
         glm::vec4 ControlPoints[216];
     } m_cbDeformConsts;
 
-    struct MaterialConsts
-    {
-        float SpecularGloss;
-        float Reflectivity;
-        float SpecularFresnel;
-        float _unknown;
+    struct MaterialConsts {
+        float     SpecularGloss;
+        float     Reflectivity;
+        float     SpecularFresnel;
+        float     _unknown;
         glm::vec4 DiffuseModulator;
         glm::vec4 TilingUV;
         glm::vec4 Colour = glm::vec4(1);
     } m_cbMaterialConsts;
 
     JustCause3::RenderBlocks::CarLight m_Block;
-    JustCause3::CDeformTable m_DeformTable;
-    VertexBuffer_t* m_VertexBufferData = nullptr;
-    std::array<ConstantBuffer_t*, 3> m_VertexShaderConstants = { nullptr };
-    ConstantBuffer_t* m_FragmentShaderConstants = nullptr;
+    JustCause3::CDeformTable           m_DeformTable;
+    VertexBuffer_t*                    m_VertexBufferData        = nullptr;
+    std::array<ConstantBuffer_t*, 3>   m_VertexShaderConstants   = {nullptr};
+    ConstantBuffer_t*                  m_FragmentShaderConstants = nullptr;
 
-public:
+  public:
     RenderBlockCarLight() = default;
     virtual ~RenderBlockCarLight()
     {
@@ -82,46 +76,57 @@ public:
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants);
     }
 
-    virtual const char* GetTypeName() override final { return "RenderBlockCarLight"; }
-    virtual bool IsOpaque() override final { return true; }
+    virtual const char* GetTypeName() override final
+    {
+        return "RenderBlockCarLight";
+    }
+    virtual bool IsOpaque() override final
+    {
+        return true;
+    }
 
     virtual void Create() override final
     {
         // load shaders
         m_VertexShader = ShaderManager::Get()->GetVertexShader("carpaintmm");
-        m_PixelShader = ShaderManager::Get()->GetPixelShader("carlight");
+        m_PixelShader  = ShaderManager::Get()->GetPixelShader("carlight");
 
         // create the element input desc
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-            { "POSITION",   0,  DXGI_FORMAT_R32G32B32_FLOAT,        0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   1,  DXGI_FORMAT_R32G32_FLOAT,           1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   2,  DXGI_FORMAT_R32G32_FLOAT,           1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   3,  DXGI_FORMAT_R32G32_FLOAT,           1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   4,  DXGI_FORMAT_R32G32_FLOAT,           2,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
+             0},
+            {"TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 2, DXGI_FORMAT_R32G32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 3, DXGI_FORMAT_R32G32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 4, DXGI_FORMAT_R32G32_FLOAT, 2, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
         };
 
         // create the vertex declaration
-        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCarLight");
+        m_VertexDeclaration =
+            Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCarLight");
 
         // create the constant buffers
         m_VertexShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "RenderBlockCarLight RBIInfo");
-        m_VertexShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockCarLight InstanceConsts");
-        m_VertexShaderConstants[2] = Renderer::Get()->CreateConstantBuffer(m_cbDeformConsts, "RenderBlockCarLight DeformConsts");
-        m_FragmentShaderConstants = Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockCarLight MaterialConsts");
+        m_VertexShaderConstants[1] =
+            Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockCarLight InstanceConsts");
+        m_VertexShaderConstants[2] =
+            Renderer::Get()->CreateConstantBuffer(m_cbDeformConsts, "RenderBlockCarLight DeformConsts");
+        m_FragmentShaderConstants =
+            Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockCarLight MaterialConsts");
 
         // create the sampler states
         {
             D3D11_SAMPLER_DESC params;
             ZeroMemory(&params, sizeof(params));
-            params.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-            params.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.MipLODBias = 0.0f;
-            params.MaxAnisotropy = 1;
+            params.Filter         = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+            params.AddressU       = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressV       = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressW       = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.MipLODBias     = 0.0f;
+            params.MaxAnisotropy  = 1;
             params.ComparisonFunc = D3D11_COMPARISON_NEVER;
-            params.MinLOD = 0.0f;
-            params.MaxLOD = 13.0f;
+            params.MinLOD         = 0.0f;
+            params.MaxLOD         = 13.0f;
 
             m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCarLight");
         }
@@ -136,7 +141,7 @@ public:
         using namespace JustCause3::Vertex;
 
         // read block data
-        stream.read((char *)&m_Block, sizeof(m_Block));
+        stream.read((char*)&m_Block, sizeof(m_Block));
 
         // read the deform table
         ReadDeformTable(stream, &m_DeformTable);
@@ -165,8 +170,7 @@ public:
 
             // read skin batches
             ReadSkinBatch(stream);
-        }
-        else if (m_Block.attributes.flags & 4) {
+        } else if (m_Block.attributes.flags & 4) {
             std::vector<VertexDeformPos> vertices;
             ReadVertexBuffer<VertexDeformPos>(stream, &m_VertexBuffer, &vertices);
 
@@ -183,8 +187,7 @@ public:
                 m_UVs.emplace_back(data.u0);
                 m_UVs.emplace_back(data.v0);
             }
-        }
-        else {
+        } else {
             std::vector<UnpackedVertexPosition> vertices;
             ReadVertexBuffer<UnpackedVertexPosition>(stream, &m_VertexBuffer, &vertices);
 
@@ -209,7 +212,8 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
-        if (!m_Visible) return;
+        if (!m_Visible)
+            return;
 
         IRenderBlock::Setup(context);
 
@@ -218,14 +222,14 @@ public:
             static const auto world = glm::mat4(1);
 
             // set vertex shader constants
-            m_cbRBIInfo.ModelWorldMatrix = glm::scale(world, { 1, 1, 1 });
+            m_cbRBIInfo.ModelWorldMatrix = glm::scale(world, {1, 1, 1});
 
             // set fragment shaders constants
-            m_cbMaterialConsts.SpecularGloss = m_Block.attributes.specularGloss;
-            m_cbMaterialConsts.Reflectivity = m_Block.attributes.reflectivity;
-            m_cbMaterialConsts.SpecularFresnel = m_Block.attributes.specularFresnel;
+            m_cbMaterialConsts.SpecularGloss    = m_Block.attributes.specularGloss;
+            m_cbMaterialConsts.Reflectivity     = m_Block.attributes.reflectivity;
+            m_cbMaterialConsts.SpecularFresnel  = m_Block.attributes.specularFresnel;
             m_cbMaterialConsts.DiffuseModulator = m_Block.attributes.diffuseModulator;
-            m_cbMaterialConsts.TilingUV = { m_Block.attributes.tilingUV, 1, 0 };
+            m_cbMaterialConsts.TilingUV         = {m_Block.attributes.tilingUV, 1, 0};
         }
 
         // set the sampler state
@@ -249,24 +253,25 @@ public:
 
     virtual void Draw(RenderContext_t* context) override final
     {
-        if (!m_Visible) return;
+        if (!m_Visible)
+            return;
 
         if (m_Block.attributes.flags & 8) {
             IRenderBlock::DrawSkinBatches(context);
-        }
-        else {
+        } else {
             IRenderBlock::Draw(context);
         }
     }
 
     virtual void DrawUI() override final
     {
-        static std::array flag_labels = {
-            "", "", "", "Is Skinned", "Disable Culling", "", "", "",
-            "", "", "", "", "", "", "", "",
-            "", "", "", "", "", "", "", "",
-            "", "", "", "", "", "", "", ""
-        };
+        static std::array flag_labels = {"", "", "", "Is Skinned", "Disable Culling",
+                                         "", "", "", "",           "",
+                                         "", "", "", "",           "",
+                                         "", "", "", "",           "",
+                                         "", "", "", "",           "",
+                                         "", "", "", "",           "",
+                                         "", ""};
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 
