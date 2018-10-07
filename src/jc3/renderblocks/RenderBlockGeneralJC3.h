@@ -157,11 +157,11 @@ class RenderBlockGeneralJC3 : public IRenderBlock
             ReadVertexBuffer<UnpackedVertexPosition2UV>(stream, &m_VertexBuffer, &vertices);
 
             for (const auto& vertex : vertices) {
-                m_Vertices.emplace_back(vertex.x);
-                m_Vertices.emplace_back(vertex.y);
-                m_Vertices.emplace_back(vertex.z);
-                m_UVs.emplace_back(vertex.u0);
-                m_UVs.emplace_back(vertex.v0);
+                m_Vertices.emplace_back(vertex.x * m_Block.attributes.packed.scale);
+                m_Vertices.emplace_back(vertex.y * m_Block.attributes.packed.scale);
+                m_Vertices.emplace_back(vertex.z * m_Block.attributes.packed.scale);
+                m_UVs.emplace_back(vertex.u0 * m_Block.attributes.packed.uv0Extent.x);
+                m_UVs.emplace_back(vertex.v0 * m_Block.attributes.packed.uv0Extent.y);
 
                 // TODO: uv1
             }
@@ -176,11 +176,11 @@ class RenderBlockGeneralJC3 : public IRenderBlock
                 auto& vertex = vertices[i];
                 auto& data   = vertices_data[i];
 
-                m_Vertices.emplace_back(unpack(vertex.x));
-                m_Vertices.emplace_back(unpack(vertex.y));
-                m_Vertices.emplace_back(unpack(vertex.z));
-                m_UVs.emplace_back(unpack(data.u0));
-                m_UVs.emplace_back(unpack(data.v0));
+                m_Vertices.emplace_back(unpack(vertex.x) * m_Block.attributes.packed.scale);
+                m_Vertices.emplace_back(unpack(vertex.y) * m_Block.attributes.packed.scale);
+                m_Vertices.emplace_back(unpack(vertex.z) * m_Block.attributes.packed.scale);
+                m_UVs.emplace_back(unpack(data.u0) * m_Block.attributes.packed.uv0Extent.x);
+                m_UVs.emplace_back(unpack(data.v0) * m_Block.attributes.packed.uv0Extent.y);
 
                 // TODO: uv2
             }
