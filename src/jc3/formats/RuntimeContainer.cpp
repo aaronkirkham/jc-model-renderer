@@ -4,7 +4,7 @@
 #include <jc3/formats/RenderBlockModel.h>
 #include <jc3/formats/RuntimeContainer.h>
 #include <jc3/hashlittle.h>
-#include <misc/stl/imgui_stl.h>
+#include <misc/cpp/imgui_stdlib.h>
 
 std::recursive_mutex                                  Factory<RuntimeContainer>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<RuntimeContainer>> Factory<RuntimeContainer>::Instances;
