@@ -60,6 +60,12 @@ public:
     }
 
     virtual const char* GetTypeName() override final { return "RenderBlockCharacterSkin"; }
+
+    virtual uint32_t GetTypeHash() const override final
+    {
+        return RenderBlockFactory::RB_CHARACTERSKIN;
+    }
+
     virtual bool IsOpaque() override final { return true; }
 
     virtual void Create() override final
@@ -238,6 +244,11 @@ public:
 
         // read index buffer
         ReadIndexBuffer(stream, &m_IndexBuffer);
+    }
+
+    virtual void Write(std::ostream& stream) override final
+    {
+        //
     }
 
     virtual void Setup(RenderContext_t* context) override final

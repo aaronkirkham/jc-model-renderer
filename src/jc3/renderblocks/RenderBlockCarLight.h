@@ -80,6 +80,12 @@ class RenderBlockCarLight : public IRenderBlock
     {
         return "RenderBlockCarLight";
     }
+
+    virtual uint32_t GetTypeHash() const override final
+    {
+        return RenderBlockFactory::RB_CARLIGHT;
+    }
+
     virtual bool IsOpaque() override final
     {
         return true;
@@ -208,6 +214,11 @@ class RenderBlockCarLight : public IRenderBlock
 
         // read index buffer
         ReadIndexBuffer(stream, &m_IndexBuffer);
+    }
+
+    virtual void Write(std::ostream& stream) override final
+    {
+        //
     }
 
     virtual void Setup(RenderContext_t* context) override final

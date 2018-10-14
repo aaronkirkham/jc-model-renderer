@@ -70,6 +70,11 @@ public:
 
     virtual const char* GetTypeName() override final { return "RenderBlockCharacter"; }
 
+    virtual uint32_t GetTypeHash() const override final
+    {
+        return RenderBlockFactory::RB_CHARACTER;
+    }
+
     virtual bool IsOpaque() override final
     {
         const auto flags = m_Block.attributes.flags;
@@ -251,6 +256,11 @@ public:
 
         // read index buffer
         ReadIndexBuffer(stream, &m_IndexBuffer);
+    }
+
+    virtual void Write(std::ostream& stream) override final
+    {
+        //
     }
 
     virtual void Setup(RenderContext_t* context) override final

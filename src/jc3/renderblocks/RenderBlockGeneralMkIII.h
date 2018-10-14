@@ -159,6 +159,11 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         return "RenderBlockGeneralMkIII";
     }
 
+    virtual uint32_t GetTypeHash() const override final
+    {
+        return RenderBlockFactory::RB_GENERALMKIII;
+    }
+
     virtual bool IsOpaque() override final
     {
         return ~(m_Block.attributes.flags >> 1) & 1;
@@ -290,6 +295,11 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
         // read index buffer
         ReadIndexBuffer(stream, &m_IndexBuffer);
+    }
+
+    virtual void Write(std::ostream& stream) override final
+    {
+        //
     }
 
     virtual void Setup(RenderContext_t* context) override final

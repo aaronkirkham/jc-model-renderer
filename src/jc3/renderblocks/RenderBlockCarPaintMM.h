@@ -113,6 +113,11 @@ class RenderBlockCarPaintMM : public IRenderBlock
         return "RenderBlockCarPaintMM";
     }
 
+    virtual uint32_t GetTypeHash() const override final
+    {
+        return RenderBlockFactory::RB_CARPAINTMM;
+    }
+
     virtual bool IsOpaque() override final
     {
         return ~(LOWORD(m_Block.attributes.flags) >> 8) & 1;
@@ -296,6 +301,11 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
         // read index buffer
         ReadIndexBuffer(stream, &m_IndexBuffer);
+    }
+
+    virtual void Write(std::ostream& stream) override final
+    {
+        //
     }
 
     virtual void Setup(RenderContext_t* context) override final

@@ -47,17 +47,18 @@ class IRenderBlock
         }
     }
 
-    virtual const char* GetTypeName() = 0;
+    virtual const char* GetTypeName()       = 0;
+    virtual uint32_t    GetTypeHash() const = 0;
 
     virtual void SetVisible(bool visible)
     {
         m_Visible = visible;
     }
-    virtual bool IsVisible()
+    virtual bool IsVisible() const
     {
         return m_Visible;
     }
-    virtual float GetScale()
+    virtual float GetScale() const
     {
         return m_ScaleModifier;
     }
@@ -88,8 +89,9 @@ class IRenderBlock
 
     virtual bool IsOpaque() = 0;
 
-    virtual void Create()                 = 0;
-    virtual void Read(std::istream& file) = 0;
+    virtual void Create()                  = 0;
+    virtual void Read(std::istream& file)  = 0;
+    virtual void Write(std::ostream& file) = 0;
 
     virtual void Setup(RenderContext_t* context)
     {
@@ -174,6 +176,19 @@ class IRenderBlock
                                                         "IRenderBlock Index Buffer");
     }
 
+    void WriteIndexBuffer(std::ostream& stream)
+    {
+        auto count = static_cast<uint32_t>(m_Indices.size());
+        stream.write((char*)&count, sizeof(count));
+        stream.write((char*)m_Indices.data(), (count * sizeof(uint16_t)));
+    }
+
+    void WriteIndexBuffer(std::ostream& stream, IndexBuffer_t* buffer)
+    {
+        stream.write((char*)&buffer->m_ElementCount, sizeof(buffer->m_ElementCount));
+        stream.write((char*)buffer->m_Data.data(), (buffer->m_ElementCount * buffer->m_ElementStride));
+    }
+
     void ReadMaterials(std::istream& stream)
     {
         uint32_t count;
@@ -206,6 +221,22 @@ class IRenderBlock
         stream.read((char*)&unknown, sizeof(unknown));
     }
 
+    void WriteMaterials(std::ostream& stream)
+    {
+        auto count = static_cast<uint32_t>(m_Materials.size());
+        stream.write((char*)&count, sizeof(count));
+
+        for (const auto& material : m_Materials) {
+            const auto& str = material.string();
+
+            auto length = static_cast<uint32_t>(str.length());
+            stream.write((char*)&length, sizeof(length));
+            stream.write(str.c_str(), length);
+        }
+
+        // unknown[4]
+    }
+
     void ReadSkinBatch(std::istream& stream)
     {
         uint32_t count;
@@ -229,6 +260,11 @@ class IRenderBlock
         }
     }
 
+    void WriteSkinBatch(std::ostream& stream)
+    {
+        //
+    }
+
     void ReadDeformTable(std::istream& stream, JustCause3::CDeformTable* deform_table)
     {
         uint32_t deformTable[256];
@@ -242,6 +278,11 @@ class IRenderBlock
                 deform_table->size = i;
             }
         }
+    }
+
+    void WriteDeformTable(std::ostream& stream)
+    {
+        //
     }
 
     void DrawSkinBatches(RenderContext_t* context)

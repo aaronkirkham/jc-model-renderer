@@ -87,6 +87,11 @@ class RenderBlockGeneralJC3 : public IRenderBlock
         return "RenderBlockGeneralJC3";
     }
 
+    virtual uint32_t GetTypeHash() const override final
+    {
+        return RenderBlockFactory::RB_GENERALJC3;
+    }
+
     virtual bool IsOpaque() override final
     {
         return ~(m_Block.attributes.flags >> 1) & 1;
@@ -188,6 +193,26 @@ class RenderBlockGeneralJC3 : public IRenderBlock
 
         // read index buffer
         ReadIndexBuffer(stream, &m_IndexBuffer);
+    }
+
+    virtual void Write(std::ostream& stream) override final
+    {
+        // write the block header
+        stream.write((char*)&m_Block, sizeof(m_Block));
+
+        // write the materials
+        WriteMaterials(stream);
+
+        // write vertex buffers
+        if (m_Block.attributes.packed.format != 1) {
+            // WriteVertexBuffer(stream, m_VertexBuffer, false);
+        } else {
+            // WriteVertexBuffer(stream, m_VertexBuffer);
+            // WriteVertexBuffer(stream, m_VertexBufferData);
+        }
+
+        // write index buffer
+        WriteIndexBuffer(stream);
     }
 
     virtual void Setup(RenderContext_t* context) override final

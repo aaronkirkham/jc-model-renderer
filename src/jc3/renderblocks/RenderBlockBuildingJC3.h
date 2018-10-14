@@ -37,6 +37,11 @@ class RenderBlockBuildingJC3 : public IRenderBlock
         return "RenderBlockBuildingJC3";
     }
 
+    virtual uint32_t GetTypeHash() const override final
+    {
+        return RenderBlockFactory::RB_BUILDINGJC3;
+    }
+
     virtual bool IsOpaque() override final
     {
         return true;
@@ -106,6 +111,11 @@ class RenderBlockBuildingJC3 : public IRenderBlock
 
         // read index buffer
         ReadIndexBuffer(stream, &m_IndexBuffer);
+    }
+
+    virtual void Write(std::ostream& stream) override final
+    {
+        //
     }
 
     virtual void Setup(RenderContext_t* context) override final
