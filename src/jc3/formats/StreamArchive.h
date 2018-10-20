@@ -20,11 +20,6 @@ struct StreamArchive_t
 
     StreamArchive_t()
     {
-        strncpy(m_Header.m_Magic, "SARC", 4);
-        m_Header.m_MagicLength = 4;
-        m_Header.m_Size = 0; // todo
-        m_Header.m_Version = 2;
-
         m_SARCBytes.resize(sizeof(m_Header));
         std::memcpy(m_SARCBytes.data(), &m_Header, sizeof(m_Header));
     }
@@ -32,10 +27,6 @@ struct StreamArchive_t
     StreamArchive_t(const fs::path& filename)
     {
         m_Filename = filename;
-        strncpy(m_Header.m_Magic, "SARC", 4);
-        m_Header.m_MagicLength = 4;
-        m_Header.m_Size = 0; // todo
-        m_Header.m_Version = 2;
 
         m_SARCBytes.resize(sizeof(m_Header));
         std::memcpy(m_SARCBytes.data(), &m_Header, sizeof(m_Header));

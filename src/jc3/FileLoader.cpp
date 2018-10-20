@@ -360,7 +360,7 @@ void FileLoader::RunFileBatches() noexcept
                     // locate the data for the file
                     for (const auto& entry : table.m_Entries) {
                         // is this the correct file hash?
-                        if (entry.m_Hash == file.first) {
+                        if (entry.m_NameHash == file.first) {
                             has_found_file = true;
 
                             // resize the buffer
@@ -631,9 +631,6 @@ void FileLoader::CompressArchive(std::ostream& stream, StreamArchive_t* archive)
 
     // generate the header
     JustCause3::AvalancheArchive::Header header;
-    strcpy(header.m_Magic, "AAF");
-    header.m_Version = 1;
-    strcpy(header.m_Magic2, "AVALANCHEARCHIVEFORMATISCOOL");
     header.m_TotalUncompressedSize = archive->m_SARCBytes.size();
     header.m_UncompressedBufferSize = num_chunks > 1 ? max_chunk_size : archive->m_SARCBytes.size();
     header.m_ChunkCount = num_chunks;
@@ -648,9 +645,6 @@ void FileLoader::CompressArchive(std::ostream& stream, StreamArchive_t* archive)
     uint32_t last_chunk_offset = 0;
     for (uint32_t i = 0; i < header.m_ChunkCount; ++i) {
         JustCause3::AvalancheArchive::Chunk chunk;
-        chunk.m_Magic = 0x4D415745;
-        chunk.m_CompressedSize = 0; // NOTE: generated later
-        chunk.m_DataSize = 0; // NOTE: generated later
 
         // generate chunks if needed
         if (num_chunks > 1) {
@@ -664,6 +658,7 @@ void FileLoader::CompressArchive(std::ostream& stream, StreamArchive_t* archive)
             chunk.m_UncompressedSize = chunk_size;
             chunk.m_BlockData = std::move(n_block_data);
         }
+        // we only have a single chunk, use the total block size
         else {
             chunk.m_UncompressedSize = block_data.size();
             chunk.m_BlockData = block_data;
@@ -1273,7 +1268,7 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
 
         // locate the data for the file
         for (const auto& entry : archiveTable.m_Entries) {
-            if (entry.m_Hash == namehash) {
+            if (entry.m_NameHash == namehash) {
                 DEBUG_LOG("FileLoader::ReadFileFromArchive - Found file in archive at " << entry.m_Offset << " (size: " << entry.m_Size << " bytes)");
 
                 // open the file stream

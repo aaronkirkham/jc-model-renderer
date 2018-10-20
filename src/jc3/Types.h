@@ -277,8 +277,8 @@ struct AvalancheTextureStream {
 };
 
 struct AvalancheTexture {
-    uint32_t               m_Magic;
-    uint8_t                m_Version;
+    uint32_t               m_Magic   = 0x58545641; // "AVTX"
+    uint8_t                m_Version = 1;
     char                   unknown[2];
     uint8_t                m_Dimension;
     DXGI_FORMAT            m_Format;
@@ -334,7 +334,7 @@ static std::tuple<uint8_t, bool> FindBestTexture(AvalancheTexture* texture, bool
 namespace ArchiveTable
 {
     struct VfsTabEntry {
-        uint32_t m_Hash;
+        uint32_t m_NameHash;
         uint32_t m_Offset;
         uint32_t m_Size;
     };
@@ -360,10 +360,10 @@ namespace ArchiveTable
     };
 
     struct TabFileHeader {
-        uint32_t m_Magic;
-        uint16_t m_Version;
-        uint16_t m_Endian;
-        int32_t  m_Alignment;
+        uint32_t m_Magic     = 0x424154; // "TAB"
+        uint16_t m_Version   = 2;
+        uint16_t m_Endian    = 1;
+        int32_t  m_Alignment = 0;
     };
 
     static_assert(sizeof(TabFileHeader) == 0xC, "TabFileHeader alignment is wrong!");
@@ -372,10 +372,10 @@ namespace ArchiveTable
 namespace StreamArchive
 {
     struct SARCHeader {
-        uint32_t m_MagicLength;
-        char     m_Magic[4];
-        uint32_t m_Version;
-        uint32_t m_Size;
+        uint32_t m_MagicLength = 4;
+        char     m_Magic[4]    = {'S', 'A', 'R', 'C'};
+        uint32_t m_Version     = 2;
+        uint32_t m_Size        = 0;
     };
 
     static_assert(sizeof(SARCHeader) == 0x10, "SARCHeader alignment is wrong!");
@@ -384,19 +384,24 @@ namespace StreamArchive
 namespace AvalancheArchive
 {
     struct Header {
-        char     m_Magic[4];
-        uint32_t m_Version;
+        char     m_Magic[4] = {'A', 'A', 'F'};
+        uint32_t m_Version  = 1;
         char     m_Magic2[28];
-        uint32_t m_TotalUncompressedSize;
-        uint32_t m_UncompressedBufferSize;
-        uint32_t m_ChunkCount;
+        uint32_t m_TotalUncompressedSize  = 0;
+        uint32_t m_UncompressedBufferSize = 0;
+        uint32_t m_ChunkCount             = 0;
+
+        Header()
+        {
+            strncpy(m_Magic2, "AVALANCHEARCHIVEFORMATISCOOL", 29);
+        }
     };
 
     struct Chunk {
-        uint32_t             m_CompressedSize;
-        uint32_t             m_UncompressedSize;
-        uint32_t             m_DataSize;
-        uint32_t             m_Magic;
+        uint32_t             m_CompressedSize   = 0;
+        uint32_t             m_UncompressedSize = 0;
+        uint32_t             m_DataSize         = 0;
+        uint32_t             m_Magic            = 0x4D415745; // "EWAM"
         std::vector<uint8_t> m_BlockData;
     };
 
@@ -405,26 +410,15 @@ namespace AvalancheArchive
 }; // namespace AvalancheArchive
 
 struct RBMHeader {
-    RBMHeader()
-    {
-        strncpy((char*)&m_Magic, "RBMDL", 5);
-        m_MagicLength     = 5;
-        m_VersionMajor    = 1;
-        m_VersionMinor    = 16;
-        m_VersionRevision = 0;
-        m_NumberOfBlocks  = 0;
-        m_Flags           = 0;
-    }
-
-    uint32_t  m_MagicLength;
-    uint8_t   m_Magic[5];
-    uint32_t  m_VersionMajor;
-    uint32_t  m_VersionMinor;
-    uint32_t  m_VersionRevision;
+    uint32_t  m_MagicLength     = 5;
+    uint8_t   m_Magic[5]        = {'R', 'B', 'M', 'D', 'L'};
+    uint32_t  m_VersionMajor    = 1;
+    uint32_t  m_VersionMinor    = 16;
+    uint32_t  m_VersionRevision = 0;
     glm::vec3 m_BoundingBoxMin;
     glm::vec3 m_BoundingBoxMax;
-    uint32_t  m_NumberOfBlocks;
-    uint32_t  m_Flags;
+    uint32_t  m_NumberOfBlocks = 0;
+    uint32_t  m_Flags          = 0;
 };
 
 static_assert(sizeof(RBMHeader) == 0x35, "RBMHeader alignment is wrong!");
@@ -449,8 +443,8 @@ static_assert(sizeof(CDeformTable) == 0x201, "CDeformTable alignment is wrong!")
 namespace RuntimeContainer
 {
     struct Header {
-        char     m_Magic[4];
-        uint32_t m_Version;
+        char     m_Magic[4] = {'R', 'T', 'P', 'C'};
+        uint32_t m_Version  = 1;
     };
 
     struct Node {
@@ -474,19 +468,19 @@ namespace RuntimeContainer
 namespace AvalancheDataFormat
 {
     struct Header {
-        uint32_t    m_Magic;
-        uint32_t    m_Version;
-        uint32_t    m_InstanceCount;
-        uint32_t    m_InstanceOffset;
-        uint32_t    m_TypeCount;
-        uint32_t    m_TypeOffset;
-        uint32_t    m_StringHashCount;
-        uint32_t    m_StringHashOffset;
-        uint32_t    m_StringCount;
-        uint32_t    m_StringOffset;
-        uint32_t    m_FileSize;
+        uint32_t    m_Magic            = 0x41444620; // "ADF "
+        uint32_t    m_Version          = 4;
+        uint32_t    m_InstanceCount    = 0;
+        uint32_t    m_InstanceOffset   = 0;
+        uint32_t    m_TypeCount        = 0;
+        uint32_t    m_TypeOffset       = 0;
+        uint32_t    m_StringHashCount  = 0;
+        uint32_t    m_StringHashOffset = 0;
+        uint32_t    m_StringCount      = 0;
+        uint32_t    m_StringOffset     = 0;
+        uint32_t    m_FileSize         = 0;
         char        _padding[20];
-        char const* m_Description;
+        char const* m_Description = "";
     };
 
     enum class TypeDefinitionType : uint32_t {
