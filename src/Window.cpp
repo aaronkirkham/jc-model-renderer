@@ -3,13 +3,13 @@
 #include <graphics/Renderer.h>
 #include <examples/imgui_impl_win32.h>
 
-#include <jc3/formats/RuntimeContainer.h>
-#include <jc3/formats/RenderBlockModel.h>
 #include <jc3/formats/AvalancheArchive.h>
+#include <jc3/formats/RenderBlockModel.h>
+#include <jc3/formats/RuntimeContainer.h>
 
-#include <sstream>
-#include <shlobj.h>
 #include <shellapi.h>
+#include <shlobj.h>
+#include <sstream>
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
@@ -20,59 +20,60 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPA
     }
 
     switch (message) {
-    case WM_SIZE:
-        Window::Get()->StartResize();
-        break;
+        case WM_SIZE:
+            Window::Get()->StartResize();
+            break;
 
-    case WM_SETFOCUS:
-        Window::Get()->Events().FocusGained();
-        break;
+        case WM_SETFOCUS:
+            Window::Get()->Events().FocusGained();
+            break;
 
-    case WM_KILLFOCUS:
-        Window::Get()->Events().FocusLost();
-        break;
+        case WM_KILLFOCUS:
+            Window::Get()->Events().FocusLost();
+            break;
 
-    case WM_CLOSE:
-        DestroyWindow(hwnd);
-        break;
+        case WM_CLOSE:
+            DestroyWindow(hwnd);
+            break;
 
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            break;
 
-    default:
-        return DefWindowProc(hwnd, message, wParam, lParam);
+        default:
+            return DefWindowProc(hwnd, message, wParam, lParam);
     }
-   
+
     return 0;
 }
 
 bool Window::Initialise(const HINSTANCE& instance)
 {
-    static auto size = glm::vec2{ 1480, 870 };
-    m_Instance = instance;
+    static auto size = glm::vec2{1480, 870};
+    m_Instance       = instance;
 
     WNDCLASSEX wc;
 
-    wc.style = (CS_HREDRAW | CS_VREDRAW | CS_OWNDC);
-    wc.lpfnWndProc = WndProc;
-    wc.cbClsExtra = 0;
-    wc.cbWndExtra = 0;
-    wc.hInstance = instance;
-    wc.hIcon = LoadIcon(nullptr, IDI_WINLOGO);
-    wc.hIconSm = wc.hIcon;
-    wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    wc.style         = (CS_HREDRAW | CS_VREDRAW | CS_OWNDC);
+    wc.lpfnWndProc   = WndProc;
+    wc.cbClsExtra    = 0;
+    wc.cbWndExtra    = 0;
+    wc.hInstance     = instance;
+    wc.hIcon         = LoadIcon(nullptr, IDI_WINLOGO);
+    wc.hIconSm       = wc.hIcon;
+    wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
     wc.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
-    wc.lpszMenuName = nullptr;
+    wc.lpszMenuName  = nullptr;
     wc.lpszClassName = g_WindowName;
-    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.cbSize        = sizeof(WNDCLASSEX);
 
     RegisterClassEx(&wc);
 
     auto x = (GetSystemMetrics(SM_CXSCREEN) - static_cast<int32_t>(size.x)) / 2;
     auto y = (GetSystemMetrics(SM_CYSCREEN) - static_cast<int32_t>(size.y)) / 2;
 
-    m_Hwnd = CreateWindowA(g_WindowName, g_WindowName, WS_OVERLAPPEDWINDOW, x, y, static_cast<int32_t>(size.x), static_cast<int32_t>(size.y), nullptr, nullptr, instance, this);
+    m_Hwnd = CreateWindowA(g_WindowName, g_WindowName, WS_OVERLAPPEDWINDOW, x, y, static_cast<int32_t>(size.x),
+                           static_cast<int32_t>(size.y), nullptr, nullptr, instance, this);
 
     ShowWindow(m_Hwnd, SW_SHOW);
     UpdateWindow(m_Hwnd);
@@ -110,7 +111,8 @@ bool Window::Frame()
 {
     // handle the resize
     if (m_IsResizing) {
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - m_TimeSinceResize);
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()
+                                                                              - m_TimeSinceResize);
         if (duration.count() > 50) {
             m_IsResizing = false;
             Window::Get()->Events().SizeChanged(Window::Get()->GetSize());
@@ -158,7 +160,7 @@ glm::vec2 Window::GetSize() const
     RECT rect{};
     GetClientRect(m_Hwnd, &rect);
 
-    return glm::vec2{ (rect.right - rect.left), (rect.bottom - rect.top) };
+    return glm::vec2{(rect.right - rect.left), (rect.bottom - rect.top)};
 }
 
 glm::vec2 Window::GetPosition() const
@@ -166,13 +168,13 @@ glm::vec2 Window::GetPosition() const
     RECT rect;
     GetWindowRect(m_Hwnd, &rect);
 
-    return glm::vec2{ rect.left, rect.top };
+    return glm::vec2{rect.left, rect.top};
 }
 
 glm::vec2 Window::GetCenterPoint() const
 {
     auto size = GetSize();
-    return glm::vec2{ size.x / 2, size.y / 2 };
+    return glm::vec2{size.x / 2, size.y / 2};
 }
 
 void Window::CaptureMouse(bool capture)
@@ -180,8 +182,7 @@ void Window::CaptureMouse(bool capture)
     if (capture && !m_IsMouseCaptured) {
         SetCapture(m_Hwnd);
         m_IsMouseCaptured = true;
-    }
-    else if (!capture && m_IsMouseCaptured) {
+    } else if (!capture && m_IsMouseCaptured) {
         ReleaseCapture();
         m_IsMouseCaptured = false;
     }
@@ -192,26 +193,26 @@ int32_t Window::ShowMessageBox(const std::string& message, uint32_t type)
     return MessageBox(m_Hwnd, message.c_str(), g_WindowName, type);
 }
 
-void Window::ShowFolderSelection(const std::string& title, std::function<void(const fs::path&)> fn_selected, std::function<void()> fn_cancelled)
+void Window::ShowFolderSelection(const std::string& title, std::function<void(const fs::path&)> fn_selected,
+                                 std::function<void()> fn_cancelled)
 {
     TCHAR path[MAX_PATH];
 
     BROWSEINFO browse_info;
     ZeroMemory(&browse_info, sizeof(BROWSEINFO));
 
-    browse_info.hwndOwner = m_Hwnd;
-    browse_info.pidlRoot = nullptr;
+    browse_info.hwndOwner      = m_Hwnd;
+    browse_info.pidlRoot       = nullptr;
     browse_info.pszDisplayName = path;
-    browse_info.lpszTitle = title.c_str();
-    browse_info.ulFlags = BIF_RETURNONLYFSDIRS;
-    browse_info.lpfn = nullptr;
+    browse_info.lpszTitle      = title.c_str();
+    browse_info.ulFlags        = BIF_RETURNONLYFSDIRS;
+    browse_info.lpfn           = nullptr;
 
     LPITEMIDLIST pidl = SHBrowseForFolder(&browse_info);
     if (pidl) {
         SHGetPathFromIDList(pidl, path);
         fn_selected(path);
-    }
-    else if (fn_cancelled) {
+    } else if (fn_cancelled) {
         fn_cancelled();
     }
 }

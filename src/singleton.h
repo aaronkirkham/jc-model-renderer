@@ -1,10 +1,9 @@
 #pragma once
 
-template<typename T>
-class Singleton
+template <typename T> class Singleton
 {
-public:
-    Singleton() = default;
+  public:
+    Singleton()          = default;
     virtual ~Singleton() = default;
 
     static T* Get()
@@ -13,6 +12,6 @@ public:
         return instance;
     }
 
-    Singleton &operator=(const Singleton&) = delete;
-    Singleton(const Singleton&) = delete;
+    Singleton& operator=(const Singleton&) = delete;
+    Singleton(const Singleton&)            = delete;
 };

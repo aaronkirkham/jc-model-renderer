@@ -1,13 +1,13 @@
 #pragma once
 
-#include <unordered_map>
-#include <string>
 #include <Window.h>
+#include <string>
+#include <unordered_map>
 
 class NameHashLookup
 {
-public:
-    NameHashLookup() = delete;
+  public:
+    NameHashLookup()          = delete;
     virtual ~NameHashLookup() = delete;
 
     static std::unordered_map<uint32_t, std::string> LookupTable;
@@ -17,7 +17,7 @@ public:
         std::thread([&] {
             try {
                 const auto handle = GetModuleHandle(nullptr);
-                const auto rc = FindResource(handle, MAKEINTRESOURCE(256), RT_RCDATA);
+                const auto rc     = FindResource(handle, MAKEINTRESOURCE(256), RT_RCDATA);
                 if (rc == nullptr) {
                     throw std::runtime_error("NameHashLookup - Failed to find dictionary resource");
                 }
@@ -28,7 +28,7 @@ public:
                 }
 
                 // parse the file list json
-                auto str = static_cast<const char*>(LockResource(data));
+                auto  str        = static_cast<const char*>(LockResource(data));
                 auto& dictionary = json::parse(str);
 
                 // generate the lookup table
@@ -36,17 +36,18 @@ public:
                     const auto namehash = static_cast<uint32_t>(std::stoul(it.key(), nullptr, 16));
                     LookupTable.insert(std::make_pair(namehash, it.value().get<std::string>()));
                 }
-            }
-            catch (const std::exception& e) {
+            } catch (const std::exception& e) {
                 DEBUG_LOG(e.what());
 
                 std::stringstream error;
-                error << "Failed to read/parse namehash lookup table.\n\nSome features will be disabled." << std::endl << std::endl;
+                error << "Failed to read/parse namehash lookup table.\n\nSome features will be disabled." << std::endl
+                      << std::endl;
                 error << e.what();
 
                 Window::Get()->ShowMessageBox(error.str());
             }
-        }).detach();
+        })
+            .detach();
     }
 
     static std::string GetName(const uint32_t name_hash)
