@@ -76,6 +76,12 @@ bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
     DEBUG_LOG(" - m_NumberOfBlocks=" << header.m_NumberOfBlocks);
     DEBUG_LOG(" - m_Flags=" << header.m_Flags);
 
+    // ensure we can read the file version (TODO: when JC4 is released, check this)
+    if (header.m_VersionMajor != 1 && header.m_VersionMinor != 16) {
+        __debugbreak();
+        return false;
+    }
+
     m_RenderBlocks.reserve(header.m_NumberOfBlocks);
 
     // store the bounding box

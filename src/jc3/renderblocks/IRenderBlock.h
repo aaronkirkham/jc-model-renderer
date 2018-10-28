@@ -164,6 +164,12 @@ class IRenderBlock
                                                          "IRenderBlock Vertex Buffer");
     }
 
+    void WriteVertexBuffer(std::ostream& stream, VertexBuffer_t* buffer)
+    {
+        stream.write((char*)&buffer->m_ElementCount, sizeof(buffer->m_ElementCount));
+        stream.write((char*)buffer->m_Data.data(), buffer->m_Data.size());
+    }
+
     void ReadIndexBuffer(std::istream& stream, IndexBuffer_t** outBuffer)
     {
         uint32_t count;
@@ -234,7 +240,9 @@ class IRenderBlock
             stream.write(str.c_str(), length);
         }
 
-        // unknown[4]
+        // TODO: find out what all this is. probably something important...
+        uint32_t unknown[4] = {0};
+        stream.write((char*)&unknown, sizeof(unknown));
     }
 
     void ReadSkinBatch(std::istream& stream)

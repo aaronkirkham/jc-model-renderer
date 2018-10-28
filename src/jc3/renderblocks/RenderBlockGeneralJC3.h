@@ -205,10 +205,10 @@ class RenderBlockGeneralJC3 : public IRenderBlock
 
         // write vertex buffers
         if (m_Block.attributes.packed.format != 1) {
-            // WriteVertexBuffer(stream, m_VertexBuffer, false);
+            WriteVertexBuffer(stream, m_VertexBuffer);
         } else {
-            // WriteVertexBuffer(stream, m_VertexBuffer);
-            // WriteVertexBuffer(stream, m_VertexBufferData);
+            WriteVertexBuffer(stream, m_VertexBuffer);
+            WriteVertexBuffer(stream, m_VertexBufferData);
         }
 
         // write index buffer
