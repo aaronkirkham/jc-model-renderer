@@ -763,6 +763,8 @@ void FileLoader::WriteTOC(const fs::path& filename, StreamArchive_t* archive) no
 void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept
 {
     FileLoader::Get()->ReadFile(filename, [this, filename, callback](bool success, FileBuffer data) {
+        using namespace JustCause3;
+
         if (!success) {
             DEBUG_LOG("ReadTexture -> failed to read \"" << filename << "\".");
             return callback(false, {});
@@ -776,7 +778,7 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
         std::istringstream stream(std::string{ (char *)data.data(), data.size() });
 
         // read the texture data
-        JustCause3::AvalancheTexture texture;
+        AvalancheTexture::Header texture;
         stream.read((char *)&texture, sizeof(texture));
 
         // ensure the header magic is correct
@@ -785,11 +787,31 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
             return callback(false, {});
         }
 
+#if 1
+        {
+            // clang-format off
+            std::stringstream ss;
+            ss << "AVTX m_Flags=" << texture.m_Flags << " (";
+
+            if (texture.m_Flags & AvalancheTexture::STREAMED)       ss << "streamed, ";
+            if (texture.m_Flags & AvalancheTexture::PLACEHOLDER)    ss << "placeholder, ";
+            if (texture.m_Flags & AvalancheTexture::TILED)          ss << "tiled, ";
+            if (texture.m_Flags & AvalancheTexture::SRGB)           ss << "SRGB, ";
+            if (texture.m_Flags & AvalancheTexture::CUBE)           ss << "cube, ";
+            if (texture.m_Flags == 0)                               ss << ", ";
+
+            ss.seekp(-2, ss.cur);
+            ss << ")";
+            DEBUG_LOG(ss.str());
+            // clang-format on
+        }
+#endif
+
         // find the best stream to use
-        auto&[stream_index, load_source] = JustCause3::FindBestTexture(&texture);
+        auto&[stream_index, load_source] = AvalancheTexture::FindBest(&texture);
 
         // find the rank
-        auto rank = JustCause3::GetHighestTextureRank(&texture, stream_index);
+        const auto rank = AvalancheTexture::GetHighestRank(&texture, stream_index);
 
         FileBuffer out;
         out.resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + texture.m_Streams[stream_index].m_Size);
@@ -855,11 +877,13 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
 
 bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) noexcept
 {
+    using namespace JustCause3;
+
     std::istringstream stream(std::string{ (char *)data->data(), data->size() });
 
     // read the texture data
-    JustCause3::AvalancheTexture texture;
-    stream.read((char *)&texture, sizeof(JustCause3::AvalancheTexture));
+    AvalancheTexture::Header texture;
+    stream.read((char*)&texture, sizeof(texture));
 
     // ensure the header magic is correct
     if (texture.m_Magic != 0x58545641) {
@@ -868,10 +892,10 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
     }
 
     // find the best stream to use
-    auto&[stream_index, load_source] = JustCause3::FindBestTexture(&texture, true);
+    auto&[stream_index, load_source] = AvalancheTexture::FindBest(&texture, true);
 
     // find the rank
-    auto rank = JustCause3::GetHighestTextureRank(&texture, stream_index);
+    const auto rank = AvalancheTexture::GetHighestRank(&texture, stream_index);
 
     //
     outData->resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + texture.m_Streams[stream_index].m_Size);

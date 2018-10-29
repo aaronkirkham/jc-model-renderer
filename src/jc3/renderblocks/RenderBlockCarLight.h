@@ -147,7 +147,7 @@ class RenderBlockCarLight : public IRenderBlock
     {
         using namespace JustCause3::Vertex;
 
-        // read block data
+        // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
         // read the deform table
@@ -219,7 +219,7 @@ class RenderBlockCarLight : public IRenderBlock
 
     virtual void Write(std::ostream& stream) override final
     {
-        //
+        // write the block attributes
     }
 
     virtual void Setup(RenderContext_t* context) override final

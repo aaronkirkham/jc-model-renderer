@@ -19,6 +19,8 @@ struct CharacterAttributes {
     char     pad2[0x30];
 };
 
+static_assert(sizeof(CharacterAttributes) == 0x6C, "CharacterAttributes alignment is wrong!");
+
 namespace JustCause3::RenderBlocks
 {
 struct Character {
@@ -258,7 +260,7 @@ class RenderBlockCharacter : public IRenderBlock
         using namespace JustCause3::Vertex;
         using namespace JustCause3::Vertex::RenderBlockCharacter;
 
-        // read the block header
+        // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
         // read the materials
@@ -271,7 +273,7 @@ class RenderBlockCharacter : public IRenderBlock
         // read vertex data
         ReadVertexBuffer(stream, &m_VertexBuffer, VertexStrides[m_Stride]);
 
-        // read skin batch
+        // read skin batches
         ReadSkinBatch(stream);
 
         // read index buffer
@@ -280,7 +282,20 @@ class RenderBlockCharacter : public IRenderBlock
 
     virtual void Write(std::ostream& stream) override final
     {
-        //
+        // write the block attributes
+        stream.write((char*)&m_Block, sizeof(m_Block));
+
+        // write the materials
+        WriteMaterials(stream);
+
+        // write the vertex data
+        WriteVertexBuffer(stream, m_VertexBuffer);
+
+        // write skin batches
+        WriteSkinBatch(stream);
+
+        // write index buffer
+        WriteIndexBuffer(stream, m_IndexBuffer);
     }
 
     virtual void Setup(RenderContext_t* context) override final

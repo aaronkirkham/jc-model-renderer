@@ -1,11 +1,15 @@
 #pragma once
 
-#include <StdInc.h>
-#include <singleton.h>
 #include <DropTarget.h>
+#include <StdInc.h>
 #include <chrono>
+#include <singleton.h>
 
+#ifdef DEBUG
+static constexpr auto g_WindowName = "JC3 Render Block Model Renderer (DEBUG)";
+#else
 static constexpr auto g_WindowName = "JC3 Render Block Model Renderer";
+#endif
 
 //#ifdef DEBUG
 #define DEBUG_LOG(s)                                                                                                   \

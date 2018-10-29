@@ -33,6 +33,14 @@ namespace Vertex
     };
     static_assert(sizeof(UnpackedVertexPosition) == 0xC, "UnpackedVertexPosition alignment is wrong!");
 
+    struct UnpackedVertexPositionXYZW {
+        float x;
+        float y;
+        float z;
+        float w;
+    };
+    static_assert(sizeof(UnpackedVertexPositionXYZW) == 0x10, "UnpackedVertexPositionXYZW alignment is wrong!");
+
     struct UnpackedVertexPosition2UV {
         float x;
         float y;
@@ -113,14 +121,6 @@ namespace Vertex
         float dt;
     };
     static_assert(sizeof(VertexDeformNormal2) == 0x20, "VertexDeformNormal2 alignment is wrong!");
-
-    struct VertexUnknown {
-        float x;
-        float y;
-        float z;
-        float w;
-    };
-    static_assert(sizeof(VertexUnknown) == 0x10, "VertexUnknown alignment is wrong!");
 
     namespace RenderBlockCharacter
     {
@@ -268,68 +268,79 @@ namespace Vertex
     }
 }; // namespace Vertex
 
-struct AvalancheTextureStream {
-    uint32_t m_Offset;
-    uint32_t m_Size;
-    uint16_t m_Alignment;
-    bool     m_IsTile;
-    bool     m_IsSource;
-};
-
-struct AvalancheTexture {
-    uint32_t               m_Magic   = 0x58545641; // "AVTX"
-    uint8_t                m_Version = 1;
-    char                   unknown[2];
-    uint8_t                m_Dimension;
-    DXGI_FORMAT            m_Format;
-    uint16_t               m_Width;
-    uint16_t               m_Height;
-    uint16_t               m_Depth;
-    uint16_t               m_Flags;
-    uint8_t                m_Mips;
-    uint8_t                m_MipsRedisent;
-    char                   pad[10];
-    AvalancheTextureStream m_Streams[8];
-};
-
-static uint32_t GetHighestTextureRank(AvalancheTexture* texture, uint32_t stream_index)
+namespace AvalancheTexture
 {
-    uint32_t rank = 0;
-    for (uint32_t i = 0; i < 8; ++i) {
-        if (i == stream_index)
-            continue;
+    enum Flags : uint32_t {
+        STREAMED    = 0x1,
+        PLACEHOLDER = 0x2,
+        TILED       = 0x4,
+        SRGB        = 0x8,
+        CUBE        = 0x40,
+    };
 
-        if (texture->m_Streams[i].m_Size > texture->m_Streams[stream_index].m_Size) {
-            ++rank;
+    struct Stream {
+        uint32_t m_Offset;
+        uint32_t m_Size;
+        uint16_t m_Alignment;
+        bool     m_IsTile;
+        bool     m_IsSource;
+    };
+
+    struct Header {
+        uint32_t    m_Magic   = 0x58545641; // "AVTX"
+        uint8_t     m_Version = 1;
+        char        unknown[2];
+        uint8_t     m_Dimension;
+        DXGI_FORMAT m_Format;
+        uint16_t    m_Width;
+        uint16_t    m_Height;
+        uint16_t    m_Depth;
+        uint16_t    m_Flags;
+        uint8_t     m_Mips;
+        uint8_t     m_MipsRedisent;
+        char        pad[10];
+        Stream      m_Streams[8];
+    };
+
+    static uint32_t GetHighestRank(Header* texture, uint32_t stream_index)
+    {
+        uint32_t rank = 0;
+        for (uint32_t i = 0; i < 8; ++i) {
+            if (i == stream_index)
+                continue;
+
+            if (texture->m_Streams[i].m_Size > texture->m_Streams[stream_index].m_Size) {
+                ++rank;
+            }
         }
+
+        return rank;
     }
 
-    return rank;
-}
+    static std::tuple<uint8_t, bool> FindBest(Header* texture, bool ignore_external = false)
+    {
+        uint8_t biggest      = 0;
+        uint8_t stream_index = 0;
+        bool    load_source  = false;
 
-static std::tuple<uint8_t, bool> FindBestTexture(AvalancheTexture* texture, bool ignore_external = false)
-{
-    uint8_t biggest      = 0;
-    uint8_t stream_index = 0;
-    bool    load_source  = false;
+        for (uint8_t i = 0; i < 8; ++i) {
+            const auto& stream = texture->m_Streams[i];
 
-    for (uint8_t i = 0; i < 8; ++i) {
-        const auto& stream = texture->m_Streams[i];
+            // skip this stream if we have no data
+            if (stream.m_Size == 0)
+                continue;
 
-        // skip this stream if we have no data
-        if (stream.m_Size == 0)
-            continue;
-
-        // find the biggest stream index
-        if ((!ignore_external && stream.m_IsSource) || (!stream.m_IsSource && stream.m_Size > biggest)) {
-            biggest      = stream.m_Size;
-            stream_index = i;
-            load_source  = stream.m_IsSource;
+            // find the biggest stream index
+            if ((!ignore_external && stream.m_IsSource) || (!stream.m_IsSource && stream.m_Size > biggest)) {
+                biggest      = stream.m_Size;
+                stream_index = i;
+                load_source  = stream.m_IsSource;
+            }
         }
-    }
 
-    return {stream_index, load_source};
-}
+        return {stream_index, load_source};
+    }
+}; // namespace AvalancheTexture
 
 namespace ArchiveTable
 {

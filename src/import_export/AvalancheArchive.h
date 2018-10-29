@@ -41,10 +41,13 @@ class AvalancheArchive : public IImportExporter
         // write files
         const auto sarc = archive->GetStreamArchive();
         for (const auto& entry : sarc->m_Files) {
-            if (entry.m_Offset != 0) {
+            if (entry.m_Offset != 0 && entry.m_Offset != -1) {
                 const auto& file_path = path / entry.m_Filename;
                 const auto& bytes     = sarc->GetEntryBuffer(entry);
                 WriteBufferToFile(file_path, &bytes);
+            } else if (entry.m_Offset == -1) {
+                // TODO: load external files
+                // we want to export the latest files and make sure to include files which are inside patch_ archives
             }
         }
     }

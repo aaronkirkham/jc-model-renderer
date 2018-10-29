@@ -233,7 +233,8 @@ class IRenderBlock
         stream.write((char*)&count, sizeof(count));
 
         for (const auto& material : m_Materials) {
-            const auto& str = material.string();
+            auto str = material.string();
+            std::replace(str.begin(), str.end(), '\\', '/');
 
             auto length = static_cast<uint32_t>(str.length());
             stream.write((char*)&length, sizeof(length));
@@ -270,7 +271,19 @@ class IRenderBlock
 
     void WriteSkinBatch(std::ostream& stream)
     {
-        //
+        uint32_t count = m_SkinBatches.size();
+        stream.write((char*)&count, sizeof(count));
+
+        for (const auto& batch : m_SkinBatches) {
+            stream.write((char*)&batch.m_Size, sizeof(batch.m_Size));
+            stream.write((char*)&batch.m_Offset, sizeof(batch.m_Offset));
+            stream.write((char*)&batch.m_BatchSize, sizeof(batch.m_BatchSize));
+
+            if (batch.m_BatchSize != 0) {
+                stream.write((char*)&batch.m_BatchLookup, sizeof(int16_t) * batch.m_BatchSize);
+                __debugbreak();
+            }
+        }
     }
 
     void ReadDeformTable(std::istream& stream, JustCause3::CDeformTable* deform_table)
@@ -288,9 +301,12 @@ class IRenderBlock
         }
     }
 
-    void WriteDeformTable(std::ostream& stream)
+    void WriteDeformTable(std::ostream& stream, JustCause3::CDeformTable* deform_table)
     {
-        //
+        for (uint32_t i = 0; i < 256; ++i) {
+            uint32_t data = deform_table->table[i];
+            stream.write((char*)&data, sizeof(data));
+        }
     }
 
     void DrawSkinBatches(RenderContext_t* context)

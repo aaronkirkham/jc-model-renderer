@@ -16,6 +16,8 @@ struct GeneralMkIIIAttributes {
     char                                 _pad4[0x1C];
 };
 
+static_assert(sizeof(GeneralMkIIIAttributes) == 0x68, "GeneralMkIIIAttributes alignment is wrong!");
+
 namespace JustCause3::RenderBlocks
 {
 struct GeneralMkIII {
@@ -244,19 +246,19 @@ class RenderBlockGeneralMkIII : public IRenderBlock
     {
         using namespace JustCause3::Vertex;
 
-        // read the block header
+        // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
         // read constant buffer data
-        stream.read((char*)&m_cbMaterialConsts2, sizeof(MaterialConsts2));
+        stream.read((char*)&m_cbMaterialConsts2, sizeof(m_cbMaterialConsts2));
 
         // read the materials
         ReadMaterials(stream);
 
         // read the vertex buffer
         if (m_Block.attributes.flags & 0x20) {
-            std::vector<VertexUnknown> vertices;
-            ReadVertexBuffer<VertexUnknown>(stream, &m_VertexBuffer, &vertices);
+            std::vector<UnpackedVertexPositionXYZW> vertices;
+            ReadVertexBuffer<UnpackedVertexPositionXYZW>(stream, &m_VertexBuffer, &vertices);
 
             for (const auto& vertex : vertices) {
                 m_Vertices.emplace_back(vertex.x * m_Block.attributes.packed.scale);
@@ -298,7 +300,26 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
     virtual void Write(std::ostream& stream) override final
     {
-        //
+        // write the block attributes
+        stream.write((char*)&m_Block, sizeof(m_Block));
+
+        // write constant buffer data
+        stream.write((char*)&m_cbMaterialConsts2, sizeof(m_cbMaterialConsts2));
+
+        // write the materials
+        WriteMaterials(stream);
+
+        // write the vertex buffer
+        WriteVertexBuffer(stream, m_VertexBuffer);
+        WriteVertexBuffer(stream, m_VertexBufferData);
+
+        // write the skin batches
+        if (m_Block.attributes.flags & 0x8020) {
+            WriteSkinBatch(stream);
+        }
+
+        // write the index buffer
+        WriteIndexBuffer(stream, m_IndexBuffer);
     }
 
     virtual void Setup(RenderContext_t* context) override final

@@ -135,7 +135,7 @@ class RenderBlockWindow : public IRenderBlock
     {
         using namespace JustCause3::Vertex;
 
-        // read block data
+        // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
         // read materials
@@ -161,7 +161,17 @@ class RenderBlockWindow : public IRenderBlock
 
     virtual void Write(std::ostream& stream) override final
     {
-        //
+        // write the block attributes
+        stream.write((char*)&m_Block, sizeof(m_Block));
+
+        // write the materials
+        WriteMaterials(stream);
+
+        // write the vertex buffer
+        WriteVertexBuffer(stream, m_VertexBuffer);
+
+        // write the index buffer
+        WriteIndexBuffer(stream, m_IndexBuffer);
     }
 
     virtual void Setup(RenderContext_t* context) override final

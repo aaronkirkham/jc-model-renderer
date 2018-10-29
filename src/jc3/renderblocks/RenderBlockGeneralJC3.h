@@ -20,6 +20,8 @@ struct GeneralJC3Attributes {
     uint32_t                             flags;
 };
 
+static_assert(sizeof(GeneralJC3Attributes) == 0x58, "GeneralJC3Attributes alignment is wrong!");
+
 namespace JustCause3::RenderBlocks
 {
 struct GeneralJC3 {
@@ -143,7 +145,7 @@ class RenderBlockGeneralJC3 : public IRenderBlock
     {
         using namespace JustCause3::Vertex;
 
-        // read the block header
+        // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
         // read the materials
@@ -195,7 +197,7 @@ class RenderBlockGeneralJC3 : public IRenderBlock
 
     virtual void Write(std::ostream& stream) override final
     {
-        // write the block header
+        // write the block attributes
         stream.write((char*)&m_Block, sizeof(m_Block));
 
         // write the materials
