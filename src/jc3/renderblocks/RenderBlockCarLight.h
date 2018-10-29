@@ -220,6 +220,20 @@ class RenderBlockCarLight : public IRenderBlock
     virtual void Write(std::ostream& stream) override final
     {
         // write the block attributes
+        stream.write((char*)&m_Block, sizeof(m_Block));
+
+        // write the deform table
+        WriteDeformTable(stream, &m_DeformTable);
+
+        // write the matierls
+        WriteMaterials(stream);
+
+        // write the vertex buffer
+        WriteVertexBuffer(stream, m_VertexBuffer);
+        WriteVertexBuffer(stream, m_VertexBufferData);
+
+        // write the index buffer
+        WriteIndexBuffer(stream, m_IndexBuffer);
     }
 
     virtual void Setup(RenderContext_t* context) override final
