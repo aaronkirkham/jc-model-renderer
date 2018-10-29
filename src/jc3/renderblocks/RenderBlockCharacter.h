@@ -4,61 +4,56 @@
 #include <jc3/renderblocks/IRenderBlock.h>
 
 #pragma pack(push, 1)
-struct CharacterAttributes
-{
+struct CharacterAttributes {
     uint32_t flags;
-    float scale;
-    char pad[0x14];
-    float specularGloss;
-    float transmission;
-    float specularFresnel;
-    float diffuseRoughness;
-    float diffuseWrap;
-    float _unknown;
-    float dirtFactor;
-    float emissive;
-    char pad2[0x30];
+    float    scale;
+    char     pad[0x14];
+    float    specularGloss;
+    float    transmission;
+    float    specularFresnel;
+    float    diffuseRoughness;
+    float    diffuseWrap;
+    float    _unknown;
+    float    dirtFactor;
+    float    emissive;
+    char     pad2[0x30];
 };
 
 namespace JustCause3::RenderBlocks
 {
-    struct Character
-    {
-        uint8_t version;
-        CharacterAttributes attributes;
-    };
+struct Character {
+    uint8_t             version;
+    CharacterAttributes attributes;
 };
+}; // namespace JustCause3::RenderBlocks
 #pragma pack(pop)
 
 class RenderBlockCharacter : public IRenderBlock
 {
-private:
-    struct cbLocalConsts
-    {
-        glm::mat4 World;
-        glm::mat4 WorldViewProjection;
-        glm::vec4 Scale;
+  private:
+    struct cbLocalConsts {
+        glm::mat4   World;
+        glm::mat4   WorldViewProjection;
+        glm::vec4   Scale;
         glm::mat3x4 MatrixPalette[70];
     } m_cbLocalConsts;
 
-    struct cbInstanceConsts
-    {
-        glm::vec4 _unknown = glm::vec4(0);
+    struct cbInstanceConsts {
+        glm::vec4 _unknown      = glm::vec4(0);
         glm::vec4 DiffuseColour = glm::vec4(0, 0, 0, 1);
-        glm::vec4 _unknown2 = glm::vec4(0); // .w is some kind of snow factor???
+        glm::vec4 _unknown2     = glm::vec4(0); // .w is some kind of snow factor???
     } m_cbInstanceConsts;
 
-    struct cbMaterialConsts
-    {
+    struct cbMaterialConsts {
         glm::vec4 unknown[10];
     } m_cbMaterialConsts;
 
     JustCause3::RenderBlocks::Character m_Block;
-    ConstantBuffer_t* m_VertexShaderConstants = nullptr;
-    std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = { nullptr };
-    int32_t m_Stride = 0;
+    ConstantBuffer_t*                   m_VertexShaderConstants   = nullptr;
+    std::array<ConstantBuffer_t*, 2>    m_FragmentShaderConstants = {nullptr};
+    int32_t                             m_Stride                  = 0;
 
-public:
+  public:
     RenderBlockCharacter() = default;
     virtual ~RenderBlockCharacter()
     {
@@ -68,7 +63,10 @@ public:
             Renderer::Get()->DestroyBuffer(fsc);
     }
 
-    virtual const char* GetTypeName() override final { return "RenderBlockCharacter"; }
+    virtual const char* GetTypeName() override final
+    {
+        return "RenderBlockCharacter";
+    }
 
     virtual uint32_t GetTypeHash() const override final
     {
@@ -86,127 +84,148 @@ public:
         m_PixelShader = ShaderManager::Get()->GetPixelShader("character");
 
         switch (m_Stride) {
-            // 4bones1uv
-        case 0: {
-            m_VertexShader = ShaderManager::Get()->GetVertexShader("character");
+                // 4bones1uv
+            case 0: {
+                m_VertexShader = ShaderManager::Get()->GetVertexShader("character");
 
-            // create the element input desc
-            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            };
+                // create the element input desc
+                // clang-format off
+                D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                    { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   4,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                };
+                // clang-format on
 
-            // create the vertex declaration
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacter (4bones1uv)");
-            break;
-        }
+                // create the vertex declaration
+                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(),
+                                                                               "RenderBlockCharacter (4bones1uv)");
+                break;
+            }
 
-            // 4bones2uvs
-        case 1: {
-            m_VertexShader = ShaderManager::Get()->GetVertexShader("character2uvs");
+                // 4bones2uvs
+            case 1: {
+                m_VertexShader = ShaderManager::Get()->GetVertexShader("character2uvs");
 
-            // create the element input desc
-            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            };
+                // create the element input desc
+                // clang-format off
+                D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                    { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                };
+                // clang-format on
 
-            // create the vertex declaration
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacter (4bones2uvs)");
-            break;
-        }
+                // create the vertex declaration
+                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(),
+                                                                               "RenderBlockCharacter (4bones2uvs)");
+                break;
+            }
 
-            // 4bones3uvs
-        case 2: {
-            m_VertexShader = ShaderManager::Get()->GetVertexShader("character3uvs");
+                // 4bones3uvs
+            case 2: {
+                m_VertexShader = ShaderManager::Get()->GetVertexShader("character3uvs");
 
-            // create the element input desc
-            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   5,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            };
+                // create the element input desc
+                // clang-format off
+                D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                    { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   5,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                };
+                // clang-format on
 
-            // create the vertex declaration
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(), "RenderBlockCharacter (4bones3uvs)");
-            break;
-        }
+                // create the vertex declaration
+                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(),
+                                                                               "RenderBlockCharacter (4bones3uvs)");
+                break;
+            }
 
-            // 8bones1uv
-        case 3: {
-            m_VertexShader = ShaderManager::Get()->GetVertexShader("character8");
+                // 8bones1uv
+            case 3: {
+                m_VertexShader = ShaderManager::Get()->GetVertexShader("character8");
 
-            // create the element input desc
-            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            };
+                // create the element input desc
+                // clang-format off
+                D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                    { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   4,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                };
+                // clang-format on
 
-            // create the vertex declaration
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(), "RenderBlockCharacter (8bones1uv)");
-            break;
-        }
+                // create the vertex declaration
+                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(),
+                                                                               "RenderBlockCharacter (8bones1uv)");
+                break;
+            }
 
-            // 8bones2uvs
-        case 4: {
-            m_VertexShader = ShaderManager::Get()->GetVertexShader("character82uvs");
+                // 8bones2uvs
+            case 4: {
+                m_VertexShader = ShaderManager::Get()->GetVertexShader("character82uvs");
 
-            // create the element input desc
-            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            };
+                // create the element input desc
+                // clang-format off
+                D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                    { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                };
+                // clang-format on
 
-            // create the vertex declaration
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(), "RenderBlockCharacter (8bones3uvs)");
-            break;
-        }
+                // create the vertex declaration
+                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(),
+                                                                               "RenderBlockCharacter (8bones3uvs)");
+                break;
+            }
 
-            // 8bones3uvs
-        case 5: {
-            m_VertexShader = ShaderManager::Get()->GetVertexShader("character83uvs");
+                // 8bones3uvs
+            case 5: {
+                m_VertexShader = ShaderManager::Get()->GetVertexShader("character83uvs");
 
-            // create the element input desc
-            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   5,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            };
+                // create the element input desc
+                // clang-format off
+                D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                    { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   5,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                    { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                };
+                // clang-format on
 
-            // create the vertex declaration
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 8, m_VertexShader.get(), "RenderBlockCharacter (8bones3uvs)");
-            break;
-        }
+                // create the vertex declaration
+                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 8, m_VertexShader.get(),
+                                                                               "RenderBlockCharacter (8bones3uvs)");
+                break;
+            }
         }
 
         // create the constant buffer
-        m_VertexShaderConstants = Renderer::Get()->CreateConstantBuffer(m_cbLocalConsts, "RenderBlockCharacter cbLocalConsts");
-        m_FragmentShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockCharacter cbInstanceConsts");
-        m_FragmentShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockCharacter cbMaterialConsts");
+        m_VertexShaderConstants =
+            Renderer::Get()->CreateConstantBuffer(m_cbLocalConsts, "RenderBlockCharacter cbLocalConsts");
+        m_FragmentShaderConstants[0] =
+            Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockCharacter cbInstanceConsts");
+        m_FragmentShaderConstants[1] =
+            Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockCharacter cbMaterialConsts");
 
         // identity the palette data
         for (int i = 0; i < 70; ++i) {
@@ -220,15 +239,15 @@ public:
         {
             D3D11_SAMPLER_DESC params;
             ZeroMemory(&params, sizeof(params));
-            params.Filter = D3D11_FILTER_ANISOTROPIC;
-            params.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.MipLODBias = 0.0f;
-            params.MaxAnisotropy = 8;
+            params.Filter         = D3D11_FILTER_ANISOTROPIC;
+            params.AddressU       = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressV       = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressW       = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.MipLODBias     = 0.0f;
+            params.MaxAnisotropy  = 8;
             params.ComparisonFunc = D3D11_COMPARISON_NEVER;
-            params.MinLOD = 0.0f;
-            params.MaxLOD = 13.0f;
+            params.MinLOD         = 0.0f;
+            params.MaxLOD         = 13.0f;
 
             m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCharacter");
         }
@@ -240,13 +259,14 @@ public:
         using namespace JustCause3::Vertex::RenderBlockCharacter;
 
         // read the block header
-        stream.read((char *)&m_Block, sizeof(m_Block));
+        stream.read((char*)&m_Block, sizeof(m_Block));
 
         // read the materials
         ReadMaterials(stream);
 
         // get the vertices stride
-        m_Stride = (3 * ((m_Block.attributes.flags >> 1) & 1) + ((m_Block.attributes.flags >> 5) & 1) + ((m_Block.attributes.flags >> 4) & 1));
+        m_Stride = (3 * ((m_Block.attributes.flags >> 1) & 1) + ((m_Block.attributes.flags >> 5) & 1)
+                    + ((m_Block.attributes.flags >> 4) & 1));
 
         // read vertex data
         ReadVertexBuffer(stream, &m_VertexBuffer, VertexStrides[m_Stride]);
@@ -265,7 +285,8 @@ public:
 
     virtual void Setup(RenderContext_t* context) override final
     {
-        if (!m_Visible) return;
+        if (!m_Visible)
+            return;
 
         IRenderBlock::Setup(context);
 
@@ -274,9 +295,9 @@ public:
             static auto world = glm::mat4(1);
 
             // set vertex shader constants
-            m_cbLocalConsts.World = world;
+            m_cbLocalConsts.World               = world;
             m_cbLocalConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
-            m_cbLocalConsts.Scale = glm::vec4(m_Block.attributes.scale * m_ScaleModifier);
+            m_cbLocalConsts.Scale               = glm::vec4(m_Block.attributes.scale * m_ScaleModifier);
 
             // set fragment shader constants
             //
@@ -300,48 +321,73 @@ public:
 
         // toggle alpha blending
         if ((m_Block.attributes.flags >> 2) & 1) {
-            //context->m_Renderer->SetAlphaEnabled(true);
+            // context->m_Renderer->SetAlphaEnabled(true);
             context->m_Renderer->SetBlendingEnabled(false);
-        }
-        else {
-            //context->m_Renderer->SetAlphaEnabled(false);
+        } else {
+            // context->m_Renderer->SetAlphaEnabled(false);
         }
 
         // setup blending
         auto _flags = (m_Block.attributes.flags & 0x3000);
         if (_flags == 0x1000) {
             context->m_Renderer->SetBlendingEnabled(true);
-            context->m_Renderer->SetBlendingFunc(D3D11_BLEND_ONE, D3D11_BLEND_ONE, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE);
-        }
-        else if (_flags == 0x2000) {
+            context->m_Renderer->SetBlendingFunc(D3D11_BLEND_ONE, D3D11_BLEND_ONE, D3D11_BLEND_SRC_ALPHA,
+                                                 D3D11_BLEND_ONE);
+        } else if (_flags == 0x2000) {
             if ((m_Block.attributes.flags >> 3) & 1) {
                 context->m_Renderer->SetBlendingEnabled(true);
-                context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE);
-            }
-            else {
+                context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_INV_SRC_ALPHA,
+                                                     D3D11_BLEND_ONE);
+            } else {
                 context->m_Renderer->SetBlendingEnabled(false);
             }
-        }
-        else {
+        } else {
             context->m_Renderer->SetBlendingEnabled(false);
         }
     }
 
     virtual void Draw(RenderContext_t* context) override final
     {
-        if (!m_Visible) return;
+        if (!m_Visible)
+            return;
 
         DrawSkinBatches(context);
     }
 
     virtual void DrawUI() override final
     {
-        static std::array flag_labels = {
-            "Disable Culling", "", "Use Alpha Mask", "Alpha Blending", "Use Feature", "Use Wrinkle Map", "Use Camera Lighting", "",
-            "", "", "", "", "", "", "", "",
-            "", "", "", "", "", "", "", "",
-            "", "", "", "", "", "", "", ""
-        };
+        static std::array flag_labels = {"Disable Culling",
+                                         "",
+                                         "Use Alpha Mask",
+                                         "Alpha Blending",
+                                         "Use Feature",
+                                         "Use Wrinkle Map",
+                                         "Use Camera Lighting",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         "",
+                                         ""};
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 
