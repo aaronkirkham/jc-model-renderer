@@ -360,7 +360,7 @@ void FileLoader::RunFileBatches() noexcept
                     // locate the data for the file
                     for (const auto& entry : table.m_Entries) {
                         // is this the correct file hash?
-                        if (entry.m_Hash == file.first) {
+                        if (entry.m_NameHash == file.first) {
                             has_found_file = true;
 
                             // resize the buffer
@@ -631,9 +631,6 @@ void FileLoader::CompressArchive(std::ostream& stream, StreamArchive_t* archive)
 
     // generate the header
     JustCause3::AvalancheArchive::Header header;
-    strcpy(header.m_Magic, "AAF");
-    header.m_Version = 1;
-    strcpy(header.m_Magic2, "AVALANCHEARCHIVEFORMATISCOOL");
     header.m_TotalUncompressedSize = archive->m_SARCBytes.size();
     header.m_UncompressedBufferSize = num_chunks > 1 ? max_chunk_size : archive->m_SARCBytes.size();
     header.m_ChunkCount = num_chunks;
@@ -648,9 +645,6 @@ void FileLoader::CompressArchive(std::ostream& stream, StreamArchive_t* archive)
     uint32_t last_chunk_offset = 0;
     for (uint32_t i = 0; i < header.m_ChunkCount; ++i) {
         JustCause3::AvalancheArchive::Chunk chunk;
-        chunk.m_Magic = 0x4D415745;
-        chunk.m_CompressedSize = 0; // NOTE: generated later
-        chunk.m_DataSize = 0; // NOTE: generated later
 
         // generate chunks if needed
         if (num_chunks > 1) {
@@ -664,6 +658,7 @@ void FileLoader::CompressArchive(std::ostream& stream, StreamArchive_t* archive)
             chunk.m_UncompressedSize = chunk_size;
             chunk.m_BlockData = std::move(n_block_data);
         }
+        // we only have a single chunk, use the total block size
         else {
             chunk.m_UncompressedSize = block_data.size();
             chunk.m_BlockData = block_data;
@@ -768,6 +763,8 @@ void FileLoader::WriteTOC(const fs::path& filename, StreamArchive_t* archive) no
 void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept
 {
     FileLoader::Get()->ReadFile(filename, [this, filename, callback](bool success, FileBuffer data) {
+        using namespace JustCause3;
+
         if (!success) {
             DEBUG_LOG("ReadTexture -> failed to read \"" << filename << "\".");
             return callback(false, {});
@@ -781,7 +778,7 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
         std::istringstream stream(std::string{ (char *)data.data(), data.size() });
 
         // read the texture data
-        JustCause3::AvalancheTexture texture;
+        AvalancheTexture::Header texture;
         stream.read((char *)&texture, sizeof(texture));
 
         // ensure the header magic is correct
@@ -790,11 +787,31 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
             return callback(false, {});
         }
 
+#if 1
+        {
+            // clang-format off
+            std::stringstream ss;
+            ss << "AVTX m_Flags=" << texture.m_Flags << " (";
+
+            if (texture.m_Flags & AvalancheTexture::STREAMED)       ss << "streamed, ";
+            if (texture.m_Flags & AvalancheTexture::PLACEHOLDER)    ss << "placeholder, ";
+            if (texture.m_Flags & AvalancheTexture::TILED)          ss << "tiled, ";
+            if (texture.m_Flags & AvalancheTexture::SRGB)           ss << "SRGB, ";
+            if (texture.m_Flags & AvalancheTexture::CUBE)           ss << "cube, ";
+            if (texture.m_Flags == 0)                               ss << ", ";
+
+            ss.seekp(-2, ss.cur);
+            ss << ")";
+            DEBUG_LOG(ss.str());
+            // clang-format on
+        }
+#endif
+
         // find the best stream to use
-        auto&[stream_index, load_source] = JustCause3::FindBestTexture(&texture);
+        auto&[stream_index, load_source] = AvalancheTexture::FindBest(&texture);
 
         // find the rank
-        auto rank = JustCause3::GetHighestTextureRank(&texture, stream_index);
+        const auto rank = AvalancheTexture::GetHighestRank(&texture, stream_index);
 
         FileBuffer out;
         out.resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + texture.m_Streams[stream_index].m_Size);
@@ -860,11 +877,13 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
 
 bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) noexcept
 {
+    using namespace JustCause3;
+
     std::istringstream stream(std::string{ (char *)data->data(), data->size() });
 
     // read the texture data
-    JustCause3::AvalancheTexture texture;
-    stream.read((char *)&texture, sizeof(JustCause3::AvalancheTexture));
+    AvalancheTexture::Header texture;
+    stream.read((char*)&texture, sizeof(texture));
 
     // ensure the header magic is correct
     if (texture.m_Magic != 0x58545641) {
@@ -873,10 +892,10 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
     }
 
     // find the best stream to use
-    auto&[stream_index, load_source] = JustCause3::FindBestTexture(&texture, true);
+    auto&[stream_index, load_source] = AvalancheTexture::FindBest(&texture, true);
 
     // find the rank
-    auto rank = JustCause3::GetHighestTextureRank(&texture, stream_index);
+    const auto rank = AvalancheTexture::GetHighestRank(&texture, stream_index);
 
     //
     outData->resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + texture.m_Streams[stream_index].m_Size);
@@ -1273,7 +1292,7 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
 
         // locate the data for the file
         for (const auto& entry : archiveTable.m_Entries) {
-            if (entry.m_Hash == namehash) {
+            if (entry.m_NameHash == namehash) {
                 DEBUG_LOG("FileLoader::ReadFileFromArchive - Found file in archive at " << entry.m_Offset << " (size: " << entry.m_Size << " bytes)");
 
                 // open the file stream

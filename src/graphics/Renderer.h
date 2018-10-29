@@ -219,7 +219,7 @@ class Renderer : public Singleton<Renderer>
 
     // vertex declarations
     VertexDeclaration_t* CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count,
-                                                 VertexShader_t* m_Shader, const char* debugName = nullptr);
+                                                 VertexShader_t* shader, const char* debugName = nullptr);
     void                 DestroyVertexDeclaration(VertexDeclaration_t* declaration);
 
     // samplers

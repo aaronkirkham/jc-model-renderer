@@ -10,6 +10,8 @@ struct CarPaintMMAttributes {
     float    unknown;
 };
 
+static_assert(sizeof(CarPaintMMAttributes) == 0x8, "CarPaintMMAttributes alignment is wrong!");
+
 namespace JustCause3::RenderBlocks
 {
 struct CarPaintMM {
@@ -113,6 +115,11 @@ class RenderBlockCarPaintMM : public IRenderBlock
         return "RenderBlockCarPaintMM";
     }
 
+    virtual uint32_t GetTypeHash() const override final
+    {
+        return RenderBlockFactory::RB_CARPAINTMM;
+    }
+
     virtual bool IsOpaque() override final
     {
         return ~(LOWORD(m_Block.attributes.flags) >> 8) & 1;
@@ -126,38 +133,31 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
         if (m_ShaderName == "carpaintmm") {
             // create the element input desc
+            // clang-format off
             D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,
-                 D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
-                 0},
-                {"TEXCOORD", 2, DXGI_FORMAT_R32G32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
-                 0},
-                {"TEXCOORD", 3, DXGI_FORMAT_R32G32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
-                 0},
-                {"TEXCOORD", 4, DXGI_FORMAT_R32G32_FLOAT, 2, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
-                 0},
+                { "POSITION",   0,  DXGI_FORMAT_R32G32B32_FLOAT,        0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R32G32_FLOAT,           1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   2,  DXGI_FORMAT_R32G32_FLOAT,           1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   3,  DXGI_FORMAT_R32G32_FLOAT,           1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R32G32_FLOAT,           2,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
             };
+            // clang-format on
 
             // create the vertex declaration
             m_VertexDeclaration =
                 Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCarPaintMM");
         } else if (m_ShaderName == "carpaintmm_deform") {
             // create the element input desc
+            // clang-format off
             D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,
-                 D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"TEXCOORD", 0, DXGI_FORMAT_R16G16B16A16_SNORM, 0, D3D11_APPEND_ALIGNED_ELEMENT,
-                 D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
-                 0},
-                {"TEXCOORD", 2, DXGI_FORMAT_R32G32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
-                 0},
-                {"TEXCOORD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT,
-                 D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"TEXCOORD", 4, DXGI_FORMAT_R32G32_FLOAT, 2, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
-                 0},
+                { "POSITION",   0,  DXGI_FORMAT_R32G32B32A32_FLOAT,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R32G32_FLOAT,           1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   2,  DXGI_FORMAT_R32G32_FLOAT,           1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   3,  DXGI_FORMAT_R32G32B32A32_FLOAT,     1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R32G32_FLOAT,           2,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
             };
+            // clang-format on
 
             // create the vertex declaration
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(),
@@ -207,14 +207,14 @@ class RenderBlockCarPaintMM : public IRenderBlock
     {
         using namespace JustCause3::Vertex;
 
-        // read the block header
+        // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
         // read static material params
-        stream.read((char*)&m_cbStaticMaterialParams, sizeof(CarPaintStaticMaterialParams));
+        stream.read((char*)&m_cbStaticMaterialParams, sizeof(m_cbStaticMaterialParams));
 
         // read dynamic material params
-        stream.read((char*)&m_cbDynamicMaterialParams, sizeof(CarPaintDynamicMaterialParams));
+        stream.read((char*)&m_cbDynamicMaterialParams, sizeof(m_cbDynamicMaterialParams));
 
         // read the deform table
         ReadDeformTable(stream, &m_DeformTable);
@@ -296,6 +296,36 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
         // read index buffer
         ReadIndexBuffer(stream, &m_IndexBuffer);
+    }
+
+    virtual void Write(std::ostream& stream) override final
+    {
+        // write the block attributes
+        stream.write((char*)&m_Block, sizeof(m_Block));
+
+        // write the static material params
+        stream.write((char*)&m_cbStaticMaterialParams, sizeof(m_cbStaticMaterialParams));
+
+        // write the dynamic material params
+        stream.write((char*)&m_cbDynamicMaterialParams, sizeof(m_cbDynamicMaterialParams));
+
+        // write the deform table
+        WriteDeformTable(stream, &m_DeformTable);
+
+        // write the materials
+        WriteMaterials(stream);
+
+        // write the vertex buffer
+        WriteVertexBuffer(stream, m_VertexBuffer);
+        WriteVertexBuffer(stream, m_VertexBufferData[0]);
+
+        // write layered UV data
+        if (!((m_Block.attributes.flags & 0x60) == 0)) {
+            WriteVertexBuffer(stream, m_VertexBufferData[1]);
+        }
+
+        // write the index buffer
+        WriteIndexBuffer(stream, m_IndexBuffer);
     }
 
     virtual void Setup(RenderContext_t* context) override final

@@ -47,17 +47,18 @@ class IRenderBlock
         }
     }
 
-    virtual const char* GetTypeName() = 0;
+    virtual const char* GetTypeName()       = 0;
+    virtual uint32_t    GetTypeHash() const = 0;
 
     virtual void SetVisible(bool visible)
     {
         m_Visible = visible;
     }
-    virtual bool IsVisible()
+    virtual bool IsVisible() const
     {
         return m_Visible;
     }
-    virtual float GetScale()
+    virtual float GetScale() const
     {
         return m_ScaleModifier;
     }
@@ -88,8 +89,9 @@ class IRenderBlock
 
     virtual bool IsOpaque() = 0;
 
-    virtual void Create()                 = 0;
-    virtual void Read(std::istream& file) = 0;
+    virtual void Create()                  = 0;
+    virtual void Read(std::istream& file)  = 0;
+    virtual void Write(std::ostream& file) = 0;
 
     virtual void Setup(RenderContext_t* context)
     {
@@ -162,6 +164,12 @@ class IRenderBlock
                                                          "IRenderBlock Vertex Buffer");
     }
 
+    void WriteVertexBuffer(std::ostream& stream, VertexBuffer_t* buffer)
+    {
+        stream.write((char*)&buffer->m_ElementCount, sizeof(buffer->m_ElementCount));
+        stream.write((char*)buffer->m_Data.data(), buffer->m_Data.size());
+    }
+
     void ReadIndexBuffer(std::istream& stream, IndexBuffer_t** outBuffer)
     {
         uint32_t count;
@@ -172,6 +180,19 @@ class IRenderBlock
 
         *outBuffer = Renderer::Get()->CreateIndexBuffer(m_Indices.data(), count, D3D11_USAGE_DEFAULT,
                                                         "IRenderBlock Index Buffer");
+    }
+
+    void WriteIndexBuffer(std::ostream& stream)
+    {
+        auto count = static_cast<uint32_t>(m_Indices.size());
+        stream.write((char*)&count, sizeof(count));
+        stream.write((char*)m_Indices.data(), (count * sizeof(uint16_t)));
+    }
+
+    void WriteIndexBuffer(std::ostream& stream, IndexBuffer_t* buffer)
+    {
+        stream.write((char*)&buffer->m_ElementCount, sizeof(buffer->m_ElementCount));
+        stream.write((char*)buffer->m_Data.data(), (buffer->m_ElementCount * buffer->m_ElementStride));
     }
 
     void ReadMaterials(std::istream& stream)
@@ -206,6 +227,25 @@ class IRenderBlock
         stream.read((char*)&unknown, sizeof(unknown));
     }
 
+    void WriteMaterials(std::ostream& stream)
+    {
+        auto count = static_cast<uint32_t>(m_Materials.size());
+        stream.write((char*)&count, sizeof(count));
+
+        for (const auto& material : m_Materials) {
+            auto str = material.string();
+            std::replace(str.begin(), str.end(), '\\', '/');
+
+            auto length = static_cast<uint32_t>(str.length());
+            stream.write((char*)&length, sizeof(length));
+            stream.write(str.c_str(), length);
+        }
+
+        // TODO: find out what all this is. probably something important...
+        uint32_t unknown[4] = {0};
+        stream.write((char*)&unknown, sizeof(unknown));
+    }
+
     void ReadSkinBatch(std::istream& stream)
     {
         uint32_t count;
@@ -229,6 +269,23 @@ class IRenderBlock
         }
     }
 
+    void WriteSkinBatch(std::ostream& stream)
+    {
+        uint32_t count = m_SkinBatches.size();
+        stream.write((char*)&count, sizeof(count));
+
+        for (const auto& batch : m_SkinBatches) {
+            stream.write((char*)&batch.m_Size, sizeof(batch.m_Size));
+            stream.write((char*)&batch.m_Offset, sizeof(batch.m_Offset));
+            stream.write((char*)&batch.m_BatchSize, sizeof(batch.m_BatchSize));
+
+            if (batch.m_BatchSize != 0) {
+                stream.write((char*)&batch.m_BatchLookup, sizeof(int16_t) * batch.m_BatchSize);
+                __debugbreak();
+            }
+        }
+    }
+
     void ReadDeformTable(std::istream& stream, JustCause3::CDeformTable* deform_table)
     {
         uint32_t deformTable[256];
@@ -241,6 +298,14 @@ class IRenderBlock
             if (data != -1 && deform_table->size < i) {
                 deform_table->size = i;
             }
+        }
+    }
+
+    void WriteDeformTable(std::ostream& stream, JustCause3::CDeformTable* deform_table)
+    {
+        for (uint32_t i = 0; i < 256; ++i) {
+            uint32_t data = deform_table->table[i];
+            stream.write((char*)&data, sizeof(data));
         }
     }
 

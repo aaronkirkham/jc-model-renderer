@@ -254,6 +254,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         });
 
         // register save file type callbacks
+        FileLoader::Get()->RegisterSaveCallback({ ".rbm" }, RenderBlockModel::SaveFileCallback);
         FileLoader::Get()->RegisterSaveCallback({ ".ee", ".bl", ".nl", ".fl" }, AvalancheArchive::SaveFileCallback);
 
         // register file type context menu callbacks

@@ -1,10 +1,10 @@
+#include <DropTarget.h>
 #include <Window.h>
 #include <graphics/Renderer.h>
-#include <DropTarget.h>
 
 #include <ShObjIdl.h>
-#include <shlobj.h>
 #include <shellapi.h>
+#include <shlobj.h>
 
 DropTarget::DropTarget(HWND hwnd)
     : m_Hwnd(hwnd)
@@ -23,12 +23,12 @@ DropTarget::~DropTarget()
 
 HRESULT DropTarget::DragEnter(IDataObject* data_object, DWORD key_stae, POINTL cursor_position, DWORD* effect)
 {
-    FORMATETC fmte = { CF_HDROP, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+    FORMATETC fmte = {CF_HDROP, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
     STGMEDIUM stgm;
     if (SUCCEEDED(data_object->GetData(&fmte, &stgm))) {
         const auto drop = reinterpret_cast<HDROP>(stgm.hGlobal);
 
-        char file[MAX_PATH] = { 0 };
+        char file[MAX_PATH] = {0};
         DragQueryFile(drop, 0, file, MAX_PATH);
 
         SetForegroundWindow(m_Hwnd);
@@ -63,8 +63,7 @@ HRESULT DropTarget::QueryInterface(const IID& iid, void** object)
     *object = NULL;
     if (IsEqualIID(iid, IID_IUnknown) || IsEqualIID(iid, IID_IDropTarget)) {
         *object = this;
-    }
-    else {
+    } else {
         return E_NOINTERFACE;
     }
     AddRef();

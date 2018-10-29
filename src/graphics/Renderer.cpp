@@ -767,12 +767,13 @@ void Renderer::SetSamplerState(SamplerState_t* sampler, int32_t slot)
 }
 
 VertexDeclaration_t* Renderer::CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count,
-                                                       VertexShader_t* m_Shader, const char* debugName)
+                                                       VertexShader_t* shader, const char* debugName)
 {
     auto declaration = new VertexDeclaration_t;
+    assert(declaration);
 
     auto result =
-        m_Device->CreateInputLayout(layout, count, m_Shader->m_Code.data(), m_Shader->m_Size, &declaration->m_Layout);
+        m_Device->CreateInputLayout(layout, count, shader->m_Code.data(), shader->m_Size, &declaration->m_Layout);
     assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS

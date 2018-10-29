@@ -6,6 +6,8 @@
 #include <memory>
 #include <mutex>
 
+static constexpr auto RBM_END_OF_BLOCK = 0x89ABCDEF;
+
 class AvalancheArchive;
 class RuntimeContainer;
 class RenderBlockModel : public Factory<RenderBlockModel>
@@ -26,6 +28,7 @@ class RenderBlockModel : public Factory<RenderBlockModel>
     }
 
     static void ReadFileCallback(const fs::path& filename, const FileBuffer& data, bool external);
+    static bool SaveFileCallback(const fs::path& filename, const fs::path& directory);
     static void Load(const fs::path& filename);
     static void LoadFromRuntimeContainer(const fs::path& filename, std::shared_ptr<RuntimeContainer> rc);
 

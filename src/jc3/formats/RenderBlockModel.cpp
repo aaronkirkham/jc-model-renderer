@@ -74,6 +74,13 @@ bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
     DEBUG_LOG("RenderBlockModel v" << header.m_VersionMajor << "." << header.m_VersionMinor << "."
                                    << header.m_VersionRevision);
     DEBUG_LOG(" - m_NumberOfBlocks=" << header.m_NumberOfBlocks);
+    DEBUG_LOG(" - m_Flags=" << header.m_Flags);
+
+    // ensure we can read the file version (TODO: when JC4 is released, check this)
+    if (header.m_VersionMajor != 1 && header.m_VersionMinor != 16) {
+        __debugbreak();
+        return false;
+    }
 
     m_RenderBlocks.reserve(header.m_NumberOfBlocks);
 
@@ -104,7 +111,7 @@ bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
             stream.read((char*)&checksum, sizeof(uint32_t));
 
             // did we read the block correctly?
-            if (checksum != 0x89ABCDEF) {
+            if (checksum != RBM_END_OF_BLOCK) {
                 DEBUG_LOG("RenderBlockModel::Parse - Failed to read Render Block");
 
                 parse_success = false;
@@ -207,6 +214,43 @@ void RenderBlockModel::ReadFileCallback(const fs::path& filename, const FileBuff
     auto rbm = RenderBlockModel::make(filename);
     assert(rbm);
     rbm->Parse(data);
+}
+
+bool RenderBlockModel::SaveFileCallback(const fs::path& filename, const fs::path& directory)
+{
+    const auto rbm = RenderBlockModel::get(filename.string());
+    if (rbm) {
+        const auto&   path = directory / filename.filename();
+        std::ofstream stream(path, std::ios::binary);
+
+        const auto& render_blocks = rbm->GetRenderBlocks();
+
+        // generate the rbm header
+        JustCause3::RBMHeader header;
+        header.m_BoundingBoxMin = rbm->GetBoundingBox()->GetMin();
+        header.m_BoundingBoxMax = rbm->GetBoundingBox()->GetMax();
+        header.m_NumberOfBlocks = render_blocks.size();
+
+        // write the header
+        stream.write((char*)&header, sizeof(header));
+
+        for (const auto& render_block : render_blocks) {
+            // write the block type hash
+            const auto& type_hash = render_block->GetTypeHash();
+            stream.write((char*)&type_hash, sizeof(type_hash));
+
+            // write the block data
+            render_block->Write(stream);
+
+            // write the end of block checksum
+            stream.write((char*)&RBM_END_OF_BLOCK, sizeof(RBM_END_OF_BLOCK));
+        }
+
+        stream.close();
+        return true;
+    }
+
+    return false;
 }
 
 void RenderBlockModel::Load(const fs::path& filename)
