@@ -222,7 +222,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
         // create the vertex declaration
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
-                                                                        "RenderBlockGeneralMkIII (packed)");
+                                                                       "RenderBlockGeneralMkIII (packed)");
 
         // create the constant buffers
         m_VertexShaderConstants[0] =
@@ -379,8 +379,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
                 // draw the skin batch
                 context->m_Renderer->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
             }
-        }
-        else if (m_Block.attributes.flags & IS_SKINNED) {
+        } else if (m_Block.attributes.flags & IS_SKINNED) {
             // TODO: skinning palette data
             IRenderBlock::DrawSkinBatches(context);
         } else {

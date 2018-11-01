@@ -1353,7 +1353,8 @@ std::tuple<std::string, std::string, uint32_t> FileLoader::LocateFileInDictionar
 
     if (find_it != m_Dictionary.end()) {
         const auto& file = (*find_it);
-        _path = file.second.second.at(0); // TODO: some hierarchy (patches_win64 over archives_win64)
+
+        _path = file.second.second.at(0);
         _namehash = file.first;
 
         // get the directory and archive name

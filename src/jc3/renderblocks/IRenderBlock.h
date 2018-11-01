@@ -234,11 +234,11 @@ class IRenderBlock
         stream.write((char*)&count, sizeof(count));
 
         for (const auto& material : m_Materials) {
-            auto str = material.generic_string();
+            const auto& filename = material.generic_string();
 
-            auto length = static_cast<uint32_t>(str.length());
+            auto length = static_cast<uint32_t>(filename.length());
             stream.write((char*)&length, sizeof(length));
-            stream.write(str.c_str(), length);
+            stream.write(filename.c_str(), length);
         }
 
         // TODO: find out what all this is. probably something important...
