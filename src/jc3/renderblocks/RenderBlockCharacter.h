@@ -33,6 +33,23 @@ struct Character {
 class RenderBlockCharacter : public IRenderBlock
 {
   private:
+    enum {
+        DISABLE_BACKFACE_CULLING   = 0x1,
+        EIGHT_BONES                = 0x2,
+        ALPHA_MASK                 = 0x4,
+        TRANSPARENCY_ALPHABLENDING = 0x8,
+        USE_FEATURE_MAP            = 0x10,
+        USE_WRINKLE_MAP            = 0x20,
+        USE_CAMERA_LIGHTING        = 0x40,
+    };
+
+    enum CharacterAttributeFlags {
+        GEAR      = 0x0,
+        EYES      = 0x1000,
+        HAIR      = 0x2000,
+        BODY_PART = 0x3000,
+    };
+
     struct cbLocalConsts {
         glm::mat4   World;
         glm::mat4   WorldViewProjection;
@@ -78,7 +95,7 @@ class RenderBlockCharacter : public IRenderBlock
     virtual bool IsOpaque() override final
     {
         const auto flags = m_Block.attributes.flags;
-        return (!(flags & 0x3000) || (flags & 0x3000) == 0x2000) && !(flags & 8);
+        return ((flags & BODY_PART) == GEAR || (flags & BODY_PART) == HAIR) && !(flags & TRANSPARENCY_ALPHABLENDING);
     }
 
     virtual void Create() override final
@@ -267,8 +284,8 @@ class RenderBlockCharacter : public IRenderBlock
         ReadMaterials(stream);
 
         // get the vertices stride
-        m_Stride = (3 * ((m_Block.attributes.flags >> 1) & 1) + ((m_Block.attributes.flags >> 5) & 1)
-                    + ((m_Block.attributes.flags >> 4) & 1));
+        const auto flags = m_Block.attributes.flags;
+        m_Stride         = (3 * (flags & EIGHT_BONES) + (flags & USE_WRINKLE_MAP) + (flags & USE_FEATURE_MAP));
 
         // read vertex data
         ReadVertexBuffer(stream, &m_VertexBuffer, VertexStrides[m_Stride]);
@@ -332,32 +349,47 @@ class RenderBlockCharacter : public IRenderBlock
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts);
 
         // set the culling mode
-        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
+                                                                                                  : D3D11_CULL_NONE);
 
-        // toggle alpha blending
-        if ((m_Block.attributes.flags >> 2) & 1) {
-            // context->m_Renderer->SetAlphaEnabled(true);
+        // toggle alpha mask
+        if (m_Block.attributes.flags & ALPHA_MASK) {
+            context->m_Renderer->SetAlphaEnabled(true);
             context->m_Renderer->SetBlendingEnabled(false);
         } else {
-            // context->m_Renderer->SetAlphaEnabled(false);
+            context->m_Renderer->SetAlphaEnabled(false);
         }
 
         // setup blending
-        auto _flags = (m_Block.attributes.flags & 0x3000);
-        if (_flags == 0x1000) {
-            context->m_Renderer->SetBlendingEnabled(true);
-            context->m_Renderer->SetBlendingFunc(D3D11_BLEND_ONE, D3D11_BLEND_ONE, D3D11_BLEND_SRC_ALPHA,
-                                                 D3D11_BLEND_ONE);
-        } else if (_flags == 0x2000) {
-            if ((m_Block.attributes.flags >> 3) & 1) {
-                context->m_Renderer->SetBlendingEnabled(true);
-                context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_INV_SRC_ALPHA,
-                                                     D3D11_BLEND_ONE);
-            } else {
-                context->m_Renderer->SetBlendingEnabled(false);
+        switch (m_Block.attributes.flags & BODY_PART) {
+            case GEAR: {
+                if (m_Block.attributes.flags & TRANSPARENCY_ALPHABLENDING) {
+                    context->m_Renderer->SetBlendingEnabled(true);
+                    context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE,
+                                                         D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE);
+                } else {
+                    context->m_Renderer->SetBlendingEnabled(false);
+                }
+                break;
             }
-        } else {
-            context->m_Renderer->SetBlendingEnabled(false);
+
+            case EYES: {
+                context->m_Renderer->SetBlendingEnabled(true);
+                context->m_Renderer->SetBlendingFunc(D3D11_BLEND_ONE, D3D11_BLEND_ONE, D3D11_BLEND_SRC_ALPHA,
+                                                     D3D11_BLEND_ONE);
+                break;
+            }
+
+            case HAIR: {
+                if (m_Block.attributes.flags & TRANSPARENCY_ALPHABLENDING) {
+                    context->m_Renderer->SetBlendingEnabled(true);
+                    context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE,
+                                                         D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE);
+                } else {
+                    context->m_Renderer->SetBlendingEnabled(false);
+                }
+                break;
+            }
         }
     }
 
@@ -371,38 +403,12 @@ class RenderBlockCharacter : public IRenderBlock
 
     virtual void DrawUI() override final
     {
-        static std::array flag_labels = {"Disable Culling",
-                                         "",
-                                         "Use Alpha Mask",
-                                         "Alpha Blending",
-                                         "Use Feature",
-                                         "Use Wrinkle Map",
-                                         "Use Camera Lighting",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         ""};
+        // clang-format off
+        static std::array flag_labels = {
+            "Disable Backface Culling",     "Eight Bones",                  "Use Alpha Mask",               "Transparency Alpha Blending",
+            "Use Feature Map",              "Use Wrinkle Map",              "Use Camera Lighting",          "",
+        };
+        // clang-format on
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 

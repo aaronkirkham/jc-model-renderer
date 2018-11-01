@@ -24,6 +24,14 @@ struct CharacterSkin {
 class RenderBlockCharacterSkin : public IRenderBlock
 {
   private:
+    enum {
+        DISABLE_BACKFACE_CULLING = 0x1,
+        USE_WRINKLE_MAP          = 0x2,
+        EIGHT_BONES              = 0x4,
+        USE_FEATURE_MAP          = 0x8,
+        ALPHA_MASK               = 0x10,
+    };
+
     struct cbLocalConsts {
         glm::mat4   World;
         glm::mat4   WorldViewProjection;
@@ -257,8 +265,8 @@ class RenderBlockCharacterSkin : public IRenderBlock
         ReadMaterials(stream);
 
         // get the vertices stride
-        m_Stride = (3 * ((m_Block.attributes.flags >> 2) & 1) + ((m_Block.attributes.flags >> 1) & 1)
-                    + ((m_Block.attributes.flags >> 4) & 1));
+        const auto flags = m_Block.attributes.flags;
+        m_Stride         = (3 * (flags & EIGHT_BONES) + (flags & USE_WRINKLE_MAP) + (flags & USE_FEATURE_MAP));
 
         // read vertex data
         ReadVertexBuffer(stream, &m_VertexBuffer, VertexStrides[m_Stride]);
@@ -323,10 +331,11 @@ class RenderBlockCharacterSkin : public IRenderBlock
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts);
 
         // set the culling mode
-        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
+                                                                                                  : D3D11_CULL_NONE);
 
         // setup blending
-        if ((m_Block.attributes.flags >> 5) & 1) {
+        if (m_Block.attributes.flags & ALPHA_MASK) {
             context->m_Renderer->SetBlendingEnabled(false);
             context->m_Renderer->SetAlphaEnabled(false);
         }
@@ -346,38 +355,12 @@ class RenderBlockCharacterSkin : public IRenderBlock
 
     virtual void DrawUI() override final
     {
-        static std::array flag_labels = {"Disable Culling",
-                                         "Use Wrinkle Map",
-                                         "",
-                                         "",
-                                         "Use Feature",
-                                         "Use Alpha Mask",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         ""};
+        // clang-format off
+        static std::array flag_labels = {
+            "Disable Backface Culling",     "Use Wrinkle Map",              "Eight Bones",                  "",
+            "Use Feature Map",              "Use Alpha Mask",               "",                             "",
+        };
+        // clang-format on
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 

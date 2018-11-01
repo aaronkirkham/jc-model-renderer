@@ -24,6 +24,16 @@ struct CarPaintMM {
 class RenderBlockCarPaintMM : public IRenderBlock
 {
   private:
+    enum {
+        LAYERED_ALBEDO_MAP         = 0x20,
+        OVERLAY_ALBEDO_MAP         = 0x40,
+        DISABLE_BACKFACE_CULLING   = 0x80,
+        TRANSPARENCY_ALPHABLENDING = 0x100,
+        TRANSPARENCY_ALPHATESTING  = 0x200,
+        IS_DEFORM                  = 0x1000,
+        IS_SKINNED                 = 0x2000,
+    };
+
     struct RBIInfo {
         glm::mat4 ModelWorldMatrix;
         glm::mat4 ModelWorldMatrixPrev; // [unused]
@@ -122,7 +132,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
     virtual bool IsOpaque() override final
     {
-        return ~(LOWORD(m_Block.attributes.flags) >> 8) & 1;
+        return ~m_Block.attributes.flags & TRANSPARENCY_ALPHABLENDING;
     }
 
     virtual void Create() override final
@@ -223,7 +233,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         ReadMaterials(stream);
 
         // read the vertex buffers
-        if (_bittest((const long*)&m_Block.attributes.flags, 13)) {
+        if (m_Block.attributes.flags & IS_SKINNED) {
             std::vector<UnpackedVertexWithNormal1> vertices;
             ReadVertexBuffer<UnpackedVertexWithNormal1>(stream, &m_VertexBuffer, &vertices);
 
@@ -245,7 +255,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
             // read skin batch
             ReadSkinBatch(stream);
-        } else if (_bittest((const long*)&m_Block.attributes.flags, 12)) {
+        } else if (m_Block.attributes.flags & IS_DEFORM) {
             std::vector<VertexDeformPos> vertices;
             ReadVertexBuffer<VertexDeformPos>(stream, &m_VertexBuffer, &vertices);
 
@@ -284,7 +294,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         }
 
         // read the layered uv data if needed
-        if (!((m_Block.attributes.flags & 0x60) == 0)) {
+        if (m_Block.attributes.flags & (LAYERED_ALBEDO_MAP | OVERLAY_ALBEDO_MAP)) {
             std::vector<UnpackedUV> uvs;
             ReadVertexBuffer<UnpackedUV>(stream, &m_VertexBufferData[1], &uvs);
 
@@ -320,7 +330,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         WriteVertexBuffer(stream, m_VertexBufferData[0]);
 
         // write layered UV data
-        if (!((m_Block.attributes.flags & 0x60) == 0)) {
+        if (m_Block.attributes.flags & (LAYERED_ALBEDO_MAP | OVERLAY_ALBEDO_MAP)) {
             WriteVertexBuffer(stream, m_VertexBufferData[1]);
         }
 
@@ -345,7 +355,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         }
 
         // set the layered albedo map
-        if (m_Block.attributes.flags & 0x20) {
+        if (m_Block.attributes.flags & LAYERED_ALBEDO_MAP) {
             const auto& texture = m_Textures.at(10);
             if (texture && texture->IsLoaded()) {
                 texture->Use(16);
@@ -353,7 +363,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         }
 
         // set the overlay albedo map
-        if (m_Block.attributes.flags & 0x40) {
+        if (m_Block.attributes.flags & OVERLAY_ALBEDO_MAP) {
             const auto& texture = m_Textures.at(11);
             if (texture && texture->IsLoaded()) {
                 texture->Use(17);
@@ -375,7 +385,8 @@ class RenderBlockCarPaintMM : public IRenderBlock
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[3], 8, m_cbRBIInfo);
 
         // set the culling mode
-        context->m_Renderer->SetCullMode(static_cast<D3D11_CULL_MODE>(~(m_Block.attributes.flags >> 6) & 2 | 1));
+        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
+                                                                                                  : D3D11_CULL_NONE);
 
         // set the 2nd and 3rd vertex buffers
         context->m_Renderer->SetVertexStream(m_VertexBufferData[0], 1);
@@ -387,11 +398,11 @@ class RenderBlockCarPaintMM : public IRenderBlock
         if (!m_Visible)
             return;
 
-        if (m_Block.attributes.flags & 0x2000) {
+        if (m_Block.attributes.flags & IS_SKINNED) {
             IRenderBlock::DrawSkinBatches(context);
         } else {
             // set deform data
-            if (m_Block.attributes.flags & 0x1000) {
+            if (m_Block.attributes.flags & IS_DEFORM) {
                 // TODO
             }
 
@@ -401,38 +412,14 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
     virtual void DrawUI() override final
     {
-        static std::array flag_labels = {"",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "Layered Albedo Map",
-                                         "Overlay Albedo Map",
-                                         "Disable Culling",
-                                         "Is Transparent",
-                                         "Alpha Test Enabled",
-                                         "",
-                                         "",
-                                         "Is Deformable",
-                                         "Is Skinned",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         ""};
+        // clang-format off
+        static std::array flag_labels = {
+            "",                             "",                             "",                             "",
+            "",                             "Layered Albedo Map",           "Overlay Albedo Map",           "Disable Backface Culling",
+            "Transparency Alpha Blending",  "Transparency Alpha Testing",   "",                             "",
+            "Is Deformable",                "Is Skinned",                   "",                             ""
+        };
+        // clang-format on
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 

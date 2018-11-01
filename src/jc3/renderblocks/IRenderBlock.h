@@ -4,6 +4,7 @@
 #include <graphics/ShaderManager.h>
 #include <graphics/TextureManager.h>
 #include <graphics/Types.h>
+#include <graphics/imgui/imgui_disabled.h>
 #include <graphics/imgui/imgui_bitfield.h>
 #include <jc3/Types.h>
 

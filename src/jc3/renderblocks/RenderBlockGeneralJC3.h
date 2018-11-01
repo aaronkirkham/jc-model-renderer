@@ -34,6 +34,12 @@ struct GeneralJC3 {
 class RenderBlockGeneralJC3 : public IRenderBlock
 {
   private:
+    enum {
+        DISABLE_BACKFACE_CULLING   = 0x1,
+        TRANSPARENCY_ALPHABLENDING = 0x2,
+        DYNAMIC_EMISSIVE           = 0x4,
+    };
+
     struct cbVertexInstanceConsts {
         glm::mat4 viewProjection;
         glm::mat4 world;
@@ -96,7 +102,7 @@ class RenderBlockGeneralJC3 : public IRenderBlock
 
     virtual bool IsOpaque() override final
     {
-        return ~(m_Block.attributes.flags >> 1) & 1;
+        return ~m_Block.attributes.flags & TRANSPARENCY_ALPHABLENDING;
     }
 
     virtual void Create() override final
@@ -153,11 +159,6 @@ class RenderBlockGeneralJC3 : public IRenderBlock
 
         // read the vertex buffers
         if (m_Block.attributes.packed.format != 1) {
-#ifdef DEBUG
-            OutputDebugString("RenderBlockGeneralJC3 is using unpacked vertices!\n");
-            __debugbreak();
-#endif
-
             std::vector<UnpackedVertexPosition2UV> vertices;
             ReadVertexBuffer<UnpackedVertexPosition2UV>(stream, &m_VertexBuffer, &vertices);
 
@@ -250,7 +251,8 @@ class RenderBlockGeneralJC3 : public IRenderBlock
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbFragmentInstanceConsts);
 
         // set the culling mode
-        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
+                                                                                                  : D3D11_CULL_NONE);
 
         // if we are using packed vertices, set the 2nd vertex buffer
         if (m_Block.attributes.packed.format == 1) {
@@ -260,38 +262,12 @@ class RenderBlockGeneralJC3 : public IRenderBlock
 
     virtual void DrawUI() override final
     {
-        static std::array flag_labels = {"Disable Culling",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         ""};
+        // clang-format off
+        static std::array flag_labels = {
+            "Disable Backface Culling",     "Transparency Alpha Blending",  "Dynamic Emissive",             "",
+            "",                             "",                             "",                             ""
+        };
+        // clang-format on
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 

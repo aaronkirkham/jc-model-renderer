@@ -29,6 +29,12 @@ struct CarLight {
 class RenderBlockCarLight : public IRenderBlock
 {
   private:
+    enum {
+        DISABLE_BACKFACE_CULLING = 0x1,
+        IS_DEFORM                = 0x4,
+        IS_SKINNED               = 0x8,
+    };
+
     struct RBIInfo {
         glm::mat4 ModelWorldMatrix;
         glm::mat4 ModelWorldMatrixPrev; // [unused]
@@ -157,7 +163,7 @@ class RenderBlockCarLight : public IRenderBlock
         ReadMaterials(stream);
 
         // read vertex buffers
-        if (m_Block.attributes.flags & 8) {
+        if (m_Block.attributes.flags & IS_SKINNED) {
             std::vector<UnpackedVertexWithNormal1> vertices;
             ReadVertexBuffer<UnpackedVertexWithNormal1>(stream, &m_VertexBuffer, &vertices);
 
@@ -177,7 +183,7 @@ class RenderBlockCarLight : public IRenderBlock
 
             // read skin batches
             ReadSkinBatch(stream);
-        } else if (m_Block.attributes.flags & 4) {
+        } else if (m_Block.attributes.flags & IS_DEFORM) {
             std::vector<VertexDeformPos> vertices;
             ReadVertexBuffer<VertexDeformPos>(stream, &m_VertexBuffer, &vertices);
 
@@ -270,7 +276,8 @@ class RenderBlockCarLight : public IRenderBlock
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants, 2, m_cbMaterialConsts);
 
         // set the culling mode
-        context->m_Renderer->SetCullMode(static_cast<D3D11_CULL_MODE>(~(m_Block.attributes.flags >> 3) & 2 | 1));
+        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
+                                                                                                  : D3D11_CULL_NONE);
 
         // set the 2nd and 3rd vertex buffers
         context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
@@ -282,7 +289,7 @@ class RenderBlockCarLight : public IRenderBlock
         if (!m_Visible)
             return;
 
-        if (m_Block.attributes.flags & 8) {
+        if (m_Block.attributes.flags & IS_SKINNED) {
             IRenderBlock::DrawSkinBatches(context);
         } else {
             IRenderBlock::Draw(context);
@@ -291,13 +298,12 @@ class RenderBlockCarLight : public IRenderBlock
 
     virtual void DrawUI() override final
     {
-        static std::array flag_labels = {"", "", "", "Is Skinned", "Disable Culling",
-                                         "", "", "", "",           "",
-                                         "", "", "", "",           "",
-                                         "", "", "", "",           "",
-                                         "", "", "", "",           "",
-                                         "", "", "", "",           "",
-                                         "", ""};
+        // clang-format off
+        static std::array flag_labels = {
+            "Disable Backface Culling",     "",                             "Is Deformable",                "Is Skinned",
+            "",                             "",                             "",                             ""
+        };
+        // clang-format on
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 

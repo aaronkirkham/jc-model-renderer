@@ -35,6 +35,10 @@ struct Window {
 class RenderBlockWindow : public IRenderBlock
 {
   private:
+    enum {
+        ENABLE_BACKFACE_CULLING = 0x1,
+    };
+
     struct cbInstanceConsts {
         glm::mat4 World;
         glm::mat4 WorldViewProjection;
@@ -216,7 +220,7 @@ class RenderBlockWindow : public IRenderBlock
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants, 1, m_cbMaterialConsts);
 
         // set the culling mode
-        if (m_Block.attributes.flags & 1) {
+        if (m_Block.attributes.flags & ENABLE_BACKFACE_CULLING) {
             context->m_Renderer->SetCullMode(D3D11_CULL_BACK);
         }
     }
@@ -226,7 +230,7 @@ class RenderBlockWindow : public IRenderBlock
         if (!m_Visible)
             return;
 
-        if (!(m_Block.attributes.flags & 1)) {
+        if (!(m_Block.attributes.flags & ENABLE_BACKFACE_CULLING)) {
             context->m_Renderer->SetCullMode(D3D11_CULL_FRONT);
             IRenderBlock::Draw(context);
             context->m_Renderer->SetCullMode(D3D11_CULL_BACK);
@@ -237,38 +241,12 @@ class RenderBlockWindow : public IRenderBlock
 
     virtual void DrawUI() override final
     {
-        static std::array flag_labels = {"Disable Culling",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         ""};
+        // clang-format off
+        static std::array flag_labels = {
+            "Enable Backface Culling",      "",                             "",                             "",
+            "",                             "",                             "",                             ""
+        };
+        // clang-format on
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 

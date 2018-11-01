@@ -30,6 +30,20 @@ struct GeneralMkIII {
 class RenderBlockGeneralMkIII : public IRenderBlock
 {
   private:
+    enum {
+        DISABLE_BACKFACE_CULLING   = 0x1,
+        TRANSPARENCY_ALPHABLENDING = 0x2,
+        TRANSPARENCY_ALPHATESTING  = 0x4,
+        DYNAMIC_EMISSIVE           = 0x8,
+        IS_SKINNED                 = 0x20,
+        USE_LAYERED                = 0x80,
+        USE_OVERLAY                = 0x100,
+        USE_DECAL                  = 0x200,
+        USE_DAMAGE                 = 0x400,
+        ANISOTROPIC_FILTERING      = 0x4000,
+        DESTRUCTION                = 0x8000,
+    };
+
     struct RBIInfo {
         glm::mat4 ModelWorldMatrix;
         glm::mat4 ModelWorldMatrixPrev; // [unused]
@@ -168,7 +182,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
     virtual bool IsOpaque() override final
     {
-        return ~(m_Block.attributes.flags >> 1) & 1;
+        return ~m_Block.attributes.flags & TRANSPARENCY_ALPHABLENDING;
     }
 
     virtual void Create() override final
@@ -198,24 +212,34 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         }
         else {
 #endif
-        // if (m_Block.attributes.flags & 0x20) {
-        //    __debugbreak();
-        //}
-        // else {
+        if (m_Block.attributes.flags & IS_SKINNED) {
+            // clang-format off
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R32G32B32A32_FLOAT,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   2,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   3,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+            // clang-format on
 
-        // clang-format off
-        D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-            { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   2,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            { "TEXCOORD",   3,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-        };
-        // clang-format on
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
+                                                                           "RenderBlockGeneralMkIII (unpacked)");
 
-        // create the vertex declaration
-        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
-                                                                       "RenderBlockGeneralMkIII (packed)");
-        //}
-        //}
+            __debugbreak();
+        } else {
+
+            // clang-format off
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   2,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   3,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+            // clang-format on
+
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
+                                                                           "RenderBlockGeneralMkIII (packed)");
+        }
 
         // create the constant buffers
         m_VertexShaderConstants[0] =
@@ -228,7 +252,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts2, 18, "RenderBlockGeneralMkIII MaterialConsts2");
 
         // create skinning palette buffer
-        if (m_Block.attributes.flags & 0x8020) {
+        if (m_Block.attributes.flags & (IS_SKINNED | DESTRUCTION)) {
             m_VertexShaderConstants[2] =
                 Renderer::Get()->CreateConstantBuffer(m_cbSkinningConsts, "RenderBlockGeneralMkIII SkinningConsts");
 
@@ -256,7 +280,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         ReadMaterials(stream);
 
         // read the vertex buffer
-        if (m_Block.attributes.flags & 0x20) {
+        if (m_Block.attributes.flags & IS_SKINNED) {
             std::vector<UnpackedVertexPositionXYZW> vertices;
             ReadVertexBuffer<UnpackedVertexPositionXYZW>(stream, &m_VertexBuffer, &vertices);
 
@@ -290,7 +314,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         }
 
         // read skin batches
-        if (m_Block.attributes.flags & 0x8020) {
+        if (m_Block.attributes.flags & (IS_SKINNED | DESTRUCTION)) {
             ReadSkinBatch(stream);
         }
 
@@ -314,7 +338,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         WriteVertexBuffer(stream, m_VertexBufferData);
 
         // write the skin batches
-        if (m_Block.attributes.flags & 0x8020) {
+        if (m_Block.attributes.flags & (IS_SKINNED | DESTRUCTION)) {
             WriteSkinBatch(stream);
         }
 
@@ -339,7 +363,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             m_cbInstanceAttributes.DepthBias         = m_Block.attributes.depthBias;
             m_cbInstanceAttributes.QuantizationScale = m_Block.attributes.packed.scale * m_ScaleModifier;
             m_cbInstanceAttributes.EmissiveTODScale =
-                (m_Block.attributes.flags & 8 ? m_Block.attributes.emissiveTODScale : 1.0f);
+                (m_Block.attributes.flags & DYNAMIC_EMISSIVE ? m_Block.attributes.emissiveTODScale : 1.0f);
             m_cbInstanceAttributes.EmissiveStartFadeDistSq = m_Block.attributes.emissiveStartFadeDistSq;
         }
 
@@ -350,7 +374,8 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts2);
 
         // set the culling mode
-        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
+        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
+                                                                                                  : D3D11_CULL_NONE);
 
         // set the 2nd vertex buffers
         context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
@@ -361,8 +386,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         if (!m_Visible)
             return;
 
-        // does the block have skin batches?
-        if (m_Block.attributes.flags & 0x8000) {
+        if (m_Block.attributes.flags & DESTRUCTION) {
             // skin batches
             for (auto& batch : m_SkinBatches) {
                 // set the skinning palette data
@@ -372,8 +396,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
                 context->m_Renderer->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
             }
         }
-        // does the block have packed vertices?
-        else if (m_Block.attributes.flags & 0x20) {
+        else if (m_Block.attributes.flags & IS_SKINNED) {
             //__debugbreak();
 
             // Test model: main_character parachute!
@@ -386,44 +409,23 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
     virtual void DrawUI() override final
     {
-        // flags & 2 = something with transparency?
-
-        static std::array flag_labels = {"Disable Culling",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "Has Packed Vertices",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "Use Anisotropic Filtering",
-                                         "Has Skin Batches",
-
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         "",
-                                         ""};
+        // clang-format off
+        static std::array flag_labels = {
+            "Disable Backface Culling",     "Transparency Alpha Blending",  "Transparency Alpha Testing",   "Dynamic Emissive",
+            "",                             "Is Skinned",                   "",                             "Use Layered",
+            "Use Overlay",                  "Use Decal",                    "Use Damage",                   "",
+            "",                             "",                             "Use Anisotropic Filtering",    "Destruction"
+        };
+        // clang-format on
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
+
+        ImGui::SliderFloat("Depth Bias", &m_Block.attributes.depthBias, 0, 1);
+
+        ImGuiCustom::PushDisabled(!(m_Block.attributes.flags & DYNAMIC_EMISSIVE));
+        ImGui::SliderFloat("Emissive Scale", &m_Block.attributes.emissiveTODScale, 0, 1);
+        ImGuiCustom::PopDisabled();
     }
 };
