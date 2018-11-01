@@ -49,9 +49,7 @@ void AvalancheArchive::AddFile(const fs::path& filename, const FileBuffer& data)
     assert(m_StreamArchive);
     assert(m_FileList);
 
-    // replace backslashes
-    auto name = filename.string();
-    std::replace(name.begin(), name.end(), '\\', '/');
+    const auto& name = filename.generic_string();
 
     if (!m_StreamArchive->HasFile(name)) {
         m_FileList->Add(name);

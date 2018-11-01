@@ -3,6 +3,7 @@
 #include <graphics/Renderer.h>
 #include <graphics/TextureManager.h>
 #include <jc3/FileLoader.h>
+#include <jc3/hashlittle.h>
 
 #include <graphics/imgui/fonts/fontawesome5_icons.h>
 
@@ -15,7 +16,7 @@ Texture::Texture(const fs::path& filename)
 
 Texture::~Texture()
 {
-    DEBUG_LOG("Texture::~Texture - Deleting texture '" << m_Filename.filename().string() << "'...");
+    DEBUG_LOG("Texture::~Texture - Deleting texture '" << m_Filename.filename() << "'...");
 
     SAFE_RELEASE(m_SRV);
     SAFE_RELEASE(m_Texture);
@@ -64,11 +65,11 @@ bool Texture::LoadFromBuffer(const FileBuffer& buffer)
     m_Buffer = std::move(buffer);
 
     if (FAILED(result)) {
-        DEBUG_LOG("[ERROR] Texture::Create - Failed to create texture '" << m_Filename.filename().string() << "'.");
+        DEBUG_LOG("[ERROR] Texture::LoadFromBuffer - Failed to create texture '" << m_Filename.filename() << "'.");
         return false;
     }
 
-    DEBUG_LOG("Texture::Create - '" << m_Filename.filename().string() << "', m_Texture=" << m_Texture
+    DEBUG_LOG("Texture::Create - '" << m_Filename.filename() << "', m_Texture=" << m_Texture
                                     << ", SRV=" << m_SRV);
 
     return SUCCEEDED(result);
@@ -82,7 +83,7 @@ bool Texture::LoadFromFile(const fs::path& filename)
 
     std::ifstream stream(filename.c_str(), std::ios::binary);
     if (stream.fail()) {
-        DEBUG_LOG("[ERROR] Failed to create texture from file '" << filename.filename().string() << "'.");
+        DEBUG_LOG("[ERROR] Failed to create texture from file '" << filename.filename() << "'.");
         return false;
     }
 
@@ -90,7 +91,7 @@ bool Texture::LoadFromFile(const fs::path& filename)
     buffer.resize(size);
     stream.read((char*)buffer.data(), size);
 
-    DEBUG_LOG("Texture::LoadFromFile - Read " << size << " bytes from " << filename.filename().string());
+    DEBUG_LOG("Texture::LoadFromFile - Read " << size << " bytes from " << filename.filename());
 
     auto result = LoadFromBuffer(buffer);
     stream.close();
@@ -101,6 +102,11 @@ void Texture::Use(uint32_t slot)
 {
     assert(m_SRV != nullptr);
     Renderer::Get()->GetDeviceContext()->PSSetShaderResources(slot, 1, &m_SRV);
+}
+
+uint32_t Texture::GetHash() const
+{
+    return hashlittle(m_Filename.generic_string().c_str());
 }
 
 TextureManager::TextureManager()

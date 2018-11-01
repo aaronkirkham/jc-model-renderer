@@ -760,6 +760,27 @@ void FileLoader::WriteTOC(const fs::path& filename, StreamArchive_t* archive) no
     stream.close();
 }
 
+static void DEBUG_TEXTURE_FLAGS(const uint32_t flags)
+{
+    using namespace JustCause3::AvalancheTexture;
+
+    // clang-format off
+    std::stringstream ss;
+    ss << "AVTX m_Flags=" << flags << " (";
+
+    if (flags & STREAMED)       ss << "streamed, ";
+    if (flags & PLACEHOLDER)    ss << "placeholder, ";
+    if (flags & TILED)          ss << "tiled, ";
+    if (flags & SRGB)           ss << "SRGB, ";
+    if (flags & CUBE)           ss << "cube, ";
+    if (flags == 0)             ss << ", ";
+
+    ss.seekp(-2, ss.cur);
+    ss << ")";
+    DEBUG_LOG(ss.str());
+    // clang-format on
+}
+
 void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept
 {
     FileLoader::Get()->ReadFile(filename, [this, filename, callback](bool success, FileBuffer data) {
@@ -787,25 +808,7 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
             return callback(false, {});
         }
 
-#if 1
-        {
-            // clang-format off
-            std::stringstream ss;
-            ss << "AVTX m_Flags=" << texture.m_Flags << " (";
-
-            if (texture.m_Flags & AvalancheTexture::STREAMED)       ss << "streamed, ";
-            if (texture.m_Flags & AvalancheTexture::PLACEHOLDER)    ss << "placeholder, ";
-            if (texture.m_Flags & AvalancheTexture::TILED)          ss << "tiled, ";
-            if (texture.m_Flags & AvalancheTexture::SRGB)           ss << "SRGB, ";
-            if (texture.m_Flags & AvalancheTexture::CUBE)           ss << "cube, ";
-            if (texture.m_Flags == 0)                               ss << ", ";
-
-            ss.seekp(-2, ss.cur);
-            ss << ")";
-            DEBUG_LOG(ss.str());
-            // clang-format on
-        }
-#endif
+        DEBUG_TEXTURE_FLAGS(texture.m_Flags);
 
         // find the best stream to use
         auto&[stream_index, load_source] = AvalancheTexture::FindBest(&texture);
@@ -890,6 +893,8 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
         DEBUG_LOG("ParseCompressedTexture -> invalid magic");
         return false;
     }
+
+    DEBUG_TEXTURE_FLAGS(texture.m_Flags);
 
     // find the best stream to use
     auto&[stream_index, load_source] = AvalancheTexture::FindBest(&texture, true);
@@ -1330,12 +1335,10 @@ std::tuple<std::string, std::string, uint32_t> FileLoader::LocateFileInDictionar
     std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 #endif
 
-    // we are looking for forward slashes only!
-    auto& _filename = filename.string();
-    std::replace(_filename.begin(), _filename.end(), '\\', '/');
-
     std::string directory_name, archive_name;
     std::string _path;
+
+    const auto& _filename = filename.generic_string();
     auto _namehash = hashlittle(_filename.c_str());
 
     // try find the namehash first to save some time
@@ -1344,7 +1347,7 @@ std::tuple<std::string, std::string, uint32_t> FileLoader::LocateFileInDictionar
         // namehash doesn't exist, look for part of the filename
         find_it = std::find_if(m_Dictionary.begin(), m_Dictionary.end(), [&](const std::pair<uint32_t, std::pair<fs::path, std::vector<std::string>>>& item) {
             const auto& item_fn = item.second.first;
-            return item_fn == _filename || (item_fn.string().find(_filename) != std::string::npos && item_fn.extension() == filename.extension());
+            return item_fn == _filename || (item_fn.generic_string().find(_filename) != std::string::npos && item_fn.extension() == filename.extension());
         });
     }
 

@@ -26,16 +26,20 @@ class Texture
     {
         return (m_Texture != nullptr && m_SRV != nullptr);
     }
-    const fs::path& GetPath()
+
+    const fs::path& GetPath() const
     {
         return m_Filename;
     }
 
-    ID3D11Resource* GetResource()
+    uint32_t GetHash() const;
+
+    ID3D11Resource* GetResource() const
     {
         return m_Texture;
     }
-    ID3D11ShaderResourceView* GetSRV()
+
+    ID3D11ShaderResourceView* GetSRV() const
     {
         return m_SRV;
     }
@@ -44,7 +48,8 @@ class Texture
     {
         return m_Size;
     }
-    const FileBuffer& GetBuffer()
+
+    const FileBuffer& GetBuffer() const
     {
         return m_Buffer;
     }
@@ -60,9 +65,9 @@ class TextureManager : public Singleton<TextureManager>
 
   public:
     enum TextureCreateFlags {
-        NO_CREATE            = (1u << 0),
-        CREATE_IF_NOT_EXISTS = (1u << 1),
-        IS_UI_RENDERABLE     = (1u << 2),
+        NO_CREATE            = 0x1,
+        CREATE_IF_NOT_EXISTS = 0x2,
+        IS_UI_RENDERABLE     = 0x4,
     };
 
     TextureManager();
@@ -88,7 +93,8 @@ class TextureManager : public Singleton<TextureManager>
     {
         return m_Textures;
     }
-    std::size_t GetCacheSize()
+
+    std::size_t GetCacheSize() const
     {
         return m_Textures.size();
     }

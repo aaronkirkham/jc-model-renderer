@@ -234,8 +234,7 @@ class IRenderBlock
         stream.write((char*)&count, sizeof(count));
 
         for (const auto& material : m_Materials) {
-            auto str = material.string();
-            std::replace(str.begin(), str.end(), '\\', '/');
+            auto str = material.generic_string();
 
             auto length = static_cast<uint32_t>(str.length());
             stream.write((char*)&length, sizeof(length));

@@ -212,34 +212,17 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         }
         else {
 #endif
-        if (m_Block.attributes.flags & IS_SKINNED) {
-            // clang-format off
-            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                { "POSITION",   0,  DXGI_FORMAT_R32G32B32A32_FLOAT,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   2,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   3,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            };
-            // clang-format on
+        // clang-format off
+        D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+            { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            { "TEXCOORD",   2,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            { "TEXCOORD",   3,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+        };
+        // clang-format on
 
-            // create the vertex declaration
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
-                                                                           "RenderBlockGeneralMkIII (unpacked)");
-
-            __debugbreak();
-        } else {
-
-            // clang-format off
-            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   2,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                { "TEXCOORD",   3,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-            };
-            // clang-format on
-
-            // create the vertex declaration
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
-                                                                           "RenderBlockGeneralMkIII (packed)");
-        }
+        // create the vertex declaration
+        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
+                                                                        "RenderBlockGeneralMkIII (packed)");
 
         // create the constant buffers
         m_VertexShaderConstants[0] =
@@ -279,6 +262,11 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         // read the materials
         ReadMaterials(stream);
 
+        // models/jc_environments/structures/military/shared/textures/metal_grating_001_alpha_dif.ddsc
+        if (m_Textures[0] && m_Textures[0]->GetHash() == 0x7D1AF10D) {
+            m_Block.attributes.flags |= ANISOTROPIC_FILTERING;
+        }
+
         // read the vertex buffer
         if (m_Block.attributes.flags & IS_SKINNED) {
             std::vector<UnpackedVertexPositionXYZW> vertices;
@@ -289,8 +277,6 @@ class RenderBlockGeneralMkIII : public IRenderBlock
                 m_Vertices.emplace_back(vertex.y * m_Block.attributes.packed.scale);
                 m_Vertices.emplace_back(vertex.z * m_Block.attributes.packed.scale);
             }
-
-            OutputDebugStringA("read unpacked vertices!\n");
         } else {
             std::vector<PackedVertexPosition> vertices;
             ReadVertexBuffer<PackedVertexPosition>(stream, &m_VertexBuffer, &vertices);
@@ -300,8 +286,6 @@ class RenderBlockGeneralMkIII : public IRenderBlock
                 m_Vertices.emplace_back(unpack(vertex.y) * m_Block.attributes.packed.scale);
                 m_Vertices.emplace_back(unpack(vertex.z) * m_Block.attributes.packed.scale);
             }
-
-            OutputDebugStringA("read packed vertices!\n");
         }
 
         // read the vertex buffer data
@@ -397,11 +381,8 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             }
         }
         else if (m_Block.attributes.flags & IS_SKINNED) {
-            //__debugbreak();
-
-            // Test model: main_character parachute!
-
-            IRenderBlock::Draw(context);
+            // TODO: skinning palette data
+            IRenderBlock::DrawSkinBatches(context);
         } else {
             IRenderBlock::Draw(context);
         }
