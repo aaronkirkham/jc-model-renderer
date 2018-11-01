@@ -117,9 +117,10 @@ bool AvalancheArchive::SaveFileCallback(const fs::path& filename, const fs::path
         // and check if we have edited any of those files. if so we need to include it in the repack of the SARC
 
         std::thread([&, archive, filename, directory, status_text_id] {
-            // generate the .ee.toc
             auto toc = filename;
-            toc.replace_extension(".ee.toc");
+            toc += ".toc";
+
+            // write the .toc file
             const auto& toc_path = directory / toc.filename();
             FileLoader::Get()->WriteTOC(toc_path, archive->m_StreamArchive.get());
 
