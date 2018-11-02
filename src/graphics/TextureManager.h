@@ -1,60 +1,11 @@
 #pragma once
 
 #include <StdInc.h>
-#include <graphics/DDSTextureLoader.h>
+#include <graphics/Texture.h>
 #include <singleton.h>
 #include <thread>
 
-class Texture
-{
-  private:
-    ID3D11Resource*           m_Texture  = nullptr;
-    ID3D11ShaderResourceView* m_SRV      = nullptr;
-    fs::path                  m_Filename = "";
-    glm::vec2                 m_Size     = glm::vec2(0);
-    FileBuffer                m_Buffer;
-
-  public:
-    Texture(const fs::path& filename);
-    virtual ~Texture();
-
-    bool LoadFromBuffer(const FileBuffer& buffer);
-    bool LoadFromFile(const fs::path& filename);
-    void Use(uint32_t slot);
-
-    bool IsLoaded() const
-    {
-        return (m_Texture != nullptr && m_SRV != nullptr);
-    }
-
-    const fs::path& GetPath() const
-    {
-        return m_Filename;
-    }
-
-    uint32_t GetHash() const;
-
-    ID3D11Resource* GetResource() const
-    {
-        return m_Texture;
-    }
-
-    ID3D11ShaderResourceView* GetSRV() const
-    {
-        return m_SRV;
-    }
-
-    const glm::vec2& GetSize() const
-    {
-        return m_Size;
-    }
-
-    const FileBuffer& GetBuffer() const
-    {
-        return m_Buffer;
-    }
-};
-
+struct DDS_PIXELFORMAT;
 class TextureManager : public Singleton<TextureManager>
 {
   private:

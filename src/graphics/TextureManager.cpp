@@ -1,113 +1,13 @@
 #include <Window.h>
 #include <fnv1.h>
+#include <graphics/DDSTextureLoader.h>
 #include <graphics/Renderer.h>
 #include <graphics/TextureManager.h>
 #include <jc3/FileLoader.h>
-#include <jc3/hashlittle.h>
 
 #include <graphics/imgui/fonts/fontawesome5_icons.h>
 
 #include <graphics/UI.h>
-
-Texture::Texture(const fs::path& filename)
-    : m_Filename(filename)
-{
-}
-
-Texture::~Texture()
-{
-    DEBUG_LOG("Texture::~Texture - Deleting texture '" << m_Filename.filename() << "'...");
-
-    SAFE_RELEASE(m_SRV);
-    SAFE_RELEASE(m_Texture);
-}
-
-bool Texture::LoadFromBuffer(const FileBuffer& buffer)
-{
-    if (buffer.empty()) {
-        return false;
-    }
-
-#ifdef DEBUG
-    if (m_SRV || m_Texture) {
-        DEBUG_LOG("Texture::LoadFromBuffer - texture already exists. deleting old one...");
-    }
-#endif
-
-    SAFE_RELEASE(m_SRV);
-    SAFE_RELEASE(m_Texture);
-
-    // create the dds texture resources
-    auto result = DirectX::CreateDDSTextureFromMemory(Renderer::Get()->GetDevice(), buffer.data(), buffer.size(),
-                                                      &m_Texture, &m_SRV);
-
-    // get the texture size
-    if (SUCCEEDED(result)) {
-        ID3D11Texture2D* _tex = nullptr;
-        result                = m_Texture->QueryInterface(&_tex);
-        assert(SUCCEEDED(result));
-
-        D3D11_TEXTURE2D_DESC desc;
-        _tex->GetDesc(&desc);
-        _tex->Release();
-
-        m_Size = {desc.Width, desc.Height};
-
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
-        auto& fn = m_Filename.filename().string();
-        D3D_SET_OBJECT_NAME_A(m_Texture, fn.c_str());
-        fn += " (SRV)";
-        D3D_SET_OBJECT_NAME_A(m_Texture, fn.c_str());
-#endif
-    }
-
-    // store the buffer
-    m_Buffer = std::move(buffer);
-
-    if (FAILED(result)) {
-        DEBUG_LOG("[ERROR] Texture::LoadFromBuffer - Failed to create texture '" << m_Filename.filename() << "'.");
-        return false;
-    }
-
-    DEBUG_LOG("Texture::Create - '" << m_Filename.filename() << "', m_Texture=" << m_Texture
-                                    << ", SRV=" << m_SRV);
-
-    return SUCCEEDED(result);
-}
-
-bool Texture::LoadFromFile(const fs::path& filename)
-{
-    m_Filename = filename;
-
-    const auto size = fs::file_size(filename);
-
-    std::ifstream stream(filename.c_str(), std::ios::binary);
-    if (stream.fail()) {
-        DEBUG_LOG("[ERROR] Failed to create texture from file '" << filename.filename() << "'.");
-        return false;
-    }
-
-    FileBuffer buffer;
-    buffer.resize(size);
-    stream.read((char*)buffer.data(), size);
-
-    DEBUG_LOG("Texture::LoadFromFile - Read " << size << " bytes from " << filename.filename());
-
-    auto result = LoadFromBuffer(buffer);
-    stream.close();
-    return result;
-}
-
-void Texture::Use(uint32_t slot)
-{
-    assert(m_SRV != nullptr);
-    Renderer::Get()->GetDeviceContext()->PSSetShaderResources(slot, 1, &m_SRV);
-}
-
-uint32_t Texture::GetHash() const
-{
-    return hashlittle(m_Filename.generic_string().c_str());
-}
 
 TextureManager::TextureManager()
 {
@@ -120,7 +20,7 @@ TextureManager::TextureManager()
             const auto texture = (*it);
 
             std::stringstream ss;
-            ss << ICON_FA_FILE_IMAGE << "  " << texture->GetPath().stem();
+            ss << ICON_FA_FILE_IMAGE << "  " << texture->GetPath().filename();
 
             // maintain aspect ratio
             ImGui::SetNextWindowSizeConstraints({128, 128}, {FLT_MAX, FLT_MAX}, [](ImGuiSizeCallbackData* data) {
@@ -189,7 +89,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, ui
         // load the texture
         FileLoader::Get()->ReadTexture(filename, [&, key, filename](bool success, FileBuffer data) {
             if (success && HasTexture(filename)) {
-                m_Textures[key]->LoadFromBuffer(data);
+                m_Textures[key]->LoadFromBuffer(&data);
             }
         });
 
@@ -221,7 +121,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, Fi
     // do we want to create the texture?
     if (flags & CREATE_IF_NOT_EXISTS) {
         m_Textures[key] = std::make_shared<Texture>(filename);
-        if (!m_Textures[key]->LoadFromBuffer(*buffer)) {
+        if (!m_Textures[key]->LoadFromBuffer(buffer)) {
             DEBUG_LOG("TextureManager::GetTexture - Failed to load texture from buffer!");
         }
 
@@ -298,7 +198,7 @@ void TextureManager::PreviewTexture(std::shared_ptr<Texture> texture)
 DDS_PIXELFORMAT TextureManager::GetPixelFormat(DXGI_FORMAT format)
 {
     DDS_PIXELFORMAT pixelFormat;
-    pixelFormat.size = 32;
+    pixelFormat.size = sizeof(DDS_PIXELFORMAT);
 
     switch (format) {
         case DXGI_FORMAT_BC1_UNORM: {
@@ -334,7 +234,7 @@ DDS_PIXELFORMAT TextureManager::GetPixelFormat(DXGI_FORMAT format)
             break;
         }
 
-        case DXGI_FORMAT_R8G8B8A8_UNORM: {
+        case DXGI_FORMAT_B8G8R8A8_UNORM: {
             pixelFormat.flags       = (DDS_RGB | DDS_ALPHA);
             pixelFormat.RGBBitCount = 32; // A8B8G8R8
             pixelFormat.RBitMask    = 0x00FF0000;
@@ -349,7 +249,7 @@ DDS_PIXELFORMAT TextureManager::GetPixelFormat(DXGI_FORMAT format)
         case DXGI_FORMAT_BC4_UNORM:
         case DXGI_FORMAT_BC5_UNORM:
         case DXGI_FORMAT_BC7_UNORM: {
-            pixelFormat.fourCC = 0x30315844;
+            pixelFormat.fourCC = 0x30315844; // DX10
             break;
         }
     }

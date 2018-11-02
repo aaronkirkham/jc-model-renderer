@@ -21,6 +21,8 @@
 #include <import_export/DDSC.h>
 #include <import_export/AvalancheArchive.h>
 
+#include <graphics/DDSTextureLoader.h>
+
 extern fs::path g_JC3Directory = "";
 extern bool g_DrawBoundingBoxes = true;
 extern bool g_ShowModelLabels = true;
@@ -239,11 +241,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterReadCallback({ ".rbm" }, RenderBlockModel::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({ ".ee", ".bl", ".nl", ".fl" }, AvalancheArchive::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({ ".epe", ".blo" }, RuntimeContainer::ReadFileCallback);
-        FileLoader::Get()->RegisterReadCallback({ ".dds", ".ddsc" }, [&](const fs::path& filename, FileBuffer data, bool external) {
+        FileLoader::Get()->RegisterReadCallback({ ".dds", ".ddsc", ".hmddsc" }, [&](const fs::path& filename, FileBuffer data, bool external) {
             // parse the compressed texture if the file was loaded from an external source
-            if (external && filename.extension() == ".ddsc") {
-                FileBuffer out;
-                if (FileLoader::Get()->ParseCompressedTexture(&data, &out)) {
+            if (external) {
+                if (filename.extension() == ".ddsc") {
+                    FileBuffer out;
+                    if (FileLoader::Get()->ParseCompressedTexture(&data, &out)) {
+                        TextureManager::Get()->GetTexture(filename, &out, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
+                        return true;
+                    }
+                }
+                else if (filename.extension() == ".hmddsc") {
+                    FileBuffer out;
+                    FileLoader::Get()->ParseHMDDSCTexture(&data, &out);
                     TextureManager::Get()->GetTexture(filename, &out, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
                     return true;
                 }

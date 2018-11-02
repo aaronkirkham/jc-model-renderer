@@ -7,7 +7,6 @@
 #include <Window.h>
 
 #include <graphics/Camera.h>
-#include <graphics/DebugRenderer.h>
 #include <graphics/Renderer.h>
 #include <graphics/UI.h>
 #include <graphics/imgui/fonts/fontawesome5_icons.h>

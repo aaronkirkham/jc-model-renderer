@@ -25,8 +25,12 @@ class RenderBlockCarPaintMM : public IRenderBlock
 {
   private:
     enum {
-        LAYERED_ALBEDO_MAP         = 0x20,
-        OVERLAY_ALBEDO_MAP         = 0x40,
+        SUPPORT_DECALS             = 0x1,
+        SUPPORT_DAMAGE_BLEND       = 0x2,
+        SUPPORT_DIRT               = 0x4,
+        SUPPORT_SOFT_TINT          = 0x10,
+        SUPPORT_LAYERED            = 0x20,
+        SUPPORT_OVERLAY            = 0x40,
         DISABLE_BACKFACE_CULLING   = 0x80,
         TRANSPARENCY_ALPHABLENDING = 0x100,
         TRANSPARENCY_ALPHATESTING  = 0x200,
@@ -174,6 +178,15 @@ class RenderBlockCarPaintMM : public IRenderBlock
                                                                            "RenderBlockCarPaintMM (deform)");
         } else if (m_ShaderName == "carpaintmm_skinned") {
             __debugbreak();
+
+            /*
+                POSITION, 0, DXGI_FORMAT_R32G32B32_FLOAT, 		0, 0, 0, 0
+                TEXCOORD, 0, DXGI_FORMAT_R8G8B8A8_UINT, 		0, 12, 0, 0
+                TEXCOORD, 1, DXGI_FORMAT_R32G32_FLOAT, 			1, 0, 0, 0
+                TEXCOORD, 2, DXGI_FORMAT_R32G32_FLOAT, 			1, 8, 0, 0
+                TEXCOORD, 3, DXGI_FORMAT_R32G32_FLOAT, 			1, 16, 0, 0
+                TEXCOORD, 4, DXGI_FORMAT_R32G32_FLOAT, 			2, 0, 0, 0
+            */
         }
 
         //
@@ -222,6 +235,16 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
         // read static material params
         stream.read((char*)&m_cbStaticMaterialParams, sizeof(m_cbStaticMaterialParams));
+
+        std::stringstream ss;
+        ss << "SupportDecals=" << m_cbStaticMaterialParams.SupportDecals << std::endl;
+        ss << "SupportDmgBlend=" << m_cbStaticMaterialParams.SupportDmgBlend << std::endl;
+        ss << "SupportLayered=" << m_cbStaticMaterialParams.SupportLayered << std::endl;
+        ss << "SupportOverlay=" << m_cbStaticMaterialParams.SupportOverlay << std::endl;
+        ss << "SupportRotating=" << m_cbStaticMaterialParams.SupportRotating << std::endl;
+        ss << "SupportDirt=" << m_cbStaticMaterialParams.SupportDirt << std::endl;
+        ss << "SupportSoftTint=" << m_cbStaticMaterialParams.SupportSoftTint << std::endl;
+        OutputDebugString(ss.str().c_str());
 
         // read dynamic material params
         stream.read((char*)&m_cbDynamicMaterialParams, sizeof(m_cbDynamicMaterialParams));
@@ -294,7 +317,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         }
 
         // read the layered uv data if needed
-        if (m_Block.attributes.flags & (LAYERED_ALBEDO_MAP | OVERLAY_ALBEDO_MAP)) {
+        if (m_Block.attributes.flags & (SUPPORT_LAYERED | SUPPORT_OVERLAY)) {
             std::vector<UnpackedUV> uvs;
             ReadVertexBuffer<UnpackedUV>(stream, &m_VertexBufferData[1], &uvs);
 
@@ -330,7 +353,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         WriteVertexBuffer(stream, m_VertexBufferData[0]);
 
         // write layered UV data
-        if (m_Block.attributes.flags & (LAYERED_ALBEDO_MAP | OVERLAY_ALBEDO_MAP)) {
+        if (m_Block.attributes.flags & (SUPPORT_LAYERED | SUPPORT_OVERLAY)) {
             WriteVertexBuffer(stream, m_VertexBufferData[1]);
         }
 
@@ -355,7 +378,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         }
 
         // set the layered albedo map
-        if (m_Block.attributes.flags & LAYERED_ALBEDO_MAP) {
+        if (m_Block.attributes.flags & SUPPORT_LAYERED) {
             const auto& texture = m_Textures.at(10);
             if (texture && texture->IsLoaded()) {
                 texture->Use(16);
@@ -363,7 +386,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         }
 
         // set the overlay albedo map
-        if (m_Block.attributes.flags & OVERLAY_ALBEDO_MAP) {
+        if (m_Block.attributes.flags & SUPPORT_OVERLAY) {
             const auto& texture = m_Textures.at(11);
             if (texture && texture->IsLoaded()) {
                 texture->Use(17);
@@ -414,21 +437,31 @@ class RenderBlockCarPaintMM : public IRenderBlock
     {
         // clang-format off
         static std::array flag_labels = {
-            "",                             "",                             "",                             "",
-            "",                             "Layered Albedo Map",           "Overlay Albedo Map",           "Disable Backface Culling",
+            "Support Decals",               "Support Damage Blend",         "Support Dirt",                 "",
+            "Support Soft Tint",            "Support Layered",              "Support Overlay",              "Disable Backface Culling",
             "Transparency Alpha Blending",  "Transparency Alpha Testing",   "",                             "",
             "Is Deformable",                "Is Skinned",                   "",                             ""
         };
         // clang-format on
 
-        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+        if (ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels)) {
+            // update static material params
+            m_cbStaticMaterialParams.SupportDecals   = m_Block.attributes.flags & SUPPORT_DECALS;
+            m_cbStaticMaterialParams.SupportDmgBlend = m_Block.attributes.flags & SUPPORT_DAMAGE_BLEND;
+            m_cbStaticMaterialParams.SupportLayered  = m_Block.attributes.flags & SUPPORT_LAYERED;
+            m_cbStaticMaterialParams.SupportOverlay  = m_Block.attributes.flags & SUPPORT_OVERLAY;
+            m_cbStaticMaterialParams.SupportDirt     = m_Block.attributes.flags & SUPPORT_DIRT;
+            m_cbStaticMaterialParams.SupportSoftTint = m_Block.attributes.flags & SUPPORT_SOFT_TINT;
+        }
 
+#if 0
         ImGui::Text("World");
         ImGui::Separator();
         ImGui::InputFloat4("m0", glm::value_ptr(world[0]));
         ImGui::InputFloat4("m1", glm::value_ptr(world[1]));
         ImGui::InputFloat4("m2", glm::value_ptr(world[2]));
         ImGui::InputFloat4("m3", glm::value_ptr(world[3]));
+#endif
 
         ImGui::ColorEdit3("Diffuse Colour", glm::value_ptr(m_cbRBIInfo.ModelDiffuseColor));
 
@@ -439,24 +472,38 @@ class RenderBlockCarPaintMM : public IRenderBlock
         ImGui::SliderFloat4("Clear Coat", glm::value_ptr(m_cbStaticMaterialParams.m_ClearCoat), 0, 1);
         ImGui::SliderFloat4("Emissive", glm::value_ptr(m_cbStaticMaterialParams.m_Emissive), 0, 1);
         ImGui::SliderFloat4("Diffuse Wrap", glm::value_ptr(m_cbStaticMaterialParams.m_DiffuseWrap), 0, 1);
-        ImGui::SliderFloat4("Dirt Params", glm::value_ptr(m_cbStaticMaterialParams.m_DirtParams), 0, 1);
-        ImGui::SliderFloat4("Dirt Blend", glm::value_ptr(m_cbStaticMaterialParams.m_DirtBlend), 0, 1);
-        ImGui::ColorEdit3("Dirt Colour", glm::value_ptr(m_cbStaticMaterialParams.m_DirtColor));
-        ImGui::SliderFloat4("Decal Width", glm::value_ptr(m_cbStaticMaterialParams.m_DecalWidth), 0, 1);
-        ImGui::ColorEdit3("Decal 1 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal1Color));
-        ImGui::ColorEdit3("Decal 2 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal2Color));
-        ImGui::ColorEdit3("Decal 3 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal3Color));
-        ImGui::ColorEdit3("Decal 4 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal4Color));
-        ImGui::SliderFloat4("Decal Blend", glm::value_ptr(m_cbStaticMaterialParams.m_DecalBlend), 0, 1);
-        ImGui::SliderFloat4("Damage", glm::value_ptr(m_cbStaticMaterialParams.m_Damage), 0, 1);
-        ImGui::SliderFloat4("Damage Blend", glm::value_ptr(m_cbStaticMaterialParams.m_DamageBlend), 0, 1);
-        ImGui::SliderFloat4("Damage Colour", glm::value_ptr(m_cbStaticMaterialParams.m_DamageColor), 0, 1);
-        ImGui::Checkbox("Support Decals", (bool*)&m_cbStaticMaterialParams.SupportDecals);
-        ImGui::Checkbox("Support Damage Blend", (bool*)&m_cbStaticMaterialParams.SupportDmgBlend);
-        ImGui::Checkbox("Support Layered", (bool*)&m_cbStaticMaterialParams.SupportLayered);
-        ImGui::Checkbox("Support Overlay", (bool*)&m_cbStaticMaterialParams.SupportOverlay);
-        ImGui::Checkbox("Support Dirt", (bool*)&m_cbStaticMaterialParams.SupportDirt);
-        ImGui::Checkbox("Support Soft Tint", (bool*)&m_cbStaticMaterialParams.SupportSoftTint);
+
+        // supports decals
+        ImGuiCustom::PushDisabled(!(m_Block.attributes.flags & SUPPORT_DECALS));
+        {
+            ImGui::SliderFloat4("Decal Index", glm::value_ptr(m_cbDynamicObjectParams.m_DecalIndex), 0, 1);
+            ImGui::SliderFloat4("Decal Width", glm::value_ptr(m_cbStaticMaterialParams.m_DecalWidth), 0, 1);
+            ImGui::ColorEdit3("Decal 1 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal1Color));
+            ImGui::ColorEdit3("Decal 2 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal2Color));
+            ImGui::ColorEdit3("Decal 3 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal3Color));
+            ImGui::ColorEdit3("Decal 4 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal4Color));
+            ImGui::SliderFloat4("Decal Blend", glm::value_ptr(m_cbStaticMaterialParams.m_DecalBlend), 0, 1);
+        }
+        ImGuiCustom::PopDisabled();
+
+        // suports damage
+        ImGuiCustom::PushDisabled(!(m_Block.attributes.flags & SUPPORT_DAMAGE_BLEND));
+        {
+            ImGui::SliderFloat4("Damage", glm::value_ptr(m_cbStaticMaterialParams.m_Damage), 0, 1);
+            ImGui::SliderFloat4("Damage Blend", glm::value_ptr(m_cbStaticMaterialParams.m_DamageBlend), 0, 1);
+            ImGui::ColorEdit4("Damage Colour", glm::value_ptr(m_cbStaticMaterialParams.m_DamageColor));
+        }
+        ImGuiCustom::PopDisabled();
+
+        // supports dirt
+        ImGuiCustom::PushDisabled(!(m_Block.attributes.flags & SUPPORT_DIRT));
+        {
+            ImGui::SliderFloat("Dirt Amount", &m_cbDynamicObjectParams.m_DirtAmount, 0, 5);
+            ImGui::SliderFloat4("Dirt Params", glm::value_ptr(m_cbStaticMaterialParams.m_DirtParams), 0, 1);
+            ImGui::SliderFloat4("Dirt Blend", glm::value_ptr(m_cbStaticMaterialParams.m_DirtBlend), 0, 1);
+            ImGui::ColorEdit3("Dirt Colour", glm::value_ptr(m_cbStaticMaterialParams.m_DirtColor));
+        }
+        ImGuiCustom::PopDisabled();
 
         ImGui::Text("Dynamic Material Params");
         ImGui::Separator();

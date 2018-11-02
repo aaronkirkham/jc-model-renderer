@@ -68,6 +68,7 @@ public:
     // textures
     void ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept;
     bool ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) noexcept;
+    void ParseHMDDSCTexture(FileBuffer* data, FileBuffer* outData) noexcept;
 
     // runtime containers
     void WriteRuntimeContainer(RuntimeContainer* runtime_container) noexcept;

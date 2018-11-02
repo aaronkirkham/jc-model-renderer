@@ -1,0 +1,31 @@
+#pragma once
+
+#include <StdInc.h>
+
+class Texture
+{
+  private:
+    ID3D11Resource*           m_Texture  = nullptr;
+    ID3D11ShaderResourceView* m_SRV      = nullptr;
+    fs::path                  m_Filename = "";
+    uint32_t                  m_NameHash = 0;
+    glm::vec2                 m_Size     = glm::vec2(0);
+    FileBuffer                m_Buffer;
+
+  public:
+    Texture(const fs::path& filename);
+    virtual ~Texture();
+
+    bool LoadFromBuffer(FileBuffer* buffer);
+    bool LoadFromFile(const fs::path& filename);
+    void Use(uint32_t slot);
+
+    bool              IsLoaded() const;
+    const fs::path&   GetPath() const;
+    const uint32_t    GetHash() const;
+    const glm::vec2&  GetSize() const;
+    const FileBuffer& GetBuffer() const;
+
+    ID3D11Resource*           GetResource() const;
+    ID3D11ShaderResourceView* GetSRV() const;
+};

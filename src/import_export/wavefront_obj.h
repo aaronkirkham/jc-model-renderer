@@ -15,14 +15,17 @@ class Wavefront_Obj : public IImportExporter
     {
         return IE_TYPE_EXPORTER;
     }
+
     const char* GetName() override final
     {
         return "Wavefront";
     }
+
     std::vector<const char*> GetInputExtensions() override final
     {
         return {".rbm"};
     }
+
     const char* GetOutputExtension() override final
     {
         return ".obj";

@@ -15,14 +15,17 @@ class DDSC : public IImportExporter
     {
         return IE_TYPE_EXPORTER;
     }
+
     const char* GetName() override final
     {
         return "DirectDraw Surface";
     }
+
     std::vector<const char*> GetInputExtensions() override final
     {
         return {".ddsc", ".hmddsc"};
     }
+
     const char* GetOutputExtension() override final
     {
         return ".dds";

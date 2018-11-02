@@ -1,5 +1,4 @@
 #include <graphics/Camera.h>
-#include <graphics/DebugRenderer.h>
 #include <graphics/Renderer.h>
 #include <graphics/ShaderManager.h>
 #include <graphics/TextureManager.h>

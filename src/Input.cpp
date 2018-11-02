@@ -5,8 +5,6 @@
 
 #include <windowsx.h>
 
-#include <graphics/DebugRenderer.h>
-
 void Input::Initialise()
 {
     // reset all keys if we lose window focus

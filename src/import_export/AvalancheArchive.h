@@ -15,14 +15,17 @@ class AvalancheArchive : public IImportExporter
     {
         return IE_TYPE_EXPORTER;
     }
+
     const char* GetName() override final
     {
         return "Avalanche Archive";
     }
+
     std::vector<const char*> GetInputExtensions() override final
     {
         return {".ee", ".bl", ".nl", ".fl"};
     }
+
     const char* GetOutputExtension() override final
     {
         return "/";

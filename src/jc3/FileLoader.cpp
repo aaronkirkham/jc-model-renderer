@@ -788,12 +788,42 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
 
         if (!success) {
             DEBUG_LOG("ReadTexture -> failed to read \"" << filename << "\".");
+
+            // look for hmddsc
+            if (filename.extension() == ".ddsc") {
+                auto hmddsc_filename = filename;
+                hmddsc_filename.replace_extension(".hmddsc");
+
+                DEBUG_LOG("ReadTexture -> ddsc failed. looking for \"" << hmddsc_filename << "\".");
+
+                auto cb = [&, callback](bool success, FileBuffer data) {
+                    FileBuffer d;
+                    ParseHMDDSCTexture(&data, &d);
+                    return callback(true, std::move(d));
+                };
+
+                if (FileLoader::UseBatches) {
+                    FileLoader::Get()->ReadFileBatched(hmddsc_filename, cb);
+                } else {
+                    FileLoader::Get()->ReadFile(hmddsc_filename, cb, SKIP_TEXTURE_LOADER);
+                }
+
+                return;
+            }
+
             return callback(false, {});
         }
 
         // generic DDS handler
         if (filename.extension() == ".dds") {
             return callback(true, std::move(data));
+        }
+
+        // HMDDSC buffer
+        if (filename.extension() == ".hmddsc") {
+            FileBuffer d;
+            ParseHMDDSCTexture(&data, &d);
+            return callback(true, std::move(d));
         }
 
         std::istringstream stream(std::string{ (char *)data.data(), data.size() });
@@ -824,13 +854,13 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
             DDS_HEADER header;
             ZeroMemory(&header, sizeof(header));
             header.size = sizeof(DDS_HEADER);
-            header.flags = (0x1007 | 0x20000);
+            header.flags = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
             header.width = texture.m_Width >> rank;
             header.height = texture.m_Height >> rank;
             header.depth = texture.m_Depth;
             header.mipMapCount = 1;
             header.ddspf = TextureManager::GetPixelFormat(texture.m_Format);
-            header.caps = (8 | 0x1000);
+            header.caps = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
 
             // write the magic and header
             std::memcpy(&out.front(), (char *)&DDS_MAGIC, sizeof(DDS_MAGIC));
@@ -860,7 +890,7 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
             };
 
             if (FileLoader::UseBatches) {
-                DEBUG_LOG("FileLoader::ReadTexture - Using batches for \"" << filename << "\"");
+                DEBUG_LOG("FileLoader::ReadTexture - Using batches for \"" << source_filename << "\"");
                 FileLoader::Get()->ReadFileBatched(source_filename, cb);
             }
             else {
@@ -910,13 +940,13 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
         DDS_HEADER header;
         ZeroMemory(&header, sizeof(header));
         header.size = sizeof(DDS_HEADER);
-        header.flags = (0x1007 | 0x20000);
+        header.flags = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
         header.width = texture.m_Width >> rank;
         header.height = texture.m_Height >> rank;
         header.depth = texture.m_Depth;
         header.mipMapCount = 1;
         header.ddspf = TextureManager::GetPixelFormat(texture.m_Format);
-        header.caps = (8 | 0x1000);
+        header.caps = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
 
         // write the magic and header
         std::memcpy(&outData->front(), (char *)&DDS_MAGIC, sizeof(DDS_MAGIC));
@@ -928,6 +958,28 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
     stream.read((char *)outData->data() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER), texture.m_Streams[stream_index].m_Size);
 
     return true;
+}
+
+void FileLoader::ParseHMDDSCTexture(FileBuffer* data, FileBuffer* outData) noexcept
+{
+    assert(data && data->size() > 0);
+
+    DDS_HEADER header;
+    ZeroMemory(&header, sizeof(header));
+    header.size = sizeof(DDS_HEADER);
+    header.flags = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
+    header.width = 512;
+    header.height = 512;
+    header.depth = 1;
+    header.mipMapCount = 1;
+    header.ddspf = TextureManager::GetPixelFormat(DXGI_FORMAT_BC1_UNORM);
+    header.caps = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
+
+    outData->resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + data->size());
+
+    std::memcpy(&outData->front(), (char *)&DDS_MAGIC, sizeof(DDS_MAGIC));
+    std::memcpy(&outData->front() + sizeof(DDS_MAGIC), (char *)&header, sizeof(DDS_HEADER));
+    std::memcpy(&outData->front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER), data->data(), data->size());
 }
 
 void FileLoader::WriteRuntimeContainer(RuntimeContainer* runtime_container) noexcept
