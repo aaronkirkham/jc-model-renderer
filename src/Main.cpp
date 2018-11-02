@@ -21,8 +21,6 @@
 #include <import_export/DDSC.h>
 #include <import_export/AvalancheArchive.h>
 
-#include <graphics/DDSTextureLoader.h>
-
 extern fs::path g_JC3Directory = "";
 extern bool g_DrawBoundingBoxes = true;
 extern bool g_ShowModelLabels = true;
