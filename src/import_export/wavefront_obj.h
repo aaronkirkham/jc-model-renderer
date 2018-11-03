@@ -46,14 +46,14 @@ class Wavefront_Obj : public IImportExporter
         for (const auto& block : model->GetRenderBlocks()) {
             out_stream << "g " << block->GetTypeName() << std::endl;
 
+            const auto & [vertices, indices, uvs] = block->GetData();
+
             // vertices
-            const auto& vertices = block->GetVertices();
             for (auto i = 0; i < vertices.size(); i += 3) {
                 out_stream << "v " << vertices[i] << " " << vertices[i + 1] << " " << vertices[i + 2] << std::endl;
             }
 
             // uvs
-            const auto& uvs = block->GetUVs();
             for (auto i = 0; i < uvs.size(); i += 2) {
                 out_stream << "vt " << uvs[i] << " " << uvs[i + 1] << std::endl;
             }
@@ -62,7 +62,6 @@ class Wavefront_Obj : public IImportExporter
             // TODO
 
             // faces
-            const auto& indices = block->GetIndices();
             for (auto i = 0; i < indices.size(); i += 3) {
                 const auto f1 = indices[i] + 1;
                 const auto f2 = indices[i + 1] + 1;
@@ -76,7 +75,7 @@ class Wavefront_Obj : public IImportExporter
 
             // materials
             const auto& textures = block->GetTextures();
-            
+
             // only diffuse texture for now
             out_stream << "newmtl " << textures[0]->GetPath().stem() << std::endl;
             out_stream << "map_Kd " << textures[0]->GetPath().stem() << ".dds" << std::endl;

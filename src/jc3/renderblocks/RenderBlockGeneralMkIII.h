@@ -21,7 +21,7 @@ static_assert(sizeof(GeneralMkIIIAttributes) == 0x68, "GeneralMkIIIAttributes al
 namespace JustCause3::RenderBlocks
 {
 struct GeneralMkIII {
-    uint8_t                version;
+    uint8_t                version = 5;
     GeneralMkIIIAttributes attributes;
 };
 }; // namespace JustCause3::RenderBlocks
@@ -187,6 +187,10 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
     virtual void Create() override final
     {
+        // reset constants
+        memset(&m_cbInstanceAttributes, 0, sizeof(m_cbInstanceAttributes));
+        memset(&m_cbMaterialConsts, 0, sizeof(m_cbMaterialConsts));
+
         // load shaders
         m_VertexShader = ShaderManager::Get()->GetVertexShader(m_ShaderName);
         m_PixelShader  = ShaderManager::Get()->GetPixelShader("generalmkiii");
@@ -244,9 +248,6 @@ class RenderBlockGeneralMkIII : public IRenderBlock
                 m_cbSkinningConsts.MatrixPalette[i] = glm::vec4(1);
             }
         }
-
-        // reset material constants
-        memset(&m_cbMaterialConsts, 0, sizeof(m_cbMaterialConsts));
     }
 
     virtual void Read(std::istream& stream) override final
@@ -269,33 +270,13 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
         // read the vertex buffer
         if (m_Block.attributes.flags & IS_SKINNED) {
-            std::vector<UnpackedVertexPositionXYZW> vertices;
-            ReadVertexBuffer<UnpackedVertexPositionXYZW>(stream, &m_VertexBuffer, &vertices);
-
-            for (const auto& vertex : vertices) {
-                m_Vertices.emplace_back(vertex.x * m_Block.attributes.packed.scale);
-                m_Vertices.emplace_back(vertex.y * m_Block.attributes.packed.scale);
-                m_Vertices.emplace_back(vertex.z * m_Block.attributes.packed.scale);
-            }
+            m_VertexBuffer = ReadVertexBuffer<UnpackedVertexPositionXYZW>(stream);
         } else {
-            std::vector<PackedVertexPosition> vertices;
-            ReadVertexBuffer<PackedVertexPosition>(stream, &m_VertexBuffer, &vertices);
-
-            for (const auto& vertex : vertices) {
-                m_Vertices.emplace_back(unpack(vertex.x) * m_Block.attributes.packed.scale);
-                m_Vertices.emplace_back(unpack(vertex.y) * m_Block.attributes.packed.scale);
-                m_Vertices.emplace_back(unpack(vertex.z) * m_Block.attributes.packed.scale);
-            }
+            m_VertexBuffer = ReadVertexBuffer<PackedVertexPosition>(stream);
         }
 
         // read the vertex buffer data
-        std::vector<GeneralShortPacked> vertices_data;
-        ReadVertexBuffer<GeneralShortPacked>(stream, &m_VertexBufferData, &vertices_data);
-
-        for (const auto& data : vertices_data) {
-            m_UVs.emplace_back(unpack(data.u0) * m_Block.attributes.packed.uv0Extent.x);
-            m_UVs.emplace_back(unpack(data.v0) * m_Block.attributes.packed.uv0Extent.y);
-        }
+        m_VertexBufferData = ReadVertexBuffer<GeneralShortPacked>(stream);
 
         // read skin batches
         if (m_Block.attributes.flags & (IS_SKINNED | DESTRUCTION)) {
@@ -303,7 +284,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         }
 
         // read index buffer
-        ReadIndexBuffer(stream, &m_IndexBuffer);
+        m_IndexBuffer = ReadIndexBuffer(stream);
     }
 
     virtual void Write(std::ostream& stream) override final
@@ -318,8 +299,8 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         WriteMaterials(stream);
 
         // write the vertex buffer
-        WriteVertexBuffer(stream, m_VertexBuffer);
-        WriteVertexBuffer(stream, m_VertexBufferData);
+        WriteBuffer(stream, m_VertexBuffer);
+        WriteBuffer(stream, m_VertexBufferData);
 
         // write the skin batches
         if (m_Block.attributes.flags & (IS_SKINNED | DESTRUCTION)) {
@@ -327,7 +308,189 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         }
 
         // write the index buffer
-        WriteIndexBuffer(stream, m_IndexBuffer);
+        WriteBuffer(stream, m_IndexBuffer);
+    }
+
+    virtual void SetData(Vertices_t* vertices, Indices_t* indices, UVs_t* uvs) override final
+    {
+        using namespace JustCause3::Vertex;
+
+        // clang-format off
+
+        memset(&m_Block.attributes, 0, sizeof(m_Block.attributes));
+        memset(&m_cbMaterialConsts2, 0, sizeof(m_cbMaterialConsts2));
+
+        m_Block.attributes.packed.scale = 1.f;
+        m_Block.attributes.packed.uv0Extent = { 1.f, 1.f };
+        m_Block.attributes.emissiveStartFadeDistSq = 2000.f;
+
+        // test
+        m_MaterialParams[0] = 1.0f;
+        m_MaterialParams[1] = 1.0f;
+        m_MaterialParams[2] = 1.0f;
+        m_MaterialParams[3] = 1.0f;
+  
+        // vertices
+        std::vector<glm::vec3> _vertices;
+        {
+            static const char* _vertices_strings[] = {
+                "v 0.500000 -0.500000 0.500000",
+                "v 0.500000 -0.500000 -0.500000",
+                "v 0.500000 0.500000 0.500000",
+                "v 0.500000 0.500000 -0.500000",
+                "v -0.500000 0.500000 0.500000",
+                "v -0.500000 0.500000 -0.500000",
+                "v -0.500000 -0.500000 0.500000",
+                "v -0.500000 -0.500000 -0.500000",
+            };
+
+            for (int i = 0; i < ARRAYSIZE(_vertices_strings); ++i) {
+                float x, y, z;
+                sscanf(_vertices_strings[i], "v %f %f %f", &x, &y, &z);
+
+                _vertices.emplace_back(glm::vec3{ x, y, z });
+            }
+        }
+
+        // indices
+        std::vector<uint16_t> vertex_indices;
+        std::vector<uint16_t> uv_indices;
+        {
+            static const char* faces[] = {
+                "f 1/1/1 2/2/1 3/3/1",
+                "f 3/3/1 2/2/1 4/4/1",
+                "f 3/1/2 4/2/2 5/3/2",
+                "f 5/3/2 4/2/2 6/4/2",
+                "f 5/4/3 6/3/3 7/2/3",
+                "f 7/2/3 6/3/3 8/1/3",
+                "f 7/1/4 8/2/4 1/3/4",
+                "f 1/3/4 8/2/4 2/4/4",
+                "f 2/1/5 8/2/5 4/3/5",
+                "f 4/3/5 8/2/5 6/4/5",
+                "f 7/1/6 1/2/6 5/3/6",
+                "f 5/3/6 1/2/6 3/4/6",
+            };
+
+            // 36
+
+            for (int i = 0; i < ARRAYSIZE(faces); ++i) {
+                int v_index[3], uv_index[3], n_index[3];
+
+                sscanf(faces[i], "f %d/%d/%d %d/%d/%d %d/%d/%d",
+                    &v_index[0], &uv_index[0], &n_index[0],
+                    &v_index[1], &uv_index[1], &n_index[1],
+                    &v_index[2], &uv_index[2], &n_index[2]);
+
+                // vertex indices
+                vertex_indices.emplace_back(v_index[0] - 1);
+                vertex_indices.emplace_back(v_index[1] - 1);
+                vertex_indices.emplace_back(v_index[2] - 1);
+
+                // uv indices
+                uv_indices.emplace_back(uv_index[0] - 1);
+                uv_indices.emplace_back(uv_index[1] - 1);
+                uv_indices.emplace_back(uv_index[2] - 1);
+            }
+        }
+
+        // uvs
+        std::vector<glm::vec2> _uvs;
+        {
+            static const char* _uv_strings[] = {
+                "vt 0.000000 0.000000",
+                "vt 1.000000 0.000000",
+                "vt 0.000000 1.000000",
+                "vt 1.000000 1.000000",
+            };
+
+            for (int i = 0; i < ARRAYSIZE(_uv_strings); ++i) {
+                float x, y;
+                sscanf(_uv_strings[i], "vt %f %f", &x, &y);
+
+                _uvs.emplace_back(glm::vec2{ x, y });
+            }
+        }
+
+        // init
+        {
+            std::vector<PackedVertexPosition> packed_vertices;
+            std::vector<GeneralShortPacked> packed_data;
+            std::vector<uint16_t> _indices;
+            
+            for (int i = 0; i < vertex_indices.size(); ++i) {
+                auto vi = vertex_indices[i];
+                auto ui = uv_indices[i];
+
+                _indices.emplace_back(packed_vertices.size());
+
+                PackedVertexPosition pvp{};
+                pvp.x = pack<int16_t>(_vertices[vi].x);
+                pvp.y = pack<int16_t>(_vertices[vi].y);
+                pvp.z = pack<int16_t>(_vertices[vi].z);
+                packed_vertices.emplace_back(std::move(pvp));
+
+                GeneralShortPacked gsp{};
+                gsp.u0 = pack<int16_t>(_uvs[ui].x);
+                gsp.v0 = pack<int16_t>(_uvs[ui].y);
+                packed_data.emplace_back(std::move(gsp));
+            }
+
+            m_VertexBuffer = Renderer::Get()->CreateBuffer(packed_vertices.data(), packed_vertices.size(), sizeof(PackedVertexPosition), VERTEX_BUFFER);
+            m_VertexBufferData = Renderer::Get()->CreateBuffer(packed_data.data(), packed_data.size(), sizeof(GeneralShortPacked), VERTEX_BUFFER);
+            m_IndexBuffer = Renderer::Get()->CreateBuffer(_indices.data(), _indices.size(), sizeof(uint16_t), INDEX_BUFFER);
+        }
+
+        // textures
+        {
+            m_Materials.emplace_back("models/jc_characters/main_characters/rico/textures/nanos.dds");
+
+            // load the material
+            auto& texture = TextureManager::Get()->GetTexture("models/jc_characters/main_characters/rico/textures/nanos.dds");
+            if (texture) {
+                texture->LoadFromFile("C:/users/aaron/Desktop/nanos.dds");
+                m_Textures.emplace_back(texture);
+            }
+        }
+
+        // clang-format on
+    }
+
+    virtual std::tuple<Vertices_t, Indices_t, UVs_t> GetData() override final
+    {
+        using namespace JustCause3::Vertex;
+
+        Vertices_t vertices;
+        Indices_t  indices = m_IndexBuffer->CastData<uint16_t>();
+        UVs_t      uvs;
+
+        if (m_Block.attributes.flags & IS_SKINNED) {
+            const auto& vb = m_VertexBuffer->CastData<UnpackedVertexPositionXYZW>();
+
+            for (const auto& vertex : vb) {
+                vertices.emplace_back(vertex.x * m_Block.attributes.packed.scale);
+                vertices.emplace_back(vertex.y * m_Block.attributes.packed.scale);
+                vertices.emplace_back(vertex.z * m_Block.attributes.packed.scale);
+            }
+        } else {
+            const auto& vb = m_VertexBuffer->CastData<PackedVertexPosition>();
+
+            for (const auto& vertex : vb) {
+                vertices.emplace_back(unpack(vertex.x) * m_Block.attributes.packed.scale);
+                vertices.emplace_back(unpack(vertex.y) * m_Block.attributes.packed.scale);
+                vertices.emplace_back(unpack(vertex.z) * m_Block.attributes.packed.scale);
+            }
+        }
+
+        const auto& vbdata = m_VertexBufferData->CastData<GeneralShortPacked>();
+
+        for (const auto& data : vbdata) {
+            uvs.emplace_back(unpack(data.u0) * m_Block.attributes.packed.uv0Extent.x);
+            uvs.emplace_back(unpack(data.v0) * m_Block.attributes.packed.uv0Extent.y);
+
+            // TODO: u1,v1
+        }
+
+        return {vertices, indices, uvs};
     }
 
     virtual void Setup(RenderContext_t* context) override final

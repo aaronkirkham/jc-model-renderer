@@ -229,6 +229,7 @@ bool RenderBlockModel::SaveFileCallback(const fs::path& filename, const fs::path
         header.m_BoundingBoxMin = rbm->GetBoundingBox()->GetMin();
         header.m_BoundingBoxMax = rbm->GetBoundingBox()->GetMax();
         header.m_NumberOfBlocks = render_blocks.size();
+        header.m_Flags          = 8;
 
         // write the header
         stream.write((char*)&header, sizeof(header));
@@ -250,6 +251,19 @@ bool RenderBlockModel::SaveFileCallback(const fs::path& filename, const fs::path
     }
 
     return false;
+}
+
+void RenderBlockModel::ContextMenuUI(const fs::path& filename)
+{
+    if (ImGui::Selectable("New Render Block (GeneralMkIII)")) {
+        auto rbm = get(filename.string());
+        assert(rbm);
+
+        auto rb = RenderBlockFactory::CreateRenderBlock("GeneralMkIII");
+        assert(rb);
+
+        rbm->GetRenderBlocks().emplace_back(rb);
+    }
 }
 
 void RenderBlockModel::Load(const fs::path& filename)

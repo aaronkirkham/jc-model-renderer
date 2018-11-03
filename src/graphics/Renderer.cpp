@@ -640,59 +640,30 @@ void Renderer::DestroyDepthStencil()
     SAFE_RELEASE(m_DepthTexture);
 }
 
-VertexBuffer_t* Renderer::CreateVertexBuffer(uint32_t count, uint32_t stride, const char* debugName)
+IBuffer_t* Renderer::CreateBuffer(const void* data, uint32_t count, uint32_t stride, BufferType type,
+                                  const char* debugName)
 {
-    auto buffer             = new VertexBuffer_t;
+    auto buffer             = new IBuffer_t;
     buffer->m_ElementCount  = count;
     buffer->m_ElementStride = stride;
-    buffer->m_Usage         = D3D11_USAGE_DYNAMIC;
+    buffer->m_Type          = type;
+    buffer->m_Usage         = D3D11_USAGE_DEFAULT;
 
-    D3D11_BUFFER_DESC desc;
-    ZeroMemory(&desc, sizeof(desc));
-    desc.Usage          = D3D11_USAGE_DYNAMIC;
-    desc.ByteWidth      = (count * stride);
-    desc.BindFlags      = D3D11_BIND_VERTEX_BUFFER;
-    desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-    auto result = m_Device->CreateBuffer(&desc, nullptr, &buffer->m_Buffer);
-    assert(SUCCEEDED(result));
-
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
-    D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, debugName);
-#endif
-
-    if (FAILED(result)) {
-        SAFE_DELETE(buffer);
-        return nullptr;
-    }
-
-    // TODO: create SRV if we need it.
-
-    return buffer;
-}
-
-VertexBuffer_t* Renderer::CreateVertexBuffer(const void* data, uint32_t count, uint32_t stride, D3D11_USAGE usage,
-                                             const char* debugName)
-{
-    auto buffer             = new VertexBuffer_t;
-    buffer->m_ElementCount  = count;
-    buffer->m_ElementStride = stride;
-    buffer->m_Usage         = usage;
+    // copy the buffer
     buffer->m_Data.resize(count * stride);
-    std::memcpy(buffer->m_Data.data(), data, count * stride);
+    std::memcpy(buffer->m_Data.data(), data, (count * stride));
 
     D3D11_BUFFER_DESC desc;
     ZeroMemory(&desc, sizeof(desc));
-    desc.Usage     = usage;
+    desc.Usage     = buffer->m_Usage;
     desc.ByteWidth = (count * stride);
-    desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    desc.BindFlags = type == VERTEX_BUFFER ? D3D11_BIND_VERTEX_BUFFER : D3D11_BIND_INDEX_BUFFER;
 
     D3D11_SUBRESOURCE_DATA resourceData;
     ZeroMemory(&resourceData, sizeof(resourceData));
     resourceData.pSysMem = data;
 
     auto result = m_Device->CreateBuffer(&desc, &resourceData, &buffer->m_Buffer);
-    assert(SUCCEEDED(result));
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
     D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, debugName);
@@ -702,44 +673,6 @@ VertexBuffer_t* Renderer::CreateVertexBuffer(const void* data, uint32_t count, u
         SAFE_DELETE(buffer);
         return nullptr;
     }
-
-    // TODO: create SRV if we need it.
-
-    return buffer;
-}
-
-IndexBuffer_t* Renderer::CreateIndexBuffer(const void* data, uint32_t count, D3D11_USAGE usage, const char* debugName)
-{
-    auto buffer             = new IndexBuffer_t;
-    buffer->m_ElementCount  = count;
-    buffer->m_ElementStride = sizeof(uint16_t);
-    buffer->m_Usage         = usage;
-    buffer->m_Data.resize(count * buffer->m_ElementStride);
-    std::memcpy(buffer->m_Data.data(), data, count * buffer->m_ElementStride);
-
-    D3D11_BUFFER_DESC desc;
-    ZeroMemory(&desc, sizeof(desc));
-    desc.Usage     = usage;
-    desc.ByteWidth = (count * sizeof(uint16_t));
-    desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-
-    D3D11_SUBRESOURCE_DATA resourceData;
-    ZeroMemory(&resourceData, sizeof(resourceData));
-    resourceData.pSysMem = data;
-
-    auto result = m_Device->CreateBuffer(&desc, &resourceData, &buffer->m_Buffer);
-    assert(SUCCEEDED(result));
-
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
-    D3D_SET_OBJECT_NAME_A(buffer->m_Buffer, debugName);
-#endif
-
-    if (FAILED(result)) {
-        SAFE_DELETE(buffer);
-        return nullptr;
-    }
-
-    // TODO: create SRV if we need it.
 
     return buffer;
 }
@@ -747,7 +680,6 @@ IndexBuffer_t* Renderer::CreateIndexBuffer(const void* data, uint32_t count, D3D
 void Renderer::DestroyBuffer(IBuffer_t* buffer)
 {
     if (buffer) {
-        SAFE_RELEASE(buffer->m_SRV);
         SAFE_RELEASE(buffer->m_Buffer);
         SAFE_DELETE(buffer);
     }
@@ -755,13 +687,13 @@ void Renderer::DestroyBuffer(IBuffer_t* buffer)
 
 void Renderer::SetVertexStream(VertexBuffer_t* buffer, int32_t slot, uint32_t offset)
 {
-    assert(buffer);
+    assert(buffer && buffer->m_Type == VERTEX_BUFFER);
     m_DeviceContext->IASetVertexBuffers(slot, 1, &buffer->m_Buffer, &buffer->m_ElementStride, &offset);
 }
 
 void Renderer::SetSamplerState(SamplerState_t* sampler, int32_t slot)
 {
-    assert(sampler);
+    assert(sampler && sampler->m_SamplerState);
     m_DeviceContext->PSSetSamplers(slot, 1, &sampler->m_SamplerState);
 }
 
@@ -848,6 +780,16 @@ void Renderer::AddToRenderList(const std::vector<IRenderBlock*>& renderblocks)
 {
     std::lock_guard<decltype(m_RenderListMutex)> _lk{m_RenderListMutex};
     std::copy(renderblocks.begin(), renderblocks.end(), std::back_inserter(m_RenderList));
+
+    // sort by opaque items, so that transparent blocks will be under them
+    std::sort(m_RenderList.begin(), m_RenderList.end(),
+              [](IRenderBlock* lhs, IRenderBlock* rhs) { return lhs->IsOpaque() > rhs->IsOpaque(); });
+}
+
+void Renderer::AddToRenderList(IRenderBlock* renderblock)
+{
+    std::lock_guard<decltype(m_RenderListMutex)> _lk{m_RenderListMutex};
+    m_RenderList.emplace_back(renderblock);
 
     // sort by opaque items, so that transparent blocks will be under them
     std::sort(m_RenderList.begin(), m_RenderList.end(),

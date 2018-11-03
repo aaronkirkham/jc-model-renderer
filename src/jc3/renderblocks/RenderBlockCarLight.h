@@ -164,63 +164,23 @@ class RenderBlockCarLight : public IRenderBlock
 
         // read vertex buffers
         if (m_Block.attributes.flags & IS_SKINNED) {
-            std::vector<UnpackedVertexWithNormal1> vertices;
-            ReadVertexBuffer<UnpackedVertexWithNormal1>(stream, &m_VertexBuffer, &vertices);
-
-            std::vector<UnpackedNormals> vertices_data;
-            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData, &vertices_data);
-
-            for (const auto& vertex : vertices) {
-                m_Vertices.emplace_back(vertex.x);
-                m_Vertices.emplace_back(vertex.y);
-                m_Vertices.emplace_back(vertex.z);
-            }
-
-            for (const auto& data : vertices_data) {
-                m_UVs.emplace_back(data.u0);
-                m_UVs.emplace_back(data.v0);
-            }
-
-            // read skin batches
-            ReadSkinBatch(stream);
+            m_VertexBuffer     = ReadVertexBuffer<UnpackedVertexWithNormal1>(stream);
+            m_VertexBufferData = ReadVertexBuffer<UnpackedNormals>(stream);
         } else if (m_Block.attributes.flags & IS_DEFORM) {
-            std::vector<VertexDeformPos> vertices;
-            ReadVertexBuffer<VertexDeformPos>(stream, &m_VertexBuffer, &vertices);
-
-            std::vector<VertexDeformNormal2> vertices_data;
-            ReadVertexBuffer<VertexDeformNormal2>(stream, &m_VertexBufferData, &vertices_data);
-
-            for (const auto& vertex : vertices) {
-                m_Vertices.emplace_back(vertex.x);
-                m_Vertices.emplace_back(vertex.y);
-                m_Vertices.emplace_back(vertex.z);
-            }
-
-            for (const auto& data : vertices_data) {
-                m_UVs.emplace_back(data.u0);
-                m_UVs.emplace_back(data.v0);
-            }
+            m_VertexBuffer     = ReadVertexBuffer<VertexDeformPos>(stream);
+            m_VertexBufferData = ReadVertexBuffer<VertexDeformNormal2>(stream);
         } else {
-            std::vector<UnpackedVertexPosition> vertices;
-            ReadVertexBuffer<UnpackedVertexPosition>(stream, &m_VertexBuffer, &vertices);
+            m_VertexBuffer     = ReadVertexBuffer<UnpackedVertexPosition>(stream);
+            m_VertexBufferData = ReadVertexBuffer<UnpackedNormals>(stream);
+        }
 
-            std::vector<UnpackedNormals> vertices_data;
-            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData, &vertices_data);
-
-            for (const auto& vertex : vertices) {
-                m_Vertices.emplace_back(vertex.x);
-                m_Vertices.emplace_back(vertex.y);
-                m_Vertices.emplace_back(vertex.z);
-            }
-
-            for (const auto& data : vertices_data) {
-                m_UVs.emplace_back(data.u0);
-                m_UVs.emplace_back(data.v0);
-            }
+        // read skin batches
+        if (m_Block.attributes.flags & IS_SKINNED) {
+            ReadSkinBatch(stream);
         }
 
         // read index buffer
-        ReadIndexBuffer(stream, &m_IndexBuffer);
+        m_IndexBuffer = ReadIndexBuffer(stream);
     }
 
     virtual void Write(std::ostream& stream) override final
@@ -235,11 +195,82 @@ class RenderBlockCarLight : public IRenderBlock
         WriteMaterials(stream);
 
         // write the vertex buffer
-        WriteVertexBuffer(stream, m_VertexBuffer);
-        WriteVertexBuffer(stream, m_VertexBufferData);
+        WriteBuffer(stream, m_VertexBuffer);
+        WriteBuffer(stream, m_VertexBufferData);
+
+        // write skin batches
+        if (m_Block.attributes.flags & IS_SKINNED) {
+            WriteSkinBatch(stream);
+        }
 
         // write the index buffer
-        WriteIndexBuffer(stream, m_IndexBuffer);
+        WriteBuffer(stream, m_IndexBuffer);
+    }
+
+    virtual void SetData(Vertices_t* vertices, Indices_t* indices, UVs_t* uvs) override final
+    {
+        //
+    }
+
+    virtual std::tuple<Vertices_t, Indices_t, UVs_t> GetData() override final
+    {
+        using namespace JustCause3::Vertex;
+
+        Vertices_t vertices;
+        Indices_t  indices = m_IndexBuffer->CastData<uint16_t>();
+        UVs_t      uvs;
+
+        if (m_Block.attributes.flags & IS_SKINNED) {
+            const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexWithNormal1>();
+            const auto& vbdata = m_VertexBufferData->CastData<UnpackedNormals>();
+
+            for (const auto& vertex : vb) {
+                vertices.emplace_back(vertex.x);
+                vertices.emplace_back(vertex.y);
+                vertices.emplace_back(vertex.z);
+            }
+
+            for (const auto& data : vbdata) {
+                uvs.emplace_back(data.u0);
+                uvs.emplace_back(data.v0);
+
+                // TODO: u1,v1
+            }
+        } else if (m_Block.attributes.flags & IS_DEFORM) {
+            const auto& vb     = m_VertexBuffer->CastData<VertexDeformPos>();
+            const auto& vbdata = m_VertexBufferData->CastData<VertexDeformNormal2>();
+
+            for (const auto& vertex : vb) {
+                vertices.emplace_back(vertex.x);
+                vertices.emplace_back(vertex.y);
+                vertices.emplace_back(vertex.z);
+            }
+
+            for (const auto& data : vbdata) {
+                uvs.emplace_back(data.u0);
+                uvs.emplace_back(data.v0);
+
+                // TODO: u1,v1
+            }
+        } else {
+            const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexPosition>();
+            const auto& vbdata = m_VertexBufferData->CastData<UnpackedNormals>();
+
+            for (const auto& vertex : vb) {
+                vertices.emplace_back(vertex.x);
+                vertices.emplace_back(vertex.y);
+                vertices.emplace_back(vertex.z);
+            }
+
+            for (const auto& data : vbdata) {
+                uvs.emplace_back(data.u0);
+                uvs.emplace_back(data.v0);
+
+                // TODO: u1,v1
+            }
+        }
+
+        return {vertices, indices, uvs};
     }
 
     virtual void Setup(RenderContext_t* context) override final

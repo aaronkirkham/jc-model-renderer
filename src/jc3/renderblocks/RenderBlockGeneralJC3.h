@@ -159,41 +159,14 @@ class RenderBlockGeneralJC3 : public IRenderBlock
 
         // read the vertex buffers
         if (m_Block.attributes.packed.format != 1) {
-            std::vector<UnpackedVertexPosition2UV> vertices;
-            ReadVertexBuffer<UnpackedVertexPosition2UV>(stream, &m_VertexBuffer, &vertices);
-
-            for (const auto& vertex : vertices) {
-                m_Vertices.emplace_back(vertex.x * m_Block.attributes.packed.scale);
-                m_Vertices.emplace_back(vertex.y * m_Block.attributes.packed.scale);
-                m_Vertices.emplace_back(vertex.z * m_Block.attributes.packed.scale);
-                m_UVs.emplace_back(vertex.u0 * m_Block.attributes.packed.uv0Extent.x);
-                m_UVs.emplace_back(vertex.v0 * m_Block.attributes.packed.uv0Extent.y);
-
-                // TODO: uv1
-            }
+            m_VertexBuffer = ReadVertexBuffer<UnpackedVertexPosition2UV>(stream);
         } else {
-            std::vector<PackedVertexPosition> vertices;
-            ReadVertexBuffer<PackedVertexPosition>(stream, &m_VertexBuffer, &vertices);
-
-            std::vector<GeneralShortPacked> vertices_data;
-            ReadVertexBuffer<GeneralShortPacked>(stream, &m_VertexBufferData, &vertices_data);
-
-            for (auto i = 0; i < vertices.size(); ++i) {
-                auto& vertex = vertices[i];
-                auto& data   = vertices_data[i];
-
-                m_Vertices.emplace_back(unpack(vertex.x) * m_Block.attributes.packed.scale);
-                m_Vertices.emplace_back(unpack(vertex.y) * m_Block.attributes.packed.scale);
-                m_Vertices.emplace_back(unpack(vertex.z) * m_Block.attributes.packed.scale);
-                m_UVs.emplace_back(unpack(data.u0) * m_Block.attributes.packed.uv0Extent.x);
-                m_UVs.emplace_back(unpack(data.v0) * m_Block.attributes.packed.uv0Extent.y);
-
-                // TODO: uv2
-            }
+            m_VertexBuffer     = ReadVertexBuffer<PackedVertexPosition>(stream);
+            m_VertexBufferData = ReadVertexBuffer<GeneralShortPacked>(stream);
         }
 
         // read index buffer
-        ReadIndexBuffer(stream, &m_IndexBuffer);
+        m_IndexBuffer = ReadIndexBuffer(stream);
     }
 
     virtual void Write(std::ostream& stream) override final
@@ -206,14 +179,60 @@ class RenderBlockGeneralJC3 : public IRenderBlock
 
         // write vertex buffers
         if (m_Block.attributes.packed.format != 1) {
-            WriteVertexBuffer(stream, m_VertexBuffer);
+            WriteBuffer(stream, m_VertexBuffer);
         } else {
-            WriteVertexBuffer(stream, m_VertexBuffer);
-            WriteVertexBuffer(stream, m_VertexBufferData);
+            WriteBuffer(stream, m_VertexBuffer);
+            WriteBuffer(stream, m_VertexBufferData);
         }
 
         // write index buffer
-        WriteIndexBuffer(stream);
+        WriteBuffer(stream, m_IndexBuffer);
+    }
+
+    virtual void SetData(Vertices_t* vertices, Indices_t* indices, UVs_t* uvs) override final
+    {
+        //
+    }
+
+    virtual std::tuple<Vertices_t, Indices_t, UVs_t> GetData() override final
+    {
+        using namespace JustCause3::Vertex;
+
+        Vertices_t vertices;
+        Indices_t  indices = m_IndexBuffer->CastData<uint16_t>();
+        UVs_t      uvs;
+
+        if (m_Block.attributes.packed.format != 1) {
+            const auto& vb = m_VertexBuffer->CastData<UnpackedVertexPosition2UV>();
+
+            for (const auto& vertex : vb) {
+                vertices.emplace_back(vertex.x);
+                vertices.emplace_back(vertex.y);
+                vertices.emplace_back(vertex.z);
+                uvs.emplace_back(vertex.u0);
+                uvs.emplace_back(vertex.v0);
+
+                // TODO: u1,v1
+            }
+        } else {
+            const auto& vb     = m_VertexBuffer->CastData<PackedVertexPosition>();
+            const auto& vbdata = m_VertexBufferData->CastData<GeneralShortPacked>();
+
+            for (auto i = 0; i < vb.size(); ++i) {
+                auto& vertex = vb[i];
+                auto& data   = vbdata[i];
+
+                vertices.emplace_back(unpack(vertex.x) * m_Block.attributes.packed.scale);
+                vertices.emplace_back(unpack(vertex.y) * m_Block.attributes.packed.scale);
+                vertices.emplace_back(unpack(vertex.z) * m_Block.attributes.packed.scale);
+                uvs.emplace_back(unpack(data.u0) * m_Block.attributes.packed.uv0Extent.x);
+                uvs.emplace_back(unpack(data.v0) * m_Block.attributes.packed.uv0Extent.y);
+
+                // TODO: u1,v1
+            }
+        }
+
+        return {vertices, indices, uvs};
     }
 
     virtual void Setup(RenderContext_t* context) override final

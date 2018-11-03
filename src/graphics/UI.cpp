@@ -6,6 +6,7 @@
 
 #include <graphics/Camera.h>
 #include <graphics/imgui/fonts/fontawesome5_icons.h>
+#include <graphics/imgui/imgui_buttondropdown.h>
 #include <graphics/imgui/imgui_rotate.h>
 #include <graphics/imgui/imgui_tabscrollcontent.h>
 
@@ -305,7 +306,9 @@ void UI::Render()
 
         bool open = true;
         ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
-        if (ImGui::Begin(ss.str().c_str(), &open, (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking))) {
+        if (ImGui::Begin(
+                ss.str().c_str(), &open,
+                (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking))) {
             (*it).second->DrawUI();
 
             ImGui::End();
@@ -460,65 +463,82 @@ void UI::RenderFileTreeView()
 
                             // render the current render block info
                             if (render_block_open) {
-                                ImGui::Text(ICON_FA_COGS "  Attributes");
+                                // show import button if the block doesn't have a vertex buffer
+                                if (!render_block->GetVertexBuffer()) {
+                                    static auto red = ImVec4{1, 0, 0, 1};
+                                    ImGui::TextColored(red, "This model doesn't have any mesh!");
 
-                                // draw render block ui
-                                render_block->DrawUI();
+                                    if (ImGuiCustom::BeginButtonDropDown("Import Mesh From")) {
+                                        if (ImGui::MenuItem("Wavefront", ".obj")) {
+                                            render_block->SetData(nullptr, nullptr, nullptr);
+                                            render_block->Create();
 
-                                ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
-
-                                // draw render block textures
-                                const auto& textures = render_block->GetTextures();
-                                if (!textures.empty()) {
-                                    ImGui::Columns(3, 0, false);
-
-                                    // draw textures
-                                    for (const auto& texture : textures) {
-                                        const auto  is_loaded = texture->IsLoaded();
-                                        const auto& path      = texture->GetPath();
-
-                                        auto window_size  = Window::Get()->GetSize();
-                                        auto aspect_ratio = (window_size.x / window_size.y);
-
-                                        auto width        = ImGui::GetWindowWidth() / ImGui::GetColumnsCount();
-                                        auto texture_size = ImVec2(width, (width / aspect_ratio));
-
-                                        // draw the texture name
-                                        if (is_loaded) {
-                                            ImGui::Text(path.filename().string().c_str());
-                                        } else {
-                                            static auto red = ImVec4{1, 0, 0, 1};
-                                            ImGui::TextColored(red, path.filename().string().c_str());
+                                            Renderer::Get()->AddToRenderList(render_block);
                                         }
 
-                                        ImGui::BeginGroup();
-
-                                        // draw the texture image
-                                        auto srv = is_loaded ? texture->GetSRV()
-                                                             : TextureManager::Get()->GetMissingTexture()->GetSRV();
-                                        ImGui::Image(srv, texture_size);
-
-                                        // tooltip
-                                        if (ImGui::IsItemHovered()) {
-                                            ImGui::SetTooltip(path.filename().string().c_str());
-                                        }
-
-                                        // open texture preview
-                                        if (is_loaded && ImGui::IsItemClicked()) {
-                                            TextureManager::Get()->PreviewTexture(texture);
-                                        }
-
-                                        // context menu
-                                        if (is_loaded) {
-                                            RenderContextMenu(path, ImGui::GetColumnIndex(), CTX_TEXTURE);
-                                        }
-
-                                        ImGui::EndGroup();
-
-                                        ImGui::NextColumn();
+                                        ImGuiCustom::EndButtonDropDown();
                                     }
+                                } else {
+                                    ImGui::Text(ICON_FA_COGS "  Attributes");
 
-                                    ImGui::Columns();
+                                    // draw render block ui
+                                    render_block->DrawUI();
+
+                                    ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
+
+                                    // draw render block textures
+                                    const auto& textures = render_block->GetTextures();
+                                    if (!textures.empty()) {
+                                        ImGui::Columns(3, 0, false);
+
+                                        // draw textures
+                                        for (const auto& texture : textures) {
+                                            const auto  is_loaded = texture->IsLoaded();
+                                            const auto& path      = texture->GetPath();
+
+                                            auto window_size  = Window::Get()->GetSize();
+                                            auto aspect_ratio = (window_size.x / window_size.y);
+
+                                            auto width        = ImGui::GetWindowWidth() / ImGui::GetColumnsCount();
+                                            auto texture_size = ImVec2(width, (width / aspect_ratio));
+
+                                            // draw the texture name
+                                            if (is_loaded) {
+                                                ImGui::Text(path.filename().string().c_str());
+                                            } else {
+                                                static auto red = ImVec4{1, 0, 0, 1};
+                                                ImGui::TextColored(red, path.filename().string().c_str());
+                                            }
+
+                                            ImGui::BeginGroup();
+
+                                            // draw the texture image
+                                            auto srv = is_loaded ? texture->GetSRV()
+                                                                 : TextureManager::Get()->GetMissingTexture()->GetSRV();
+                                            ImGui::Image(srv, texture_size);
+
+                                            // tooltip
+                                            if (ImGui::IsItemHovered()) {
+                                                ImGui::SetTooltip(path.filename().string().c_str());
+                                            }
+
+                                            // open texture preview
+                                            if (is_loaded && ImGui::IsItemClicked()) {
+                                                TextureManager::Get()->PreviewTexture(texture);
+                                            }
+
+                                            // context menu
+                                            if (is_loaded) {
+                                                RenderContextMenu(path, ImGui::GetColumnIndex(), CTX_TEXTURE);
+                                            }
+
+                                            ImGui::EndGroup();
+
+                                            ImGui::NextColumn();
+                                        }
+
+                                        ImGui::Columns();
+                                    }
                                 }
 
                                 ImGui::TreePop();

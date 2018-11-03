@@ -86,6 +86,7 @@ class RenderBlockBuildingJC3 : public IRenderBlock
         // read the materials
         ReadMaterials(stream);
 
+#if 0
         // read the vertex buffers
         if (m_Block.attributes.packed.format == 1) {
             std::vector<PackedVertexPosition> vertices;
@@ -111,11 +112,22 @@ class RenderBlockBuildingJC3 : public IRenderBlock
 
         // read index buffer
         ReadIndexBuffer(stream, &m_IndexBuffer);
+#endif
     }
 
     virtual void Write(std::ostream& stream) override final
     {
         //
+    }
+
+    virtual void SetData(Vertices_t* vertices, Indices_t* indices, UVs_t* uvs) override final
+    {
+        //
+    }
+
+    virtual std::tuple<Vertices_t, Indices_t, UVs_t> GetData() override final
+    {
+        return {};
     }
 
     virtual void Setup(RenderContext_t* context) override final

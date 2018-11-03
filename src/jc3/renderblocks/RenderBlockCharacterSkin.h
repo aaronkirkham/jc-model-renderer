@@ -269,14 +269,13 @@ class RenderBlockCharacterSkin : public IRenderBlock
         m_Stride         = (3 * (flags & EIGHT_BONES) + (flags & USE_WRINKLE_MAP) + (flags & USE_FEATURE_MAP));
 
         // read vertex data
-        ReadVertexBuffer(stream, &m_VertexBuffer, VertexStrides[m_Stride]);
-        // InitVerticesForExporters(&m_VertexBuffer->m_Data, m_Stride, &m_Vertices, &m_UVs);
+        m_VertexBuffer = ReadBuffer(stream, VERTEX_BUFFER, VertexStrides[m_Stride]);
 
         // read skin batch
         ReadSkinBatch(stream);
 
         // read index buffer
-        ReadIndexBuffer(stream, &m_IndexBuffer);
+        m_IndexBuffer = ReadIndexBuffer(stream);
     }
 
     virtual void Write(std::ostream& stream) override final
@@ -288,13 +287,23 @@ class RenderBlockCharacterSkin : public IRenderBlock
         WriteMaterials(stream);
 
         // write the vertex data
-        WriteVertexBuffer(stream, m_VertexBuffer);
+        WriteBuffer(stream, m_VertexBuffer);
 
         // write skin batches
         WriteSkinBatch(stream);
 
         // write index buffer
-        WriteIndexBuffer(stream, m_IndexBuffer);
+        WriteBuffer(stream, m_IndexBuffer);
+    }
+
+    virtual void SetData(Vertices_t* vertices, Indices_t* indices, UVs_t* uvs) override final
+    {
+        //
+    }
+
+    virtual std::tuple<Vertices_t, Indices_t, UVs_t> GetData() override final
+    {
+        return {};
     }
 
     virtual void Setup(RenderContext_t* context) override final

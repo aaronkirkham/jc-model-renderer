@@ -266,6 +266,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterSaveCallback({ ".ee", ".bl", ".nl", ".fl" }, AvalancheArchive::SaveFileCallback);
 
         // register file type context menu callbacks
+        UI::Get()->RegisterContextMenuCallback({ ".rbm" }, RenderBlockModel::ContextMenuUI);
         UI::Get()->RegisterContextMenuCallback({ ".epe" }, RuntimeContainer::ContextMenuUI);
 
         // register importers and exporters
@@ -288,6 +289,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
                 for (const auto& model : RenderBlockModel::Instances) {
                     for (const auto& block : model.second->GetRenderBlocks()) {
+                        if (!block->GetVertexBuffer() || !block->GetIndexBuffer()) {
+                            continue;
+                        }
+
                         auto index_count = block->GetIndexBuffer()->m_ElementCount;
 
                         vertices += block->GetVertexBuffer()->m_ElementCount;

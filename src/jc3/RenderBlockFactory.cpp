@@ -8,6 +8,8 @@
 #include <jc3/renderblocks/RenderBlockGeneralMkIII.h>
 #include <jc3/renderblocks/RenderBlockWindow.h>
 
+#include <jc3/hashlittle.h>
+
 IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type)
 {
     switch (type) {
@@ -30,6 +32,11 @@ IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type)
     }
 
     return nullptr;
+}
+
+IRenderBlock* RenderBlockFactory::CreateRenderBlock(const std::string& name)
+{
+    return CreateRenderBlock(hashlittle(name.c_str()));
 }
 
 const char* RenderBlockFactory::GetRenderBlockName(const uint32_t type)
