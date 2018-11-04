@@ -98,8 +98,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
     };
 
     g_JC3Directory = Settings::Get()->GetValue<std::string>("jc3_directory");
-    g_DrawBoundingBoxes = Settings::Get()->GetValue<bool>("draw_bounding_boxes", true);
-    g_ShowModelLabels = Settings::Get()->GetValue<bool>("show_model_labels", true);
+    g_DrawBoundingBoxes = Settings::Get()->GetValue<bool>("draw_bounding_boxes", false);
+    g_ShowModelLabels   = Settings::Get()->GetValue<bool>("show_model_labels", false);
 
     DEBUG_LOG("JC3 Directory: " << g_JC3Directory);
 

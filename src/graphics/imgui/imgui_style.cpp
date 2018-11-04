@@ -18,6 +18,7 @@ void SetupImGuiStyle()
     style.WindowBorderSize  = 0.0f;
 
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.IniFilename = nullptr;
 
     io.ConfigResizeWindowsFromEdges = true;
 
