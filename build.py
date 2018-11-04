@@ -122,27 +122,10 @@ def RunMSBuild(configuration, builddir=""):
     if gypi_values['target_arch'] == "x64":
         platform = "x64"
         
-    var = execute([msbuild, "out/jc3-rbm-renderer.sln", "/t:Build", "/p:Configuration=" + configuration,  "/p:Platform=" + platform])
-    return var
-
-def RunMake(configuration, builddir=""):
-    env = os.environ.copy()
-    env['BUILDTYPE'] = configuration
-    
-    if builddir:
-      env['builddir'] = builddir
-    
-    var = execute(["make", "-C", "out", "-j" + str(multiprocessing.cpu_count())], env)
-    return var
+    return execute([msbuild, "out/jc3-rbm-renderer.sln", "/t:Build", "/p:Configuration=" + configuration, "/p:Platform=" + platform])
 
 if _platform == "win32":
     if options.debug:
         sys.exit(RunMSBuild("Debug"))
     else:
         sys.exit(RunMSBuild("Release"))
-
-if _platform.startswith("linux") or _platform.startswith("darwin"):
-    if options.debug:
-        sys.exit(RunMake("Debug", options.builddir))
-    else:
-        sys.exit(RunMake("Release", options.builddir))

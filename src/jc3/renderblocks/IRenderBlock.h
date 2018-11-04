@@ -4,8 +4,8 @@
 #include <graphics/ShaderManager.h>
 #include <graphics/TextureManager.h>
 #include <graphics/Types.h>
-#include <graphics/imgui/imgui_disabled.h>
 #include <graphics/imgui/imgui_bitfield.h>
+#include <graphics/imgui/imgui_disabled.h>
 #include <jc3/Types.h>
 
 class IRenderBlock
@@ -23,12 +23,8 @@ class IRenderBlock
 
     std::vector<fs::path>                 m_Materials;
     std::vector<std::shared_ptr<Texture>> m_Textures;
+    float                                 m_MaterialParams[4] = {0};
     std::vector<JustCause3::CSkinBatch>   m_SkinBatches;
-
-    // used by the exporter stuff, vertices are unpacked by the renders blocks
-    std::vector<float>    m_Vertices;
-    std::vector<uint16_t> m_Indices;
-    std::vector<float>    m_UVs;
 
   public:
     IRenderBlock() = default;
@@ -55,37 +51,30 @@ class IRenderBlock
     {
         m_Visible = visible;
     }
+
     virtual bool IsVisible() const
     {
         return m_Visible;
     }
+
     virtual float GetScale() const
     {
         return m_ScaleModifier;
     }
+
     virtual VertexBuffer_t* GetVertexBuffer()
     {
         return m_VertexBuffer;
     }
+
     virtual IndexBuffer_t* GetIndexBuffer()
     {
         return m_IndexBuffer;
     }
+
     virtual const std::vector<std::shared_ptr<Texture>>& GetTextures()
     {
         return m_Textures;
-    }
-    virtual const std::vector<float>& GetVertices()
-    {
-        return m_Vertices;
-    }
-    virtual const std::vector<uint16_t>& GetIndices()
-    {
-        return m_Indices;
-    }
-    virtual const std::vector<float>& GetUVs()
-    {
-        return m_UVs;
     }
 
     virtual bool IsOpaque() = 0;
@@ -93,6 +82,9 @@ class IRenderBlock
     virtual void Create()                  = 0;
     virtual void Read(std::istream& file)  = 0;
     virtual void Write(std::ostream& file) = 0;
+
+    virtual void                                     SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) = 0;
+    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData()                                                     = 0;
 
     virtual void Setup(RenderContext_t* context)
     {
@@ -138,62 +130,33 @@ class IRenderBlock
         }
     }
 
-    template <typename T>
-    void ReadVertexBuffer(std::istream& stream, VertexBuffer_t** outBuffer, std::vector<T>* outVertices = nullptr)
+    IBuffer_t* ReadBuffer(std::istream& stream, BufferType type, uint32_t stride)
     {
-        auto stride = static_cast<uint32_t>(sizeof(T));
+        assert(stride);
 
-        uint32_t count;
-        stream.read((char*)&count, sizeof(count));
-
-        outVertices->resize(count);
-        stream.read((char*)outVertices->data(), (count * stride));
-
-        *outBuffer = Renderer::Get()->CreateVertexBuffer(outVertices->data(), count, stride, D3D11_USAGE_DEFAULT,
-                                                         "IRenderBlock Vertex Buffer");
-    }
-
-    void ReadVertexBuffer(std::istream& stream, VertexBuffer_t** outBuffer, uint32_t stride)
-    {
         uint32_t count;
         stream.read((char*)&count, sizeof(count));
 
         auto buffer = std::make_unique<char[]>(count * stride);
         stream.read((char*)buffer.get(), (count * stride));
 
-        *outBuffer = Renderer::Get()->CreateVertexBuffer(buffer.get(), count, stride, D3D11_USAGE_DEFAULT,
-                                                         "IRenderBlock Vertex Buffer");
+        return Renderer::Get()->CreateBuffer(buffer.get(), count, stride, type, "IRenderBlock Buffer");
     }
 
-    void WriteVertexBuffer(std::ostream& stream, VertexBuffer_t* buffer)
+    template <typename T> IBuffer_t* ReadVertexBuffer(std::istream& stream)
+    {
+        return ReadBuffer(stream, VERTEX_BUFFER, sizeof(T));
+    }
+
+    IBuffer_t* ReadIndexBuffer(std::istream& stream)
+    {
+        return ReadBuffer(stream, INDEX_BUFFER, sizeof(uint16_t));
+    }
+
+    void WriteBuffer(std::ostream& stream, IBuffer_t* buffer)
     {
         stream.write((char*)&buffer->m_ElementCount, sizeof(buffer->m_ElementCount));
         stream.write((char*)buffer->m_Data.data(), buffer->m_Data.size());
-    }
-
-    void ReadIndexBuffer(std::istream& stream, IndexBuffer_t** outBuffer)
-    {
-        uint32_t count;
-        stream.read((char*)&count, sizeof(count));
-
-        m_Indices.resize(count);
-        stream.read((char*)m_Indices.data(), (count * sizeof(uint16_t)));
-
-        *outBuffer = Renderer::Get()->CreateIndexBuffer(m_Indices.data(), count, D3D11_USAGE_DEFAULT,
-                                                        "IRenderBlock Index Buffer");
-    }
-
-    void WriteIndexBuffer(std::ostream& stream)
-    {
-        auto count = static_cast<uint32_t>(m_Indices.size());
-        stream.write((char*)&count, sizeof(count));
-        stream.write((char*)m_Indices.data(), (count * sizeof(uint16_t)));
-    }
-
-    void WriteIndexBuffer(std::ostream& stream, IndexBuffer_t* buffer)
-    {
-        stream.write((char*)&buffer->m_ElementCount, sizeof(buffer->m_ElementCount));
-        stream.write((char*)buffer->m_Data.data(), (buffer->m_ElementCount * buffer->m_ElementStride));
     }
 
     void ReadMaterials(std::istream& stream)
@@ -201,7 +164,7 @@ class IRenderBlock
         uint32_t count;
         stream.read((char*)&count, sizeof(count));
 
-        m_Materials.reserve(count);
+        m_Materials.resize(count);
 
         for (uint32_t i = 0; i < count; ++i) {
             uint32_t length;
@@ -215,7 +178,7 @@ class IRenderBlock
             stream.read(filename.get(), length);
             filename[length] = '\0';
 
-            m_Materials.emplace_back(filename.get());
+            m_Materials[i] = filename.get();
 
             // load the material
             auto& texture = TextureManager::Get()->GetTexture(filename.get());
@@ -224,8 +187,7 @@ class IRenderBlock
             }
         }
 
-        uint32_t unknown[4];
-        stream.read((char*)&unknown, sizeof(unknown));
+        stream.read((char*)&m_MaterialParams, sizeof(m_MaterialParams));
     }
 
     void WriteMaterials(std::ostream& stream)
@@ -233,17 +195,15 @@ class IRenderBlock
         auto count = static_cast<uint32_t>(m_Materials.size());
         stream.write((char*)&count, sizeof(count));
 
-        for (const auto& material : m_Materials) {
-            const auto& filename = material.generic_string();
+        for (uint32_t i = 0; i < count; ++i) {
+            const auto& filename = m_Materials[i].generic_string();
+            const auto  length   = static_cast<uint32_t>(filename.length());
 
-            auto length = static_cast<uint32_t>(filename.length());
             stream.write((char*)&length, sizeof(length));
             stream.write(filename.c_str(), length);
         }
 
-        // TODO: find out what all this is. probably something important...
-        uint32_t unknown[4] = {0};
-        stream.write((char*)&unknown, sizeof(unknown));
+        stream.write((char*)&m_MaterialParams, sizeof(m_MaterialParams));
     }
 
     void ReadSkinBatch(std::istream& stream)
@@ -280,8 +240,7 @@ class IRenderBlock
             stream.write((char*)&batch.m_BatchSize, sizeof(batch.m_BatchSize));
 
             if (batch.m_BatchSize != 0) {
-                stream.write((char*)&batch.m_BatchLookup, sizeof(int16_t) * batch.m_BatchSize);
-                __debugbreak();
+                stream.write((char*)batch.m_BatchLookup, sizeof(int16_t) * batch.m_BatchSize);
             }
         }
     }

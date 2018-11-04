@@ -7,39 +7,19 @@
 std::recursive_mutex                                  Factory<AvalancheArchive>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<AvalancheArchive>> Factory<AvalancheArchive>::Instances;
 
-AvalancheArchive::AvalancheArchive(const fs::path& file, bool load_from_archive)
-    : m_File(file)
-{
-    if (load_from_archive) {
-        // read the stream archive
-        FileLoader::Get()->ReadStreamArchive(file, [&](std::unique_ptr<StreamArchive_t> archive) {
-            assert(archive);
-            m_StreamArchive = std::move(archive);
-
-            // parse the file list
-            m_FileList = std::make_unique<DirectoryList>();
-            m_FileList->Parse(m_StreamArchive.get());
-        });
-    } else {
-        m_StreamArchive = std::make_unique<StreamArchive_t>(file);
-        m_FileList      = std::make_unique<DirectoryList>();
-    }
-
-    UI::Get()->SwitchToTab(TAB_ARCHIVES);
-}
-
-AvalancheArchive::AvalancheArchive(const fs::path& filename, const FileBuffer& buffer)
+AvalancheArchive::AvalancheArchive(const fs::path& filename, const FileBuffer& buffer, bool external)
     : m_File(filename)
 {
     // read the stream archive
-    FileLoader::Get()->ReadStreamArchive(filename, std::move(buffer), [&](std::unique_ptr<StreamArchive_t> archive) {
-        assert(archive);
-        m_StreamArchive = std::move(archive);
+    FileLoader::Get()->ReadStreamArchive(filename, std::move(buffer), external,
+                                         [&](std::unique_ptr<StreamArchive_t> archive) {
+                                             assert(archive);
+                                             m_StreamArchive = std::move(archive);
 
-        // parse the file list
-        m_FileList = std::make_unique<DirectoryList>();
-        m_FileList->Parse(m_StreamArchive.get());
-    });
+                                             // parse the file list
+                                             m_FileList = std::make_unique<DirectoryList>();
+                                             m_FileList->Parse(m_StreamArchive.get());
+                                         });
 
     UI::Get()->SwitchToTab(TAB_ARCHIVES);
 }
@@ -96,7 +76,7 @@ bool AvalancheArchive::HasFile(const fs::path& filename)
 
 void AvalancheArchive::ReadFileCallback(const fs::path& filename, const FileBuffer& data, bool external)
 {
-    AvalancheArchive::make(filename, data);
+    AvalancheArchive::make(filename, data, external);
 }
 
 bool AvalancheArchive::SaveFileCallback(const fs::path& filename, const fs::path& directory)

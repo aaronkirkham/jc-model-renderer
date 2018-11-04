@@ -4,6 +4,10 @@
 #include <d3d11.h>
 #include <vector>
 
+using floats_t    = std::vector<float>;
+using uint16s_t   = std::vector<uint16_t>;
+using materials_t = std::vector<fs::path>;
+
 class Renderer;
 struct RenderContext_t {
     Renderer*            m_Renderer          = nullptr;
@@ -24,21 +28,25 @@ struct RenderContext_t {
     glm::mat4            m_viewProjectionMatrix;
 };
 
+enum BufferType { VERTEX_BUFFER = 1, INDEX_BUFFER = 2, NUM_BUFFER_TYPES = 3 };
+
 struct IBuffer_t {
-    ID3D11Buffer*             m_Buffer = nullptr;
-    ID3D11ShaderResourceView* m_SRV    = nullptr;
-    std::vector<uint8_t>      m_Data;
-    uint32_t                  m_ElementCount  = 0;
-    uint32_t                  m_ElementStride = 0;
-    D3D11_USAGE               m_Usage         = D3D11_USAGE_DEFAULT;
+    ID3D11Buffer* m_Buffer = nullptr;
+    FileBuffer    m_Data;
+    uint32_t      m_ElementCount  = 0;
+    uint32_t      m_ElementStride = 0;
+    BufferType    m_Type          = NUM_BUFFER_TYPES;
+    D3D11_USAGE   m_Usage         = D3D11_USAGE_DEFAULT;
+
+    template <typename T> std::vector<T> CastData()
+    {
+        return {reinterpret_cast<T*>(m_Data.data()), reinterpret_cast<T*>(m_Data.data() + m_Data.size())};
+    }
 };
 
-struct VertexBuffer_t : IBuffer_t {
-};
-struct IndexBuffer_t : IBuffer_t {
-};
-struct ConstantBuffer_t : IBuffer_t {
-};
+using VertexBuffer_t   = IBuffer_t;
+using IndexBuffer_t    = IBuffer_t;
+using ConstantBuffer_t = IBuffer_t;
 
 struct VertexShader_t {
     virtual ~VertexShader_t()

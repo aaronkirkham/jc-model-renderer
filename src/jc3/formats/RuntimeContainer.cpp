@@ -49,26 +49,28 @@ RuntimeContainer::~RuntimeContainer()
 
 void RuntimeContainer::GenerateBetterNames()
 {
-    std::stringstream ss;
-    const auto        _class = GetProperty("_class", false);
-    const auto        _name  = GetProperty("name", false);
+    std::string tmp;
+    const auto  _class = GetProperty("_class", false);
+    const auto  _name  = GetProperty("name", false);
 
     if (_class) {
-        ss << _class->GetValue<std::string>();
-        if (_name)
-            ss << " (";
+        tmp.append(_class->GetValue<std::string>());
+        if (_name) {
+            tmp.append(" (");
+        }
     }
 
     if (_name) {
-        ss << _name->GetValue<std::string>();
-        if (_class)
-            ss << ")";
+        tmp.append(_name->GetValue<std::string>());
+        if (_class) {
+            tmp.append(")");
+        }
     }
 
     if (m_Name.empty()) {
-        m_Name = ss.str();
-    } else if (!ss.str().empty()) {
-        m_Name = ss.str() + " (" + m_Name + ")";
+        m_Name = tmp;
+    } else if (!tmp.empty()) {
+        m_Name = tmp + " (" + m_Name + ")";
     }
 
     for (const auto& container : m_Containers) {

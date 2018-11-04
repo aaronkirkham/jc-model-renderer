@@ -29,6 +29,8 @@ class RenderBlockModel : public Factory<RenderBlockModel>
 
     static void ReadFileCallback(const fs::path& filename, const FileBuffer& data, bool external);
     static bool SaveFileCallback(const fs::path& filename, const fs::path& directory);
+    static void ContextMenuUI(const fs::path& filename);
+
     static void Load(const fs::path& filename);
     static void LoadFromRuntimeContainer(const fs::path& filename, std::shared_ptr<RuntimeContainer> rc);
 
@@ -38,7 +40,7 @@ class RenderBlockModel : public Factory<RenderBlockModel>
 
     void DrawGizmos();
 
-    const std::vector<IRenderBlock*>& GetRenderBlocks()
+    std::vector<IRenderBlock*>& GetRenderBlocks()
     {
         return m_RenderBlocks;
     }
@@ -47,10 +49,12 @@ class RenderBlockModel : public Factory<RenderBlockModel>
     {
         return m_Filename.filename().string();
     }
+
     std::string GetFilePath()
     {
         return m_Filename.parent_path().string();
     }
+
     const fs::path& GetPath()
     {
         return m_Filename;

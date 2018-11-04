@@ -236,16 +236,6 @@ class RenderBlockCarPaintMM : public IRenderBlock
         // read static material params
         stream.read((char*)&m_cbStaticMaterialParams, sizeof(m_cbStaticMaterialParams));
 
-        std::stringstream ss;
-        ss << "SupportDecals=" << m_cbStaticMaterialParams.SupportDecals << std::endl;
-        ss << "SupportDmgBlend=" << m_cbStaticMaterialParams.SupportDmgBlend << std::endl;
-        ss << "SupportLayered=" << m_cbStaticMaterialParams.SupportLayered << std::endl;
-        ss << "SupportOverlay=" << m_cbStaticMaterialParams.SupportOverlay << std::endl;
-        ss << "SupportRotating=" << m_cbStaticMaterialParams.SupportRotating << std::endl;
-        ss << "SupportDirt=" << m_cbStaticMaterialParams.SupportDirt << std::endl;
-        ss << "SupportSoftTint=" << m_cbStaticMaterialParams.SupportSoftTint << std::endl;
-        OutputDebugString(ss.str().c_str());
-
         // read dynamic material params
         stream.read((char*)&m_cbDynamicMaterialParams, sizeof(m_cbDynamicMaterialParams));
 
@@ -257,78 +247,30 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
         // read the vertex buffers
         if (m_Block.attributes.flags & IS_SKINNED) {
-            std::vector<UnpackedVertexWithNormal1> vertices;
-            ReadVertexBuffer<UnpackedVertexWithNormal1>(stream, &m_VertexBuffer, &vertices);
-
-            std::vector<UnpackedNormals> vertices_data;
-            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData[0], &vertices_data);
-
-            for (const auto& vertex : vertices) {
-                m_Vertices.emplace_back(vertex.x);
-                m_Vertices.emplace_back(vertex.y);
-                m_Vertices.emplace_back(vertex.z);
-            }
-
-            for (const auto& data : vertices_data) {
-                m_UVs.emplace_back(data.u0);
-                m_UVs.emplace_back(data.v0);
-            }
-
-            m_ShaderName = "carpaintmm_skinned";
-
-            // read skin batch
-            ReadSkinBatch(stream);
+            m_VertexBuffer        = ReadVertexBuffer<UnpackedVertexWithNormal1>(stream);
+            m_VertexBufferData[0] = ReadVertexBuffer<UnpackedNormals>(stream);
+            m_ShaderName          = "carpaintmm_skinned";
         } else if (m_Block.attributes.flags & IS_DEFORM) {
-            std::vector<VertexDeformPos> vertices;
-            ReadVertexBuffer<VertexDeformPos>(stream, &m_VertexBuffer, &vertices);
-
-            std::vector<VertexDeformNormal2> vertices_data;
-            ReadVertexBuffer<VertexDeformNormal2>(stream, &m_VertexBufferData[0], &vertices_data);
-
-            for (const auto& vertex : vertices) {
-                m_Vertices.emplace_back(vertex.x);
-                m_Vertices.emplace_back(vertex.y);
-                m_Vertices.emplace_back(vertex.z);
-            }
-
-            for (const auto& data : vertices_data) {
-                m_UVs.emplace_back(data.u0);
-                m_UVs.emplace_back(data.v0);
-            }
-
-            m_ShaderName = "carpaintmm_deform";
+            m_VertexBuffer        = ReadVertexBuffer<VertexDeformPos>(stream);
+            m_VertexBufferData[0] = ReadVertexBuffer<VertexDeformNormal2>(stream);
+            m_ShaderName          = "carpaintmm_deform";
         } else {
-            std::vector<UnpackedVertexPosition> vertices;
-            ReadVertexBuffer<UnpackedVertexPosition>(stream, &m_VertexBuffer, &vertices);
+            m_VertexBuffer        = ReadVertexBuffer<UnpackedVertexPosition>(stream);
+            m_VertexBufferData[0] = ReadVertexBuffer<UnpackedNormals>(stream);
+        }
 
-            std::vector<UnpackedNormals> vertices_data;
-            ReadVertexBuffer<UnpackedNormals>(stream, &m_VertexBufferData[0], &vertices_data);
-
-            for (const auto& vertex : vertices) {
-                m_Vertices.emplace_back(vertex.x);
-                m_Vertices.emplace_back(vertex.y);
-                m_Vertices.emplace_back(vertex.z);
-            }
-
-            for (const auto& data : vertices_data) {
-                m_UVs.emplace_back(data.u0);
-                m_UVs.emplace_back(data.v0);
-            }
+        // read skin batch
+        if (m_Block.attributes.flags & IS_SKINNED) {
+            ReadSkinBatch(stream);
         }
 
         // read the layered uv data if needed
         if (m_Block.attributes.flags & (SUPPORT_LAYERED | SUPPORT_OVERLAY)) {
-            std::vector<UnpackedUV> uvs;
-            ReadVertexBuffer<UnpackedUV>(stream, &m_VertexBufferData[1], &uvs);
-
-            for (const auto& uv : uvs) {
-                m_UVs.emplace_back(uv.u);
-                m_UVs.emplace_back(uv.v);
-            }
+            m_VertexBufferData[1] = ReadVertexBuffer<UnpackedUV>(stream);
         }
 
         // read index buffer
-        ReadIndexBuffer(stream, &m_IndexBuffer);
+        m_IndexBuffer = ReadIndexBuffer(stream);
     }
 
     virtual void Write(std::ostream& stream) override final
@@ -349,16 +291,92 @@ class RenderBlockCarPaintMM : public IRenderBlock
         WriteMaterials(stream);
 
         // write the vertex buffer
-        WriteVertexBuffer(stream, m_VertexBuffer);
-        WriteVertexBuffer(stream, m_VertexBufferData[0]);
+        WriteBuffer(stream, m_VertexBuffer);
+        WriteBuffer(stream, m_VertexBufferData[0]);
+
+        // write skin batch
+        if (m_Block.attributes.flags & IS_SKINNED) {
+            WriteSkinBatch(stream);
+        }
 
         // write layered UV data
         if (m_Block.attributes.flags & (SUPPORT_LAYERED | SUPPORT_OVERLAY)) {
-            WriteVertexBuffer(stream, m_VertexBufferData[1]);
+            WriteBuffer(stream, m_VertexBufferData[1]);
         }
 
         // write the index buffer
-        WriteIndexBuffer(stream, m_IndexBuffer);
+        WriteBuffer(stream, m_IndexBuffer);
+    }
+
+    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) override final
+    {
+        //
+    }
+
+    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData() override final
+    {
+        using namespace JustCause3::Vertex;
+
+        floats_t  vertices;
+        uint16s_t indices = m_IndexBuffer->CastData<uint16_t>();
+        floats_t  uvs;
+
+        if (m_Block.attributes.flags & IS_SKINNED) {
+            const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexWithNormal1>();
+            const auto& vbdata = m_VertexBufferData[0]->CastData<UnpackedNormals>();
+
+            for (const auto& vertex : vb) {
+                vertices.emplace_back(vertex.x);
+                vertices.emplace_back(vertex.y);
+                vertices.emplace_back(vertex.z);
+            }
+
+            for (const auto& data : vbdata) {
+                uvs.emplace_back(data.u0);
+                uvs.emplace_back(data.v0);
+
+                // TODO: u1,v1
+            }
+        } else if (m_Block.attributes.flags & IS_DEFORM) {
+            const auto& vb     = m_VertexBuffer->CastData<VertexDeformPos>();
+            const auto& vbdata = m_VertexBufferData[0]->CastData<VertexDeformNormal2>();
+
+            for (const auto& vertex : vb) {
+                vertices.emplace_back(vertex.x);
+                vertices.emplace_back(vertex.y);
+                vertices.emplace_back(vertex.z);
+            }
+
+            for (const auto& data : vbdata) {
+                uvs.emplace_back(data.u0);
+                uvs.emplace_back(data.v0);
+
+                // TODO: u1,v1
+            }
+        } else {
+            const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexPosition>();
+            const auto& vbdata = m_VertexBufferData[0]->CastData<UnpackedNormals>();
+
+            for (const auto& vertex : vb) {
+                vertices.emplace_back(vertex.x);
+                vertices.emplace_back(vertex.y);
+                vertices.emplace_back(vertex.z);
+            }
+
+            for (const auto& data : vbdata) {
+                uvs.emplace_back(data.u0);
+                uvs.emplace_back(data.v0);
+
+                // TODO: u1,v1
+            }
+        }
+
+        if (m_Block.attributes.flags & (SUPPORT_LAYERED | SUPPORT_OVERLAY)) {
+            const auto& uvs = m_VertexBufferData[1]->CastData<UnpackedUV>();
+            // TODO: u,v
+        }
+
+        return {vertices, indices, uvs};
     }
 
     virtual void Setup(RenderContext_t* context) override final

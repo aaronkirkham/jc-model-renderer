@@ -10,7 +10,7 @@ namespace Vertex
 {
     struct SPackedAttribute {
         int32_t   format;
-        float     scale;
+        float     scale = 1.0f;
         glm::vec2 uv0Extent;
         glm::vec2 uv1Extent;
         float     colourExtent;

@@ -2,11 +2,12 @@
 
 #include <StdInc.h>
 #include <array>
+#include <graphics/Types.h>
 #include <imgui.h>
+#include <singleton.h>
+
 #include <examples/imgui_impl_dx11.h>
 #include <examples/imgui_impl_win32.h>
-#include <graphics/Types.h>
-#include <singleton.h>
 
 #define SAFE_DELETE(ptr)                                                                                               \
     if (ptr) {                                                                                                         \
@@ -142,11 +143,8 @@ class Renderer : public Singleton<Renderer>
     void SetCullMode(D3D11_CULL_MODE mode);
 
     // buffers
-    VertexBuffer_t* CreateVertexBuffer(uint32_t count, uint32_t stride, const char* debugName = nullptr);
-    VertexBuffer_t* CreateVertexBuffer(const void* data, uint32_t count, uint32_t stride,
-                                       D3D11_USAGE usage = D3D11_USAGE_DEFAULT, const char* debugName = nullptr);
-    IndexBuffer_t*  CreateIndexBuffer(const void* data, uint32_t count, D3D11_USAGE usage = D3D11_USAGE_DEFAULT,
-                                      const char* debugName = nullptr);
+    IBuffer_t* CreateBuffer(const void* data, uint32_t count, uint32_t stride, BufferType type,
+                            const char* debugName = nullptr);
 
     template <typename T> ConstantBuffer_t* CreateConstantBuffer(T& data, const char* debugName = nullptr)
     {
@@ -228,6 +226,7 @@ class Renderer : public Singleton<Renderer>
 
     // render list
     void AddToRenderList(const std::vector<IRenderBlock*>& renderblocks);
+    void AddToRenderList(IRenderBlock* renderblock);
     void RemoveFromRenderList(const std::vector<IRenderBlock*>& renderblocks);
 
     ID3D11Device* GetDevice()

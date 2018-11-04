@@ -269,14 +269,13 @@ class RenderBlockCharacterSkin : public IRenderBlock
         m_Stride         = (3 * (flags & EIGHT_BONES) + (flags & USE_WRINKLE_MAP) + (flags & USE_FEATURE_MAP));
 
         // read vertex data
-        ReadVertexBuffer(stream, &m_VertexBuffer, VertexStrides[m_Stride]);
-        // InitVerticesForExporters(&m_VertexBuffer->m_Data, m_Stride, &m_Vertices, &m_UVs);
+        m_VertexBuffer = ReadBuffer(stream, VERTEX_BUFFER, VertexStrides[m_Stride]);
 
         // read skin batch
         ReadSkinBatch(stream);
 
         // read index buffer
-        ReadIndexBuffer(stream, &m_IndexBuffer);
+        m_IndexBuffer = ReadIndexBuffer(stream);
     }
 
     virtual void Write(std::ostream& stream) override final
@@ -288,13 +287,66 @@ class RenderBlockCharacterSkin : public IRenderBlock
         WriteMaterials(stream);
 
         // write the vertex data
-        WriteVertexBuffer(stream, m_VertexBuffer);
+        WriteBuffer(stream, m_VertexBuffer);
 
         // write skin batches
         WriteSkinBatch(stream);
 
         // write index buffer
-        WriteIndexBuffer(stream, m_IndexBuffer);
+        WriteBuffer(stream, m_IndexBuffer);
+    }
+
+    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) override final
+    {
+        //
+    }
+
+    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData() override final
+    {
+        using namespace JustCause3::Vertex;
+        using namespace JustCause3::Vertex::RenderBlockCharacter;
+
+        floats_t  vertices;
+        uint16s_t indices = m_IndexBuffer->CastData<uint16_t>();
+        floats_t  uvs;
+
+        switch (m_Stride) {
+            // 4bones1uv, 4bones2uvs, 4bones3uvs
+            case 0:
+            case 1:
+            case 2: {
+                // TODO: once multiple UVs are supported, change this!
+                const auto& vb = m_VertexBuffer->CastData<Packed4Bones1UV>();
+                for (const auto& vertex : vb) {
+                    vertices.emplace_back(unpack(vertex.x));
+                    vertices.emplace_back(unpack(vertex.y));
+                    vertices.emplace_back(unpack(vertex.z));
+                    uvs.emplace_back(unpack(vertex.u0));
+                    uvs.emplace_back(unpack(vertex.v0));
+                }
+
+                break;
+            }
+
+            // 8bones1uv, 8bones2uvs, 8bones3uvs
+            case 3:
+            case 4:
+            case 5: {
+                // TODO: once multiple UVs are supported, change this!
+                const auto& vb = m_VertexBuffer->CastData<Packed8Bones1UV>();
+                for (const auto& vertex : vb) {
+                    vertices.emplace_back(unpack(vertex.x));
+                    vertices.emplace_back(unpack(vertex.y));
+                    vertices.emplace_back(unpack(vertex.z));
+                    uvs.emplace_back(unpack(vertex.u0));
+                    uvs.emplace_back(unpack(vertex.v0));
+                }
+
+                break;
+            }
+        }
+
+        return {vertices, indices, uvs};
     }
 
     virtual void Setup(RenderContext_t* context) override final
@@ -366,46 +418,4 @@ class RenderBlockCharacterSkin : public IRenderBlock
 
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
     }
-
-    /*
-    void InitVerticesForExporters(std::vector<uint8_t>* data, int32_t stride, std::vector<float>* vertices,
-    std::vector<float>* uvs)
-    {
-        switch (stride) {
-        case 0: {
-            //Packed4Bones1UV
-
-            std::vector<Packed4Bones1UV> vertexdata(data->data(), data->data() + (data->size() /
-    sizeof(Packed4Bones1UV))); for (const auto& vertex : vertexdata) { vertices->emplace_back(unpack(vertex.x));
-                vertices->emplace_back(unpack(vertex.y));
-                vertices->emplace_back(unpack(vertex.z));
-                uvs->emplace_back(unpack(vertex.u0));
-                uvs->emplace_back(unpack(vertex.v0));
-            }
-
-            break;
-        }
-        case 1: {
-            //Packed4Bones2UVs
-            break;
-        }
-        case 2: {
-            //Packed4Bones3UVs
-            break;
-        }
-        case 3: {
-            //Packed8Bones1UV
-            break;
-        }
-        case 4: {
-            //Packed8Bones2UVs
-            break;
-        }
-        case 5: {
-            //Packed8Bones3UVs
-            break;
-        }
-        }
-    }
-    */
 };

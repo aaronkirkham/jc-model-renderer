@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 class IRenderBlock;
 class RenderBlockFactory
@@ -10,6 +11,7 @@ class RenderBlockFactory
     virtual ~RenderBlockFactory() = default;
 
     static IRenderBlock* CreateRenderBlock(const uint32_t type);
+    static IRenderBlock* CreateRenderBlock(const std::string& name);
     static const char*   GetRenderBlockName(const uint32_t type);
 
     // render block type hashes

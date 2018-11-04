@@ -21,12 +21,12 @@ class AvalancheArchive : public IImportExporter
         return "Avalanche Archive";
     }
 
-    std::vector<const char*> GetInputExtensions() override final
+    std::vector<const char*> GetImportExtension() override final
     {
         return {".ee", ".bl", ".nl", ".fl"};
     }
 
-    const char* GetOutputExtension() override final
+    const char* GetExportExtension() override final
     {
         return "/";
     }
@@ -55,7 +55,12 @@ class AvalancheArchive : public IImportExporter
         }
     }
 
-    void Export(const fs::path& filename, const fs::path& to, ImportExportFinishedCallback callback) override final
+    void Import(const fs::path& filename, ImportFinishedCallback callback) override final
+    {
+        //
+    }
+
+    void Export(const fs::path& filename, const fs::path& to, ExportFinishedCallback callback) override final
     {
         const auto& path = to / filename.stem();
         DEBUG_LOG("AvalancheArchive::Export - Exporting archive to '" << path << "'...");

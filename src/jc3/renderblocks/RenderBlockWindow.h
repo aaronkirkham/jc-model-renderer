@@ -146,21 +146,10 @@ class RenderBlockWindow : public IRenderBlock
         ReadMaterials(stream);
 
         // read vertex buffer
-        {
-            std::vector<UnpackedVertexPosition2UV> vertices;
-            ReadVertexBuffer<UnpackedVertexPosition2UV>(stream, &m_VertexBuffer, &vertices);
-
-            for (const auto& vertex : vertices) {
-                m_Vertices.emplace_back(vertex.x);
-                m_Vertices.emplace_back(vertex.y);
-                m_Vertices.emplace_back(vertex.z);
-                m_UVs.emplace_back(vertex.u0 * m_Block.attributes.UVScale);
-                m_UVs.emplace_back(vertex.v0 * m_Block.attributes.UVScale);
-            }
-        }
+        m_VertexBuffer = ReadVertexBuffer<UnpackedVertexPosition2UV>(stream);
 
         // read index buffer
-        ReadIndexBuffer(stream, &m_IndexBuffer);
+        m_IndexBuffer = ReadIndexBuffer(stream);
     }
 
     virtual void Write(std::ostream& stream) override final
@@ -172,10 +161,38 @@ class RenderBlockWindow : public IRenderBlock
         WriteMaterials(stream);
 
         // write the vertex buffer
-        WriteVertexBuffer(stream, m_VertexBuffer);
+        WriteBuffer(stream, m_VertexBuffer);
 
         // write the index buffer
-        WriteIndexBuffer(stream, m_IndexBuffer);
+        WriteBuffer(stream, m_IndexBuffer);
+    }
+
+    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) override final
+    {
+        //
+    }
+
+    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData() override final
+    {
+        using namespace JustCause3::Vertex;
+
+        floats_t  vertices;
+        uint16s_t indices = m_IndexBuffer->CastData<uint16_t>();
+        floats_t  uvs;
+
+        const auto& vb = m_VertexBuffer->CastData<UnpackedVertexPosition2UV>();
+
+        for (const auto& vertex : vb) {
+            vertices.emplace_back(vertex.x);
+            vertices.emplace_back(vertex.y);
+            vertices.emplace_back(vertex.z);
+            uvs.emplace_back(vertex.u0);
+            uvs.emplace_back(vertex.v0);
+
+            // TODO: u1,v1
+        }
+
+        return {vertices, indices, uvs};
     }
 
     virtual void Setup(RenderContext_t* context) override final

@@ -7,6 +7,7 @@
 #include <memory>
 #include <assert.h>
 #include <string>
+#include <sstream>
 #include <vector>
 #include <array>
 #include <map>

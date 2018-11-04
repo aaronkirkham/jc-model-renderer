@@ -26,16 +26,21 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
         return it->second;
     }
 
-    fs::path   file      = "../assets/shaders/" + name + ".vb";
-    const auto file_size = fs::file_size(file);
+#ifdef DEBUG
+    fs::path file = "../assets/shaders/" + name + ".vb";
+#else
+    fs::path file = "assets/shaders/" + name + ".vb";
+#endif
 
     // read
     std::ifstream stream(file, std::ios::binary);
     if (stream.fail()) {
-        DEBUG_LOG("ShaderManager::GetVertexShader - couldn't open \"" << file << "\".");
-        Window::Get()->ShowMessageBox("Couldn't open shader.", MB_ICONERROR | MB_OK);
+        DEBUG_LOG("[ERROR] ShaderManager::GetVertexShader - couldn't open \"" << file << "\".");
+        Window::Get()->ShowMessageBox("Failed to open shader \"" + file.generic_string() + "\".", MB_ICONERROR | MB_OK);
         return nullptr;
     }
+
+    const auto file_size = fs::file_size(file);
 
     // resize
     FileBuffer data;
@@ -77,16 +82,21 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
         return it->second;
     }
 
-    fs::path   file      = "../assets/shaders/" + name + ".fb";
-    const auto file_size = fs::file_size(file);
+#ifdef DEBUG
+    fs::path file = "../assets/shaders/" + name + ".fb";
+#else
+    fs::path file = "assets/shaders/" + name + ".fb";
+#endif
 
     // read
     std::ifstream stream(file, std::ios::binary);
     if (stream.fail()) {
-        DEBUG_LOG("ShaderManager::GetPixelShader - couldn't open \"" << file << "\".");
-        Window::Get()->ShowMessageBox("Couldn't open shader.", MB_ICONERROR | MB_OK);
+        DEBUG_LOG("[ERROR] ShaderManager::GetPixelShader - couldn't open \"" << file << "\".");
+        Window::Get()->ShowMessageBox("Failed to open shader \"" + file.generic_string() + "\".", MB_ICONERROR | MB_OK);
         return nullptr;
     }
+
+    const auto file_size = fs::file_size(file);
 
     // resize
     FileBuffer data;
