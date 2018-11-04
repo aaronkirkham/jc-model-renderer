@@ -16,7 +16,7 @@ static constexpr auto g_WindowName = "JC3 Render Block Model Renderer";
     {                                                                                                                  \
         std::stringstream ss_;                                                                                         \
         ss_ << s << std::endl;                                                                                         \
-        OutputDebugStringA(ss_.str().c_str());                                                                         \
+        OutputDebugString(ss_.str().c_str());                                                                          \
     }
 //#else
 //#define DEBUG_LOG(s)
@@ -82,7 +82,9 @@ class Window : public Singleton<Window>
         return m_IsMouseCaptured;
     }
 
-    int32_t ShowMessageBox(const std::string& message, uint32_t type = MB_ICONERROR | MB_OK);
+    int32_t ShowMessageBox(const std::string& message, uint32_t type = MB_ICONWARNING | MB_OK);
+    void    ShowFileSelection(const std::string& title, const std::string& filter,
+                              std::function<void(const fs::path&)> fn_selected);
     void    ShowFolderSelection(const std::string& title, std::function<void(const fs::path&)> fn_selected,
                                 std::function<void()> fn_cancelled = {});
 

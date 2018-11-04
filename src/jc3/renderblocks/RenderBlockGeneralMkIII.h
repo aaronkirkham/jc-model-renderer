@@ -311,7 +311,8 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(Vertices_t* vertices, Indices_t* indices, UVs_t* uvs) override final
+#if 0
+    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) override final
     {
         using namespace JustCause3::Vertex;
 
@@ -359,14 +360,19 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             static const char* faces[] = {
                 "f 1/1/1 2/2/1 3/3/1",
                 "f 3/3/1 2/2/1 4/4/1",
+
                 "f 3/1/2 4/2/2 5/3/2",
                 "f 5/3/2 4/2/2 6/4/2",
+
                 "f 5/4/3 6/3/3 7/2/3",
                 "f 7/2/3 6/3/3 8/1/3",
+
                 "f 7/1/4 8/2/4 1/3/4",
                 "f 1/3/4 8/2/4 2/4/4",
+
                 "f 2/1/5 8/2/5 4/3/5",
                 "f 4/3/5 8/2/5 6/4/5",
+
                 "f 7/1/6 1/2/6 5/3/6",
                 "f 5/3/6 1/2/6 3/4/6",
             };
@@ -447,21 +453,82 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             // load the material
             auto& texture = TextureManager::Get()->GetTexture("models/jc_characters/main_characters/rico/textures/nanos.dds");
             if (texture) {
-                texture->LoadFromFile("C:/users/aaron/Desktop/nanos.dds");
+                texture->LoadFromFile("C:/users/aaron/Desktop/nanos cube/nanos.dds");
                 m_Textures.emplace_back(texture);
             }
         }
 
         // clang-format on
     }
+#endif
 
-    virtual std::tuple<Vertices_t, Indices_t, UVs_t> GetData() override final
+#if 1
+    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) override final
     {
         using namespace JustCause3::Vertex;
 
-        Vertices_t vertices;
-        Indices_t  indices = m_IndexBuffer->CastData<uint16_t>();
-        UVs_t      uvs;
+        memset(&m_Block.attributes, 0, sizeof(m_Block.attributes));
+        memset(&m_cbMaterialConsts2, 0, sizeof(m_cbMaterialConsts2));
+
+        m_Block.attributes.packed.scale            = 1.f;
+        m_Block.attributes.packed.uv0Extent        = {1.f, 1.f};
+        m_Block.attributes.emissiveStartFadeDistSq = 2000.f;
+
+        // temp
+        m_Block.attributes.flags |= DISABLE_BACKFACE_CULLING;
+
+        // test
+        m_MaterialParams[0] = 1.0f;
+        m_MaterialParams[1] = 1.0f;
+        m_MaterialParams[2] = 1.0f;
+        m_MaterialParams[3] = 1.0f;
+
+        std::vector<PackedVertexPosition> packed_vertices;
+        std::vector<GeneralShortPacked>   packed_data;
+
+        for (int i = 0; i < vertices->size(); i += 3) {
+            PackedVertexPosition pos{};
+            pos.x = pack<int16_t>(vertices->at(i));
+            pos.y = pack<int16_t>(vertices->at(i + 1));
+            pos.z = pack<int16_t>(vertices->at(i + 2));
+            packed_vertices.emplace_back(std::move(pos));
+        }
+
+        /*for (int i = 0; i < uvs->size(); i+=2) {
+            GeneralShortPacked gsp{};
+            gsp.u0 = pack<int16_t>(uvs->at(i));
+            gsp.v0 = pack<int16_t>(uvs->at(i + 1));
+            packed_data.emplace_back(std::move(gsp));
+        }*/
+
+        // textures
+        {
+            m_Materials.emplace_back("models/jc_characters/main_characters/rico/textures/nanos.dds");
+
+            // load the material
+            auto& texture =
+                TextureManager::Get()->GetTexture("models/jc_characters/main_characters/rico/textures/nanos.dds");
+            if (texture) {
+                texture->LoadFromFile("C:/users/aaron/Desktop/nanos cube/nanos.dds");
+                m_Textures.emplace_back(texture);
+            }
+        }
+
+        m_VertexBuffer     = Renderer::Get()->CreateBuffer(packed_vertices.data(), packed_vertices.size(),
+                                                       sizeof(PackedVertexPosition), VERTEX_BUFFER);
+        m_VertexBufferData = Renderer::Get()->CreateBuffer(packed_data.data(), packed_data.size(),
+                                                           sizeof(GeneralShortPacked), VERTEX_BUFFER);
+        m_IndexBuffer = Renderer::Get()->CreateBuffer(indices->data(), indices->size(), sizeof(uint16_t), INDEX_BUFFER);
+    }
+#endif
+
+    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData() override final
+    {
+        using namespace JustCause3::Vertex;
+
+        floats_t  vertices;
+        uint16s_t indices = m_IndexBuffer->CastData<uint16_t>();
+        floats_t  uvs;
 
         if (m_Block.attributes.flags & IS_SKINNED) {
             const auto& vb = m_VertexBuffer->CastData<UnpackedVertexPositionXYZW>();

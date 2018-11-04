@@ -34,10 +34,9 @@ bool Texture::LoadFromBuffer(FileBuffer* buffer)
     SAFE_RELEASE(m_Texture);
 
     // create the dds texture resources
-    const auto renderer = Renderer::Get();
-    auto       result   = DirectX::CreateDDSTextureFromMemoryEx(renderer->GetDevice(), renderer->GetDeviceContext(),
-                                                        buffer->data(), buffer->size(), 0, D3D11_USAGE_DEFAULT,
-                                                        D3D11_BIND_SHADER_RESOURCE, 0, 0, false, &m_Texture, &m_SRV);
+    auto result = DirectX::CreateDDSTextureFromMemoryEx(Renderer::Get()->GetDevice(), buffer->data(), buffer->size(), 0,
+                                                        D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, false,
+                                                        &m_Texture, &m_SRV);
 
     // get the texture size
     if (SUCCEEDED(result)) {
@@ -76,13 +75,14 @@ bool Texture::LoadFromFile(const fs::path& filename)
 {
     m_Filename = filename;
 
-    const auto size = fs::file_size(filename);
-
     std::ifstream stream(filename.c_str(), std::ios::binary);
     if (stream.fail()) {
-        DEBUG_LOG("[ERROR] Failed to create texture from file '" << filename.filename() << "'.");
+        DEBUG_LOG("[ERROR] Failed to create texture from file \"" << filename.filename() << "\".");
+        Window::Get()->ShowMessageBox("Failed to open texture \"" + filename.generic_string() + "\".");
         return false;
     }
+
+    const auto size = fs::file_size(filename);
 
     FileBuffer buffer;
     buffer.resize(size);

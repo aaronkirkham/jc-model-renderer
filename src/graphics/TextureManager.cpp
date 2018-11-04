@@ -12,7 +12,11 @@
 TextureManager::TextureManager()
 {
     m_MissingTexture = std::make_unique<Texture>("missing-texture.dds");
+#ifdef DEBUG
     m_MissingTexture->LoadFromFile("../assets/missing-texture.dds");
+#else
+    m_MissingTexture->LoadFromFile("assets/missing-texture.dds");
+#endif
 
     Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {
         for (auto it = m_PreviewTextures.begin(); it != m_PreviewTextures.end();) {

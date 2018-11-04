@@ -170,8 +170,10 @@ bool Renderer::Render()
         // clear gbuffer
         static float _black[4] = {0, 0, 0, 0};
         for (const auto& rt : m_GBuffer) {
-            if (rt)
+            if (rt) {
                 m_DeviceContext->ClearRenderTargetView(rt, _black);
+            }
+                
         }
 
         m_DeviceContext->ClearDepthStencilView(m_DepthStencilView, (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL), 1.0f, 0);

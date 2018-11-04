@@ -15,8 +15,7 @@ class AvalancheArchive : public Factory<AvalancheArchive>
     bool                             m_HasUnsavedChanged = false;
 
   public:
-    AvalancheArchive(const fs::path& file, bool load_from_archive = true);
-    AvalancheArchive(const fs::path& filename, const FileBuffer& buffer);
+    AvalancheArchive(const fs::path& filename, const FileBuffer& buffer, bool external = false);
     virtual ~AvalancheArchive() = default;
 
     virtual std::string GetFactoryKey() const

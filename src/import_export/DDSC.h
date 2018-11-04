@@ -21,20 +21,25 @@ class DDSC : public IImportExporter
         return "DirectDraw Surface";
     }
 
-    std::vector<const char*> GetInputExtensions() override final
+    std::vector<const char*> GetImportExtension() override final
     {
         return {".ddsc", ".hmddsc"};
     }
 
-    const char* GetOutputExtension() override final
+    const char* GetExportExtension() override final
     {
         return ".dds";
     }
 
-    void Export(const fs::path& filename, const fs::path& to, ImportExportFinishedCallback callback) override final
+    void Import(const fs::path& filename, ImportFinishedCallback callback) override final
+    {
+        //
+    }
+
+    void Export(const fs::path& filename, const fs::path& to, ExportFinishedCallback callback) override final
     {
         auto& path = to / filename.stem();
-        path += ".dds";
+        path += GetExportExtension();
         DEBUG_LOG("DDSC::Export - Exporting texture to '" << path << "'...");
 
         FileLoader::Get()->ReadFile(filename, [&, path, callback](bool success, FileBuffer data) {

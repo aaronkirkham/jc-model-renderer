@@ -255,6 +255,7 @@ bool RenderBlockModel::SaveFileCallback(const fs::path& filename, const fs::path
 
 void RenderBlockModel::ContextMenuUI(const fs::path& filename)
 {
+#if 0
     if (ImGui::Selectable("New Render Block (GeneralMkIII)")) {
         auto rbm = get(filename.string());
         assert(rbm);
@@ -264,6 +265,7 @@ void RenderBlockModel::ContextMenuUI(const fs::path& filename)
 
         rbm->GetRenderBlocks().emplace_back(rb);
     }
+#endif
 }
 
 void RenderBlockModel::Load(const fs::path& filename)

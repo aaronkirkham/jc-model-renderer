@@ -3,6 +3,13 @@
 	{
 		'target_name': 'imgui',
 		'type': 'static_library',
+		'configurations': {
+			'Debug': {
+				'defines': [
+					'_ITERATOR_DEBUG_LEVEL=0',
+				],
+			},
+		},
 		'defines': [
 			'IMGUI_DISABLE_OBSOLETE_FUNCTIONS',
 		],

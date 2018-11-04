@@ -7,6 +7,13 @@
 			'imgui.gyp:imgui',
 			'zlib.gyp:zlib',
 		],
+		'configurations': {
+			'Debug': {
+				'defines': [
+					'_ITERATOR_DEBUG_LEVEL=0',
+				],
+			},
+		},
 		'defines': [
 			'WIN32_LEAN_AND_MEAN',
 			'CPPHTTPLIB_ZLIB_SUPPORT',
@@ -35,11 +42,12 @@
 			'dxgi.lib',
 			'D3DCompiler.lib',
 			'Ole32.lib',
+			'Comdlg32.lib',
 		],
 		'include_dirs': [
 			'src',
 			'vendor/ksignals',
-			'vendor/json/src',
+			'vendor/json/single_include/nlohmann',
 			'vendor/glm/glm',
 			'vendor/httplib',
 		],

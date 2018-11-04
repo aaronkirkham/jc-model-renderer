@@ -120,12 +120,12 @@ class RenderBlockBuildingJC3 : public IRenderBlock
         //
     }
 
-    virtual void SetData(Vertices_t* vertices, Indices_t* indices, UVs_t* uvs) override final
+    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) override final
     {
         //
     }
 
-    virtual std::tuple<Vertices_t, Indices_t, UVs_t> GetData() override final
+    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData() override final
     {
         return {};
     }

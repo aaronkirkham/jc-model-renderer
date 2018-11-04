@@ -308,18 +308,18 @@ class RenderBlockCarPaintMM : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(Vertices_t* vertices, Indices_t* indices, UVs_t* uvs) override final
+    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) override final
     {
         //
     }
 
-    virtual std::tuple<Vertices_t, Indices_t, UVs_t> GetData() override final
+    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData() override final
     {
         using namespace JustCause3::Vertex;
 
-        Vertices_t vertices;
-        Indices_t  indices = m_IndexBuffer->CastData<uint16_t>();
-        UVs_t      uvs;
+        floats_t  vertices;
+        uint16s_t indices = m_IndexBuffer->CastData<uint16_t>();
+        floats_t  uvs;
 
         if (m_Block.attributes.flags & IS_SKINNED) {
             const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexWithNormal1>();

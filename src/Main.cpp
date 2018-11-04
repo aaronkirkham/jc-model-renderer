@@ -74,6 +74,9 @@ void SelectJustCause3Directory()
 LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS* exception_pointers);
 #endif
 
+#include <import_export/ImportExportManager.h>
+#include <jc3/RenderBlockFactory.h>
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine, int32_t iCmdShow)
 {
 #ifndef DEBUG
@@ -129,7 +132,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         CheckForUpdates();
 #endif
 
-#if 1
+#ifdef DEBUG
         Input::Get()->Events().KeyUp.connect([](uint32_t key) {
             if (key == VK_F1) {
                 //FileLoader::Get()->LocateFileInDictionary("models/jc_environments/props/animation_prop/textures/bucket_dif.hmddsc");
@@ -227,9 +230,25 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 });
             }
             else if (key == VK_F7) {
-                fs::path filename = "editor/entities/gameobjects/main_character.epe";
+                /*fs::path filename = "editor/entities/gameobjects/main_character.epe";
                 RuntimeContainer::Load(filename, [&](std::shared_ptr<RuntimeContainer> rc) {
                     FileLoader::Get()->WriteRuntimeContainer(rc.get());
+                });*/
+
+                const auto& importers = ImportExportManager::Get()->GetImporters(".rbm");
+                importers[0]->Import("C:/users/aaron/desktop/nanos cube/nanos.obj", [&](bool success, std::any data) {
+                    const auto rbm = RenderBlockModel::make("nanos.obj");
+                    const auto render_block = RenderBlockFactory::CreateRenderBlock("GeneralMkIII");
+
+                    rbm->GetRenderBlocks().emplace_back(render_block);
+
+                    auto & [vertices, uvs, normals, indices] =
+                        std::any_cast<std::tuple<floats_t, floats_t, floats_t, uint16s_t>>(data);
+
+                    render_block->SetData(&vertices, &indices, &uvs);
+                    render_block->Create();
+
+                    Renderer::Get()->AddToRenderList(render_block);
                 });
             }
         });
@@ -289,7 +308,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
                 for (const auto& model : RenderBlockModel::Instances) {
                     for (const auto& block : model.second->GetRenderBlocks()) {
-                        if (!block->GetVertexBuffer() || !block->GetIndexBuffer()) {
+                        if (!block->IsVisible() || !block->GetVertexBuffer() || !block->GetIndexBuffer()) {
                             continue;
                         }
 

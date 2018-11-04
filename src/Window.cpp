@@ -1,15 +1,16 @@
-#include <Window.h>
 #include <Input.h>
+#include <Window.h>
 #include <graphics/Renderer.h>
+
 #include <examples/imgui_impl_win32.h>
 
 #include <jc3/formats/AvalancheArchive.h>
 #include <jc3/formats/RenderBlockModel.h>
 #include <jc3/formats/RuntimeContainer.h>
 
+#include <commdlg.h>
 #include <shellapi.h>
 #include <shlobj.h>
-#include <sstream>
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
@@ -190,16 +191,37 @@ void Window::CaptureMouse(bool capture)
 
 int32_t Window::ShowMessageBox(const std::string& message, uint32_t type)
 {
-    return MessageBox(m_Hwnd, message.c_str(), g_WindowName, type);
+    auto result = MessageBox(m_Hwnd, message.c_str(), g_WindowName, type);
+    if (type == MB_ICONERROR) {
+        TerminateProcess(GetCurrentProcess(), -1);
+    }
+
+    return result;
+}
+
+void Window::ShowFileSelection(const std::string& title, const std::string& filter, std::function<void(const fs::path&)> fn_selected)
+{
+    char         filename[MAX_PATH] = {0};
+    OPENFILENAME ofn                = {0};
+
+    ofn.lStructSize = sizeof(OPENFILENAME);
+    ofn.hwndOwner   = m_Hwnd;
+    ofn.lpstrFilter = filter.c_str();
+    ofn.lpstrFile   = filename;
+    ofn.nMaxFile    = MAX_PATH;
+    ofn.lpstrTitle  = title.c_str();
+    ofn.Flags       = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
+
+    if (GetOpenFileName(&ofn)) {
+        fn_selected(filename);
+    }
 }
 
 void Window::ShowFolderSelection(const std::string& title, std::function<void(const fs::path&)> fn_selected,
                                  std::function<void()> fn_cancelled)
 {
-    TCHAR path[MAX_PATH];
-
-    BROWSEINFO browse_info;
-    ZeroMemory(&browse_info, sizeof(BROWSEINFO));
+    TCHAR      path[MAX_PATH] = {0};
+    BROWSEINFO browse_info    = {0};
 
     browse_info.hwndOwner      = m_Hwnd;
     browse_info.pidlRoot       = nullptr;

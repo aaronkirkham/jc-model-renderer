@@ -196,8 +196,9 @@ void UI::Render()
     }
 
     // open the about popup
-    if (g_ShowAboutWindow)
+    if (g_ShowAboutWindow) {
         ImGui::OpenPopup("About");
+    }
 
     // About
     if (ImGui::BeginPopupModal("About", &g_ShowAboutWindow, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))) {
@@ -465,19 +466,30 @@ void UI::RenderFileTreeView()
                             if (render_block_open) {
                                 // show import button if the block doesn't have a vertex buffer
                                 if (!render_block->GetVertexBuffer()) {
+#ifdef ENABLE_OBJ_IMPORT
                                     static auto red = ImVec4{1, 0, 0, 1};
                                     ImGui::TextColored(red, "This model doesn't have any mesh!");
 
                                     if (ImGuiCustom::BeginButtonDropDown("Import Mesh From")) {
-                                        if (ImGui::MenuItem("Wavefront", ".obj")) {
-                                            render_block->SetData(nullptr, nullptr, nullptr);
-                                            render_block->Create();
+                                        const auto& importers = ImportExportManager::Get()->GetImporters(".rbm");
+                                        for (const auto& importer : importers) {
+                                            if (ImGui::MenuItem(importer->GetName(), importer->GetExportExtension())) {
+                                                UI::Events().ImportFileRequest(
+                                                    importer, [&](bool success, std::any data) {
+                                                        auto & [vertices, uvs, normals, indices] = std::any_cast<
+                                                            std::tuple<floats_t, floats_t, floats_t, uint16s_t>>(data);
 
-                                            Renderer::Get()->AddToRenderList(render_block);
+                                                        render_block->SetData(&vertices, &indices, &uvs);
+                                                        render_block->Create();
+
+                                                        Renderer::Get()->AddToRenderList(render_block);
+                                                    });
+                                            }
                                         }
 
                                         ImGuiCustom::EndButtonDropDown();
                                     }
+#endif
                                 } else {
                                     ImGui::Text(ICON_FA_COGS "  Attributes");
 
@@ -611,11 +623,11 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra, u
 #endif
 
         // exporters
-        const auto& exporters = ImportExportManager::Get()->GetExportersForExtension(filename.extension().string());
+        const auto& exporters = ImportExportManager::Get()->GetExporters(filename.extension().string());
         if (exporters.size() > 0) {
             if (ImGui::BeginMenu(ICON_FA_MINUS_CIRCLE "  Export", (exporters.size() > 0))) {
                 for (const auto& exporter : exporters) {
-                    if (ImGui::MenuItem(exporter->GetName(), exporter->GetOutputExtension())) {
+                    if (ImGui::MenuItem(exporter->GetName(), exporter->GetExportExtension())) {
                         UI::Get()->Events().ExportFileRequest(filename, exporter);
                     }
                 }

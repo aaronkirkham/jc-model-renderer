@@ -4,9 +4,9 @@
 #include <d3d11.h>
 #include <vector>
 
-using Vertices_t = std::vector<float>;
-using Indices_t  = std::vector<uint16_t>;
-using UVs_t      = std::vector<float>;
+using floats_t    = std::vector<float>;
+using uint16s_t   = std::vector<uint16_t>;
+using materials_t = std::vector<fs::path>;
 
 class Renderer;
 struct RenderContext_t {
