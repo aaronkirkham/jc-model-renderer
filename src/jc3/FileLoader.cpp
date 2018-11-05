@@ -129,7 +129,8 @@ FileLoader::FileLoader()
                 }
             });
         } else {
-            DEBUG_LOG("[ERROR] FileLoader (FileTreeItemSelected) - Unknown file type extension \"" << file.extension() << "\". (" << file << ")");
+            DEBUG_LOG("[ERROR] FileLoader (FileTreeItemSelected) - Unknown file type extension \""
+                      << file.extension() << "\". (" << file << ")");
 
             std::string error = "Unable to read the \"" + file.extension().string() + "\" extension.\n\n";
             error += "Want to help? Check out our GitHub page for information on how to contribute.";
@@ -163,11 +164,9 @@ FileLoader::FileLoader()
                     }
                 }
 
-                std::stringstream error;
-                error << "Failed to save \"" << file.filename() << "\".";
-                Window::Get()->ShowMessageBox(error.str());
-
-                DEBUG_LOG("[ERROR] " << error.str());
+                DEBUG_LOG("[ERROR] FileLoader (SaveFileRequest) - Failed to save \"" + file.filename().string()
+                          + "\".");
+                Window::Get()->ShowMessageBox("Failed to save \"" + file.filename().string() + "\".");
             });
         }
     });
@@ -217,11 +216,9 @@ FileLoader::FileLoader()
                             UI::Get()->PopStatusText(status_text_id);
 
                             if (!success) {
-                                std::stringstream error;
-                                error << "Failed to export \"" << file.filename() << "\".";
-                                Window::Get()->ShowMessageBox(error.str());
-
-                                DEBUG_LOG("[ERROR] " << error.str());
+                                DEBUG_LOG("[ERROR] FileLoader (ExportFileRequest) - Failed to export \""
+                                          + file.filename().string() + "\".");
+                                Window::Get()->ShowMessageBox("Failed to export \"" + file.filename().string() + "\".");
                             }
                         });
                     })
@@ -257,7 +254,7 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback, u
     }
 
     // check any loaded archives for the file
-    const auto & [archive, entry] = GetStreamArchiveFromFile(filename);
+    const auto& [archive, entry] = GetStreamArchiveFromFile(filename);
     if (archive && entry.m_Offset != 0 && entry.m_Offset != -1) {
         auto buffer = archive->GetEntryBuffer(entry);
 
@@ -279,7 +276,7 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback, u
 
     // finally, lets read it directory from the arc file
     std::thread([this, filename, callback, status_text_id] {
-        const auto & [directory_name, archive_name, namehash] = LocateFileInDictionary(filename);
+        const auto& [directory_name, archive_name, namehash] = LocateFileInDictionary(filename);
         if (!directory_name.empty()) {
             FileBuffer buffer;
             if (ReadFileFromArchive(directory_name, archive_name, namehash, &buffer)) {
@@ -306,7 +303,7 @@ void FileLoader::RunFileBatches() noexcept
         std::lock_guard<std::recursive_mutex> _lk{m_BatchesMutex};
 
         for (const auto& path : m_PathBatches) {
-            const auto & [directory_name, archive_name, namehash] = LocateFileInDictionary(path.first);
+            const auto& [directory_name, archive_name, namehash] = LocateFileInDictionary(path.first);
             if (!directory_name.empty()) {
                 const auto& archive_path = (directory_name + "/" + archive_name);
 
@@ -556,7 +553,7 @@ void FileLoader::ReadStreamArchive(const fs::path& filename, const FileBuffer& d
 
         ReadFile(toc_filename,
                  [&, toc_filename, compressed_data = std::move(data), callback](bool success, FileBuffer data) {
-                     return callback(read_archive(&compressed_data, &data));
+                     return callback(read_archive(&compressed_data, success ? &data : nullptr));
                  });
     } else {
         std::thread(
@@ -851,7 +848,7 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
             DEBUG_TEXTURE_FLAGS(texture.m_Flags);
 
             // find the best stream to use
-            auto & [stream_index, load_source] = AvalancheTexture::FindBest(&texture);
+            auto& [stream_index, load_source] = AvalancheTexture::FindBest(&texture);
 
             // find the rank
             const auto rank = AvalancheTexture::GetHighestRank(&texture, stream_index);
@@ -939,7 +936,7 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
     DEBUG_TEXTURE_FLAGS(texture.m_Flags);
 
     // find the best stream to use
-    auto & [stream_index, load_source] = AvalancheTexture::FindBest(&texture, true);
+    auto& [stream_index, load_source] = AvalancheTexture::FindBest(&texture, true);
 
     // find the rank
     const auto rank = AvalancheTexture::GetHighestRank(&texture, stream_index);
@@ -1112,7 +1109,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const fs::pa
     instanceQueue.push({root_container.get(), rootNode});
 
     while (!instanceQueue.empty()) {
-        const auto & [current_container, item] = instanceQueue.front();
+        const auto& [current_container, item] = instanceQueue.front();
 
         stream.seekg(item.m_DataOffset);
 
@@ -1152,7 +1149,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const fs::pa
 
     // grab all the property values
     while (!propertyQueue.empty()) {
-        const auto & [current_property, prop] = propertyQueue.front();
+        const auto& [current_property, prop] = propertyQueue.front();
 
         // read each type
         const auto& type = current_property->GetType();

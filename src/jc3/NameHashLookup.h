@@ -19,12 +19,12 @@ class NameHashLookup
                 const auto handle = GetModuleHandle(nullptr);
                 const auto rc     = FindResource(handle, MAKEINTRESOURCE(256), RT_RCDATA);
                 if (rc == nullptr) {
-                    throw std::runtime_error("NameHashLookup - Failed to find dictionary resource");
+                    throw std::runtime_error("FindResource failed");
                 }
 
                 const auto data = LoadResource(handle, rc);
                 if (data == nullptr) {
-                    throw std::runtime_error("NameHashLookup - Failed to load dictionary resource");
+                    throw std::runtime_error("LoadResource failed");
                 }
 
                 // parse the file list json
@@ -37,14 +37,13 @@ class NameHashLookup
                     LookupTable.insert(std::make_pair(namehash, it.value().get<std::string>()));
                 }
             } catch (const std::exception& e) {
-                DEBUG_LOG(e.what());
+                DEBUG_LOG("[ERROR] NameHashLookup - Failed to load lookup table (" << e.what() << ")");
 
-                std::stringstream error;
-                error << "Failed to read/parse namehash lookup table.\n\nSome features will be disabled." << std::endl
-                      << std::endl;
-                error << e.what();
-
-                Window::Get()->ShowMessageBox(error.str());
+                std::string error = "Failed to load namehash lookup table. (";
+                error += e.what();
+                error += ")\n\n";
+                error += "Some features will be disabled.";
+                Window::Get()->ShowMessageBox(error);
             }
         })
             .detach();
@@ -52,7 +51,6 @@ class NameHashLookup
 
     static std::string GetName(const uint32_t name_hash)
     {
-        assert(LookupTable.size() != 0);
         auto it = LookupTable.find(name_hash);
         if (it != LookupTable.end()) {
             return (*it).second;
