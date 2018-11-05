@@ -1,0 +1,76 @@
+#pragma once
+
+#include <jc3/renderblocks/IRenderBlock.h>
+
+#pragma pack(push, 1)
+#pragma pack(pop)
+
+class RenderBlock___ : public IRenderBlock
+{
+  private:
+  public:
+    RenderBlock___() = default;
+    virtual ~RenderBlock___()
+    {
+        //
+    }
+
+    virtual const char* GetTypeName() override final
+    {
+        return "RenderBlock___";
+    }
+
+    virtual uint32_t GetTypeHash() const override final
+    {
+        return 0x0;
+    }
+
+    virtual bool IsOpaque() override final
+    {
+        return true;
+    }
+
+    virtual void Create() override final
+    {
+        //
+    }
+
+    virtual void Read(std::istream& stream) override final
+    {
+        //
+    }
+
+    virtual void Write(std::ostream& stream) override final
+    {
+        //
+    }
+
+    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) override final
+    {
+        //
+    }
+
+    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData() override final
+    {
+        return {};
+    }
+
+    virtual void Setup(RenderContext_t* context) override final
+    {
+        if (!m_Visible)
+            return;
+
+        IRenderBlock::Setup(context);
+    }
+
+    virtual void Draw(RenderContext_t* context) override final
+    {
+        if (!m_Visible)
+            return;
+    }
+
+    virtual void DrawUI() override final
+    {
+        //
+    }
+};

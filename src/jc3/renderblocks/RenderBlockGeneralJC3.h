@@ -13,9 +13,9 @@ struct GeneralJC3Attributes {
     float                                diffuseWrap;
     float                                specularFresnel;
     glm::vec4                            diffuseModulator;
-    float                                _unknown;
+    float                                backLight;
     float                                _unknown2;
-    float                                _unknown3;
+    float                                startFadeOutDistanceEmissiveSq;
     JustCause3::Vertex::SPackedAttribute packed;
     uint32_t                             flags;
 };
@@ -51,7 +51,10 @@ class RenderBlockGeneralJC3 : public IRenderBlock
     } m_cbVertexInstanceConsts;
 
     struct cbVertexMaterialConsts {
-        glm::vec4 data;
+        float     DepthBias;
+        float     EmissiveStartFadeDistSq;
+        float     _unknown;
+        float     _unknown2;
         glm::vec2 uv0Extent;
         glm::vec2 uv1Extent;
     } m_cbVertexMaterialConsts;
@@ -247,13 +250,16 @@ class RenderBlockGeneralJC3 : public IRenderBlock
             const auto scale = m_Block.attributes.packed.scale * m_ScaleModifier;
 
             // set vertex shader constants
-            m_cbVertexInstanceConsts.viewProjection = context->m_viewProjectionMatrix;
-            m_cbVertexInstanceConsts.world          = glm::scale(glm::mat4(1), {scale, scale, scale});
-            m_cbVertexInstanceConsts.colour         = glm::vec4(1, 1, 1, 1);
-            m_cbVertexInstanceConsts._thing         = glm::vec4(0, 1, 2, 1);
-            m_cbVertexMaterialConsts.data      = {m_Block.attributes.depthBias, m_Block.attributes._unknown3, 0, 0};
-            m_cbVertexMaterialConsts.uv0Extent = m_Block.attributes.packed.uv0Extent;
-            m_cbVertexMaterialConsts.uv1Extent = m_Block.attributes.packed.uv1Extent;
+            m_cbVertexInstanceConsts.viewProjection          = context->m_viewProjectionMatrix;
+            m_cbVertexInstanceConsts.world                   = glm::scale(glm::mat4(1), {scale, scale, scale});
+            m_cbVertexInstanceConsts.colour                  = glm::vec4(1, 1, 1, 1);
+            m_cbVertexInstanceConsts._thing                  = glm::vec4(0, 1, 2, 1);
+            m_cbVertexMaterialConsts.DepthBias               = m_Block.attributes.depthBias;
+            m_cbVertexMaterialConsts.EmissiveStartFadeDistSq = m_Block.attributes.startFadeOutDistanceEmissiveSq;
+            m_cbVertexMaterialConsts._unknown                = 0;
+            m_cbVertexMaterialConsts._unknown2               = 0;
+            m_cbVertexMaterialConsts.uv0Extent               = m_Block.attributes.packed.uv0Extent;
+            m_cbVertexMaterialConsts.uv1Extent               = m_Block.attributes.packed.uv1Extent;
 
             // set fragment shader constants
             m_cbFragmentMaterialConsts.specularGloss    = m_Block.attributes.specularGloss;
@@ -298,8 +304,9 @@ class RenderBlockGeneralJC3 : public IRenderBlock
         ImGui::SliderFloat("Diffuse Wrap", &m_Block.attributes.diffuseWrap, 0.0f, 10.0f);
         ImGui::SliderFloat("Specular Fresnel", &m_Block.attributes.specularFresnel, 0.0f, 10.0f);
         ImGui::ColorEdit3("Diffuse Modulator", glm::value_ptr(m_Block.attributes.diffuseModulator));
-        ImGui::SliderFloat("Unknown #1", &m_Block.attributes._unknown, 0.0f, 10.0f);
+        ImGui::SliderFloat("Back Light", &m_Block.attributes.backLight, 0.0f, 10.0f);
         ImGui::SliderFloat("Unknown #2", &m_Block.attributes._unknown2, 0.0f, 10.0f);
-        ImGui::SliderFloat("Unknown #3", &m_Block.attributes._unknown3, 0.0f, 10.0f);
+        ImGui::SliderFloat("Fade Out Distance Emissive", &m_Block.attributes.startFadeOutDistanceEmissiveSq, 0.0f,
+                           10.0f);
     }
 };

@@ -82,6 +82,14 @@ namespace Vertex
     };
     static_assert(sizeof(PackedTex2UV) == 0x8, "PackedTex2UV alignment is wrong!");
 
+    struct PackedTexWithSomething {
+        int16_t u0;
+        int16_t v0;
+        float   unknown;
+    };
+
+    static_assert(sizeof(PackedTexWithSomething) == 0x8, "PackedTexWithSomething alignment is wrong!");
+
     struct UnpackedUV {
         float u;
         float v;

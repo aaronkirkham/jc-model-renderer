@@ -6,6 +6,7 @@
 #include <jc3/renderblocks/RenderBlockCharacterSkin.h>
 #include <jc3/renderblocks/RenderBlockGeneralJC3.h>
 #include <jc3/renderblocks/RenderBlockGeneralMkIII.h>
+#include <jc3/renderblocks/RenderBlockLandmark.h>
 #include <jc3/renderblocks/RenderBlockWindow.h>
 
 #include <jc3/hashlittle.h>
@@ -27,6 +28,8 @@ IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type)
             return new RenderBlockGeneralJC3;
         case RB_GENERALMKIII:
             return new RenderBlockGeneralMkIII;
+        case RB_LANDMARK:
+            return new RenderBlockLandmark;
         case RB_WINDOW:
             return new RenderBlockWindow;
     }
