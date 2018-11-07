@@ -14,6 +14,8 @@ static_assert(sizeof(CharacterSkinAttributes) == 0x38, "CharacterSkinAttributes 
 
 namespace JustCause3::RenderBlocks
 {
+static constexpr uint8_t CHARACTERSKIN_VERSION = 6;
+
 struct CharacterSkin {
     uint8_t                 version;
     CharacterSkinAttributes attributes;
@@ -50,6 +52,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
     } m_cbMaterialConsts;
 
     JustCause3::RenderBlocks::CharacterSkin m_Block;
+    std::vector<JustCause3::CSkinBatch>     m_SkinBatches;
     ConstantBuffer_t*                       m_VertexShaderConstants   = nullptr;
     std::array<ConstantBuffer_t*, 2>        m_FragmentShaderConstants = {nullptr};
     int32_t                                 m_Stride                  = 0;
@@ -58,10 +61,15 @@ class RenderBlockCharacterSkin : public IRenderBlock
     RenderBlockCharacterSkin() = default;
     virtual ~RenderBlockCharacterSkin()
     {
-        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants);
+        // delete the skin batch lookup
+        for (auto& batch : m_SkinBatches) {
+            SAFE_DELETE(batch.m_BatchLookup);
+        }
 
-        for (auto& fsc : m_FragmentShaderConstants)
-            Renderer::Get()->DestroyBuffer(fsc);
+        // destroy shader constants
+        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants);
+        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
+        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[1]);
     }
 
     virtual const char* GetTypeName() override final
@@ -261,18 +269,22 @@ class RenderBlockCharacterSkin : public IRenderBlock
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
+        if (m_Block.version != JustCause3::RenderBlocks::CHARACTERSKIN_VERSION) {
+            __debugbreak();
+        }
+
         // read the materials
         ReadMaterials(stream);
 
         // get the vertices stride
         const auto flags = m_Block.attributes.flags;
-        m_Stride         = (3 * (flags & EIGHT_BONES) + (flags & USE_WRINKLE_MAP) + (flags & USE_FEATURE_MAP));
+        m_Stride         = (3 * ((flags >> 2) & 1) + ((flags >> 1) & 1) + ((flags >> 4) & 1));
 
         // read vertex data
         m_VertexBuffer = ReadBuffer(stream, VERTEX_BUFFER, VertexStrides[m_Stride]);
 
         // read skin batch
-        ReadSkinBatch(stream);
+        ReadSkinBatch(stream, &m_SkinBatches);
 
         // read index buffer
         m_IndexBuffer = ReadIndexBuffer(stream);
@@ -290,7 +302,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
         WriteBuffer(stream, m_VertexBuffer);
 
         // write skin batches
-        WriteSkinBatch(stream);
+        WriteSkinBatch(stream, &m_SkinBatches);
 
         // write index buffer
         WriteBuffer(stream, m_IndexBuffer);
@@ -389,7 +401,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
         // setup blending
         if (m_Block.attributes.flags & ALPHA_MASK) {
             context->m_Renderer->SetBlendingEnabled(false);
-            context->m_Renderer->SetAlphaEnabled(false);
+            context->m_Renderer->SetAlphaTestEnabled(false);
         }
 
         context->m_Renderer->SetBlendingEnabled(true);
@@ -402,7 +414,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
         if (!m_Visible)
             return;
 
-        IRenderBlock::DrawSkinBatches(context);
+        IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
     }
 
     virtual void DrawUI() override final

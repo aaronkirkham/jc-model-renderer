@@ -12,10 +12,11 @@
 
 #include <functional>
 
-using ReadFileCallback    = std::function<void(bool success, FileBuffer data)>;
-using FileTypeCallback    = std::function<void(const fs::path& filename, FileBuffer data, bool external)>;
-using FileSaveCallback    = std::function<bool(const fs::path& filename, const fs::path& directory)>;
-using ReadArchiveCallback = std::function<void(std::unique_ptr<StreamArchive_t>)>;
+using ReadFileCallback       = std::function<void(bool success, FileBuffer data)>;
+using FileTypeCallback       = std::function<void(const fs::path& filename, FileBuffer data, bool external)>;
+using FileSaveCallback       = std::function<bool(const fs::path& filename, const fs::path& directory)>;
+using ReadArchiveCallback    = std::function<void(std::unique_ptr<StreamArchive_t>)>;
+using DictionaryLookupResult = std::tuple<std::string, std::string, uint32_t>;
 
 enum ReadFileFlags : uint8_t {
     SKIP_TEXTURE_LOADER = 1,
@@ -82,8 +83,9 @@ class FileLoader : public Singleton<FileLoader>
 
     // stream archive caching
     std::tuple<StreamArchive_t*, StreamArchiveEntry_t>
-                                                   GetStreamArchiveFromFile(const fs::path& file, StreamArchive_t* archive = nullptr) noexcept;
-    std::tuple<std::string, std::string, uint32_t> LocateFileInDictionary(const fs::path& filename) noexcept;
+                           GetStreamArchiveFromFile(const fs::path& file, StreamArchive_t* archive = nullptr) noexcept;
+    DictionaryLookupResult LocateFileInDictionary(const fs::path& filename) noexcept;
+    DictionaryLookupResult LocateFileInDictionaryByPartOfName(const fs::path& filename) noexcept;
 
     DirectoryList* GetDirectoryList()
     {

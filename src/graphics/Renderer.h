@@ -51,6 +51,10 @@ struct FragmentGlobalConstants {
     glm::vec4 _unknown4[63];       // 32 - 95
 };
 
+struct AlphaTestConstants {
+    float AlphaMulRef[4] = {50.0f, -1.0f, 50.0f, -1.0f};
+};
+
 class IRenderBlock;
 class Renderer : public Singleton<Renderer>
 {
@@ -71,9 +75,11 @@ class Renderer : public Singleton<Renderer>
     ID3D11DepthStencilView*                  m_DepthStencilView          = nullptr;
     ID3D11BlendState*                        m_BlendState                = nullptr;
 
-    std::array<ConstantBuffer_t*, 2> m_GlobalConstants = {nullptr};
+    std::array<ConstantBuffer_t*, 2> m_GlobalConstants    = {nullptr};
+    ConstantBuffer_t*                m_AlphaTestConstants = nullptr;
     VertexGlobalConstants            m_cbVertexGlobalConsts;
     FragmentGlobalConstants          m_cbFragmentGlobalConsts;
+    AlphaTestConstants               m_cbAlphaTestConsts;
 
     glm::vec4 m_ClearColour = g_DefaultClearColour;
 
@@ -137,7 +143,7 @@ class Renderer : public Singleton<Renderer>
     void SetBlendingEq(D3D11_BLEND_OP colour, D3D11_BLEND_OP alpha);
 
     void SetDepthEnabled(bool state);
-    void SetAlphaEnabled(bool state);
+    void SetAlphaTestEnabled(bool state);
 
     void SetFillMode(D3D11_FILL_MODE mode);
     void SetCullMode(D3D11_CULL_MODE mode);

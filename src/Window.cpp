@@ -199,7 +199,8 @@ int32_t Window::ShowMessageBox(const std::string& message, uint32_t type)
     return result;
 }
 
-void Window::ShowFileSelection(const std::string& title, const std::string& filter, std::function<void(const fs::path&)> fn_selected)
+void Window::ShowFileSelection(const std::string& title, const std::string& filter,
+                               std::function<void(const fs::path&)> fn_selected)
 {
     char         filename[MAX_PATH] = {0};
     OPENFILENAME ofn                = {0};

@@ -20,8 +20,10 @@ static_assert(sizeof(GeneralMkIIIAttributes) == 0x68, "GeneralMkIIIAttributes al
 
 namespace JustCause3::RenderBlocks
 {
+static constexpr uint8_t GENERALMKIII_VERSION = 5;
+
 struct GeneralMkIII {
-    uint8_t                version = 5;
+    uint8_t                version;
     GeneralMkIIIAttributes attributes;
 };
 }; // namespace JustCause3::RenderBlocks
@@ -152,6 +154,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
     } m_cbMaterialConsts2;
 
     JustCause3::RenderBlocks::GeneralMkIII m_Block;
+    std::vector<JustCause3::CSkinBatch>    m_SkinBatches;
     VertexBuffer_t*                        m_VertexBufferData        = nullptr;
     std::string                            m_ShaderName              = "generalmkiii";
     std::array<ConstantBuffer_t*, 3>       m_VertexShaderConstants   = {nullptr};
@@ -161,13 +164,19 @@ class RenderBlockGeneralMkIII : public IRenderBlock
     RenderBlockGeneralMkIII() = default;
     virtual ~RenderBlockGeneralMkIII()
     {
-        Renderer::Get()->DestroyBuffer(m_VertexBufferData);
+        // delete the skin batch lookup
+        for (auto& batch : m_SkinBatches) {
+            SAFE_DELETE(batch.m_BatchLookup);
+        }
 
-        for (auto& vsc : m_VertexShaderConstants)
+        // destroy shader constants
+        for (auto& vsc : m_VertexShaderConstants) {
             Renderer::Get()->DestroyBuffer(vsc);
+        }
 
-        for (auto& fsc : m_FragmentShaderConstants)
+        for (auto& fsc : m_FragmentShaderConstants) {
             Renderer::Get()->DestroyBuffer(fsc);
+        }
     }
 
     virtual const char* GetTypeName() override final
@@ -257,6 +266,10 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
+        if (m_Block.version != JustCause3::RenderBlocks::GENERALMKIII_VERSION) {
+            __debugbreak();
+        }
+
         // read constant buffer data
         stream.read((char*)&m_cbMaterialConsts2, sizeof(m_cbMaterialConsts2));
 
@@ -280,7 +293,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
         // read skin batches
         if (m_Block.attributes.flags & (IS_SKINNED | DESTRUCTION)) {
-            ReadSkinBatch(stream);
+            ReadSkinBatch(stream, &m_SkinBatches);
         }
 
         // read index buffer
@@ -304,7 +317,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
         // write the skin batches
         if (m_Block.attributes.flags & (IS_SKINNED | DESTRUCTION)) {
-            WriteSkinBatch(stream);
+            WriteSkinBatch(stream, &m_SkinBatches);
         }
 
         // write the index buffer
@@ -470,6 +483,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         memset(&m_Block.attributes, 0, sizeof(m_Block.attributes));
         memset(&m_cbMaterialConsts2, 0, sizeof(m_cbMaterialConsts2));
 
+        m_Block.version                            = JustCause3::RenderBlocks::GENERALMKIII_VERSION;
         m_Block.attributes.packed.scale            = 1.f;
         m_Block.attributes.packed.uv0Extent        = {1.f, 1.f};
         m_Block.attributes.emissiveStartFadeDistSq = 2000.f;
@@ -611,7 +625,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             }
         } else if (m_Block.attributes.flags & IS_SKINNED) {
             // TODO: skinning palette data
-            IRenderBlock::DrawSkinBatches(context);
+            IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
         } else {
             IRenderBlock::Draw(context);
         }

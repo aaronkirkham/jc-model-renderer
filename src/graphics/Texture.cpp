@@ -26,7 +26,7 @@ bool Texture::LoadFromBuffer(FileBuffer* buffer)
 
 #ifdef DEBUG
     if (m_SRV || m_Texture) {
-        DEBUG_LOG("Texture::LoadFromBuffer - texture already exists. deleting old one...");
+        DEBUG_LOG("Texture::LoadFromBuffer - Deleting old texture before creating new one...");
     }
 #endif
 
@@ -65,8 +65,6 @@ bool Texture::LoadFromBuffer(FileBuffer* buffer)
         DEBUG_LOG("[ERROR] Texture::LoadFromBuffer - Failed to create texture '" << m_Filename.filename() << "'.");
         return false;
     }
-
-    DEBUG_LOG("Texture::Create - '" << m_Filename.filename() << "', m_Texture=" << m_Texture << ", SRV=" << m_SRV);
 
     return SUCCEEDED(result);
 }

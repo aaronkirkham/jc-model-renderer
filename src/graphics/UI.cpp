@@ -90,10 +90,13 @@ void UI::Render()
 
         // file
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem(ICON_FA_FOLDER "  Select JC3 path"))
+            if (ImGui::MenuItem(ICON_FA_FOLDER "  Select JC3 path")) {
                 SelectJustCause3Directory();
-            if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit"))
+            }
+
+            if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit")) {
                 Window::Get()->BeginShutdown();
+            }
 
             ImGui::EndMenu();
         }
@@ -115,14 +118,21 @@ void UI::Render()
         // renderer
         if (ImGui::BeginMenu("Renderer")) {
             if (ImGui::BeginMenu("Visualize")) {
-                if (ImGui::MenuItem("Diffuse", nullptr, m_CurrentActiveGBuffer == 0))
+                if (ImGui::MenuItem("Diffuse", nullptr, m_CurrentActiveGBuffer == 0)) {
                     m_CurrentActiveGBuffer = 0;
-                if (ImGui::MenuItem("Normal", nullptr, m_CurrentActiveGBuffer == 1))
+                }
+
+                if (ImGui::MenuItem("Normal", nullptr, m_CurrentActiveGBuffer == 1)) {
                     m_CurrentActiveGBuffer = 1;
-                if (ImGui::MenuItem("Properties", nullptr, m_CurrentActiveGBuffer == 2))
+                }
+
+                if (ImGui::MenuItem("Properties", nullptr, m_CurrentActiveGBuffer == 2)) {
                     m_CurrentActiveGBuffer = 2;
-                if (ImGui::MenuItem("PropertiesEx", nullptr, m_CurrentActiveGBuffer == 3))
+                }
+
+                if (ImGui::MenuItem("PropertiesEx", nullptr, m_CurrentActiveGBuffer == 3)) {
                     m_CurrentActiveGBuffer = 3;
+                }
 
                 ImGui::EndMenu();
             }
@@ -476,7 +486,7 @@ void UI::RenderFileTreeView()
                                             if (ImGui::MenuItem(importer->GetName(), importer->GetExportExtension())) {
                                                 UI::Events().ImportFileRequest(
                                                     importer, [&](bool success, std::any data) {
-                                                        auto & [vertices, uvs, normals, indices] = std::any_cast<
+                                                        auto& [vertices, uvs, normals, indices] = std::any_cast<
                                                             std::tuple<floats_t, floats_t, floats_t, uint16s_t>>(data);
 
                                                         render_block->SetData(&vertices, &indices, &uvs);

@@ -73,8 +73,8 @@ void TextureManager::Shutdown()
 
 std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, uint8_t flags)
 {
-    auto name = filename.filename().stem().string();
-    auto key  = fnv_1_32::hash(name.c_str(), name.length());
+    const auto& name = filename.string();
+    const auto  key  = fnv_1_32::hash(name.c_str(), name.length());
 
     if (std::find(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key) == m_LastUsedTextures.end()) {
         m_LastUsedTextures.emplace_back(key);
@@ -89,9 +89,16 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, ui
     // do we want to create the texture?
     if (flags & CREATE_IF_NOT_EXISTS) {
         m_Textures[key] = std::make_shared<Texture>(filename);
-
         // load the texture
         FileLoader::Get()->ReadTexture(filename, [&, key, filename](bool success, FileBuffer data) {
+#ifdef DEBUG
+            if (!success) {
+                DEBUG_LOG("TextureManager::GetTexture - Failed to read texture. (" << filename << ")");
+            } else if (!HasTexture(filename)) {
+                DEBUG_LOG("TextureManager::GetTexture - Read texture, but doesn't exists in TextureManager.");
+            }
+#endif
+
             if (success && HasTexture(filename)) {
                 m_Textures[key]->LoadFromBuffer(&data);
             }
@@ -105,8 +112,8 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, ui
 
 std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, FileBuffer* buffer, uint8_t flags)
 {
-    auto name = filename.filename().stem().string();
-    auto key  = fnv_1_32::hash(name.c_str(), name.length());
+    const auto& name = filename.generic_string();
+    const auto  key  = fnv_1_32::hash(name.c_str(), name.length());
 
     if (std::find(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key) == m_LastUsedTextures.end()) {
         m_LastUsedTextures.emplace_back(key);
@@ -141,8 +148,8 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, Fi
 
 bool TextureManager::HasTexture(const fs::path& filename)
 {
-    auto name = filename.filename().stem().string();
-    auto key  = fnv_1_32::hash(name.c_str(), name.length());
+    const auto& name = filename.string();
+    const auto  key  = fnv_1_32::hash(name.c_str(), name.length());
 
     return (m_Textures.find(key) != m_Textures.end());
 }
@@ -178,8 +185,8 @@ void TextureManager::Flush()
 
 void TextureManager::Delete(std::shared_ptr<Texture> texture)
 {
-    auto name = texture->GetPath().filename().stem().string();
-    auto key  = fnv_1_32::hash(name.c_str(), name.length());
+    const auto& name = texture->GetPath().string();
+    const auto  key  = fnv_1_32::hash(name.c_str(), name.length());
 
     m_LastUsedTextures.erase(std::remove(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key),
                              m_LastUsedTextures.end());
@@ -201,7 +208,7 @@ void TextureManager::PreviewTexture(std::shared_ptr<Texture> texture)
 
 DDS_PIXELFORMAT TextureManager::GetPixelFormat(DXGI_FORMAT format)
 {
-    DDS_PIXELFORMAT pixelFormat;
+    DDS_PIXELFORMAT pixelFormat{};
     pixelFormat.size = sizeof(DDS_PIXELFORMAT);
 
     switch (format) {
@@ -253,6 +260,7 @@ DDS_PIXELFORMAT TextureManager::GetPixelFormat(DXGI_FORMAT format)
         case DXGI_FORMAT_BC4_UNORM:
         case DXGI_FORMAT_BC5_UNORM:
         case DXGI_FORMAT_BC7_UNORM: {
+            pixelFormat.flags  = DDS_FOURCC;
             pixelFormat.fourCC = 0x30315844; // DX10
             break;
         }

@@ -24,6 +24,8 @@ static_assert(sizeof(GeneralJC3Attributes) == 0x58, "GeneralJC3Attributes alignm
 
 namespace JustCause3::RenderBlocks
 {
+static constexpr uint8_t GENERALJC3_VERSION = 6;
+
 struct GeneralJC3 {
     uint8_t              version;
     GeneralJC3Attributes attributes;
@@ -156,6 +158,10 @@ class RenderBlockGeneralJC3 : public IRenderBlock
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
+
+        if (m_Block.version != JustCause3::RenderBlocks::GENERALJC3_VERSION) {
+            __debugbreak();
+        }
 
         // read the materials
         ReadMaterials(stream);
@@ -306,7 +312,6 @@ class RenderBlockGeneralJC3 : public IRenderBlock
         ImGui::ColorEdit3("Diffuse Modulator", glm::value_ptr(m_Block.attributes.diffuseModulator));
         ImGui::SliderFloat("Back Light", &m_Block.attributes.backLight, 0.0f, 10.0f);
         ImGui::SliderFloat("Unknown #2", &m_Block.attributes._unknown2, 0.0f, 10.0f);
-        ImGui::SliderFloat("Fade Out Distance Emissive", &m_Block.attributes.startFadeOutDistanceEmissiveSq, 0.0f,
-                           10.0f);
+        ImGui::InputFloat("Fade Out Distance Emissive", &m_Block.attributes.startFadeOutDistanceEmissiveSq);
     }
 };

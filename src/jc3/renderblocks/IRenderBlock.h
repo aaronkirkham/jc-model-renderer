@@ -24,7 +24,6 @@ class IRenderBlock
     std::vector<fs::path>                 m_Materials;
     std::vector<std::shared_ptr<Texture>> m_Textures;
     float                                 m_MaterialParams[4] = {0};
-    std::vector<JustCause3::CSkinBatch>   m_SkinBatches;
 
   public:
     IRenderBlock() = default;
@@ -37,11 +36,6 @@ class IRenderBlock
         Renderer::Get()->DestroyBuffer(m_IndexBuffer);
         Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
         Renderer::Get()->DestroySamplerState(m_SamplerState);
-
-        // delete the batch lookup
-        for (auto& batch : m_SkinBatches) {
-            SAFE_DELETE(batch.m_BatchLookup);
-        }
     }
 
     virtual const char* GetTypeName()       = 0;
@@ -206,11 +200,11 @@ class IRenderBlock
         stream.write((char*)&m_MaterialParams, sizeof(m_MaterialParams));
     }
 
-    void ReadSkinBatch(std::istream& stream)
+    void ReadSkinBatch(std::istream& stream, std::vector<JustCause3::CSkinBatch>* skin_batches)
     {
         uint32_t count;
         stream.read((char*)&count, sizeof(count));
-        m_SkinBatches.reserve(count);
+        skin_batches->reserve(count);
 
         for (uint32_t i = 0; i < count; ++i) {
             JustCause3::CSkinBatch batch;
@@ -225,16 +219,16 @@ class IRenderBlock
                 stream.read((char*)batch.m_BatchLookup, sizeof(int16_t) * batch.m_BatchSize);
             }
 
-            m_SkinBatches.emplace_back(batch);
+            skin_batches->emplace_back(std::move(batch));
         }
     }
 
-    void WriteSkinBatch(std::ostream& stream)
+    void WriteSkinBatch(std::ostream& stream, std::vector<JustCause3::CSkinBatch>* skin_batches)
     {
-        uint32_t count = m_SkinBatches.size();
+        uint32_t count = skin_batches->size();
         stream.write((char*)&count, sizeof(count));
 
-        for (const auto& batch : m_SkinBatches) {
+        for (const auto& batch : *skin_batches) {
             stream.write((char*)&batch.m_Size, sizeof(batch.m_Size));
             stream.write((char*)&batch.m_Offset, sizeof(batch.m_Offset));
             stream.write((char*)&batch.m_BatchSize, sizeof(batch.m_BatchSize));
@@ -268,12 +262,12 @@ class IRenderBlock
         }
     }
 
-    void DrawSkinBatches(RenderContext_t* context)
+    void DrawSkinBatches(RenderContext_t* context, const std::vector<JustCause3::CSkinBatch>& skin_batches)
     {
         if (!m_Visible)
             return;
 
-        for (const auto& batch : m_SkinBatches) {
+        for (const auto& batch : skin_batches) {
             context->m_Renderer->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
         }
     }

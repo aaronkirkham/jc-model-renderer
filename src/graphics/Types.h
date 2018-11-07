@@ -17,8 +17,8 @@ struct RenderContext_t {
     D3D11_CULL_MODE      m_CullMode          = D3D11_CULL_BACK;
     bool                 m_RasterIsDirty     = true;
     bool                 m_BlendIsDirty      = true;
-    bool                 m_BlendEnabled      = true;
-    bool                 m_AlphaEnabled      = true;
+    bool                 m_AlphaBlendEnabled = true;
+    bool                 m_AlphaTestEnabled  = true;
     D3D11_BLEND          m_BlendSourceColour = D3D11_BLEND_SRC_ALPHA;
     D3D11_BLEND          m_BlendSourceAlpha  = D3D11_BLEND_ONE;
     D3D11_BLEND          m_BlendDestColour   = D3D11_BLEND_INV_SRC_ALPHA;

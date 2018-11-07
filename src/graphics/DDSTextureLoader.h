@@ -25,6 +25,12 @@
 
 #pragma pack(push, 1)
 
+#ifndef MAKEFOURCC
+#define MAKEFOURCC(ch0, ch1, ch2, ch3)                                                                                 \
+    ((uint32_t)(uint8_t)(ch0) | ((uint32_t)(uint8_t)(ch1) << 8) | ((uint32_t)(uint8_t)(ch2) << 16)                     \
+     | ((uint32_t)(uint8_t)(ch3) << 24))
+#endif /* defined(MAKEFOURCC) */
+
 const uint32_t DDS_MAGIC = 0x20534444; // "DDS "
 
 struct DDS_PIXELFORMAT {

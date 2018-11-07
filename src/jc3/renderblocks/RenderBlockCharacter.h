@@ -23,6 +23,8 @@ static_assert(sizeof(CharacterAttributes) == 0x6C, "CharacterAttributes alignmen
 
 namespace JustCause3::RenderBlocks
 {
+static constexpr uint8_t CHARACTER_VERSION = 9;
+
 struct Character {
     uint8_t             version;
     CharacterAttributes attributes;
@@ -68,6 +70,7 @@ class RenderBlockCharacter : public IRenderBlock
     } m_cbMaterialConsts;
 
     JustCause3::RenderBlocks::Character m_Block;
+    std::vector<JustCause3::CSkinBatch> m_SkinBatches;
     ConstantBuffer_t*                   m_VertexShaderConstants   = nullptr;
     std::array<ConstantBuffer_t*, 2>    m_FragmentShaderConstants = {nullptr};
     int32_t                             m_Stride                  = 0;
@@ -76,10 +79,15 @@ class RenderBlockCharacter : public IRenderBlock
     RenderBlockCharacter() = default;
     virtual ~RenderBlockCharacter()
     {
-        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants);
+        // delete the skin batch lookup
+        for (auto& batch : m_SkinBatches) {
+            SAFE_DELETE(batch.m_BatchLookup);
+        }
 
-        for (auto& fsc : m_FragmentShaderConstants)
-            Renderer::Get()->DestroyBuffer(fsc);
+        // destroy shader constants
+        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants);
+        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
+        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[1]);
     }
 
     virtual const char* GetTypeName() override final
@@ -100,7 +108,8 @@ class RenderBlockCharacter : public IRenderBlock
 
     virtual void Create() override final
     {
-        m_PixelShader = ShaderManager::Get()->GetPixelShader("character");
+        m_PixelShader = ShaderManager::Get()->GetPixelShader(
+            (m_Block.attributes.flags & BODY_PART) != HAIR ? "character" : "characterhair_msk");
 
         switch (m_Stride) {
                 // 4bones1uv
@@ -280,18 +289,22 @@ class RenderBlockCharacter : public IRenderBlock
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
+        if (m_Block.version != JustCause3::RenderBlocks::CHARACTER_VERSION) {
+            __debugbreak();
+        }
+
         // read the materials
         ReadMaterials(stream);
 
         // get the vertices stride
         const auto flags = m_Block.attributes.flags;
-        m_Stride         = (3 * (flags & EIGHT_BONES) + (flags & USE_WRINKLE_MAP) + (flags & USE_FEATURE_MAP));
+        m_Stride         = (3 * ((flags >> 1) & 1) + ((flags >> 4) & 1) + ((flags >> 5) & 1));
 
         // read vertex data
         m_VertexBuffer = ReadBuffer(stream, VERTEX_BUFFER, VertexStrides[m_Stride]);
 
         // read skin batches
-        ReadSkinBatch(stream);
+        ReadSkinBatch(stream, &m_SkinBatches);
 
         // read index buffer
         m_IndexBuffer = ReadIndexBuffer(stream);
@@ -309,7 +322,7 @@ class RenderBlockCharacter : public IRenderBlock
         WriteBuffer(stream, m_VertexBuffer);
 
         // write skin batches
-        WriteSkinBatch(stream);
+        WriteSkinBatch(stream, &m_SkinBatches);
 
         // write index buffer
         WriteBuffer(stream, m_IndexBuffer);
@@ -407,10 +420,10 @@ class RenderBlockCharacter : public IRenderBlock
 
         // toggle alpha mask
         if (m_Block.attributes.flags & ALPHA_MASK) {
-            context->m_Renderer->SetAlphaEnabled(true);
+            context->m_Renderer->SetAlphaTestEnabled(true);
             context->m_Renderer->SetBlendingEnabled(false);
         } else {
-            context->m_Renderer->SetAlphaEnabled(false);
+            context->m_Renderer->SetAlphaTestEnabled(false);
         }
 
         // setup blending
@@ -451,7 +464,7 @@ class RenderBlockCharacter : public IRenderBlock
         if (!m_Visible)
             return;
 
-        DrawSkinBatches(context);
+        IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
     }
 
     virtual void DrawUI() override final

@@ -19,6 +19,8 @@ struct LandmarkAttributes {
 };
 namespace JustCause3::RenderBlocks
 {
+static constexpr uint8_t LANDMARK_VERSION = 7;
+
 struct Landmark {
     uint8_t            version;
     LandmarkAttributes attributes;
@@ -124,6 +126,10 @@ class RenderBlockLandmark : public IRenderBlock
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
+
+        if (m_Block.version != JustCause3::RenderBlocks::LANDMARK_VERSION) {
+            __debugbreak();
+        }
 
         // read the materials
         ReadMaterials(stream);
@@ -237,7 +243,6 @@ class RenderBlockLandmark : public IRenderBlock
         ImGui::ColorEdit3("Diffuse Modulator", glm::value_ptr(m_Block.attributes.diffuseModulator));
         ImGui::SliderFloat("Back Light", &m_Block.attributes.backLight, 0.0f, 10.0f);
         ImGui::SliderFloat("Unknown #2", &m_Block.attributes._unknown2, 0.0f, 10.0f);
-        ImGui::SliderFloat("Fade Out Distance Emissive", &m_Block.attributes.startFadeOutDistanceEmissiveSq, 0.0f,
-                           10.0f);
+        ImGui::InputFloat("Fade Out Distance Emissive", &m_Block.attributes.startFadeOutDistanceEmissiveSq);
     }
 };

@@ -11,16 +11,16 @@ static constexpr auto g_WindowName = "JC3 Render Block Model Renderer (DEBUG)";
 static constexpr auto g_WindowName = "JC3 Render Block Model Renderer";
 #endif
 
-//#ifdef DEBUG
+#ifdef DEBUG
 #define DEBUG_LOG(s)                                                                                                   \
     {                                                                                                                  \
         std::stringstream ss_;                                                                                         \
         ss_ << s << std::endl;                                                                                         \
         OutputDebugString(ss_.str().c_str());                                                                          \
     }
-//#else
-//#define DEBUG_LOG(s)
-//#endif
+#else
+#define DEBUG_LOG(s)
+#endif
 
 struct WindowEvents {
     ksignals::Event<void(const glm::vec2& size)>    SizeChanged;

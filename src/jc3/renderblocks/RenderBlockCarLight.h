@@ -19,6 +19,8 @@ static_assert(sizeof(CarLightAttributes) == 0x3C, "CarLightAttributes alignment 
 
 namespace JustCause3::RenderBlocks
 {
+static constexpr uint8_t CARLIGHT_VERSION = 1;
+
 struct CarLight {
     uint8_t            version;
     CarLightAttributes attributes;
@@ -64,22 +66,29 @@ class RenderBlockCarLight : public IRenderBlock
         glm::vec4 Colour = glm::vec4(1);
     } m_cbMaterialConsts;
 
-    JustCause3::RenderBlocks::CarLight m_Block;
-    JustCause3::CDeformTable           m_DeformTable;
-    VertexBuffer_t*                    m_VertexBufferData        = nullptr;
-    std::array<ConstantBuffer_t*, 3>   m_VertexShaderConstants   = {nullptr};
-    ConstantBuffer_t*                  m_FragmentShaderConstants = nullptr;
+    JustCause3::RenderBlocks::CarLight  m_Block;
+    JustCause3::CDeformTable            m_DeformTable;
+    std::vector<JustCause3::CSkinBatch> m_SkinBatches;
+    VertexBuffer_t*                     m_VertexBufferData        = nullptr;
+    std::array<ConstantBuffer_t*, 3>    m_VertexShaderConstants   = {nullptr};
+    ConstantBuffer_t*                   m_FragmentShaderConstants = nullptr;
 
   public:
     RenderBlockCarLight() = default;
     virtual ~RenderBlockCarLight()
     {
+        // delete the skin batch lookup
+        for (auto& batch : m_SkinBatches) {
+            SAFE_DELETE(batch.m_BatchLookup);
+        }
+
+        // destroy shader constants
         Renderer::Get()->DestroyBuffer(m_VertexBufferData);
-
-        for (auto& vsc : m_VertexShaderConstants)
-            Renderer::Get()->DestroyBuffer(vsc);
-
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants);
+
+        for (auto& vsc : m_VertexShaderConstants) {
+            Renderer::Get()->DestroyBuffer(vsc);
+        }
     }
 
     virtual const char* GetTypeName() override final
@@ -156,6 +165,10 @@ class RenderBlockCarLight : public IRenderBlock
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
+        if (m_Block.version != JustCause3::RenderBlocks::CARLIGHT_VERSION) {
+            __debugbreak();
+        }
+
         // read the deform table
         ReadDeformTable(stream, &m_DeformTable);
 
@@ -176,7 +189,7 @@ class RenderBlockCarLight : public IRenderBlock
 
         // read skin batches
         if (m_Block.attributes.flags & IS_SKINNED) {
-            ReadSkinBatch(stream);
+            ReadSkinBatch(stream, &m_SkinBatches);
         }
 
         // read index buffer
@@ -200,7 +213,7 @@ class RenderBlockCarLight : public IRenderBlock
 
         // write skin batches
         if (m_Block.attributes.flags & IS_SKINNED) {
-            WriteSkinBatch(stream);
+            WriteSkinBatch(stream, &m_SkinBatches);
         }
 
         // write the index buffer
@@ -321,7 +334,7 @@ class RenderBlockCarLight : public IRenderBlock
             return;
 
         if (m_Block.attributes.flags & IS_SKINNED) {
-            IRenderBlock::DrawSkinBatches(context);
+            IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
         } else {
             IRenderBlock::Draw(context);
         }

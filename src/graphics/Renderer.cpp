@@ -40,6 +40,11 @@ Renderer::Renderer()
         for (const auto& render_block : m_RenderList) {
             // draw the model
             render_block->Setup(context);
+            
+
+            // update alpha test constants
+            SetPixelShaderConstants(m_AlphaTestConstants, 4, m_cbAlphaTestConsts);
+
             render_block->Draw(context);
 
             // reset render states
@@ -99,6 +104,9 @@ bool Renderer::Initialise(const HWND& hwnd)
     m_GlobalConstants[1] = CreateConstantBuffer(m_cbFragmentGlobalConsts, "Renderer FragmentGlobalConstants");
     memset(&m_cbFragmentGlobalConsts, 0, sizeof(m_cbFragmentGlobalConsts));
 
+    // create alpha test constants
+    m_AlphaTestConstants = CreateConstantBuffer(m_cbAlphaTestConsts, "Renderer AlphaTestConstants");
+
     // setup imgui
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -135,6 +143,7 @@ void Renderer::Shutdown()
     DestroyDepthStencil();
     DestroyBuffer(m_GlobalConstants[0]);
     DestroyBuffer(m_GlobalConstants[1]);
+    DestroyBuffer(m_AlphaTestConstants);
 
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
@@ -173,7 +182,6 @@ bool Renderer::Render()
             if (rt) {
                 m_DeviceContext->ClearRenderTargetView(rt, _black);
             }
-                
         }
 
         m_DeviceContext->ClearDepthStencilView(m_DepthStencilView, (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL), 1.0f, 0);
@@ -254,9 +262,9 @@ void Renderer::DrawIndexed(uint32_t start_index, uint32_t index_count, IndexBuff
 
 void Renderer::SetBlendingEnabled(bool state)
 {
-    if (m_RenderContext.m_BlendEnabled != state) {
-        m_RenderContext.m_BlendEnabled = state;
-        m_RenderContext.m_BlendIsDirty = true;
+    if (m_RenderContext.m_AlphaBlendEnabled != state) {
+        m_RenderContext.m_AlphaBlendEnabled = state;
+        m_RenderContext.m_BlendIsDirty      = true;
     }
 }
 
@@ -302,12 +310,19 @@ void Renderer::SetDepthEnabled(bool state)
     m_DeviceContext->OMSetDepthStencilState(state ? m_DepthStencilEnabledState : m_DepthStencilDisabledState, 1);
 }
 
-void Renderer::SetAlphaEnabled(bool state)
+void Renderer::SetAlphaTestEnabled(bool state)
 {
-    if (m_RenderContext.m_AlphaEnabled != state) {
-        m_RenderContext.m_AlphaEnabled = state;
-        m_RenderContext.m_BlendIsDirty = true;
-    }
+    /*if (m_RenderContext.m_AlphaTestEnabled != state) {
+        m_RenderContext.m_AlphaTestEnabled = state;
+
+        if (state) {
+            m_cbAlphaTestConsts.AlphaMulRef[0] = m_cbAlphaTestConsts.AlphaMulRef[2];
+            m_cbAlphaTestConsts.AlphaMulRef[1] = m_cbAlphaTestConsts.AlphaMulRef[3];
+        } else {
+            m_cbAlphaTestConsts.AlphaMulRef[0] = 0.0f;
+            m_cbAlphaTestConsts.AlphaMulRef[1] = 1.0f;
+        }
+    }*/
 }
 
 void Renderer::SetFillMode(D3D11_FILL_MODE mode)
@@ -570,7 +585,7 @@ void Renderer::CreateBlendState()
         ZeroMemory(&blendDesc, sizeof(blendDesc));
 
         blendDesc.AlphaToCoverageEnable                 = false;
-        blendDesc.RenderTarget[0].BlendEnable           = m_RenderContext.m_BlendEnabled;
+        blendDesc.RenderTarget[0].BlendEnable           = m_RenderContext.m_AlphaBlendEnabled;
         blendDesc.RenderTarget[0].SrcBlend              = m_RenderContext.m_BlendSourceColour;
         blendDesc.RenderTarget[0].DestBlend             = m_RenderContext.m_BlendDestColour;
         blendDesc.RenderTarget[0].BlendOp               = m_RenderContext.m_BlendColourEq;

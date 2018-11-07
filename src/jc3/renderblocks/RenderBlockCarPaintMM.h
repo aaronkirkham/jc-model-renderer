@@ -14,6 +14,8 @@ static_assert(sizeof(CarPaintMMAttributes) == 0x8, "CarPaintMMAttributes alignme
 
 namespace JustCause3::RenderBlocks
 {
+static constexpr uint8_t CARPAINTMM_VERSION = 14;
+
 struct CarPaintMM {
     uint8_t              version;
     CarPaintMMAttributes attributes;
@@ -103,6 +105,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
     JustCause3::RenderBlocks::CarPaintMM m_Block;
     JustCause3::CDeformTable             m_DeformTable;
+    std::vector<JustCause3::CSkinBatch>  m_SkinBatches;
     std::string                          m_ShaderName              = "carpaintmm";
     std::array<VertexBuffer_t*, 2>       m_VertexBufferData        = {nullptr};
     std::array<ConstantBuffer_t*, 3>     m_VertexShaderConstants   = {nullptr};
@@ -114,6 +117,12 @@ class RenderBlockCarPaintMM : public IRenderBlock
     RenderBlockCarPaintMM() = default;
     virtual ~RenderBlockCarPaintMM()
     {
+        // delete the skin batch lookup
+        for (auto& batch : m_SkinBatches) {
+            SAFE_DELETE(batch.m_BatchLookup);
+        }
+
+        // destroy shader constants
         for (auto& vb : m_VertexBufferData)
             Renderer::Get()->DestroyBuffer(vb);
 
@@ -233,6 +242,10 @@ class RenderBlockCarPaintMM : public IRenderBlock
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
+        if (m_Block.version != JustCause3::RenderBlocks::CARPAINTMM_VERSION) {
+            __debugbreak();
+        }
+
         // read static material params
         stream.read((char*)&m_cbStaticMaterialParams, sizeof(m_cbStaticMaterialParams));
 
@@ -261,7 +274,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
         // read skin batch
         if (m_Block.attributes.flags & IS_SKINNED) {
-            ReadSkinBatch(stream);
+            ReadSkinBatch(stream, &m_SkinBatches);
         }
 
         // read the layered uv data if needed
@@ -296,7 +309,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
         // write skin batch
         if (m_Block.attributes.flags & IS_SKINNED) {
-            WriteSkinBatch(stream);
+            WriteSkinBatch(stream, &m_SkinBatches);
         }
 
         // write layered UV data
@@ -440,7 +453,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
             return;
 
         if (m_Block.attributes.flags & IS_SKINNED) {
-            IRenderBlock::DrawSkinBatches(context);
+            IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
         } else {
             // set deform data
             if (m_Block.attributes.flags & IS_DEFORM) {

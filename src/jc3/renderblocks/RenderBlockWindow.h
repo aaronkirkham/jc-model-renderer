@@ -25,6 +25,8 @@ static_assert(sizeof(WindowAttributes) == 0x28, "WindowAttributes alignment is w
 
 namespace JustCause3::RenderBlocks
 {
+static constexpr uint8_t WINDOW_VERSION = 1;
+
 struct Window {
     uint8_t          version;
     WindowAttributes attributes;
@@ -141,6 +143,10 @@ class RenderBlockWindow : public IRenderBlock
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
+
+        if (m_Block.version != JustCause3::RenderBlocks::WINDOW_VERSION) {
+            __debugbreak();
+        }
 
         // read materials
         ReadMaterials(stream);

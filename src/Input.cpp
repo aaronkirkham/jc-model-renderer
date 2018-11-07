@@ -35,34 +35,47 @@ bool Input::HandleMessage(MSG* event)
     const auto key       = static_cast<uint32_t>(event->wParam);
     const auto modifiers = static_cast<uint32_t>(event->lParam);
 
-    if (message == WM_KEYDOWN) {
-        m_KeyboardState[key] = true;
-        m_InputEvents.KeyDown(key);
-    } else if (message == WM_KEYUP) {
-        /*if (key == VK_ESCAPE) {
-            TerminateProcess(GetCurrentProcess(), 0);
-        }*/
+    switch (message) {
+        case WM_KEYDOWN: {
+            m_KeyboardState[key] = true;
+            m_InputEvents.KeyDown(key);
+            break;
+        }
 
-        m_KeyboardState[key] = false;
-        m_InputEvents.KeyUp(key);
-    } else if (message == WM_LBUTTONUP || message == WM_LBUTTONDOWN || message == WM_RBUTTONUP
-               || message == WM_RBUTTONDOWN) {
-        auto position =
-            glm::vec2{static_cast<float>(GET_X_LPARAM(event->lParam)), static_cast<float>(GET_Y_LPARAM(event->lParam))};
-        m_InputEvents.MousePress(message, position);
+        case WM_KEYUP: {
+            m_KeyboardState[key] = false;
+            m_InputEvents.KeyUp(key);
+            break;
+        }
 
-        m_LastClickPosition = position;
-        Camera::Get()->MouseToWorld(position, &m_LastClickWorldPosition);
-    } else if (message == WM_MOUSEMOVE) {
-        auto position =
-            glm::vec2{static_cast<float>(GET_X_LPARAM(event->lParam)), static_cast<float>(GET_Y_LPARAM(event->lParam))};
-        m_InputEvents.MouseMove((m_MousePosition - position));
+        case WM_LBUTTONUP:
+        case WM_LBUTTONDOWN:
+        case WM_RBUTTONUP:
+        case WM_RBUTTONDOWN: {
+            auto position = glm::vec2{static_cast<float>(GET_X_LPARAM(event->lParam)),
+                                      static_cast<float>(GET_Y_LPARAM(event->lParam))};
+            m_InputEvents.MousePress(message, position);
 
-        m_MousePosition = position;
-        Camera::Get()->MouseToWorld(position, &m_MouseWorldPosition);
-    } else if (message == WM_MOUSEWHEEL) {
-        auto delta = static_cast<float>(GET_WHEEL_DELTA_WPARAM(event->wParam));
-        m_InputEvents.MouseScroll(delta);
+            m_LastClickPosition = position;
+            Camera::Get()->MouseToWorld(position, &m_LastClickWorldPosition);
+            break;
+        }
+
+        case WM_MOUSEMOVE: {
+            auto position = glm::vec2{static_cast<float>(GET_X_LPARAM(event->lParam)),
+                                      static_cast<float>(GET_Y_LPARAM(event->lParam))};
+            m_InputEvents.MouseMove((m_MousePosition - position));
+
+            m_MousePosition = position;
+            Camera::Get()->MouseToWorld(position, &m_MouseWorldPosition);
+            break;
+        }
+
+        case WM_MOUSEWHEEL: {
+            auto delta = static_cast<float>(GET_WHEEL_DELTA_WPARAM(event->wParam));
+            m_InputEvents.MouseScroll(delta);
+            break;
+        }
     }
 
     return true;

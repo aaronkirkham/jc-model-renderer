@@ -1,4 +1,3 @@
-#include <Window.h>
 #include <graphics/DDSTextureLoader.h>
 #include <graphics/TextureManager.h>
 #include <graphics/UI.h>
@@ -263,8 +262,9 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback, u
     }
 #ifdef DEBUG
     else if (archive && (entry.m_Offset == 0 || entry.m_Offset == -1)) {
-        DEBUG_LOG("NOTE: \"" << filename.filename()
-                             << "\" exists in archive but has been patched. Reading the patched version instead.");
+        DEBUG_LOG("[NOTE] FileLoader::ReadFile - \""
+                  << filename.filename()
+                  << "\" exists in archive but has been patched. Reading the patched version instead.");
     }
 #endif
 
@@ -469,7 +469,7 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(FileBuffer* sarc
 
     // read the toc header for the filelist
     if (toc_buffer) {
-        DEBUG_LOG("USING .toc BUFFER FOR ARCHIVE FILELIST");
+        DEBUG_LOG("FileLoader::ParseStreamArchive - Using .toc buffer for archive filelist");
 
         std::istringstream toc_stream(std::string{(char*)toc_buffer->data(), toc_buffer->size()});
         while (static_cast<size_t>(toc_stream.tellg()) < toc_buffer->size()) {
@@ -492,8 +492,6 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(FileBuffer* sarc
     }
     // if we didn't pass a TOC buffer, stream the file list from the SARC header
     else {
-        DEBUG_LOG("USING ORIGINAL FOR ARCHIVE FILELIST");
-
         auto start_pos = stream.tellg();
         while (true) {
             StreamArchiveEntry_t entry;
@@ -761,25 +759,26 @@ void FileLoader::WriteTOC(const fs::path& filename, StreamArchive_t* archive) no
     stream.close();
 }
 
-static void DEBUG_TEXTURE_FLAGS(const uint32_t flags)
+static void DEBUG_TEXTURE_FLAGS(const JustCause3::AvalancheTexture::Header* header)
 {
     using namespace JustCause3::AvalancheTexture;
 
-    // clang-format off
-    std::stringstream ss;
-    ss << "AVTX m_Flags=" << flags << " (";
+    if (header->m_Flags != 0) {
+        // clang-format off
+        std::stringstream ss;
+        ss << "AVTX m_Flags=" << header->m_Flags << " (";
 
-    if (flags & STREAMED)       ss << "streamed, ";
-    if (flags & PLACEHOLDER)    ss << "placeholder, ";
-    if (flags & TILED)          ss << "tiled, ";
-    if (flags & SRGB)           ss << "SRGB, ";
-    if (flags & CUBE)           ss << "cube, ";
-    if (flags == 0)             ss << ", ";
+        if (header->m_Flags & STREAMED)       ss << "streamed, ";
+        if (header->m_Flags & PLACEHOLDER)    ss << "placeholder, ";
+        if (header->m_Flags & TILED)          ss << "tiled, ";
+        if (header->m_Flags & SRGB)           ss << "SRGB, ";
+        if (header->m_Flags & CUBE)           ss << "cube, ";
 
-    ss.seekp(-2, ss.cur);
-    ss << ")";
-    DEBUG_LOG(ss.str());
-    // clang-format on
+        ss.seekp(-2, ss.cur);
+        ss << ")";
+        DEBUG_LOG(ss.str());
+        // clang-format on
+    }
 }
 
 void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept
@@ -845,7 +844,7 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
                 return callback(false, {});
             }
 
-            DEBUG_TEXTURE_FLAGS(texture.m_Flags);
+            DEBUG_TEXTURE_FLAGS(&texture);
 
             // find the best stream to use
             auto& [stream_index, load_source] = AvalancheTexture::FindBest(&texture);
@@ -853,30 +852,39 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
             // find the rank
             const auto rank = AvalancheTexture::GetHighestRank(&texture, stream_index);
 
+            // generate the DDS header
+            DDS_HEADER header{};
+            header.size        = sizeof(DDS_HEADER);
+            header.flags       = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
+            header.width       = texture.m_Width >> rank;
+            header.height      = texture.m_Height >> rank;
+            header.depth       = texture.m_Depth;
+            header.mipMapCount = 1;
+            header.ddspf       = TextureManager::GetPixelFormat(texture.m_Format);
+            header.caps        = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
+
+            //
+            bool dxt10header = (header.ddspf.fourCC == MAKEFOURCC('D', 'X', '1', '0'));
+
+            // resize the output buffer
             FileBuffer out;
-            out.resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + texture.m_Streams[stream_index].m_Size);
+            out.resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + (dxt10header ? sizeof(DDS_HEADER_DXT10) : 0)
+                       + texture.m_Streams[stream_index].m_Size);
 
-            // write the DDS header block to the output
-            {
-                DDS_HEADER header;
-                ZeroMemory(&header, sizeof(header));
-                header.size        = sizeof(DDS_HEADER);
-                header.flags       = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
-                header.width       = texture.m_Width >> rank;
-                header.height      = texture.m_Height >> rank;
-                header.depth       = texture.m_Depth;
-                header.mipMapCount = 1;
-                header.ddspf       = TextureManager::GetPixelFormat(texture.m_Format);
-                header.caps        = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
+            // write the DDS magic and header
+            std::memcpy(&out.front(), (char*)&DDS_MAGIC, sizeof(DDS_MAGIC));
+            std::memcpy(&out.front() + sizeof(DDS_MAGIC), (char*)&header, sizeof(DDS_HEADER));
 
-                // write the magic and header
-                std::memcpy(&out.front(), (char*)&DDS_MAGIC, sizeof(DDS_MAGIC));
-                std::memcpy(&out.front() + sizeof(DDS_MAGIC), (char*)&header, sizeof(DDS_HEADER));
+            // write the DXT10 header
+            if (dxt10header) {
+                DDS_HEADER_DXT10 dx10header{};
+                dx10header.dxgiFormat        = texture.m_Format;
+                dx10header.resourceDimension = D3D10_RESOURCE_DIMENSION_TEXTURE2D;
+                dx10header.arraySize         = 1;
+
+                std::memcpy(&out.front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER), (char*)&dx10header,
+                            sizeof(DDS_HEADER_DXT10));
             }
-
-            // TODO: convert texture to valid format.
-            // the game will convert some textures if the surface format is over 0x3E8
-            // this is the reason why some textures will fail to load (charactereyescube_v2/v3)
 
             // if we need to load the source file, request it
             if (load_source) {
@@ -887,10 +895,11 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
                 auto size   = texture.m_Streams[stream_index].m_Size;
 
                 // read file callback
-                auto cb = [&, source_filename, texture, offset, size, out, callback](bool       success,
-                                                                                     FileBuffer data) mutable {
+                auto cb = [&, dxt10header, offset, size, out, callback](bool success, FileBuffer data) mutable {
                     if (success) {
-                        std::memcpy(&out.front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER), data.data() + offset, size);
+                        std::memcpy(&out.front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER)
+                                        + (dxt10header ? sizeof(DDS_HEADER_DXT10) : 0),
+                                    data.data() + offset, size);
                         return callback(true, std::move(out));
                     }
 
@@ -909,7 +918,8 @@ void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback
 
             // read the texture data
             stream.seekg(texture.m_Streams[stream_index].m_Offset);
-            stream.read((char*)out.data() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER),
+            stream.read((char*)&out.front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER)
+                            + (dxt10header ? sizeof(DDS_HEADER_DXT10) : 0),
                         texture.m_Streams[stream_index].m_Size);
 
             return callback(true, std::move(out));
@@ -933,7 +943,7 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
         return false;
     }
 
-    DEBUG_TEXTURE_FLAGS(texture.m_Flags);
+    DEBUG_TEXTURE_FLAGS(&texture);
 
     // find the best stream to use
     auto& [stream_index, load_source] = AvalancheTexture::FindBest(&texture, true);
@@ -941,30 +951,43 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
     // find the rank
     const auto rank = AvalancheTexture::GetHighestRank(&texture, stream_index);
 
+    // generate the DDS header
+    DDS_HEADER header{};
+    header.size        = sizeof(DDS_HEADER);
+    header.flags       = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
+    header.width       = texture.m_Width >> rank;
+    header.height      = texture.m_Height >> rank;
+    header.depth       = texture.m_Depth;
+    header.mipMapCount = 1;
+    header.ddspf       = TextureManager::GetPixelFormat(texture.m_Format);
+    header.caps        = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
+
     //
-    outData->resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + texture.m_Streams[stream_index].m_Size);
+    bool dxt10header = (header.ddspf.fourCC == MAKEFOURCC('D', 'X', '1', '0'));
 
-    // write the DDS header block to the output
-    {
-        DDS_HEADER header;
-        ZeroMemory(&header, sizeof(header));
-        header.size        = sizeof(DDS_HEADER);
-        header.flags       = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
-        header.width       = texture.m_Width >> rank;
-        header.height      = texture.m_Height >> rank;
-        header.depth       = texture.m_Depth;
-        header.mipMapCount = 1;
-        header.ddspf       = TextureManager::GetPixelFormat(texture.m_Format);
-        header.caps        = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
+    // resize the output buffer
+    outData->resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + (dxt10header ? sizeof(DDS_HEADER_DXT10) : 0)
+                    + texture.m_Streams[stream_index].m_Size);
 
-        // write the magic and header
-        std::memcpy(&outData->front(), (char*)&DDS_MAGIC, sizeof(DDS_MAGIC));
-        std::memcpy(&outData->front() + sizeof(DDS_MAGIC), (char*)&header, sizeof(DDS_HEADER));
+    // write the DDS magic and header
+    std::memcpy(&outData->front(), (char*)&DDS_MAGIC, sizeof(DDS_MAGIC));
+    std::memcpy(&outData->front() + sizeof(DDS_MAGIC), (char*)&header, sizeof(DDS_HEADER));
+
+    // write the DXT10 header
+    if (dxt10header) {
+        DDS_HEADER_DXT10 dx10header{};
+        dx10header.dxgiFormat        = texture.m_Format;
+        dx10header.resourceDimension = D3D10_RESOURCE_DIMENSION_TEXTURE2D;
+        dx10header.arraySize         = 1;
+
+        std::memcpy(&outData->front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER), (char*)&dx10header,
+                    sizeof(DDS_HEADER_DXT10));
     }
 
     // read the texture data
     stream.seekg(texture.m_Streams[stream_index].m_Offset);
-    stream.read((char*)outData->data() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER),
+    stream.read((char*)outData->front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER)
+                    + (dxt10header ? sizeof(DDS_HEADER_DXT10) : 0),
                 texture.m_Streams[stream_index].m_Size);
 
     return true;
@@ -974,8 +997,7 @@ void FileLoader::ParseHMDDSCTexture(FileBuffer* data, FileBuffer* outData) noexc
 {
     assert(data && data->size() > 0);
 
-    DDS_HEADER header;
-    ZeroMemory(&header, sizeof(header));
+    DDS_HEADER header{};
     header.size        = sizeof(DDS_HEADER);
     header.flags       = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
     header.width       = 512;
@@ -1389,64 +1411,45 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
     return false;
 }
 
-std::tuple<std::string, std::string, uint32_t> FileLoader::LocateFileInDictionary(const fs::path& filename) noexcept
+DictionaryLookupResult FileLoader::LocateFileInDictionary(const fs::path& filename) noexcept
 {
-#ifdef DEBUG
-    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-#endif
-
-    std::string directory_name, archive_name;
-    std::string _path;
-
     const auto& _filename = filename.generic_string();
     auto        _namehash = hashlittle(_filename.c_str());
 
-    // try find the namehash first to save some time
-    auto find_it = m_Dictionary.find(_namehash);
-
-#ifdef DEBUG
-    auto d1 =
-        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1).count();
-    DEBUG_LOG(" -> [PERF] FileLoader::LocateFileInDictionary map.find took " << d1 << " ms");
-#endif
-
-    if (find_it == m_Dictionary.end()) {
-        // namehash doesn't exist, look for part of the filename
-        find_it = std::find_if(m_Dictionary.begin(), m_Dictionary.end(),
-                               [&](const std::pair<uint32_t, std::pair<fs::path, std::vector<std::string>>>& item) {
-                                   const auto& item_fn = item.second.first;
-                                   return item_fn == _filename
-                                          || (item_fn.generic_string().find(_filename) != std::string::npos
-                                              && item_fn.extension() == filename.extension());
-                               });
-
-#ifdef DEBUG
-        auto d2 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1)
-                      .count();
-        DEBUG_LOG(" -> [PERF] FileLoader::LocateFileInDictionary std::find_if took " << d2 << " ms");
-#endif
+    // try find the file namehash
+    auto it = m_Dictionary.find(_namehash);
+    if (it == m_Dictionary.end()) {
+        return {};
     }
 
-    if (find_it != m_Dictionary.end()) {
-        const auto& file = (*find_it);
+    const auto& file = (*it);
+    const auto& path = file.second.second.at(0);
+    const auto  pos  = path.find_last_of("/");
 
-        _path     = file.second.second.at(0);
-        _namehash = file.first;
+    return {path.substr(0, pos), path.substr(pos + 1, path.length()), file.first};
+}
 
-        // get the directory and archive name
-        const auto pos = _path.find_last_of("/");
-        directory_name = _path.substr(0, pos);
-        archive_name   = _path.substr(pos + 1, _path.length());
+DictionaryLookupResult FileLoader::LocateFileInDictionaryByPartOfName(const fs::path& filename) noexcept
+{
+    const auto& _filename = filename.generic_string();
+
+    auto it = std::find_if(m_Dictionary.begin(), m_Dictionary.end(),
+                           [&](const std::pair<uint32_t, std::pair<fs::path, std::vector<std::string>>>& item) {
+                               const auto& item_fn = item.second.first;
+                               return item_fn == _filename
+                                      || (item_fn.generic_string().find(_filename) != std::string::npos
+                                          && item_fn.extension() == filename.extension());
+                           });
+
+    if (it == m_Dictionary.end()) {
+        return {};
     }
 
-#ifdef DEBUG
-    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+    const auto& file = (*it);
+    const auto& path = file.second.second.at(0);
+    const auto  pos  = path.find_last_of("/");
 
-    DEBUG_LOG("[PERF] FileLoader::LocateFileInDictionary (" << filename.string() << ") - took " << duration << " ms.");
-#endif
-
-    return {directory_name, archive_name, _namehash};
+    return {path.substr(0, pos), path.substr(pos + 1, path.length()), file.first};
 }
 
 void FileLoader::RegisterReadCallback(const std::vector<std::string>& extensions, FileTypeCallback fn)
