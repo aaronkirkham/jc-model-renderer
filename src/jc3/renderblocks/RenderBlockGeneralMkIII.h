@@ -169,6 +169,9 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             SAFE_DELETE(batch.m_BatchLookup);
         }
 
+        // destroy the vertex buffer data
+        Renderer::Get()->DestroyBuffer(m_VertexBufferData);
+
         // destroy shader constants
         for (auto& vsc : m_VertexShaderConstants) {
             Renderer::Get()->DestroyBuffer(vsc);
@@ -256,6 +259,22 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             for (int i = 0; i < 2; ++i) {
                 m_cbSkinningConsts.MatrixPalette[i] = glm::vec4(1);
             }
+        }
+
+        // create the sampler states
+        {
+            D3D11_SAMPLER_DESC params{};
+            params.Filter         = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+            params.AddressU       = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressV       = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.AddressW       = D3D11_TEXTURE_ADDRESS_WRAP;
+            params.MipLODBias     = 0.0f;
+            params.MaxAnisotropy  = 1;
+            params.ComparisonFunc = D3D11_COMPARISON_NEVER;
+            params.MinLOD         = 0.0f;
+            params.MaxLOD         = 13.0f;
+
+            m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockGeneralMkIII");
         }
     }
 
@@ -594,6 +613,10 @@ class RenderBlockGeneralMkIII : public IRenderBlock
                 (m_Block.attributes.flags & DYNAMIC_EMISSIVE ? m_Block.attributes.emissiveTODScale : 1.0f);
             m_cbInstanceAttributes.EmissiveStartFadeDistSq = m_Block.attributes.emissiveStartFadeDistSq;
         }
+
+        // set the samplers
+        context->m_Renderer->SetSamplerState(m_SamplerState, 0);
+        context->m_Renderer->SetSamplerState(m_SamplerState, 1);
 
         // set the constant buffers
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 12, m_cbRBIInfo);

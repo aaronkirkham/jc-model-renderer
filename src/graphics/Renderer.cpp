@@ -40,7 +40,6 @@ Renderer::Renderer()
         for (const auto& render_block : m_RenderList) {
             // draw the model
             render_block->Setup(context);
-            
 
             // update alpha test constants
             SetPixelShaderConstants(m_AlphaTestConstants, 4, m_cbAlphaTestConsts);
@@ -156,7 +155,7 @@ void Renderer::Shutdown()
     SAFE_RELEASE(m_SwapChain);
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-    m_DeviceDebugger->ReportLiveDeviceObjects(D3D11_RLDO_IGNORE_INTERNAL);
+    m_DeviceDebugger->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
 #endif
 
 #ifdef DEBUG
@@ -467,8 +466,7 @@ void Renderer::CreateGBuffer(const glm::vec2& size)
 
 void Renderer::CreateDevice(const HWND& hwnd, const glm::vec2& size)
 {
-    DXGI_SWAP_CHAIN_DESC desc;
-    ZeroMemory(&desc, sizeof(desc));
+    DXGI_SWAP_CHAIN_DESC desc{};
     desc.BufferCount                        = 1;
     desc.BufferDesc.Width                   = static_cast<uint32_t>(size.x);
     desc.BufferDesc.Height                  = static_cast<uint32_t>(size.y);
@@ -506,8 +504,7 @@ void Renderer::CreateDevice(const HWND& hwnd, const glm::vec2& size)
     // hide specific messages
     D3D11_MESSAGE_ID messages_to_hide[] = {D3D11_MESSAGE_ID_DEVICE_DRAW_SAMPLER_NOT_SET};
 
-    D3D11_INFO_QUEUE_FILTER filter;
-    ZeroMemory(&filter, sizeof(filter));
+    D3D11_INFO_QUEUE_FILTER filter{};
     filter.DenyList.NumIDs  = _countof(messages_to_hide);
     filter.DenyList.pIDList = messages_to_hide;
     info_queue->AddStorageFilterEntries(&filter);
@@ -519,8 +516,7 @@ void Renderer::CreateDepthStencil(const glm::vec2& size)
 {
     // create the depth stencil
     {
-        D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
-        ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
+        D3D11_DEPTH_STENCIL_DESC depthStencilDesc{};
         depthStencilDesc.DepthEnable                  = true;
         depthStencilDesc.DepthWriteMask               = D3D11_DEPTH_WRITE_MASK_ALL;
         depthStencilDesc.DepthFunc                    = D3D11_COMPARISON_LESS;
@@ -581,9 +577,7 @@ void Renderer::CreateBlendState()
     if (m_RenderContext.m_BlendIsDirty) {
         SAFE_RELEASE(m_BlendState);
 
-        D3D11_BLEND_DESC blendDesc;
-        ZeroMemory(&blendDesc, sizeof(blendDesc));
-
+        D3D11_BLEND_DESC blendDesc{};
         blendDesc.AlphaToCoverageEnable                 = false;
         blendDesc.RenderTarget[0].BlendEnable           = m_RenderContext.m_AlphaBlendEnabled;
         blendDesc.RenderTarget[0].SrcBlend              = m_RenderContext.m_BlendSourceColour;
@@ -612,9 +606,7 @@ void Renderer::CreateRasterizerState()
     if (m_RenderContext.m_RasterIsDirty) {
         SAFE_RELEASE(m_RasterizerState);
 
-        D3D11_RASTERIZER_DESC rasterDesc;
-        ZeroMemory(&rasterDesc, sizeof(D3D11_RASTERIZER_DESC));
-
+        D3D11_RASTERIZER_DESC rasterDesc{};
         rasterDesc.FillMode        = m_RenderContext.m_FillMode;
         rasterDesc.CullMode        = m_RenderContext.m_CullMode;
         rasterDesc.DepthClipEnable = true;
@@ -670,14 +662,12 @@ IBuffer_t* Renderer::CreateBuffer(const void* data, uint32_t count, uint32_t str
     buffer->m_Data.resize(count * stride);
     std::memcpy(buffer->m_Data.data(), data, (count * stride));
 
-    D3D11_BUFFER_DESC desc;
-    ZeroMemory(&desc, sizeof(desc));
+    D3D11_BUFFER_DESC desc{};
     desc.Usage     = buffer->m_Usage;
     desc.ByteWidth = (count * stride);
     desc.BindFlags = type == VERTEX_BUFFER ? D3D11_BIND_VERTEX_BUFFER : D3D11_BIND_INDEX_BUFFER;
 
-    D3D11_SUBRESOURCE_DATA resourceData;
-    ZeroMemory(&resourceData, sizeof(resourceData));
+    D3D11_SUBRESOURCE_DATA resourceData{};
     resourceData.pSysMem = data;
 
     auto result = m_Device->CreateBuffer(&desc, &resourceData, &buffer->m_Buffer);

@@ -167,15 +167,13 @@ class Renderer : public Singleton<Renderer>
         buffer->m_ElementStride = 16 * vec4count;
         buffer->m_Usage         = D3D11_USAGE_DYNAMIC;
 
-        D3D11_BUFFER_DESC desc;
-        ZeroMemory(&desc, sizeof(desc));
+        D3D11_BUFFER_DESC desc{};
         desc.Usage          = D3D11_USAGE_DYNAMIC;
         desc.ByteWidth      = 16 * vec4count;
         desc.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-        D3D11_SUBRESOURCE_DATA resourceData;
-        ZeroMemory(&resourceData, sizeof(resourceData));
+        D3D11_SUBRESOURCE_DATA resourceData{};
         resourceData.pSysMem = &data;
 
         auto result = m_Device->CreateBuffer(&desc, &resourceData, &buffer->m_Buffer);

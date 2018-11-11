@@ -116,8 +116,7 @@ class RenderBlockWindow : public IRenderBlock
 
         // create the sampler states
         {
-            D3D11_SAMPLER_DESC params;
-            ZeroMemory(&params, sizeof(params));
+            D3D11_SAMPLER_DESC params{};
             params.Filter         = D3D11_FILTER_ANISOTROPIC;
             params.AddressU       = D3D11_TEXTURE_ADDRESS_WRAP;
             params.AddressV       = D3D11_TEXTURE_ADDRESS_WRAP;
