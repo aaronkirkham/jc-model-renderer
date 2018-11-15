@@ -14,24 +14,7 @@ void SetupImGuiStyle();
 Renderer::Renderer()
 {
     Window::Get()->Events().SizeChanged.connect([this](const glm::vec2& size) {
-        if (size.x == 0 || size.y == 0 || !m_Device || !m_DeviceContext) {
-            return true;
-        }
-
-        ImGui_ImplDX11_InvalidateDeviceObjects();
-
-        DestroyRenderTargets();
-        DestroyDepthStencil();
-
-        m_SwapChain->ResizeBuffers(0, static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y), DXGI_FORMAT_UNKNOWN,
-                                   0);
-
-        CreateDepthStencil(size);
-        CreateRenderTarget(size);
-        CreateGBuffer(size);
-
-        ImGui_ImplDX11_CreateDeviceObjects();
-        return true;
+        SetResolution(size);
     });
 
     // draw render blocks
@@ -60,7 +43,7 @@ Renderer::~Renderer()
 ID3D11Texture2D* Renderer::CreateTexture2D(const glm::vec2& size, DXGI_FORMAT format, uint32_t bindFlags,
                                            const char* debugName)
 {
-    D3D11_TEXTURE2D_DESC textureDesc;
+    D3D11_TEXTURE2D_DESC textureDesc{};
     textureDesc.Width              = static_cast<UINT>(size.x);
     textureDesc.Height             = static_cast<UINT>(size.y);
     textureDesc.MipLevels          = 1;
@@ -139,6 +122,7 @@ void Renderer::Shutdown()
     m_DeviceContext->RSSetState(nullptr);
 
     DestroyRenderTargets();
+    DestroyGBuffer();
     DestroyDepthStencil();
     DestroyBuffer(m_GlobalConstants[0]);
     DestroyBuffer(m_GlobalConstants[1]);
@@ -163,12 +147,41 @@ void Renderer::Shutdown()
 #endif
 }
 
-bool Renderer::Render()
+void Renderer::SetResolution(const glm::vec2& size)
+{
+    if (size.x == 0 || size.y == 0 || !m_Device || !m_DeviceContext) {
+        return;
+    }
+
+    // ImGui_ImplDX11_InvalidateDeviceObjects();
+
+    DestroyRenderTargets();
+    DestroyGBuffer();
+    DestroyDepthStencil();
+
+    m_SwapChain->ResizeBuffers(0, static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y), DXGI_FORMAT_UNKNOWN, 0);
+
+    CreateDepthStencil(size);
+    CreateRenderTarget(size);
+    CreateGBuffer(size);
+
+    // ImGui_ImplDX11_CreateDeviceObjects();
+}
+
+void Renderer::SetGBufferResolution(const glm::vec2& size)
+{
+    DestroyGBuffer();
+    CreateGBuffer(size);
+}
+
+bool Renderer::Render(const float delta_time)
 {
     // start frame for imgui
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
+
+    m_RenderContext.m_DeltaTime = delta_time;
 
     // begin scene
     {
@@ -179,7 +192,7 @@ bool Renderer::Render()
         static float _black[4] = {0, 0, 0, 0};
         for (const auto& rt : m_GBuffer) {
             if (rt) {
-                m_DeviceContext->ClearRenderTargetView(rt, _black);
+                m_DeviceContext->ClearRenderTargetView(rt, glm::value_ptr(m_ClearColour));
             }
         }
 
@@ -194,18 +207,17 @@ bool Renderer::Render()
 
     // g buffer
     {
-        m_DeviceContext->OMSetRenderTargets(m_GBuffer.size(), &m_GBuffer[0], m_DepthStencilView);
         SetDepthEnabled(true);
-
+        m_DeviceContext->OMSetRenderTargets(m_GBuffer.size(), &m_GBuffer[0], m_DepthStencilView);
         m_RenderEvents.PreRender(&m_RenderContext);
-        SetDepthEnabled(false);
     }
 
     // activate back buffer
+    SetDepthEnabled(false);
     m_DeviceContext->OMSetRenderTargets(1, &m_BackBuffer, m_DepthStencilView);
 
     // render ui
-    UI::Get()->Render();
+    UI::Get()->Render(&m_RenderContext);
 
     m_RenderEvents.PostRender(&m_RenderContext);
 
@@ -470,16 +482,16 @@ void Renderer::CreateDevice(const HWND& hwnd, const glm::vec2& size)
     desc.BufferCount                        = 1;
     desc.BufferDesc.Width                   = static_cast<uint32_t>(size.x);
     desc.BufferDesc.Height                  = static_cast<uint32_t>(size.y);
-    desc.BufferDesc.Format                  = DXGI_FORMAT_R8G8B8A8_UNORM;
     desc.BufferDesc.RefreshRate.Numerator   = 60;
     desc.BufferDesc.RefreshRate.Denominator = 1;
+    desc.BufferDesc.Format                  = DXGI_FORMAT_R8G8B8A8_UNORM;
+    desc.BufferDesc.ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+    desc.BufferDesc.Scaling                 = DXGI_MODE_SCALING_UNSPECIFIED;
     desc.BufferUsage                        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     desc.OutputWindow                       = hwnd;
     desc.SampleDesc.Count                   = 1;
     desc.SampleDesc.Quality                 = 0;
     desc.Windowed                           = true;
-    desc.BufferDesc.ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-    desc.BufferDesc.Scaling                 = DXGI_MODE_SCALING_UNSPECIFIED;
     desc.SwapEffect                         = DXGI_SWAP_EFFECT_DISCARD;
     desc.Flags                              = 0;
 
@@ -629,14 +641,16 @@ void Renderer::DestroyRenderTargets()
     static ID3D11RenderTargetView* null_targets[5] = {nullptr};
     m_DeviceContext->OMSetRenderTargets(5, null_targets, nullptr);
 
-    // free gbuffer
-    for (auto& srv : m_GBufferSRV)
-        SAFE_RELEASE(srv);
-    for (auto& rt : m_GBuffer)
-        SAFE_RELEASE(rt);
-
     // free back buffer
     SAFE_RELEASE(m_BackBuffer);
+}
+
+void Renderer::DestroyGBuffer()
+{
+    for (int i = 0; i < m_GBuffer.size(); ++i) {
+        SAFE_RELEASE(m_GBufferSRV[i]);
+        SAFE_RELEASE(m_GBuffer[i]);
+    }
 }
 
 void Renderer::DestroyDepthStencil()

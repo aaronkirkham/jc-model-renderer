@@ -10,6 +10,8 @@
 #include <graphics/imgui/fonts/fontawesome5_icons.h>
 #include <graphics/UI.h>
 
+static constexpr auto DIRECTORYLIST_ROOT = "zzzzz_root";
+
 class DirectoryList
 {
 private:
@@ -28,7 +30,7 @@ private:
             else {
                 auto temp = current;
                 current = nullptr;
-                current["/"] = temp;
+                current[DIRECTORYLIST_ROOT] = temp;
                 split(str, current[directory]);
             }
         }
@@ -37,19 +39,9 @@ private:
                 current.emplace_back(str);
             }
             else {
-                current["/"].emplace_back(str);
+                current[DIRECTORYLIST_ROOT].emplace_back(str);
             }
         }
-    }
-
-    inline const char* filetype_icon(const fs::path& extension)
-    {
-        if (extension == ".ee" || extension == ".bl" || extension == ".nl" || extension == ".fl") return ICON_FA_FILE_ARCHIVE;
-        else if (extension == ".dds" || extension == ".ddsc" || extension == ".hmddsc") return ICON_FA_FILE_IMAGE;
-        else if (extension == ".bank") return ICON_FA_FILE_AUDIO;
-        else if (extension == ".bikc") return ICON_FA_FILE_VIDEO;
-
-        return ICON_FA_FILE;
     }
 
 public:
@@ -104,71 +96,5 @@ public:
         }
     }
 
-    void Draw(AvalancheArchive* archive, nlohmann::json* current = nullptr, std::string prev = "", bool open_folders = false)
-    {
-        if (!current) current = GetStructure();
-
-        if (current->is_object()) {
-            for (auto it = current->begin(); it != current->end(); ++it) {
-                auto current_key = it.key();
-
-                if (current_key != "/") {
-                    auto id = ImGui::GetID(current_key.c_str());
-                    auto is_open = ImGui::GetStateStorage()->GetInt(id);
-
-                    if (ImGui::TreeNodeEx(current_key.c_str(), ImGuiTreeNodeFlags_None, "%s  %s", is_open ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER, current_key.c_str())) {
-                        auto next = &current->operator[](current_key);
-                        Draw(archive, next, prev.length() ? prev + "/" + current_key : current_key, open_folders);
-
-                        ImGui::TreePop();
-                    }
-                }
-                else {
-                    auto next = &current->operator[](current_key);
-                    Draw(archive, next, prev, open_folders);
-                }
-            }
-        }
-        else {
-            if (current->is_string()) {
-#ifdef DEBUG
-                __debugbreak();
-#endif
-            }
-            else {
-                for (auto& leaf : *current) {
-                    auto filename = fs::path(leaf.get<std::string>());
-                    ImGui::TreeNodeEx(filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen), "%s  %s", filetype_icon(filename.extension()), filename.string().c_str());
-
-                    auto prev_path = fs::path(prev);
-                    fs::path file_path;
-
-                    if (prev.length() == 0) {
-                        file_path = filename;
-                    }
-                    else if (prev.length() == 1) {
-                        file_path = prev_path.string() + filename.string();
-                    }
-                    else {
-                        file_path = prev_path / filename;
-                    }
-
-                    // tooltips
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip(filename.string().c_str());
-                    }
-
-                    // fire file selected events
-                    if (ImGui::IsItemClicked()) {
-                        UI::Get()->Events().FileTreeItemSelected(file_path, archive);
-                    }
-
-                    // context menu
-                    UI::Get()->RenderContextMenu(file_path, 0, archive ? CTX_FILE | CTX_ARCHIVE : CTX_FILE);
-                }
-            }
-        }
-    }
-
-    nlohmann::json* GetStructure() { return &m_Structure; }
+    nlohmann::json* GetTree() { return &m_Structure; }
 };

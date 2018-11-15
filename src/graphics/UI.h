@@ -4,14 +4,15 @@
 #include <memory.h>
 #include <singleton.h>
 
+#include "widgets/IWidget.h"
 #include <import_export/IImportExporter.h>
 
 class AvalancheArchive;
 struct UIEvents {
-    ksignals::Event<void(const fs::path& file, AvalancheArchive* archive)> FileTreeItemSelected;
-    ksignals::Event<void(const fs::path& file, const fs::path& directory)> SaveFileRequest;
+    ksignals::Event<void(const fs::path& file, AvalancheArchive* archive)>            FileTreeItemSelected;
+    ksignals::Event<void(const fs::path& file, const fs::path& directory)>            SaveFileRequest;
     ksignals::Event<void(IImportExporter* importer, ImportFinishedCallback callback)> ImportFileRequest;
-    ksignals::Event<void(const fs::path& file, IImportExporter* exporter)> ExportFileRequest;
+    ksignals::Event<void(const fs::path& file, IImportExporter* exporter)>            ExportFileRequest;
 };
 
 enum ContextMenuFlags {
@@ -25,6 +26,15 @@ enum TreeViewTab {
     TAB_ARCHIVES,
     TAB_MODELS,
     TAB_TOTAL,
+};
+
+enum DragDropPayloadType {
+    DROPPAYLOAD_UNKNOWN,
+};
+
+struct DragDropPayload {
+    DragDropPayloadType type;
+    const char* data;
 };
 
 using ContextMenuCallback = std::function<void(const fs::path& filename)>;
@@ -44,6 +54,11 @@ class UI : public Singleton<UI>
     TreeViewTab                                m_TabToSwitch          = TAB_FILE_EXPLORER;
     uint8_t                                    m_CurrentActiveGBuffer = 0;
 
+    std::vector<std::unique_ptr<IWidget>> m_Widgets;
+    bool m_IsDragDrop = false;
+    std::string m_DragDropPayload;
+
+
     ImDrawList* m_SceneDrawList = nullptr;
     float       m_SceneWidth    = 0.0f;
     float       m_SidebarWidth  = MIN_SIDEBAR_WIDTH;
@@ -59,17 +74,21 @@ class UI : public Singleton<UI>
         return m_UIEvents;
     }
 
-    void Render();
+    void Render(RenderContext_t* context);
     void RenderSpinner(const std::string& str);
     void RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra = 0, uint32_t flags = 0);
 
     uint64_t PushStatusText(const std::string& str);
     void     PopStatusText(uint64_t id);
 
-    void SwitchToTab(const TreeViewTab tab)
+    const char* GetFileTypeIcon(const fs::path& filename);
+
+    const uint8_t GetCurrentActiveGBuffer() const
     {
-        m_TabToSwitch = tab;
+        return m_CurrentActiveGBuffer;
     }
+
+    DragDropPayload* GetDropPayload(DragDropPayloadType payload_type);
 
     void RegisterContextMenuCallback(const std::vector<std::string>& extensions, ContextMenuCallback fn);
 

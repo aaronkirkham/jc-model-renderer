@@ -108,24 +108,16 @@ void Window::Shutdown()
     m_Instance = nullptr;
 }
 
-bool Window::Frame()
-{
-    // handle the resize
-    if (m_IsResizing) {
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()
-                                                                              - m_TimeSinceResize);
-        if (duration.count() > 50) {
-            m_IsResizing = false;
-            Window::Get()->Events().SizeChanged(Window::Get()->GetSize());
-        }
-    }
-
-    return Renderer::Get()->Render();
-}
-
 void Window::Run()
 {
+    using clock = std::chrono::high_resolution_clock;
+    auto start = clock::now();
+
     while (m_Running) {
+        const auto diff = clock::now() - start;
+        start = clock::now();
+        const float delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
+
         // handle messages
         MSG msg{};
         while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE) > 0) {
@@ -142,8 +134,18 @@ void Window::Run()
             DispatchMessage(&msg);
         }
 
-        // update the window
-        Frame();
+        // handle window resize
+        if (m_IsResizing) {
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                clock::now() - m_TimeSinceResize);
+            if (duration.count() > 50) {
+                m_IsResizing = false;
+                Window::Get()->Events().SizeChanged(Window::Get()->GetSize());
+            }
+        }
+
+        // render
+        Renderer::Get()->Render(delta_time);
 
         // if the window is minimized, sleep for a bit
         if (IsIconic(m_Hwnd)) {

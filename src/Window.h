@@ -63,7 +63,6 @@ class Window : public Singleton<Window>
         m_Running = false;
     }
 
-    bool Frame();
     void Run();
 
     void StartResize()

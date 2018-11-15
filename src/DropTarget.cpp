@@ -31,8 +31,11 @@ HRESULT DropTarget::DragEnter(IDataObject* data_object, DWORD key_stae, POINTL c
         char file[MAX_PATH] = {0};
         DragQueryFile(drop, 0, file, MAX_PATH);
 
+#if 0
         SetForegroundWindow(m_Hwnd);
         SetFocus(m_Hwnd);
+#endif
+
         Window::Get()->Events().DragEnter(file);
 
         ReleaseStgMedium(&stgm);

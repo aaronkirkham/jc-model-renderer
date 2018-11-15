@@ -102,13 +102,14 @@ class Renderer : public Singleton<Renderer>
     void CreateRasterizerState();
 
     void DestroyRenderTargets();
+    void DestroyGBuffer();
     void DestroyDepthStencil();
 
     void UpdateGlobalConstants();
 
   public:
     Renderer();
-    ~Renderer();
+    virtual ~Renderer();
 
     virtual RenderEvents& Events()
     {
@@ -118,16 +119,20 @@ class Renderer : public Singleton<Renderer>
     bool Initialise(const HWND& hwnd);
     void Shutdown();
 
+    void SetResolution(const glm::vec2& size);
+    void SetGBufferResolution(const glm::vec2& size);
+
     void SetClearColour(const glm::vec4& colour)
     {
         m_ClearColour = colour;
     }
+
     const glm::vec4& GetClearColour()
     {
         return m_ClearColour;
     }
 
-    bool Render();
+    bool Render(const float delta_time);
 
     void SetupRenderStates();
 
@@ -237,14 +242,17 @@ class Renderer : public Singleton<Renderer>
     {
         return m_Device;
     }
+
     ID3D11DeviceContext* GetDeviceContext()
     {
         return m_DeviceContext;
     }
+
     IDXGISwapChain* GetSwapChain()
     {
         return m_SwapChain;
     }
+
     ID3D11ShaderResourceView* GetGBufferSRV(uint8_t index)
     {
         return m_GBufferSRV[index];

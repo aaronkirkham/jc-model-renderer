@@ -10,6 +10,7 @@ using materials_t = std::vector<fs::path>;
 
 class Renderer;
 struct RenderContext_t {
+    float                m_DeltaTime         = 0.0f;
     Renderer*            m_Renderer          = nullptr;
     ID3D11Device*        m_Device            = nullptr;
     ID3D11DeviceContext* m_DeviceContext     = nullptr;
