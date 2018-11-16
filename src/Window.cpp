@@ -21,25 +21,30 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPA
     }
 
     switch (message) {
-        case WM_SIZE:
+        case WM_SIZE: {
             Window::Get()->StartResize();
             break;
+        }
 
-        case WM_SETFOCUS:
+        case WM_SETFOCUS: {
             Window::Get()->Events().FocusGained();
             break;
+        }
 
-        case WM_KILLFOCUS:
+        case WM_KILLFOCUS: {
             Window::Get()->Events().FocusLost();
             break;
+        }
 
-        case WM_CLOSE:
+        case WM_CLOSE: {
             DestroyWindow(hwnd);
             break;
+        }
 
-        case WM_DESTROY:
+        case WM_DESTROY: {
             PostQuitMessage(0);
             break;
+        }
 
         default:
             return DefWindowProc(hwnd, message, wParam, lParam);
@@ -94,6 +99,7 @@ void Window::Shutdown()
     m_Running = false;
 
     // clear factories
+    // TODO: move me!
     RuntimeContainer::Instances.clear();
     RenderBlockModel::Instances.clear();
     AvalancheArchive::Instances.clear();
@@ -111,12 +117,12 @@ void Window::Shutdown()
 void Window::Run()
 {
     using clock = std::chrono::high_resolution_clock;
-    auto start = clock::now();
+    auto start  = clock::now();
 
     while (m_Running) {
-        const auto diff = clock::now() - start;
-        start = clock::now();
-        const float delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
+        const auto diff        = clock::now() - start;
+        start                  = clock::now();
+        const float delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() / 1000.0f;
 
         // handle messages
         MSG msg{};
@@ -125,10 +131,8 @@ void Window::Run()
                 goto shutdown;
             }
 
-            // if the window has focus, pass input to the input handler
-            if (HasFocus()) {
-                Input::Get()->HandleMessage(&msg);
-            }
+            //TEMP
+            Input::Get()->HandleMessage(&msg);
 
             TranslateMessage(&msg);
             DispatchMessage(&msg);
@@ -136,8 +140,7 @@ void Window::Run()
 
         // handle window resize
         if (m_IsResizing) {
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-                clock::now() - m_TimeSinceResize);
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(clock::now() - m_TimeSinceResize);
             if (duration.count() > 50) {
                 m_IsResizing = false;
                 Window::Get()->Events().SizeChanged(Window::Get()->GetSize());

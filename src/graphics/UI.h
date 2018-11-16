@@ -21,53 +21,40 @@ enum ContextMenuFlags {
     CTX_TEXTURE = (1 << 2),
 };
 
-enum TreeViewTab {
-    TAB_FILE_EXPLORER,
-    TAB_ARCHIVES,
-    TAB_MODELS,
-    TAB_TOTAL,
-};
-
 enum DragDropPayloadType {
     DROPPAYLOAD_UNKNOWN,
 };
 
 struct DragDropPayload {
     DragDropPayloadType type;
-    const char* data;
+    const char*         data;
 };
 
 using ContextMenuCallback = std::function<void(const fs::path& filename)>;
 
-static constexpr auto MIN_SIDEBAR_WIDTH = 400.0f;
-
 struct ImDrawList;
 struct BoundingBox;
+class Texture;
 class UI : public Singleton<UI>
 {
   private:
-    UIEvents                                   m_UIEvents;
-    float                                      m_MainMenuBarHeight = 0.0f;
+    UIEvents m_UIEvents;
+
     std::recursive_mutex                       m_StatusTextsMutex;
     std::map<uint64_t, std::string>            m_StatusTexts;
     std::map<std::string, ContextMenuCallback> m_ContextMenuCallbacks;
-    TreeViewTab                                m_TabToSwitch          = TAB_FILE_EXPLORER;
-    uint8_t                                    m_CurrentActiveGBuffer = 0;
+
+    uint8_t m_CurrentActiveGBuffer = 0;
 
     std::vector<std::unique_ptr<IWidget>> m_Widgets;
-    bool m_IsDragDrop = false;
-    std::string m_DragDropPayload;
-
-
-    ImDrawList* m_SceneDrawList = nullptr;
-    float       m_SceneWidth    = 0.0f;
-    float       m_SidebarWidth  = MIN_SIDEBAR_WIDTH;
-
-    void RenderFileTreeView();
+    bool                                  m_IsDragDrop = false;
+    std::string                           m_DragDropPayload;
 
   public:
     UI();
     virtual ~UI() = default;
+
+    ImDrawList* SceneDrawList = nullptr;
 
     virtual UIEvents& Events()
     {
@@ -77,6 +64,8 @@ class UI : public Singleton<UI>
     void Render(RenderContext_t* context);
     void RenderSpinner(const std::string& str);
     void RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra = 0, uint32_t flags = 0);
+
+    void RenderBlockTexture(const std::string& title, Texture* texture);
 
     uint64_t PushStatusText(const std::string& str);
     void     PopStatusText(uint64_t id);
@@ -92,6 +81,8 @@ class UI : public Singleton<UI>
 
     void RegisterContextMenuCallback(const std::vector<std::string>& extensions, ContextMenuCallback fn);
 
+    // TODO: move these back into some DebugRenderer class
+    //  want to use a shader for it so we can draw stuff in the 3d world
 #undef DrawText
     void DrawText(const std::string& text, const glm::vec3& position, const glm::vec4& colour, bool center);
     void DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour);

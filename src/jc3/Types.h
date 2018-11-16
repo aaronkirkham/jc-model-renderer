@@ -233,11 +233,13 @@ namespace Vertex
 
     template <typename T> static T pack(float value)
     {
+#undef max
         return static_cast<T>(value / 1.0f * std::numeric_limits<T>::max());
     }
 
     template <typename T> static float unpack(T value)
     {
+#undef max
         return (value * 1.0f / std::numeric_limits<T>::max());
     }
 

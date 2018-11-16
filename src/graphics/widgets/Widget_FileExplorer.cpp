@@ -36,7 +36,8 @@ void Widget_FileExplorer::RenderTreeView(nlohmann::json* tree, AvalancheArchive*
 
             if (ImGui::TreeNodeEx(key.c_str(), 0, "%s  %s", is_open ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER,
                                   key.c_str())) {
-                Widget_FileExplorer::RenderTreeView(&(*tree)[key], current_archive, acc_filepath.length() ? acc_filepath + "/" + key : key);
+                Widget_FileExplorer::RenderTreeView(&(*tree)[key], current_archive,
+                                                    acc_filepath.length() ? acc_filepath + "/" + key : key);
                 ImGui::TreePop();
             }
         }
@@ -44,7 +45,7 @@ void Widget_FileExplorer::RenderTreeView(nlohmann::json* tree, AvalancheArchive*
     // current tree is a filelist
     else if (tree->is_array()) {
         for (const auto& value : *tree) {
-            const auto& filename = value.get<std::string>();
+            const auto& filename           = value.get<std::string>();
             const auto& filename_with_path = acc_filepath.length() ? acc_filepath + "/" + filename : filename;
 
             ImGui::TreeNodeEx(filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen),

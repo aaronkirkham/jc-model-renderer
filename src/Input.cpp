@@ -47,35 +47,6 @@ bool Input::HandleMessage(MSG* event)
             m_InputEvents.KeyUp(key);
             break;
         }
-
-        case WM_LBUTTONUP:
-        case WM_LBUTTONDOWN:
-        case WM_RBUTTONUP:
-        case WM_RBUTTONDOWN: {
-            auto position = glm::vec2{static_cast<float>(GET_X_LPARAM(event->lParam)),
-                                      static_cast<float>(GET_Y_LPARAM(event->lParam))};
-            m_InputEvents.MousePress(message, position);
-
-            m_LastClickPosition = position;
-            Camera::Get()->MouseToWorld(position, &m_LastClickWorldPosition);
-            break;
-        }
-
-        case WM_MOUSEMOVE: {
-            auto position = glm::vec2{static_cast<float>(GET_X_LPARAM(event->lParam)),
-                                      static_cast<float>(GET_Y_LPARAM(event->lParam))};
-            m_InputEvents.MouseMove((m_MousePosition - position));
-
-            m_MousePosition = position;
-            Camera::Get()->MouseToWorld(position, &m_MouseWorldPosition);
-            break;
-        }
-
-        case WM_MOUSEWHEEL: {
-            auto delta = static_cast<float>(GET_WHEEL_DELTA_WPARAM(event->wParam));
-            m_InputEvents.MouseScroll(delta);
-            break;
-        }
     }
 
     return true;

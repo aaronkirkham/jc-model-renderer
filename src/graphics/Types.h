@@ -81,19 +81,6 @@ struct SamplerState_t {
     ID3D11SamplerState* m_SamplerState = nullptr;
 };
 
-struct Ray {
-    glm::vec3 m_Origin;
-    glm::vec3 m_Direction;
-    glm::vec3 m_InvDirection;
-
-    Ray(const glm::vec3& origin, const glm::vec3& direction)
-        : m_Origin(origin)
-        , m_Direction(direction)
-    {
-        m_InvDirection = (1.0f / direction);
-    }
-};
-
 struct BoundingBox {
     glm::vec3 m_Min;
     glm::vec3 m_Max;
@@ -135,45 +122,87 @@ struct BoundingBox {
     {
         return (m_Max * m_Scale);
     }
+};
 
-    /*
-    // If line is parallel and outsite the box it is not possible to intersect
-    if (direction.x == 0.0f && (origin.x < min(leftBottom.x, rightTop.x) || origin.x > max(leftBottom.x, rightTop.x)))
-    return false;
+struct Ray {
+    glm::vec3 m_Origin;
+    glm::vec3 m_End;
+    glm::vec3 m_Direction;
 
-    if (direction.y == 0.0f && (origin.y < min(leftBottom.y, rightTop.y) || origin.y > max(leftBottom.y, rightTop.y)))
-    return false;
-
-    if (direction.z == 0.0f && (origin.z < min(leftBottom.z, rightTop.z) || origin.z > max(leftBottom.z, rightTop.z)))
-    return false;
-    */
-
-    bool Intersect(const Ray& ray, float* distance) const
+    Ray(const glm::vec3& origin, const glm::vec3& end)
+        : m_Origin(origin)
+        , m_End(end)
     {
-        const auto min = (m_Min * m_Scale);
-        const auto max = (m_Max * m_Scale);
+        m_Direction = glm::normalize(end - origin);
+    }
 
-        auto t1 = (min.x - ray.m_Origin.x) * ray.m_InvDirection.x;
-        auto t2 = (max.x - ray.m_Origin.x) * ray.m_InvDirection.x;
-        auto t3 = (min.y - ray.m_Origin.y) * ray.m_InvDirection.y;
-        auto t4 = (max.y - ray.m_Origin.y) * ray.m_InvDirection.y;
-        auto t5 = (min.z - ray.m_Origin.z) * ray.m_InvDirection.z;
-        auto t6 = (max.z - ray.m_Origin.z) * ray.m_InvDirection.z;
+    float Hit(const BoundingBox& box)
+    {
+        float dist = INFINITY;
 
-        auto tmin = std::max(std::max(std::min(t1, t2), std::min(t3, t4)), std::min(t5, t6));
-        auto tmax = std::min(std::min(std::max(t1, t2), std::max(t3, t4)), std::max(t5, t6));
-
-        if (tmax < 0) {
-            *distance = tmax;
-            return false;
+        if (m_Origin.x < box.GetMin().x && m_Direction.x > 0.0f) {
+            float x = (box.GetMin().x - m_Origin.x) / m_Direction.x;
+            if (x < dist) {
+                glm::vec3 point = m_Origin + x * m_Direction;
+                if (point.y >= box.GetMin().y && point.y <= box.GetMax().y && point.z >= box.GetMin().z
+                    && point.z <= box.GetMax().z) {
+                    dist = x;
+                }
+            }
+        }
+        if (m_Origin.x > box.GetMax().x && m_Direction.x < 0.0f) {
+            float x = (box.GetMax().x - m_Origin.x) / m_Direction.x;
+            if (x < dist) {
+                glm::vec3 point = m_Origin + x * m_Direction;
+                if (point.y >= box.GetMin().y && point.y <= box.GetMax().y && point.z >= box.GetMin().z
+                    && point.z <= box.GetMax().z) {
+                    dist = x;
+                }
+            }
+        }
+        // Check for intersecting in the Y-direction
+        if (m_Origin.y < box.GetMin().y && m_Direction.y > 0.0f) {
+            float x = (box.GetMin().y - m_Origin.y) / m_Direction.y;
+            if (x < dist) {
+                glm::vec3 point = m_Origin + x * m_Direction;
+                if (point.x >= box.GetMin().x && point.x <= box.GetMax().x && point.z >= box.GetMin().z
+                    && point.z <= box.GetMax().z) {
+                    dist = x;
+                }
+            }
+        }
+        if (m_Origin.y > box.GetMax().y && m_Direction.y < 0.0f) {
+            float x = (box.GetMax().y - m_Origin.y) / m_Direction.y;
+            if (x < dist) {
+                glm::vec3 point = m_Origin + x * m_Direction;
+                if (point.x >= box.GetMin().x && point.x <= box.GetMax().x && point.z >= box.GetMin().z
+                    && point.z <= box.GetMax().z) {
+                    dist = x;
+                }
+            }
+        }
+        // Check for intersecting in the Z-direction
+        if (m_Origin.z < box.GetMin().z && m_Direction.z > 0.0f) {
+            float x = (box.GetMin().z - m_Origin.z) / m_Direction.z;
+            if (x < dist) {
+                glm::vec3 point = m_Origin + x * m_Direction;
+                if (point.x >= box.GetMin().x && point.x <= box.GetMax().x && point.y >= box.GetMin().y
+                    && point.y <= box.GetMax().y) {
+                    dist = x;
+                }
+            }
+        }
+        if (m_Origin.z > box.GetMax().z && m_Direction.z < 0.0f) {
+            float x = (box.GetMax().z - m_Origin.z) / m_Direction.z;
+            if (x < dist) {
+                glm::vec3 point = m_Origin + x * m_Direction;
+                if (point.x >= box.GetMin().x && point.x <= box.GetMax().x && point.y >= box.GetMin().y
+                    && point.y <= box.GetMax().y) {
+                    dist = x;
+                }
+            }
         }
 
-        if (tmin > tmax) {
-            *distance = tmax;
-            return false;
-        }
-
-        *distance = tmin;
-        return true;
+        return dist;
     }
 };

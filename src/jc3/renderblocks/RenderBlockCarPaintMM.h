@@ -111,8 +111,6 @@ class RenderBlockCarPaintMM : public IRenderBlock
     std::array<ConstantBuffer_t*, 3>     m_VertexShaderConstants   = {nullptr};
     std::array<ConstantBuffer_t*, 4>     m_FragmentShaderConstants = {nullptr};
 
-    glm::mat4 world = glm::mat4(1);
-
   public:
     RenderBlockCarPaintMM() = default;
     virtual ~RenderBlockCarPaintMM()
@@ -400,11 +398,10 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
         // setup the constant buffer
         {
-            // const auto scale = m_Block.attributes.packed.scale;
-            // static auto world = glm::mat4(1);
+            static auto world = glm::mat4(1);
 
             // set vertex shader constants
-            m_cbRBIInfo.ModelWorldMatrix = glm::scale(world, {1, 1, 1});
+            m_cbRBIInfo.ModelWorldMatrix = world;
         }
 
         // set the layered albedo map

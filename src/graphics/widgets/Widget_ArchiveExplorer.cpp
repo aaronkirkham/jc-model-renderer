@@ -6,6 +6,7 @@
 Widget_ArchiveExplorer::Widget_ArchiveExplorer()
 {
     m_Title = "Archives";
+    m_Flags |= ImGuiWindowFlags_NoFocusOnAppearing;
 }
 
 void Widget_ArchiveExplorer::Render(RenderContext_t* context)

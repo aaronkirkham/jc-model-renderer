@@ -193,14 +193,14 @@ void RenderBlockModel::DrawGizmos()
 
     // draw bounding boxes
     if (g_DrawBoundingBoxes) {
-        auto mouse_pos = Input::Get()->GetMouseWorldPosition();
+        //auto mouse_pos = Input::Get()->GetMouseWorldPosition();
 
-        Ray   ray(mouse_pos, {0, 0, 1});
-        float distance   = 0.0f;
-        auto  intersects = m_BoundingBox.Intersect(ray, &distance);
+        //Ray   ray(mouse_pos, {0, 0, 1});
+        //float distance = 0.0f;
+        // auto  intersects = m_BoundingBox.Intersect(ray, &distance);
 
         static auto red   = glm::vec4{1, 0, 0, 1};
-        static auto green = glm::vec4{0, 1, 0, 1};
+        //static auto green = glm::vec4{0, 1, 0, 1};
 
         UI::Get()->DrawBoundingBox(m_BoundingBox, red);
 

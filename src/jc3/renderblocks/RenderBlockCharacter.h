@@ -3,6 +3,9 @@
 #include <StdInc.h>
 #include <jc3/renderblocks/IRenderBlock.h>
 
+#include <graphics/UI.h>
+#include <graphics/imgui/fonts/fontawesome5_icons.h>
+
 #pragma pack(push, 1)
 struct CharacterAttributes {
     uint32_t flags;
@@ -482,5 +485,24 @@ class RenderBlockCharacter : public IRenderBlock
         ImGui::SliderFloat4("Unknown #1", glm::value_ptr(m_cbInstanceConsts._unknown), 0, 1);
         ImGui::ColorEdit4("Diffuse Colour", glm::value_ptr(m_cbInstanceConsts.DiffuseColour));
         ImGui::SliderFloat4("Unknown #2", glm::value_ptr(m_cbInstanceConsts._unknown2), 0, 1);
+
+        // Textures
+        if (ImGui::CollapsingHeader(ICON_FA_FILE_IMAGE "  Textures")) {
+            ImGui::Columns(2, nullptr, false);
+            {
+                UI::Get()->RenderBlockTexture("DiffuseMap", m_Textures[0].get());
+                UI::Get()->RenderBlockTexture("NormalMap", m_Textures[1].get());
+                UI::Get()->RenderBlockTexture("PropertiesMap", m_Textures[2].get());
+                UI::Get()->RenderBlockTexture("DetailDiffuseMap", m_Textures[3].get());
+                UI::Get()->RenderBlockTexture("DetailNormalMap", m_Textures[4].get());
+
+                if (m_Block.attributes.flags & USE_CAMERA_LIGHTING) {
+                    UI::Get()->RenderBlockTexture("CameraMap", m_Textures[8].get());
+                }
+
+                UI::Get()->RenderBlockTexture("MetallicMap", m_Textures[9].get());
+            }
+            ImGui::EndColumns();
+        }
     }
 };

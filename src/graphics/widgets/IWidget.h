@@ -7,8 +7,9 @@ struct RenderContext_t;
 class IWidget
 {
   protected:
-    std::string m_Title   = "";
-    bool        m_Visible = true;
+    std::string      m_Title   = "";
+    bool             m_Visible = true;
+    ImGuiWindowFlags m_Flags   = ImGuiWindowFlags_NoCollapse;
 
   public:
     IWidget()          = default;
@@ -20,7 +21,7 @@ class IWidget
             return false;
         }
 
-        ImGui::Begin(m_Title.c_str());
+        ImGui::Begin(m_Title.c_str(), nullptr, m_Flags);
         return true;
     }
 

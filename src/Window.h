@@ -29,7 +29,6 @@ struct WindowEvents {
     ksignals::Event<void(const fs::path& filename)> DragEnter;
     ksignals::Event<void()>                         DragLeave;
     ksignals::Event<void()>                         DragDropped;
-    ksignals::Event<void(const fs::path&)>          UnhandledDragDropped;
 };
 
 class Window : public Singleton<Window>
