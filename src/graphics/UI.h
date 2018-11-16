@@ -44,8 +44,6 @@ class UI : public Singleton<UI>
     std::map<uint64_t, std::string>            m_StatusTexts;
     std::map<std::string, ContextMenuCallback> m_ContextMenuCallbacks;
 
-    uint8_t m_CurrentActiveGBuffer = 0;
-
     std::vector<std::unique_ptr<IWidget>> m_Widgets;
     bool                                  m_IsDragDrop = false;
     std::string                           m_DragDropPayload;
@@ -71,11 +69,6 @@ class UI : public Singleton<UI>
     void     PopStatusText(uint64_t id);
 
     const char* GetFileTypeIcon(const fs::path& filename);
-
-    const uint8_t GetCurrentActiveGBuffer() const
-    {
-        return m_CurrentActiveGBuffer;
-    }
 
     DragDropPayload* GetDropPayload(DragDropPayloadType payload_type);
 

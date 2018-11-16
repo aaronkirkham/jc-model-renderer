@@ -18,10 +18,8 @@ void SetupImGuiStyle()
     style.WindowBorderSize  = 0.0f;
 
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.IniFilename = nullptr;
-
-    io.ConfigResizeWindowsFromEdges = true;
-    io.ConfigDockingWithShift       = false;
+    io.IniFilename            = nullptr;
+    io.ConfigDockingWithShift = false;
 
     style.Colors[ImGuiCol_Text]                 = ImVec4(0.73f, 0.73f, 0.73f, 1.00f);
     style.Colors[ImGuiCol_TextDisabled]         = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);

@@ -31,7 +31,7 @@ void Widget_Viewport::Render(RenderContext_t* context)
     width -= (width % 2 != 0) ? 1 : 0;
     height -= (height % 2 != 0) ? 1 : 0;
 
-    const auto texture = context->m_Renderer->GetGBufferSRV(UI::Get()->GetCurrentActiveGBuffer());
+    const auto texture = context->m_Renderer->GetGBufferSRV(m_RenderTarget);
     if (texture) {
         ImGui::Image(texture, ImVec2((float)width, (float)height));
     }
@@ -54,12 +54,25 @@ void Widget_Viewport::Render(RenderContext_t* context)
 
     // TEMP TEMP TEMP
     UI::Get()->SceneDrawList = ImGui::GetWindowDrawList();
+
+    // gbuffer render target selection
+    {
+        static const char* gbuffer_items[] = {"Diffuse", "Normal", "Properties", "PropertiesEx"};
+
+        ImGui::SetCursorPos(ImVec2(5, 25));
+
+        ImGui::PushItemWidth(110);
+        ImGui::Combo("##render_target", &m_RenderTarget, gbuffer_items, IM_ARRAYSIZE(gbuffer_items));
+        ImGui::PopItemWidth();
+    }
 }
 
 void Widget_Viewport::HandleInput(const float delta_time)
 {
     const auto& io        = ImGui::GetIO();
     const auto& mouse_pos = glm::vec2(io.MousePos.x, io.MousePos.y);
+
+    // FIXME: make sure the initial click was inside this window!
 
     // handle mouse press
     if (ImGui::IsMouseDown(0)) {

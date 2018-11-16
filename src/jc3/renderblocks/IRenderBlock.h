@@ -14,14 +14,12 @@ class IRenderBlock
     bool  m_Visible       = true;
     float m_ScaleModifier = 1.0f;
 
-    VertexBuffer_t*                 m_VertexBuffer      = nullptr;
-    IndexBuffer_t*                  m_IndexBuffer       = nullptr;
-    std::shared_ptr<VertexShader_t> m_VertexShader      = nullptr;
-    std::shared_ptr<PixelShader_t>  m_PixelShader       = nullptr;
-    VertexDeclaration_t*            m_VertexDeclaration = nullptr;
-    SamplerState_t*                 m_SamplerState      = nullptr;
-
-    std::vector<fs::path>                 m_Materials;
+    VertexBuffer_t*                       m_VertexBuffer      = nullptr;
+    IndexBuffer_t*                        m_IndexBuffer       = nullptr;
+    std::shared_ptr<VertexShader_t>       m_VertexShader      = nullptr;
+    std::shared_ptr<PixelShader_t>        m_PixelShader       = nullptr;
+    VertexDeclaration_t*                  m_VertexDeclaration = nullptr;
+    SamplerState_t*                       m_SamplerState      = nullptr;
     std::vector<std::shared_ptr<Texture>> m_Textures;
     float                                 m_MaterialParams[4] = {0};
 
@@ -158,7 +156,7 @@ class IRenderBlock
         uint32_t count;
         stream.read((char*)&count, sizeof(count));
 
-        m_Materials.resize(count);
+        m_Textures.resize(count);
 
         for (uint32_t i = 0; i < count; ++i) {
             uint32_t length;
@@ -172,12 +170,10 @@ class IRenderBlock
             stream.read(filename.get(), length);
             filename[length] = '\0';
 
-            m_Materials[i] = filename.get();
-
             // load the material
-            auto& texture = TextureManager::Get()->GetTexture(filename.get());
+            auto texture = TextureManager::Get()->GetTexture(filename.get());
             if (texture) {
-                m_Textures.emplace_back(texture);
+                m_Textures[i] = std::move(texture);
             }
         }
 
@@ -186,11 +182,11 @@ class IRenderBlock
 
     void WriteMaterials(std::ostream& stream)
     {
-        auto count = static_cast<uint32_t>(m_Materials.size());
+        auto count = static_cast<uint32_t>(m_Textures.size());
         stream.write((char*)&count, sizeof(count));
 
         for (uint32_t i = 0; i < count; ++i) {
-            const auto& filename = m_Materials[i].generic_string();
+            const auto& filename = m_Textures[i]->GetPath().generic_string();
             const auto  length   = static_cast<uint32_t>(filename.length());
 
             stream.write((char*)&length, sizeof(length));

@@ -46,6 +46,7 @@ class RenderBlockCharacter : public IRenderBlock
         USE_FEATURE_MAP            = 0x10,
         USE_WRINKLE_MAP            = 0x20,
         USE_CAMERA_LIGHTING        = 0x40,
+        USE_EYE_REFLECTION         = 0x80,
     };
 
     enum CharacterAttributeFlags {
@@ -474,7 +475,7 @@ class RenderBlockCharacter : public IRenderBlock
         // clang-format off
         static std::array flag_labels = {
             "Disable Backface Culling",     "Eight Bones",                  "Use Alpha Mask",               "Transparency Alpha Blending",
-            "Use Feature Map",              "Use Wrinkle Map",              "Use Camera Lighting",          "",
+            "Use Feature Map",              "Use Wrinkle Map",              "Use Camera Lighting",          "Use Eye Reflection",
         };
         // clang-format on
 
@@ -487,22 +488,42 @@ class RenderBlockCharacter : public IRenderBlock
         ImGui::SliderFloat4("Unknown #2", glm::value_ptr(m_cbInstanceConsts._unknown2), 0, 1);
 
         // Textures
-        if (ImGui::CollapsingHeader(ICON_FA_FILE_IMAGE "  Textures")) {
-            ImGui::Columns(2, nullptr, false);
-            {
-                UI::Get()->RenderBlockTexture("DiffuseMap", m_Textures[0].get());
-                UI::Get()->RenderBlockTexture("NormalMap", m_Textures[1].get());
-                UI::Get()->RenderBlockTexture("PropertiesMap", m_Textures[2].get());
-                UI::Get()->RenderBlockTexture("DetailDiffuseMap", m_Textures[3].get());
-                UI::Get()->RenderBlockTexture("DetailNormalMap", m_Textures[4].get());
+        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
+        ImGui::Columns(2, nullptr, false);
+        {
+            switch (m_Block.attributes.flags & BODY_PART) {
+                case GEAR: {
+                    UI::Get()->RenderBlockTexture("DiffuseMap", m_Textures[0].get());
+                    UI::Get()->RenderBlockTexture("NormalMap", m_Textures[1].get());
+                    UI::Get()->RenderBlockTexture("PropertiesMap", m_Textures[2].get());
+                    UI::Get()->RenderBlockTexture("DetailDiffuseMap", m_Textures[3].get());
+                    UI::Get()->RenderBlockTexture("DetailNormalMap", m_Textures[4].get());
 
-                if (m_Block.attributes.flags & USE_CAMERA_LIGHTING) {
-                    UI::Get()->RenderBlockTexture("CameraMap", m_Textures[8].get());
+                    if (m_Block.attributes.flags & USE_CAMERA_LIGHTING) {
+                        UI::Get()->RenderBlockTexture("CameraMap", m_Textures[8].get());
+                    }
+
+                    UI::Get()->RenderBlockTexture("MetallicMap", m_Textures[9].get());
+                    break;
                 }
 
-                UI::Get()->RenderBlockTexture("MetallicMap", m_Textures[9].get());
+                case EYES: {
+                    UI::Get()->RenderBlockTexture("DiffuseMap", m_Textures[0].get());
+
+                    if (m_Block.attributes.flags & USE_EYE_REFLECTION) {
+                        UI::Get()->RenderBlockTexture("ReflectionMap", m_Textures[10].get());
+                    }
+                    break;
+                }
+
+                case HAIR: {
+                    UI::Get()->RenderBlockTexture("DiffuseMap", m_Textures[0].get());
+                    UI::Get()->RenderBlockTexture("NormalMap", m_Textures[1].get());
+                    UI::Get()->RenderBlockTexture("PropertiesMap", m_Textures[2].get());
+                    break;
+                }
             }
-            ImGui::EndColumns();
         }
+        ImGui::EndColumns();
     }
 };

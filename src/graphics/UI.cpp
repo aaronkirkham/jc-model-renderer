@@ -146,26 +146,6 @@ void UI::Render(RenderContext_t* context)
 
         // renderer
         if (ImGui::BeginMenu("Renderer")) {
-            if (ImGui::BeginMenu("Visualize")) {
-                if (ImGui::MenuItem("Diffuse", nullptr, m_CurrentActiveGBuffer == 0)) {
-                    m_CurrentActiveGBuffer = 0;
-                }
-
-                if (ImGui::MenuItem("Normal", nullptr, m_CurrentActiveGBuffer == 1)) {
-                    m_CurrentActiveGBuffer = 1;
-                }
-
-                if (ImGui::MenuItem("Properties", nullptr, m_CurrentActiveGBuffer == 2)) {
-                    m_CurrentActiveGBuffer = 2;
-                }
-
-                if (ImGui::MenuItem("PropertiesEx", nullptr, m_CurrentActiveGBuffer == 3)) {
-                    m_CurrentActiveGBuffer = 3;
-                }
-
-                ImGui::EndMenu();
-            }
-
             static bool wireframe = false;
             if (ImGui::MenuItem("Wireframe", nullptr, wireframe)) {
                 wireframe = !wireframe;

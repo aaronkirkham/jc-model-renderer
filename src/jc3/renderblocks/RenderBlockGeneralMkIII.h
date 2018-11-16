@@ -536,6 +536,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
         // textures
         {
+#if 0
             m_Materials.emplace_back("models/jc_characters/main_characters/rico/textures/nanos.dds");
 
             // load the material
@@ -545,6 +546,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
                 texture->LoadFromFile("C:/users/aaron/Desktop/nanos cube/nanos.dds");
                 m_Textures.emplace_back(texture);
             }
+#endif
         }
 
         m_VertexBuffer     = Renderer::Get()->CreateBuffer(packed_vertices.data(), packed_vertices.size(),
