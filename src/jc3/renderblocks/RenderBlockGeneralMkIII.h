@@ -616,9 +616,10 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             m_cbInstanceAttributes.EmissiveStartFadeDistSq = m_Block.attributes.emissiveStartFadeDistSq;
         }
 
-        // set the samplers
-        context->m_Renderer->SetSamplerState(m_SamplerState, 0);
-        context->m_Renderer->SetSamplerState(m_SamplerState, 1);
+        // set the textures
+        for (int i = 0; i < 4; ++i) {
+            IRenderBlock::BindTexture(i, m_SamplerState);
+        }
 
         // set the constant buffers
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 12, m_cbRBIInfo);
@@ -667,6 +668,8 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         };
         // clang-format on
 
+        ImGui::Text(ICON_FA_COGS "  Attributes");
+
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
@@ -676,5 +679,16 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         ImGuiCustom::PushDisabled(!(m_Block.attributes.flags & DYNAMIC_EMISSIVE));
         ImGui::SliderFloat("Emissive Scale", &m_Block.attributes.emissiveTODScale, 0, 1);
         ImGuiCustom::PopDisabled();
+
+        // Textures
+        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
+        ImGui::Columns(3, nullptr, false);
+        {
+            UI::Get()->RenderBlockTexture("Albedo1Map", m_Textures[0]);
+            UI::Get()->RenderBlockTexture("Gloss1Map", m_Textures[1]);
+            UI::Get()->RenderBlockTexture("Metallic1Map", m_Textures[2]);
+            UI::Get()->RenderBlockTexture("Normal1Map", m_Textures[3]);
+        }
+        ImGui::EndColumns();
     }
 };

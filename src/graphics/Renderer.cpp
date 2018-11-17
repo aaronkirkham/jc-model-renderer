@@ -718,6 +718,17 @@ void Renderer::SetSamplerState(SamplerState_t* sampler, int32_t slot)
     m_DeviceContext->PSSetSamplers(slot, 1, &sampler->m_SamplerState);
 }
 
+void Renderer::ClearTexture(int32_t slot)
+{
+    ClearTextures(slot, slot);
+}
+
+void Renderer::ClearTextures(int32_t start, int32_t last)
+{
+    static ID3D11ShaderResourceView* null_srv[20] = {nullptr};
+    m_DeviceContext->PSSetShaderResources(start, (last - start) + 1, null_srv);
+}
+
 VertexDeclaration_t* Renderer::CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count,
                                                        VertexShader_t* shader, const char* debugName)
 {

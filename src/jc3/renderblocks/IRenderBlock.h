@@ -4,6 +4,8 @@
 #include <graphics/ShaderManager.h>
 #include <graphics/TextureManager.h>
 #include <graphics/Types.h>
+#include <graphics/UI.h>
+#include <graphics/imgui/fonts/fontawesome5_icons.h>
 #include <graphics/imgui/imgui_bitfield.h>
 #include <graphics/imgui/imgui_disabled.h>
 #include <jc3/Types.h>
@@ -92,14 +94,6 @@ class IRenderBlock
         context->m_DeviceContext->VSSetShader(m_VertexShader->m_Shader, nullptr, 0);
         context->m_DeviceContext->PSSetShader(m_PixelShader->m_Shader, nullptr, 0);
 
-        // enable textures
-        for (uint32_t i = 0; i < m_Textures.size(); ++i) {
-            const auto& texture = m_Textures[i];
-            if (texture && texture->IsLoaded()) {
-                texture->Use(i);
-            }
-        }
-
         // set the input layout
         context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
 
@@ -120,6 +114,19 @@ class IRenderBlock
         } else {
             context->m_Renderer->Draw(0, (m_VertexBuffer->m_ElementCount / 3));
         }
+    }
+
+    inline void BindTexture(int32_t texture_index, int32_t slot, SamplerState_t* sampler = nullptr)
+    {
+        const auto& texture = m_Textures[texture_index];
+        if (texture && texture->IsLoaded()) {
+            texture->Use(slot, sampler);
+        }
+    }
+
+    inline void BindTexture(int32_t texture_index, SamplerState_t* sampler = nullptr)
+    {
+        return BindTexture(texture_index, texture_index, sampler);
     }
 
     IBuffer_t* ReadBuffer(std::istream& stream, BufferType type, uint32_t stride)

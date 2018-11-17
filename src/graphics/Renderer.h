@@ -223,6 +223,8 @@ class Renderer : public Singleton<Renderer>
 
     void SetVertexStream(VertexBuffer_t* buffer, int32_t slot, uint32_t offset = 0);
     void SetSamplerState(SamplerState_t* sampler, int32_t slot);
+    void ClearTexture(int32_t slot);
+    void ClearTextures(int32_t first, int32_t last);
 
     // vertex declarations
     VertexDeclaration_t* CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count,

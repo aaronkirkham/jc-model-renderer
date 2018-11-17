@@ -387,9 +387,11 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra, u
     ImGui::PopID();
 }
 
-void UI::RenderBlockTexture(const std::string& title, Texture* texture)
+void UI::RenderBlockTexture(const std::string& title, std::shared_ptr<Texture> texture)
 {
-    assert(texture);
+    if (!texture) {
+        return;
+    }
 
     const auto  col_width          = (ImGui::GetWindowWidth() / ImGui::GetColumnsCount());
     const auto& filename_with_path = texture->GetPath();
@@ -406,9 +408,9 @@ void UI::RenderBlockTexture(const std::string& title, Texture* texture)
         }
 
         // open texture preview
-        /*if (is_loaded && ImGui::IsItemClicked()) {
+        if (texture->IsLoaded() && ImGui::IsItemClicked()) {
             TextureManager::Get()->PreviewTexture(texture);
-        }*/
+        }
 
         // context menu
         RenderContextMenu(filename_with_path, ImGui::GetColumnIndex(), ContextMenuFlags::CTX_TEXTURE);

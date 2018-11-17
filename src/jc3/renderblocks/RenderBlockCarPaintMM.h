@@ -403,26 +403,24 @@ class RenderBlockCarPaintMM : public IRenderBlock
             // set vertex shader constants
             m_cbRBIInfo.ModelWorldMatrix = world;
         }
-
-        // set the layered albedo map
-        if (m_Block.attributes.flags & SUPPORT_LAYERED) {
-            const auto& texture = m_Textures.at(10);
-            if (texture && texture->IsLoaded()) {
-                texture->Use(16);
-            }
-        }
-
-        // set the overlay albedo map
-        if (m_Block.attributes.flags & SUPPORT_OVERLAY) {
-            const auto& texture = m_Textures.at(11);
-            if (texture && texture->IsLoaded()) {
-                texture->Use(17);
-            }
-        }
-
-        // set the sampler states
+        
+        // set the textures
         for (int i = 0; i < 10; ++i) {
-            context->m_Renderer->SetSamplerState(m_SamplerState, i);
+            IRenderBlock::BindTexture(i, m_SamplerState);
+        }
+
+        // set the layered albedo map texture
+        if (m_Block.attributes.flags & SUPPORT_LAYERED) {
+            IRenderBlock::BindTexture(10, 16);
+        } else {
+            context->m_Renderer->ClearTexture(16);
+        }
+
+        // set the overlay albedo map texture
+        if (m_Block.attributes.flags & SUPPORT_OVERLAY) {
+            IRenderBlock::BindTexture(11, 17);
+        } else {
+            context->m_Renderer->ClearTexture(17);
         }
 
         // set the constant buffers
@@ -471,6 +469,8 @@ class RenderBlockCarPaintMM : public IRenderBlock
         };
         // clang-format on
 
+        ImGui::Text(ICON_FA_COGS "  Attributes");
+
         if (ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels)) {
             // update static material params
             m_cbStaticMaterialParams.SupportDecals   = m_Block.attributes.flags & SUPPORT_DECALS;
@@ -480,15 +480,6 @@ class RenderBlockCarPaintMM : public IRenderBlock
             m_cbStaticMaterialParams.SupportDirt     = m_Block.attributes.flags & SUPPORT_DIRT;
             m_cbStaticMaterialParams.SupportSoftTint = m_Block.attributes.flags & SUPPORT_SOFT_TINT;
         }
-
-#if 0
-        ImGui::Text("World");
-        ImGui::Separator();
-        ImGui::InputFloat4("m0", glm::value_ptr(world[0]));
-        ImGui::InputFloat4("m1", glm::value_ptr(world[1]));
-        ImGui::InputFloat4("m2", glm::value_ptr(world[2]));
-        ImGui::InputFloat4("m3", glm::value_ptr(world[3]));
-#endif
 
         ImGui::ColorEdit3("Diffuse Colour", glm::value_ptr(m_cbRBIInfo.ModelDiffuseColor));
 
@@ -540,5 +531,30 @@ class RenderBlockCarPaintMM : public IRenderBlock
         ImGui::SliderFloat("Specular Gloss Override", &m_cbDynamicMaterialParams.m_SpecularGlossOverride, 0, 1);
         ImGui::SliderFloat("Metallic Override", &m_cbDynamicMaterialParams.m_MetallicOverride, 0, 1);
         ImGui::SliderFloat("Clear Coat Override", &m_cbDynamicMaterialParams.m_ClearCoatOverride, 0, 1);
+
+        // Textures
+        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
+        ImGui::Columns(3, nullptr, false);
+        {
+            UI::Get()->RenderBlockTexture("DiffuseMap", m_Textures[0]);
+            UI::Get()->RenderBlockTexture("NormalMap", m_Textures[1]);
+            UI::Get()->RenderBlockTexture("PropertyMap", m_Textures[2]);
+            UI::Get()->RenderBlockTexture("TintMap", m_Textures[3]);
+            UI::Get()->RenderBlockTexture("DamageNormalMap", m_Textures[4]);
+            UI::Get()->RenderBlockTexture("DamageAlbedoMap", m_Textures[5]);
+            UI::Get()->RenderBlockTexture("DirtMap", m_Textures[6]);
+            UI::Get()->RenderBlockTexture("DecalAlbedoMap", m_Textures[7]);
+            UI::Get()->RenderBlockTexture("DecalNormalMap", m_Textures[8]);
+            UI::Get()->RenderBlockTexture("DecalPropertyMap", m_Textures[9]);
+
+            if (m_Block.attributes.flags & SUPPORT_LAYERED) {
+                UI::Get()->RenderBlockTexture("LayeredAlbedoMap", m_Textures[10]);
+            }
+            
+            if (m_Block.attributes.flags & SUPPORT_OVERLAY) {
+                UI::Get()->RenderBlockTexture("OverlayAlbedoMap", m_Textures[11]);
+            }
+        }
+        ImGui::EndColumns();
     }
 };

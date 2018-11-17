@@ -64,11 +64,8 @@ void Widget_ModelExplorer::Render(RenderContext_t* context)
                         }
 #endif
                     } else {
-                        ImGui::BeginChild("attr", {}, true);
                         // draw model attributes ui
-                        ImGui::Text(ICON_FA_COGS "  Attributes");
                         render_block->DrawUI();
-                        ImGui::EndChild();
 
 #if 0
                         // draw model textures ui

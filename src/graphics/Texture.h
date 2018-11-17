@@ -2,6 +2,7 @@
 
 #include <StdInc.h>
 
+struct SamplerState_t;
 class Texture
 {
   private:
@@ -18,7 +19,8 @@ class Texture
 
     bool LoadFromBuffer(FileBuffer* buffer);
     bool LoadFromFile(const fs::path& filename);
-    void Use(uint32_t slot);
+    void Use(uint32_t slot, SamplerState_t* sampler = nullptr);
+    void UseVS(uint32_t slot);
 
     bool              IsLoaded() const;
     const fs::path&   GetPath() const;

@@ -39,6 +39,7 @@ class RenderBlockWindow : public IRenderBlock
   private:
     enum {
         ENABLE_BACKFACE_CULLING = 0x1,
+        SIMPLE                  = 0x2,
     };
 
     struct cbInstanceConsts {
@@ -224,9 +225,25 @@ class RenderBlockWindow : public IRenderBlock
             m_cbMaterialConsts.UVScale         = m_Block.attributes.UVScale;
         }
 
+        // set the textures
+        IRenderBlock::BindTexture(0, m_SamplerState);
+
+        if (!(m_Block.attributes.flags & SIMPLE)) {
+            IRenderBlock::BindTexture(1, 2, m_SamplerState);
+            IRenderBlock::BindTexture(2, 3, m_SamplerState);
+        }
+
+        // TODO: damage
+
         // set the sampler state
-        context->m_Renderer->SetSamplerState(m_SamplerState, 0);
-        context->m_Renderer->SetSamplerState(_test, 15);
+        // context->m_Renderer->SetSamplerState(m_SamplerState, 0);
+        // context->m_Renderer->SetSamplerState(_test, 15);
+
+#if 0
+        // set lighting textures
+        const auto gbuffer_diffuse = context->m_Renderer->GetGBufferSRV(0);
+        context->m_DeviceContext->PSSetShaderResources(15, 1, &gbuffer_diffuse);
+#endif
 
         // enable blending
         context->m_Renderer->SetBlendingEnabled(true);
@@ -265,10 +282,12 @@ class RenderBlockWindow : public IRenderBlock
     {
         // clang-format off
         static std::array flag_labels = {
-            "Enable Backface Culling",      "",                             "",                             "",
+            "Enable Backface Culling",      "Simple",                       "",                             "",
             "",                             "",                             "",                             ""
         };
         // clang-format on
+
+        ImGui::Text(ICON_FA_COGS "  Attributes");
 
         ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
 
@@ -279,5 +298,22 @@ class RenderBlockWindow : public IRenderBlock
         ImGui::SliderFloat("Min Alpha", &m_Block.attributes.MinAlpha, 0, 1);
         ImGui::SliderFloat("UV Scale", &m_Block.attributes.UVScale, 0, 1);
         ImGui::SliderFloat("Alpha", &m_cbMaterialConsts.Alpha, 0, 1);
+
+        // Textures
+        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
+        ImGui::Columns(3, nullptr, false);
+        {
+            UI::Get()->RenderBlockTexture("DiffuseMap", m_Textures[0]);
+
+            if (!(m_Block.attributes.flags & SIMPLE)) {
+                UI::Get()->RenderBlockTexture("NormalMap", m_Textures[1]);
+                UI::Get()->RenderBlockTexture("PropertyMap", m_Textures[2]);
+            }
+
+            // damage
+            UI::Get()->RenderBlockTexture("DamagePointNormalMap", m_Textures[3]);
+            UI::Get()->RenderBlockTexture("DamagePointPropertyMap", m_Textures[4]);
+        }
+        ImGui::EndColumns();
     }
 };
