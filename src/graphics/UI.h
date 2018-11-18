@@ -42,7 +42,7 @@ struct DragDropPayload {
     const char*         data;
 };
 
-using ContextMenuCallback = std::function<void(const fs::path& filename)>;
+using ContextMenuCallback               = std::function<void(const fs::path& filename)>;
 static constexpr auto MIN_SIDEBAR_WIDTH = 400.0f;
 
 class UI : public Singleton<UI>
@@ -55,6 +55,7 @@ class UI : public Singleton<UI>
     std::map<std::string, ContextMenuCallback> m_ContextMenuCallbacks;
     TreeViewTab                                m_TabToSwitch          = TAB_FILE_EXPLORER;
     uint8_t                                    m_CurrentActiveGBuffer = 0;
+    std::array<bool, 2>                        m_SceneMouseState      = {false};
 
     bool        m_IsDragDrop = false;
     std::string m_DragDropPayload;
@@ -88,6 +89,11 @@ class UI : public Singleton<UI>
     void SwitchToTab(const TreeViewTab tab)
     {
         m_TabToSwitch = tab;
+    }
+
+    bool IsDragDropping() const
+    {
+        return m_IsDragDrop;
     }
 
     void RegisterContextMenuCallback(const std::vector<std::string>& extensions, ContextMenuCallback fn);

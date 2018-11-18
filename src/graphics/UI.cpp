@@ -49,6 +49,9 @@ UI::UI()
 
     Window::Get()->Events().DragLeave.connect(ResetDragDrop);
     Window::Get()->Events().DragDropped.connect(ResetDragDrop);
+
+    // reset scene mouse state
+    Window::Get()->Events().FocusLost.connect([&] { m_SceneMouseState.fill(false); });
 }
 
 void UI::Render(RenderContext_t* context)
@@ -244,8 +247,7 @@ void UI::Render(RenderContext_t* context)
     // draw scene view
     if (ImGui::Begin("Scene", nullptr,
                      (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
-                      | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus
-                      | ImGuiWindowFlags_NoInputs))) {
+                      | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus))) {
         const auto& size = ImGui::GetWindowSize();
         m_SceneWidth     = size.x;
 
@@ -261,6 +263,40 @@ void UI::Render(RenderContext_t* context)
         }
 
         m_SceneDrawList = ImGui::GetWindowDrawList();
+
+        // handle input
+        {
+            const auto& io        = ImGui::GetIO();
+            const auto& mouse_pos = glm::vec2(io.MousePos.x, io.MousePos.y);
+
+            // because we manually toggle the mouse down when drag/dropping from an external source, we need to check
+            // this or the camera will be moved
+            if (!UI::Get()->IsDragDropping()) {
+                // handle mouse press
+                for (int i = 0; i < 2; ++i) {
+                    if (ImGui::IsMouseDown(i)) {
+                        if (!m_SceneMouseState[i] && ImGui::IsItemHovered()) {
+                            m_SceneMouseState[i] = true;
+                            Camera::Get()->OnMousePress(i, true, mouse_pos);
+                        }
+                        // handle mouse move
+                        else if (m_SceneMouseState[i]) {
+                            Camera::Get()->OnMouseMove({-io.MouseDelta.x, -io.MouseDelta.y});
+                        }
+                    }
+                    // handle mouse release
+                    else if (m_SceneMouseState[i]) {
+                        m_SceneMouseState[i] = false;
+                        Camera::Get()->OnMousePress(i, false, mouse_pos);
+                    }
+                }
+
+                // handle mouse scroll
+                if (io.MouseWheel != 0 && ImGui::IsItemHovered()) {
+                    Camera::Get()->OnMouseScroll(io.MouseWheel);
+                }
+            }
+        }
 
         ImGui::End();
     }

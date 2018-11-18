@@ -34,6 +34,10 @@ class Camera : public Singleton<Camera>
     void                              FocusOn(RenderBlockModel* model);
     std::shared_ptr<RenderBlockModel> Pick(const glm::vec2& mouse);
 
+    void OnMousePress(int32_t button, bool is_button_down, const glm::vec2& position);
+    void OnMouseMove(const glm::vec2& delta);
+    void OnMouseScroll(const float delta);
+
     const glm::vec3& GetPosition() const
     {
         return m_Position;

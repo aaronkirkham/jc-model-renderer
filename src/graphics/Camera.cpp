@@ -1,4 +1,3 @@
-#include <Input.h>
 #include <Window.h>
 #include <graphics/Camera.h>
 #include <graphics/Renderer.h>
@@ -6,11 +5,20 @@
 
 static constexpr auto g_MouseSensitivity       = 0.0025f;
 static constexpr auto g_MovementSensitivity    = 0.05f;
-static constexpr auto g_MouseScrollSensitivity = 0.01f;
+static constexpr auto g_MouseScrollSensitivity = 0.1f;
 
 static auto SpeedMultiplier = [](float value) {
-    return value
-           * (Input::Get()->IsKeyPressed(VK_SHIFT) ? 0.05f : Input::Get()->IsKeyPressed(VK_CONTROL) ? 5.0f : 1.0f);
+    const auto& io = ImGui::GetIO();
+
+    if (io.KeyShift) {
+        return value * 0.1f;
+    }
+
+    if (io.KeyCtrl) {
+        return value * 5.0f;
+    }
+
+    return value * 1.0f;
 };
 
 Camera::Camera()
@@ -31,76 +39,6 @@ Camera::Camera()
 
         m_IsTranslatingView = false;
         m_IsRotatingView    = false;
-    });
-
-    auto& events = Input::Get()->Events();
-    events.MousePress.connect([&](uint32_t message, const glm::vec2& position) {
-        bool capture_mouse = false;
-
-        switch (message) {
-                // left button down
-            case WM_LBUTTONDOWN:
-                m_IsRotatingView = true;
-                capture_mouse    = true;
-                break;
-
-                // left button up
-            case WM_LBUTTONUP:
-                m_IsRotatingView = false;
-                break;
-
-                // right button down
-            case WM_RBUTTONDOWN:
-                m_IsTranslatingView = true;
-                capture_mouse       = true;
-                break;
-
-            case WM_RBUTTONUP:
-                m_IsTranslatingView = false;
-                break;
-        }
-
-        // capture the mouse to stop it escaping the window
-        Window::Get()->CaptureMouse(capture_mouse);
-
-        return true;
-    });
-
-    events.MouseMove.connect([&](const glm::vec2& position) {
-        // handle view translation
-        if (m_IsTranslatingView) {
-            m_Position.x += position.x * SpeedMultiplier(g_MouseSensitivity);
-            m_Position.y -= position.y * SpeedMultiplier(g_MouseSensitivity);
-        }
-
-        // handle view rotation
-        if (m_IsRotatingView) {
-            m_Rotation.z += position.x * SpeedMultiplier(g_MouseSensitivity);
-            m_Rotation.y += position.y * SpeedMultiplier(g_MouseSensitivity);
-        }
-
-        return true;
-    });
-
-    events.MouseScroll.connect(
-        [&](float delta) { m_Position.z += (delta * SpeedMultiplier(g_MouseScrollSensitivity)); });
-
-    events.KeyDown.connect([&](uint32_t key) {
-        if (key == VK_RIGHT) {
-            m_Position.x += SpeedMultiplier(g_MovementSensitivity);
-        } else if (key == VK_LEFT) {
-            m_Position.x -= SpeedMultiplier(g_MovementSensitivity);
-        } else if (key == VK_UP) {
-            m_Position.z += SpeedMultiplier(g_MovementSensitivity);
-        } else if (key == VK_DOWN) {
-            m_Position.z -= SpeedMultiplier(g_MovementSensitivity);
-        } else if (key == VK_PRIOR) {
-            m_Position.y += SpeedMultiplier(g_MovementSensitivity);
-        } else if (key == VK_NEXT) {
-            m_Position.y -= SpeedMultiplier(g_MovementSensitivity);
-        }
-
-        return true;
     });
 }
 
@@ -176,4 +114,39 @@ std::shared_ptr<RenderBlockModel> Camera::Pick(const glm::vec2& mouse)
     }
 
     return !hits.empty() ? hits.begin()->second : nullptr;
+}
+
+void Camera::OnMousePress(int32_t button, bool is_button_down, const glm::vec2& position)
+{
+    // left button
+    if (button == 0) {
+        m_IsRotatingView = is_button_down;
+    }
+    // right button
+    else if (button == 1) {
+        m_IsTranslatingView = is_button_down;
+    }
+
+    // capture the mouse to stop it escaping the window
+    Window::Get()->CaptureMouse(is_button_down);
+}
+
+void Camera::OnMouseMove(const glm::vec2& delta)
+{
+    // handle view translation
+    if (m_IsTranslatingView) {
+        m_Position.x += delta.x * SpeedMultiplier(g_MouseSensitivity);
+        m_Position.y -= delta.y * SpeedMultiplier(g_MouseSensitivity);
+    }
+
+    // handle view rotation
+    if (m_IsRotatingView) {
+        m_Rotation.z += delta.x * SpeedMultiplier(g_MouseSensitivity);
+        m_Rotation.y += delta.y * SpeedMultiplier(g_MouseSensitivity);
+    }
+}
+
+void Camera::OnMouseScroll(const float delta)
+{
+    m_Position.z += (delta * SpeedMultiplier(g_MouseScrollSensitivity));
 }

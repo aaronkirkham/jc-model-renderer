@@ -1,4 +1,3 @@
-#include <Input.h>
 #include <Window.h>
 #include <graphics/Renderer.h>
 
@@ -89,8 +88,6 @@ bool Window::Initialise(const HINSTANCE& instance)
 
     m_DragDrop = std::make_unique<DropTarget>(m_Hwnd);
 
-    Input::Get()->Initialise();
-
     return Renderer::Get()->Initialise(m_Hwnd);
 }
 
@@ -129,11 +126,6 @@ void Window::Run()
         while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE) > 0) {
             if (msg.message == WM_QUIT) {
                 goto shutdown;
-            }
-
-            // if the window has focus, pass input to the input handler
-            if (HasFocus()) {
-                Input::Get()->HandleMessage(&msg);
             }
 
             TranslateMessage(&msg);
