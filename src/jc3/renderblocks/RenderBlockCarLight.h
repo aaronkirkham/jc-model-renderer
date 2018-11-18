@@ -307,9 +307,9 @@ class RenderBlockCarLight : public IRenderBlock
             m_cbMaterialConsts.TilingUV         = {m_Block.attributes.tilingUV, 1, 0};
         }
 
-        // set the sampler state
-        for (int i = 0; i < 10; ++i) {
-            context->m_Renderer->SetSamplerState(m_SamplerState, i);
+        // set the textures
+        for (int i = 0; i < m_Textures.size(); ++i) {
+            IRenderBlock::BindTexture(i, m_SamplerState);
         }
 
         // set the constant buffers
@@ -339,7 +339,7 @@ class RenderBlockCarLight : public IRenderBlock
         }
     }
 
-    virtual void DrawUI() override final
+    virtual void DrawContextMenu() override final
     {
         // clang-format off
         static std::array flag_labels = {
@@ -348,12 +348,30 @@ class RenderBlockCarLight : public IRenderBlock
         };
         // clang-format on
 
-        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    }
+
+    virtual void DrawUI() override final
+    {
+        ImGui::Text(ICON_FA_COGS "  Attributes");
 
         ImGui::SliderFloat("Specular Gloss", &m_Block.attributes.specularGloss, 0, 1);
         ImGui::SliderFloat("Reflectivity", &m_Block.attributes.reflectivity, 0, 1);
         ImGui::SliderFloat("Specular Fresnel", &m_Block.attributes.specularFresnel, 0, 1);
         ImGui::ColorEdit3("Diffuse Modulator", glm::value_ptr(m_Block.attributes.diffuseModulator));
         ImGui::SliderFloat2("Tiling", glm::value_ptr(m_Block.attributes.tilingUV), 0, 10);
+
+        // Textures
+        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
+        ImGui::Columns(3, nullptr, false);
+        {
+            IRenderBlock::DrawTexture("DiffuseMap", 0);
+            IRenderBlock::DrawTexture("NormalMap", 1);
+            IRenderBlock::DrawTexture("PropertyMap", 2);
+            // 3 unknown
+            IRenderBlock::DrawTexture("NormalDetailMap", 4);
+            IRenderBlock::DrawTexture("EmissiveMap", 5);
+        }
+        ImGui::EndColumns();
     }
 };

@@ -82,34 +82,6 @@ FileLoader::FileLoader()
 
     // TODO: move the events to a better location?
 
-    // handle file drops
-    Window::Get()->Events().UnhandledDragDropped.connect([&](const fs::path& file) {
-        // do we have a registered callback for this file type?
-        if (m_FileTypeCallbacks.find(file.extension().string()) != m_FileTypeCallbacks.end()) {
-            const auto size = fs::file_size(file);
-
-            FileBuffer data;
-            data.resize(size);
-
-            // read the file
-            std::ifstream stream(file, std::ios::binary);
-            assert(!stream.fail());
-            stream.read((char*)data.data(), size);
-            stream.close();
-
-            // run the callback handlers
-            for (const auto& fn : m_FileTypeCallbacks[file.extension().string()]) {
-                fn(file, data, true);
-            }
-        } else {
-            DEBUG_LOG("[ERROR] FileLoader (UnhandledDragDropped) - Unknown file type extension \"" << file << "\".");
-
-            std::string error = "Unable to read the \"" + file.extension().string() + "\" extension.\n\n";
-            error += "Want to help? Check out our GitHub page for information on how to contribute.";
-            Window::Get()->ShowMessageBox(error);
-        }
-    });
-
     // trigger the file type callbacks
     UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& file, AvalancheArchive* archive) {
         // do we have a registered callback for this file type?
@@ -206,12 +178,11 @@ FileLoader::FileLoader()
 
                 // if we have a valid exporter, read the file and export it
                 if (_exporter) {
-                    std::stringstream status_text;
-                    status_text << "Exporting \"" << file << "\"...";
-                    const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
+                    std::string status_text = "Exporting \"" + file.generic_string() + "\"...";
+                    const auto status_text_id = UI::Get()->PushStatusText(status_text);
 
                     std::thread([&, file, selected, status_text_id] {
-                        _exporter->Export(file, selected, [&, status_text_id](bool success) {
+                        _exporter->Export(file, selected, [&, file, status_text_id](bool success) {
                             UI::Get()->PopStatusText(status_text_id);
 
                             if (!success) {
@@ -232,9 +203,8 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback, u
     uint64_t status_text_id = 0;
 
     if (!UseBatches) {
-        std::stringstream status_text;
-        status_text << "Reading \"" << filename << "\"...";
-        status_text_id = UI::Get()->PushStatusText(status_text.str());
+        std::string status_text = "Reading \"" + filename.generic_string() + "\"...";
+        status_text_id = UI::Get()->PushStatusText(status_text);
     }
 
     // are we trying to load textures?
@@ -409,6 +379,36 @@ void FileLoader::RunFileBatches() noexcept
         m_Batches.clear();
     })
         .detach();
+}
+
+void FileLoader::ReadFileFromDisk(const fs::path& filename) noexcept
+{
+    const auto& extension = filename.extension().string();
+
+    // do we have a registered callback for this file type?
+    if (m_FileTypeCallbacks.find(extension) != m_FileTypeCallbacks.end()) {
+        const auto size = fs::file_size(filename);
+
+        FileBuffer data;
+        data.resize(size);
+
+        // read the file
+        std::ifstream stream(filename, std::ios::binary);
+        assert(!stream.fail());
+        stream.read((char*)data.data(), size);
+        stream.close();
+
+        // run the callback handlers
+        for (const auto& fn : m_FileTypeCallbacks[extension]) {
+            fn(filename.filename(), data, true);
+        }
+    } else {
+        DEBUG_LOG("[ERROR] FileLoader (ReadFileWithTypeCallback) - Unknown file type extension \"" << filename.filename() << "\".");
+
+        std::string error = "Unable to read the \"" + extension + "\" extension.\n\n";
+        error += "Want to help? Check out our GitHub page for information on how to contribute.";
+        Window::Get()->ShowMessageBox(error);
+    }
 }
 
 bool FileLoader::ReadArchiveTable(const fs::path& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept

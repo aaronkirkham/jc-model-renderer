@@ -147,5 +147,7 @@ class RenderBlockBuildingJC3 : public IRenderBlock
         context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
     }
 
+    virtual void DrawContextMenu() override final {}
+
     virtual void DrawUI() override final {}
 };

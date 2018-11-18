@@ -5,9 +5,13 @@
 
 class DropTarget : public IDropTarget
 {
+    using clock = std::chrono::steady_clock;
+
   private:
-    HWND m_Hwnd     = nullptr;
-    LONG m_RefCount = 0;
+    HWND                           m_Hwnd     = nullptr;
+    LONG                           m_RefCount = 0;
+    std::chrono::time_point<clock> m_TimeSinceDragEnter;
+    bool                           m_BringToFront = false;
 
   public:
     DropTarget(HWND hwnd);

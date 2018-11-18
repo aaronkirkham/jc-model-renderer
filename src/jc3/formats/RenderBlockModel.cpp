@@ -33,16 +33,10 @@ RenderBlockModel::RenderBlockModel(const fs::path& filename)
             m_ParentArchive = archive.second;
         }
     }
-
-    if (!m_ParentArchive) {
-        DEBUG_LOG("didn't find a parent :(");
-    }
 }
 
 RenderBlockModel::~RenderBlockModel()
 {
-    DEBUG_LOG("RenderBlockModel::~RenderBlockModel");
-
     // remove from renderlist
     Renderer::Get()->RemoveFromRenderList(m_RenderBlocks);
 
@@ -103,6 +97,7 @@ bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
 
         const auto render_block = RenderBlockFactory::CreateRenderBlock(hash);
         if (render_block) {
+            render_block->SetParent(this);
             render_block->Read(stream);
             render_block->Create();
 
@@ -193,14 +188,14 @@ void RenderBlockModel::DrawGizmos()
 
     // draw bounding boxes
     if (g_DrawBoundingBoxes) {
-        auto mouse_pos = Input::Get()->GetMouseWorldPosition();
+        //auto mouse_pos = Input::Get()->GetMouseWorldPosition();
 
-        Ray   ray(mouse_pos, {0, 0, 1});
-        float distance   = 0.0f;
-        auto  intersects = m_BoundingBox.Intersect(ray, &distance);
+        //Ray   ray(mouse_pos, {0, 0, 1});
+        //float distance = 0.0f;
+        // auto  intersects = m_BoundingBox.Intersect(ray, &distance);
 
         static auto red   = glm::vec4{1, 0, 0, 1};
-        static auto green = glm::vec4{0, 1, 0, 1};
+        //static auto green = glm::vec4{0, 1, 0, 1};
 
         UI::Get()->DrawBoundingBox(m_BoundingBox, red);
 

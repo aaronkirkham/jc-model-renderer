@@ -21,7 +21,7 @@ AvalancheArchive::AvalancheArchive(const fs::path& filename, const FileBuffer& b
                                              m_FileList->Parse(m_StreamArchive.get());
                                          });
 
-    UI::Get()->SwitchToTab(TAB_ARCHIVES);
+    //UI::Get()->SwitchToTab(TAB_ARCHIVES);
 }
 
 void AvalancheArchive::AddFile(const fs::path& filename, const FileBuffer& data)
@@ -71,7 +71,7 @@ void AvalancheArchive::AddDirectory(const fs::path& filename, const fs::path& ro
 bool AvalancheArchive::HasFile(const fs::path& filename)
 {
     assert(m_StreamArchive);
-    return m_StreamArchive->HasFile(filename.string());
+    return m_StreamArchive->HasFile(filename.generic_string());
 }
 
 void AvalancheArchive::ReadFileCallback(const fs::path& filename, const FileBuffer& data, bool external)

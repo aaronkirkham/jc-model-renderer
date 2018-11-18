@@ -111,8 +111,6 @@ class RenderBlockCarPaintMM : public IRenderBlock
     std::array<ConstantBuffer_t*, 3>     m_VertexShaderConstants   = {nullptr};
     std::array<ConstantBuffer_t*, 4>     m_FragmentShaderConstants = {nullptr};
 
-    glm::mat4 world = glm::mat4(1);
-
   public:
     RenderBlockCarPaintMM() = default;
     virtual ~RenderBlockCarPaintMM()
@@ -400,32 +398,29 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
         // setup the constant buffer
         {
-            // const auto scale = m_Block.attributes.packed.scale;
-            // static auto world = glm::mat4(1);
+            static auto world = glm::mat4(1);
 
             // set vertex shader constants
-            m_cbRBIInfo.ModelWorldMatrix = glm::scale(world, {1, 1, 1});
+            m_cbRBIInfo.ModelWorldMatrix = world;
         }
-
-        // set the layered albedo map
-        if (m_Block.attributes.flags & SUPPORT_LAYERED) {
-            const auto& texture = m_Textures.at(10);
-            if (texture && texture->IsLoaded()) {
-                texture->Use(16);
-            }
-        }
-
-        // set the overlay albedo map
-        if (m_Block.attributes.flags & SUPPORT_OVERLAY) {
-            const auto& texture = m_Textures.at(11);
-            if (texture && texture->IsLoaded()) {
-                texture->Use(17);
-            }
-        }
-
-        // set the sampler states
+        
+        // set the textures
         for (int i = 0; i < 10; ++i) {
-            context->m_Renderer->SetSamplerState(m_SamplerState, i);
+            IRenderBlock::BindTexture(i, m_SamplerState);
+        }
+
+        // set the layered albedo map texture
+        if (m_Block.attributes.flags & SUPPORT_LAYERED) {
+            IRenderBlock::BindTexture(10, 16);
+        } else {
+            context->m_Renderer->ClearTexture(16);
+        }
+
+        // set the overlay albedo map texture
+        if (m_Block.attributes.flags & SUPPORT_OVERLAY) {
+            IRenderBlock::BindTexture(11, 17);
+        } else {
+            context->m_Renderer->ClearTexture(17);
         }
 
         // set the constant buffers
@@ -463,7 +458,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         }
     }
 
-    virtual void DrawUI() override final
+    virtual void DrawContextMenu() override final
     {
         // clang-format off
         static std::array flag_labels = {
@@ -474,7 +469,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         };
         // clang-format on
 
-        if (ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels)) {
+        if (ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels)) {
             // update static material params
             m_cbStaticMaterialParams.SupportDecals   = m_Block.attributes.flags & SUPPORT_DECALS;
             m_cbStaticMaterialParams.SupportDmgBlend = m_Block.attributes.flags & SUPPORT_DAMAGE_BLEND;
@@ -483,15 +478,11 @@ class RenderBlockCarPaintMM : public IRenderBlock
             m_cbStaticMaterialParams.SupportDirt     = m_Block.attributes.flags & SUPPORT_DIRT;
             m_cbStaticMaterialParams.SupportSoftTint = m_Block.attributes.flags & SUPPORT_SOFT_TINT;
         }
+    }
 
-#if 0
-        ImGui::Text("World");
-        ImGui::Separator();
-        ImGui::InputFloat4("m0", glm::value_ptr(world[0]));
-        ImGui::InputFloat4("m1", glm::value_ptr(world[1]));
-        ImGui::InputFloat4("m2", glm::value_ptr(world[2]));
-        ImGui::InputFloat4("m3", glm::value_ptr(world[3]));
-#endif
+    virtual void DrawUI() override final
+    {
+        ImGui::Text(ICON_FA_COGS "  Attributes");
 
         ImGui::ColorEdit3("Diffuse Colour", glm::value_ptr(m_cbRBIInfo.ModelDiffuseColor));
 
@@ -543,5 +534,30 @@ class RenderBlockCarPaintMM : public IRenderBlock
         ImGui::SliderFloat("Specular Gloss Override", &m_cbDynamicMaterialParams.m_SpecularGlossOverride, 0, 1);
         ImGui::SliderFloat("Metallic Override", &m_cbDynamicMaterialParams.m_MetallicOverride, 0, 1);
         ImGui::SliderFloat("Clear Coat Override", &m_cbDynamicMaterialParams.m_ClearCoatOverride, 0, 1);
+
+        // Textures
+        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
+        ImGui::Columns(3, nullptr, false);
+        {
+            IRenderBlock::DrawTexture("DiffuseMap", 0);
+            IRenderBlock::DrawTexture("NormalMap", 1);
+            IRenderBlock::DrawTexture("PropertyMap", 2);
+            IRenderBlock::DrawTexture("TintMap", 3);
+            IRenderBlock::DrawTexture("DamageNormalMap", 4);
+            IRenderBlock::DrawTexture("DamageAlbedoMap", 5);
+            IRenderBlock::DrawTexture("DirtMap", 6);
+            IRenderBlock::DrawTexture("DecalAlbedoMap", 7);
+            IRenderBlock::DrawTexture("DecalNormalMap", 8);
+            IRenderBlock::DrawTexture("DecalPropertyMap", 9);
+
+            if (m_Block.attributes.flags & SUPPORT_LAYERED) {
+                IRenderBlock::DrawTexture("LayeredAlbedoMap", 10);
+            }
+            
+            if (m_Block.attributes.flags & SUPPORT_OVERLAY) {
+                IRenderBlock::DrawTexture("OverlayAlbedoMap", 11);
+            }
+        }
+        ImGui::EndColumns();
     }
 };

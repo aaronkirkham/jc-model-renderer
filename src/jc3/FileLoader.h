@@ -52,6 +52,8 @@ class FileLoader : public Singleton<FileLoader>
     void ReadFileBatched(const fs::path& filename, ReadFileCallback callback) noexcept;
     void RunFileBatches() noexcept;
 
+    void ReadFileFromDisk(const fs::path& filename) noexcept;
+
     // archives
     bool ReadArchiveTable(const fs::path& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept;
     bool ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash,

@@ -93,20 +93,37 @@ bool Texture::LoadFromFile(const fs::path& filename)
     return result;
 }
 
-void Texture::Use(uint32_t slot)
+void Texture::Use(uint32_t slot, SamplerState_t* sampler)
 {
-    assert(m_SRV != nullptr);
-    Renderer::Get()->GetDeviceContext()->PSSetShaderResources(slot, 1, &m_SRV);
+    if (m_SRV) {
+        Renderer::Get()->GetDeviceContext()->PSSetShaderResources(slot, 1, &m_SRV);
+
+        if (sampler) {
+            Renderer::Get()->SetSamplerState(sampler, slot);
+        }
+    }
+}
+
+void Texture::UseVS(uint32_t slot)
+{
+    if (m_SRV) {
+        Renderer::Get()->GetDeviceContext()->VSSetShaderResources(slot, 1, &m_SRV);
+    }
+}
+
+void Texture::SetFileName(const fs::path& filename)
+{
+    m_Filename = filename;
+}
+
+const fs::path& Texture::GetFileName() const
+{
+    return m_Filename;
 }
 
 bool Texture::IsLoaded() const
 {
     return (m_Texture != nullptr && m_SRV != nullptr);
-}
-
-const fs::path& Texture::GetPath() const
-{
-    return m_Filename;
 }
 
 const uint32_t Texture::GetHash() const

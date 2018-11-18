@@ -26,9 +26,7 @@
 extern bool     g_DrawBoundingBoxes;
 extern bool     g_ShowModelLabels;
 extern fs::path g_JC3Directory;
-
-static bool g_ShowAllArchiveContents = false;
-static bool g_ShowAboutWindow        = false;
+static bool     g_ShowAboutWindow = false;
 
 #ifdef DEBUG
 static bool g_CheckForUpdatesEnabled = false;
@@ -64,15 +62,16 @@ UI::UI()
 
         // if nothing handled the drag drop payload, pass it back to the window events
         if (!ImGui::IsDragDropPayloadBeingAccepted()) {
-            Window::Get()->Events().UnhandledDragDropped(_dragdrop_filename);
+            // Window::Get()->Events().UnhandledDragDropped(_dragdrop_filename);
         }
     });
 }
 
-void UI::Render()
+void UI::Render(RenderContext_t* context)
 {
     const auto& window_size = Window::Get()->GetSize();
 
+#if 0
     if (_is_dragging) {
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern)) {
             static uint32_t test = 0x10;
@@ -83,6 +82,7 @@ void UI::Render()
             ImGui::EndDragDropSource();
         }
     }
+#endif
 
     // main menu bar
     if (ImGui::BeginMainMenuBar()) {
@@ -259,7 +259,7 @@ void UI::Render()
         m_SceneWidth     = size.x;
 
         // update camera projection if needed
-        Camera::Get()->UpdateWindowSize({size.x, size.y});
+        Camera::Get()->UpdateViewport({size.x, size.y});
 
         m_SceneDrawList = ImGui::GetWindowDrawList();
 
@@ -360,8 +360,13 @@ void UI::RenderFileTreeView()
         {
             // file explorer tab
             if (ImGuiCustom::TabItemScroll("File Explorer", m_TabToSwitch == TAB_FILE_EXPLORER)) {
-                FileLoader::Get()->GetDirectoryList()->Draw(nullptr);
+                const auto directory_list = FileLoader::Get()->GetDirectoryList();
+                if (directory_list) {
+                    directory_list->Draw(directory_list->GetTree());
+                }
+
                 ImGuiCustom::EndTabItemScroll();
+
                 if (m_TabToSwitch == TAB_FILE_EXPLORER) {
                     m_TabToSwitch = TAB_TOTAL;
                 }
@@ -393,7 +398,7 @@ void UI::RenderFileTreeView()
                     if (open && archive->GetDirectoryList()) {
                         // draw the directory list
                         ImGui::PushID(filename.string().c_str());
-                        archive->GetDirectoryList()->Draw(archive.get());
+                        archive->GetDirectoryList()->Draw(archive->GetDirectoryList()->GetTree(), archive.get());
                         ImGui::PopID();
                     }
 
@@ -430,21 +435,18 @@ void UI::RenderFileTreeView()
                     const auto& filename           = (*it).second->GetFileName();
 
                     // render the current model info
-                    bool is_still_open = true;
-                    auto open          = ImGui::CollapsingHeader(filename.c_str(), &is_still_open);
+                    bool       is_still_open = true;
+                    const auto open          = ImGui::CollapsingHeader(filename.c_str(), &is_still_open);
 
                     // context menu
                     RenderContextMenu(filename_with_path);
 
                     if (open) {
-                        uint32_t render_block_index = 0;
+                        uint32_t index = 0;
                         for (auto& render_block : (*it).second->GetRenderBlocks()) {
-                            // TODO: highlight the current render block when hovering over the ui
-
-                            // unique block id
-                            std::stringstream block_label;
-                            block_label << render_block->GetTypeName();
-                            block_label << "##" << filename << "-" << render_block_index;
+                            // unique id
+                            std::string label(render_block->GetTypeName());
+                            label.append("##" + filename + "-" + std::to_string(index));
 
                             // make the things transparent if the block isn't rendering
                             const auto block_visible = render_block->IsVisible();
@@ -452,8 +454,15 @@ void UI::RenderFileTreeView()
                                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.35f);
 
                             // current block header
-                            const auto render_block_open = ImGui::TreeNode(block_label.str().c_str());
+                            const auto tree_open = ImGui::TreeNode(label.c_str());
 
+                            // draw render block context menu
+                            if (ImGui::BeginPopupContextItem()) {
+                                render_block->DrawContextMenu();
+                                ImGui::EndPopup();
+                            }
+
+#if 0
                             // block context menu
                             {
                                 if (!block_visible)
@@ -471,9 +480,10 @@ void UI::RenderFileTreeView()
                                 if (!block_visible)
                                     ImGui::PopStyleVar();
                             }
+#endif
 
                             // render the current render block info
-                            if (render_block_open) {
+                            if (tree_open) {
                                 // show import button if the block doesn't have a vertex buffer
                                 if (!render_block->GetVertexBuffer()) {
 #ifdef ENABLE_OBJ_IMPORT
@@ -501,75 +511,19 @@ void UI::RenderFileTreeView()
                                     }
 #endif
                                 } else {
-                                    ImGui::Text(ICON_FA_COGS "  Attributes");
-
-                                    // draw render block ui
+                                    // draw model attributes ui
                                     render_block->DrawUI();
-
-                                    ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
-
-                                    // draw render block textures
-                                    const auto& textures = render_block->GetTextures();
-                                    if (!textures.empty()) {
-                                        ImGui::Columns(3, 0, false);
-
-                                        // draw textures
-                                        for (const auto& texture : textures) {
-                                            const auto  is_loaded = texture->IsLoaded();
-                                            const auto& path      = texture->GetPath();
-
-                                            auto window_size  = Window::Get()->GetSize();
-                                            auto aspect_ratio = (window_size.x / window_size.y);
-
-                                            auto width        = ImGui::GetWindowWidth() / ImGui::GetColumnsCount();
-                                            auto texture_size = ImVec2(width, (width / aspect_ratio));
-
-                                            // draw the texture name
-                                            if (is_loaded) {
-                                                ImGui::Text(path.filename().string().c_str());
-                                            } else {
-                                                static auto red = ImVec4{1, 0, 0, 1};
-                                                ImGui::TextColored(red, path.filename().string().c_str());
-                                            }
-
-                                            ImGui::BeginGroup();
-
-                                            // draw the texture image
-                                            auto srv = is_loaded ? texture->GetSRV()
-                                                                 : TextureManager::Get()->GetMissingTexture()->GetSRV();
-                                            ImGui::Image(srv, texture_size);
-
-                                            // tooltip
-                                            if (ImGui::IsItemHovered()) {
-                                                ImGui::SetTooltip(path.filename().string().c_str());
-                                            }
-
-                                            // open texture preview
-                                            if (is_loaded && ImGui::IsItemClicked()) {
-                                                TextureManager::Get()->PreviewTexture(texture);
-                                            }
-
-                                            // context menu
-                                            if (is_loaded) {
-                                                RenderContextMenu(path, ImGui::GetColumnIndex(), CTX_TEXTURE);
-                                            }
-
-                                            ImGui::EndGroup();
-
-                                            ImGui::NextColumn();
-                                        }
-
-                                        ImGui::Columns();
-                                    }
                                 }
 
                                 ImGui::TreePop();
                             }
 
+#if 0
                             if (!block_visible)
                                 ImGui::PopStyleVar();
+#endif
 
-                            ++render_block_index;
+                            ++index;
                         }
                     }
 
@@ -667,6 +621,64 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra, u
     ImGui::PopID();
 }
 
+void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title, std::shared_ptr<Texture> texture)
+{
+    if (!texture) {
+        return;
+    }
+
+    const auto  col_width          = (ImGui::GetWindowWidth() / ImGui::GetColumnsCount());
+    const auto& filename_with_path = texture->GetFileName();
+
+    ImGui::BeginGroup();
+    {
+        ImGui::Text(title.c_str());
+        ImGui::Image(texture->GetSRV(), ImVec2(col_width, col_width / 2), ImVec2(0, 0), ImVec2(1, 1),
+                     ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 1));
+
+        // tooltip
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(filename_with_path.filename().string().c_str());
+        }
+
+        // open texture preview
+        if (texture->IsLoaded() && ImGui::IsItemClicked()) {
+            TextureManager::Get()->PreviewTexture(texture);
+        }
+
+        // context menu
+        RenderContextMenu(filename_with_path, ImGui::GetColumnIndex(), ContextMenuFlags::CTX_TEXTURE);
+
+#if 0
+        // dragdrop payload
+        if (const auto payload = UI::Get()->GetDropPayload(DROPPAYLOAD_UNKNOWN)) {
+            DEBUG_LOG("DropPayload (" << title << "): " << payload->data);
+            fs::path payload_data(payload->data);
+            texture->LoadFromFile(payload->data);
+
+            // generate the new file path
+            const auto parent   = render_block->GetParent();
+            auto       filename = parent->GetPath().parent_path();
+            filename /= "textures" / payload_data.filename();
+
+            // update the texture name
+            texture->SetFileName(filename);
+
+            // TODO: do we want this??
+#if 0
+            // add the file to the parent archive
+            const auto archive = parent->GetParentArchive();
+            if (archive) {
+                archive->AddFile(filename, texture->GetBuffer());
+            }
+#endif
+        }
+#endif
+    }
+    ImGui::EndGroup();
+    ImGui::NextColumn();
+}
+
 uint64_t UI::PushStatusText(const std::string& str)
 {
     static std::atomic_uint64_t unique_ids = {0};
@@ -694,16 +706,14 @@ void UI::DrawText(const std::string& text, const glm::vec3& position, const glm:
 {
     assert(m_SceneDrawList);
 
-    glm::vec3 screen;
-    if (Camera::Get()->WorldToScreen(position, &screen)) {
-        if (center) {
-            const auto text_size = ImGui::CalcTextSize(text.c_str());
-            m_SceneDrawList->AddText(ImVec2{(screen.x - (text_size.x / 2)), (screen.y - (text_size.y / 2))},
-                                     ImColor{colour.x, colour.y, colour.z, colour.a}, text.c_str());
-        } else {
-            m_SceneDrawList->AddText(ImVec2{screen.x, screen.y}, ImColor{colour.x, colour.y, colour.z, colour.a},
-                                     text.c_str());
-        }
+    const auto& screen = Camera::Get()->WorldToScreen(position);
+    if (center) {
+        const auto text_size = ImGui::CalcTextSize(text.c_str());
+        m_SceneDrawList->AddText(ImVec2{(screen.x - (text_size.x / 2)), (screen.y - (text_size.y / 2))},
+                                 ImColor{colour.x, colour.y, colour.z, colour.a}, text.c_str());
+    } else {
+        m_SceneDrawList->AddText(ImVec2{screen.x, screen.y}, ImColor{colour.x, colour.y, colour.z, colour.a},
+                                 text.c_str());
     }
 }
 
@@ -717,10 +727,8 @@ void UI::DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour)
     for (auto i = 0; i < 8; ++i) {
         const auto world = glm::vec3{box[(i ^ (i >> 1)) & 1].x, box[(i >> 1) & 1].y, box[(i >> 2) & 1].z};
 
-        glm::vec3 screen;
-        Camera::Get()->WorldToScreen(world, &screen);
-
-        points[i] = {screen.x, screen.y};
+        const auto& screen = Camera::Get()->WorldToScreen(world);
+        points[i]          = {screen.x, screen.y};
     }
 
     const auto col = ImColor{colour.x, colour.y, colour.z, colour.a};

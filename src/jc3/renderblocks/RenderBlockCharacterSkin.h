@@ -30,8 +30,8 @@ class RenderBlockCharacterSkin : public IRenderBlock
         DISABLE_BACKFACE_CULLING = 0x1,
         USE_WRINKLE_MAP          = 0x2,
         EIGHT_BONES              = 0x4,
-        USE_FEATURE_MAP          = 0x8,
-        ALPHA_MASK               = 0x10,
+        USE_FEATURE_MAP          = 0x10,
+        ALPHA_MASK               = 0x20,
     };
 
     struct cbLocalConsts {
@@ -367,6 +367,8 @@ class RenderBlockCharacterSkin : public IRenderBlock
 
         IRenderBlock::Setup(context);
 
+        const auto flags = m_Block.attributes.flags;
+
         // setup the constant buffer
         {
             const auto  scale = m_Block.attributes.scale;
@@ -381,12 +383,18 @@ class RenderBlockCharacterSkin : public IRenderBlock
             //
         }
 
-        // set the sampler states
-        context->m_Renderer->SetSamplerState(m_SamplerState, 0);
-        context->m_Renderer->SetSamplerState(m_SamplerState, 1);
-        context->m_Renderer->SetSamplerState(m_SamplerState, 2);
-        context->m_Renderer->SetSamplerState(m_SamplerState, 3);
-        context->m_Renderer->SetSamplerState(m_SamplerState, 4);
+        // set the textures
+        for (int i = 0; i < 5; ++i) {
+            IRenderBlock::BindTexture(i, m_SamplerState);
+        }
+
+        if (flags & USE_FEATURE_MAP) {
+            IRenderBlock::BindTexture(7, 5, m_SamplerState);
+        }
+
+        if (flags & USE_WRINKLE_MAP) {
+            IRenderBlock::BindTexture(8, 6, m_SamplerState);
+        }
 
         // set the constant buffers
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbLocalConsts);
@@ -394,11 +402,10 @@ class RenderBlockCharacterSkin : public IRenderBlock
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts);
 
         // set the culling mode
-        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
-                                                                                                  : D3D11_CULL_NONE);
+        context->m_Renderer->SetCullMode((!(flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 
         // setup blending
-        if (m_Block.attributes.flags & ALPHA_MASK) {
+        if (flags & ALPHA_MASK) {
             context->m_Renderer->SetBlendingEnabled(false);
             context->m_Renderer->SetAlphaTestEnabled(false);
         }
@@ -416,7 +423,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
         IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
     }
 
-    virtual void DrawUI() override final
+    virtual void DrawContextMenu() override final
     {
         // clang-format off
         static std::array flag_labels = {
@@ -425,8 +432,33 @@ class RenderBlockCharacterSkin : public IRenderBlock
         };
         // clang-format on
 
-        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    }
+
+    virtual void DrawUI() override final
+    {
+        ImGui::Text(ICON_FA_COGS "  Attributes");
 
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
+
+        // Textures
+        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
+        ImGui::Columns(3, nullptr, false);
+        {
+            IRenderBlock::DrawTexture("DiffuseMap", 0);
+            IRenderBlock::DrawTexture("NormalMap", 1);
+            IRenderBlock::DrawTexture("PropertiesMap", 2);
+            IRenderBlock::DrawTexture("DetailDiffuseMap", 3);
+            IRenderBlock::DrawTexture("DetailNormalMap", 4);
+
+            if (m_Block.attributes.flags & USE_FEATURE_MAP) {
+                IRenderBlock::DrawTexture("FeatureMap", 7);
+            }
+
+            if (m_Block.attributes.flags & USE_WRINKLE_MAP) {
+                IRenderBlock::DrawTexture("WrinkleMap", 8);
+            }
+        }
+        ImGui::EndColumns();
     }
 };

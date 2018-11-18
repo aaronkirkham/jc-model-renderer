@@ -9,9 +9,8 @@ static constexpr auto g_MovementSensitivity    = 0.05f;
 static constexpr auto g_MouseScrollSensitivity = 0.01f;
 
 static auto SpeedMultiplier = [](float value) {
-    const auto& input = Input::Get();
-
-    return value * (input->IsKeyPressed(VK_SHIFT) ? 0.05f : input->IsKeyPressed(VK_CONTROL) ? 5.0f : 1.0f);
+    return value
+           * (Input::Get()->IsKeyPressed(VK_SHIFT) ? 0.05f : Input::Get()->IsKeyPressed(VK_CONTROL) ? 5.0f : 1.0f);
 };
 
 Camera::Camera()
@@ -19,11 +18,10 @@ Camera::Camera()
     const auto  window      = Window::Get();
     const auto& window_size = window->GetSize();
 
+    m_Position   = glm::vec3(0, 3, -10);
+    m_Rotation   = glm::vec3(0, 0, 0);
     m_Projection = glm::perspectiveFovLH(glm::radians(m_FOV), window_size.x, window_size.y, m_NearClip, m_FarClip);
-    m_Viewport   = glm::vec4{0, 0, window_size.x, window_size.y};
-
-    m_Position = glm::vec3(0, 3, -10);
-    m_Rotation = glm::vec3(0, 0, 0);
+    m_Viewport   = window_size;
 
     // handle window losing focus
     window->Events().FocusLost.connect([&] {
@@ -109,12 +107,10 @@ Camera::Camera()
 void Camera::Update(RenderContext_t* context)
 {
     // calculate the view matrix
-    {
-        m_View = glm::translate(glm::mat4(1.0f), -m_Position);
-        m_View = glm::rotate(m_View, m_Rotation.x, {0, 0, 1});
-        m_View = glm::rotate(m_View, m_Rotation.y, {1, 0, 0});
-        m_View = glm::rotate(m_View, m_Rotation.z, {0, 1, 0});
-    }
+    m_View = glm::translate(glm::mat4(1), -m_Position);
+    m_View = glm::rotate(m_View, m_Rotation.x, {0, 0, 1});
+    m_View = glm::rotate(m_View, m_Rotation.y, {1, 0, 0});
+    m_View = glm::rotate(m_View, m_Rotation.z, {0, 1, 0});
 
     // update view projection
     m_ViewProjection = (m_Projection * m_View);
@@ -123,46 +119,25 @@ void Camera::Update(RenderContext_t* context)
     context->m_viewProjectionMatrix = m_ViewProjection;
 }
 
-void Camera::UpdateWindowSize(const glm::vec2& size)
+void Camera::UpdateViewport(const glm::vec2& size)
 {
-    if (size.x > 0 && size.y > 0 && m_LastWindowSize != size) {
+    if (size.x > 0 && size.y > 0 && m_Viewport != size) {
         m_Projection = glm::perspectiveFovLH(glm::radians(m_FOV), size.x, size.y, m_NearClip, m_FarClip);
-        m_Viewport   = glm::vec4{0, 0, size.x, size.y};
-
-        m_LastWindowSize = size;
+        m_Viewport   = size;
     }
 }
 
-bool Camera::WorldToScreen(const glm::vec3& world, glm::vec3* screen)
+glm::vec2 Camera::WorldToScreen(const glm::vec3& world)
 {
-    *screen = glm::project(world, m_View, m_Projection, m_Viewport);
-
-    // glm uses the bottom of the window, so we need to take that into account
-    screen->y = (m_LastWindowSize.y - screen->y);
-
-    return (screen->z < 1.0f);
+    const auto& screen = glm::project(world, m_View, m_Projection, glm::vec4(0, 0, m_Viewport));
+    return {screen.x, (m_Viewport.y - screen.y)};
 }
 
-void Camera::ScreenToWorld(const glm::vec3& screen, glm::vec3* world)
+glm::vec3 Camera::ScreenToWorld(const glm::vec2& screen)
 {
-    // glm uses the bottom of the window, so we need to take that into account
-    *world = glm::unProject({screen.x, m_LastWindowSize.y - screen.y, screen.z}, m_View, m_Projection, m_Viewport);
-}
-
-template <typename T> T lerp(const T& start, const T& end, float percent)
-{
-    return (start + percent * (end - start));
-}
-
-void Camera::MouseToWorld(const glm::vec2& mouse, glm::vec3* world)
-{
-#undef near
-#undef far
-
-    const auto near = glm::unProject({mouse.x, m_LastWindowSize.y - mouse.y, 0}, m_View, m_Projection, m_Viewport);
-    const auto far  = glm::unProject({mouse.x, m_LastWindowSize.y - mouse.y, 1}, m_View, m_Projection, m_Viewport);
-
-    *world = lerp(near, far, (0.0f - near.z) / (far.z - near.z));
+    const auto& world =
+        glm::unProject({screen.x, (m_Viewport.y - screen.y), 1}, m_View, m_Projection, glm::vec4(0, 0, m_Viewport));
+    return world;
 }
 
 void Camera::FocusOn(RenderBlockModel* model)
@@ -182,4 +157,23 @@ void Camera::FocusOn(RenderBlockModel* model)
 
     m_Position = glm::vec3{0, (dimensions.y / 2), -(distance + 0.5f)};
     m_Rotation = glm::vec3(0);
+}
+
+std::shared_ptr<RenderBlockModel> Camera::Pick(const glm::vec2& mouse)
+{
+    Ray                                                ray(m_Position, ScreenToWorld(mouse));
+    std::map<float, std::shared_ptr<RenderBlockModel>> hits;
+
+    for (const auto& Instance : RenderBlockModel::Instances) {
+        const auto render_block = Instance.second;
+
+        const auto dist = ray.Hit(*render_block->GetBoundingBox());
+        if (dist == 0.0f || dist == INFINITY) {
+            continue;
+        }
+
+        hits[dist] = std::move(render_block);
+    }
+
+    return !hits.empty() ? hits.begin()->second : nullptr;
 }

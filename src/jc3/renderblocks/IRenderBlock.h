@@ -4,24 +4,26 @@
 #include <graphics/ShaderManager.h>
 #include <graphics/TextureManager.h>
 #include <graphics/Types.h>
-#include <graphics/imgui/imgui_bitfield.h>
+#include <graphics/UI.h>
+#include <graphics/imgui/fonts/fontawesome5_icons.h>
+#include <graphics/imgui/imgui_buttondropdown.h>
 #include <graphics/imgui/imgui_disabled.h>
 #include <jc3/Types.h>
 
+class RenderBlockModel;
 class IRenderBlock
 {
   protected:
-    bool  m_Visible       = true;
-    float m_ScaleModifier = 1.0f;
+    RenderBlockModel* m_Parent        = nullptr;
+    bool              m_Visible       = true;
+    float             m_ScaleModifier = 1.0f;
 
-    VertexBuffer_t*                 m_VertexBuffer      = nullptr;
-    IndexBuffer_t*                  m_IndexBuffer       = nullptr;
-    std::shared_ptr<VertexShader_t> m_VertexShader      = nullptr;
-    std::shared_ptr<PixelShader_t>  m_PixelShader       = nullptr;
-    VertexDeclaration_t*            m_VertexDeclaration = nullptr;
-    SamplerState_t*                 m_SamplerState      = nullptr;
-
-    std::vector<fs::path>                 m_Materials;
+    VertexBuffer_t*                       m_VertexBuffer      = nullptr;
+    IndexBuffer_t*                        m_IndexBuffer       = nullptr;
+    std::shared_ptr<VertexShader_t>       m_VertexShader      = nullptr;
+    std::shared_ptr<PixelShader_t>        m_PixelShader       = nullptr;
+    VertexDeclaration_t*                  m_VertexDeclaration = nullptr;
+    SamplerState_t*                       m_SamplerState      = nullptr;
     std::vector<std::shared_ptr<Texture>> m_Textures;
     float                                 m_MaterialParams[4] = {0};
 
@@ -36,6 +38,16 @@ class IRenderBlock
         Renderer::Get()->DestroyBuffer(m_IndexBuffer);
         Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
         Renderer::Get()->DestroySamplerState(m_SamplerState);
+    }
+
+    void SetParent(RenderBlockModel* parent)
+    {
+        m_Parent = parent;
+    }
+
+    RenderBlockModel* GetParent()
+    {
+        return m_Parent;
     }
 
     virtual const char* GetTypeName()       = 0;
@@ -94,14 +106,6 @@ class IRenderBlock
         context->m_DeviceContext->VSSetShader(m_VertexShader->m_Shader, nullptr, 0);
         context->m_DeviceContext->PSSetShader(m_PixelShader->m_Shader, nullptr, 0);
 
-        // enable textures
-        for (uint32_t i = 0; i < m_Textures.size(); ++i) {
-            const auto& texture = m_Textures[i];
-            if (texture && texture->IsLoaded()) {
-                texture->Use(i);
-            }
-        }
-
         // set the input layout
         context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
 
@@ -122,6 +126,19 @@ class IRenderBlock
         } else {
             context->m_Renderer->Draw(0, (m_VertexBuffer->m_ElementCount / 3));
         }
+    }
+
+    inline void BindTexture(int32_t texture_index, int32_t slot, SamplerState_t* sampler = nullptr)
+    {
+        const auto& texture = m_Textures[texture_index];
+        if (texture && texture->IsLoaded()) {
+            texture->Use(slot, sampler);
+        }
+    }
+
+    inline void BindTexture(int32_t texture_index, SamplerState_t* sampler = nullptr)
+    {
+        return BindTexture(texture_index, texture_index, sampler);
     }
 
     IBuffer_t* ReadBuffer(std::istream& stream, BufferType type, uint32_t stride)
@@ -158,7 +175,7 @@ class IRenderBlock
         uint32_t count;
         stream.read((char*)&count, sizeof(count));
 
-        m_Materials.resize(count);
+        m_Textures.resize(count);
 
         for (uint32_t i = 0; i < count; ++i) {
             uint32_t length;
@@ -172,12 +189,10 @@ class IRenderBlock
             stream.read(filename.get(), length);
             filename[length] = '\0';
 
-            m_Materials[i] = filename.get();
-
             // load the material
-            auto& texture = TextureManager::Get()->GetTexture(filename.get());
+            auto texture = TextureManager::Get()->GetTexture(filename.get());
             if (texture) {
-                m_Textures.emplace_back(texture);
+                m_Textures[i] = std::move(texture);
             }
         }
 
@@ -186,15 +201,21 @@ class IRenderBlock
 
     void WriteMaterials(std::ostream& stream)
     {
-        auto count = static_cast<uint32_t>(m_Materials.size());
+        auto count = static_cast<uint32_t>(m_Textures.size());
         stream.write((char*)&count, sizeof(count));
 
         for (uint32_t i = 0; i < count; ++i) {
-            const auto& filename = m_Materials[i].generic_string();
-            const auto  length   = static_cast<uint32_t>(filename.length());
+            const auto& texture = m_Textures[i];
+            if (texture) {
+                const auto& filename = m_Textures[i]->GetFileName().generic_string();
+                const auto  length   = static_cast<uint32_t>(filename.length());
 
-            stream.write((char*)&length, sizeof(length));
-            stream.write(filename.c_str(), length);
+                stream.write((char*)&length, sizeof(length));
+                stream.write(filename.c_str(), length);
+            } else {
+                static auto ZERO = 0;
+                stream.write((char*)&ZERO, sizeof(ZERO));
+            }
         }
 
         stream.write((char*)&m_MaterialParams, sizeof(m_MaterialParams));
@@ -272,5 +293,11 @@ class IRenderBlock
         }
     }
 
-    virtual void DrawUI() = 0;
+    virtual void DrawContextMenu() = 0;
+    virtual void DrawUI()          = 0;
+
+    inline void DrawTexture(const std::string& title, uint32_t texture_slot)
+    {
+        UI::Get()->RenderBlockTexture(this, title, m_Textures[texture_slot]);
+    }
 };

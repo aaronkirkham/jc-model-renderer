@@ -12,21 +12,20 @@ void SetupImGuiStyle()
     style.GrabRounding      = 0.0f;
     style.WindowRounding    = 0.0f;
     style.ScrollbarRounding = 3.0f;
-    style.FrameRounding     = 3.0f;
+    style.FrameRounding     = 0.0f;
     style.WindowTitleAlign  = ImVec2(0.5f, 0.5f);
     style.ItemSpacing.y     = 6.0f;
     style.WindowBorderSize  = 0.0f;
 
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.IniFilename = nullptr;
-
-    io.ConfigResizeWindowsFromEdges = true;
+    io.IniFilename            = nullptr;
+    io.ConfigDockingWithShift = false;
 
     style.Colors[ImGuiCol_Text]                 = ImVec4(0.73f, 0.73f, 0.73f, 1.00f);
     style.Colors[ImGuiCol_TextDisabled]         = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
     style.Colors[ImGuiCol_WindowBg]             = ImVec4(0.26f, 0.26f, 0.26f, 0.95f);
     style.Colors[ImGuiCol_ChildWindowBg]        = ImVec4(0.28f, 0.28f, 0.28f, 1.00f);
-    style.Colors[ImGuiCol_PopupBg]              = ImVec4(0.2f, 0.2f, 0.2f, 1.00f);
+    style.Colors[ImGuiCol_PopupBg]              = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
     style.Colors[ImGuiCol_Border]               = ImVec4(0.26f, 0.26f, 0.26f, 1.00f);
     style.Colors[ImGuiCol_BorderShadow]         = ImVec4(0.26f, 0.26f, 0.26f, 1.00f);
     style.Colors[ImGuiCol_FrameBg]              = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
@@ -41,7 +40,7 @@ void SetupImGuiStyle()
     style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
     style.Colors[ImGuiCol_ScrollbarGrabActive]  = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
     style.Colors[ImGuiCol_CheckMark]            = ImVec4(0.78f, 0.78f, 0.78f, 1.00f);
-    style.Colors[ImGuiCol_SliderGrab]           = ImVec4(0.74f, 0.74f, 0.74f, 1.00f);
+    style.Colors[ImGuiCol_SliderGrab]           = ImVec4(0.74f, 0.74f, 0.74f, 0.55f);
     style.Colors[ImGuiCol_SliderGrabActive]     = ImVec4(0.74f, 0.74f, 0.74f, 1.00f);
     style.Colors[ImGuiCol_Button]               = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
     style.Colors[ImGuiCol_ButtonHovered]        = ImVec4(0.43f, 0.43f, 0.43f, 1.00f);

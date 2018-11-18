@@ -6,12 +6,18 @@
 
 #include <import_export/IImportExporter.h>
 
+struct ImDrawList;
+struct BoundingBox;
+struct RenderContext_t;
+class Texture;
+class IRenderBlock;
 class AvalancheArchive;
+
 struct UIEvents {
-    ksignals::Event<void(const fs::path& file, AvalancheArchive* archive)> FileTreeItemSelected;
-    ksignals::Event<void(const fs::path& file, const fs::path& directory)> SaveFileRequest;
+    ksignals::Event<void(const fs::path& file, AvalancheArchive* archive)>            FileTreeItemSelected;
+    ksignals::Event<void(const fs::path& file, const fs::path& directory)>            SaveFileRequest;
     ksignals::Event<void(IImportExporter* importer, ImportFinishedCallback callback)> ImportFileRequest;
-    ksignals::Event<void(const fs::path& file, IImportExporter* exporter)> ExportFileRequest;
+    ksignals::Event<void(const fs::path& file, IImportExporter* exporter)>            ExportFileRequest;
 };
 
 enum ContextMenuFlags {
@@ -31,8 +37,6 @@ using ContextMenuCallback = std::function<void(const fs::path& filename)>;
 
 static constexpr auto MIN_SIDEBAR_WIDTH = 400.0f;
 
-struct ImDrawList;
-struct BoundingBox;
 class UI : public Singleton<UI>
 {
   private:
@@ -59,9 +63,11 @@ class UI : public Singleton<UI>
         return m_UIEvents;
     }
 
-    void Render();
+    void Render(RenderContext_t* context);
     void RenderSpinner(const std::string& str);
     void RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra = 0, uint32_t flags = 0);
+
+    void RenderBlockTexture(IRenderBlock* render_block, const std::string& title, std::shared_ptr<Texture> texture);
 
     uint64_t PushStatusText(const std::string& str);
     void     PopStatusText(uint64_t id);

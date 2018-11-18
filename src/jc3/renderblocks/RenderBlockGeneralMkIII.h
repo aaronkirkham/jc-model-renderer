@@ -536,6 +536,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
         // textures
         {
+#if 0
             m_Materials.emplace_back("models/jc_characters/main_characters/rico/textures/nanos.dds");
 
             // load the material
@@ -545,6 +546,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
                 texture->LoadFromFile("C:/users/aaron/Desktop/nanos cube/nanos.dds");
                 m_Textures.emplace_back(texture);
             }
+#endif
         }
 
         m_VertexBuffer     = Renderer::Get()->CreateBuffer(packed_vertices.data(), packed_vertices.size(),
@@ -614,9 +616,10 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             m_cbInstanceAttributes.EmissiveStartFadeDistSq = m_Block.attributes.emissiveStartFadeDistSq;
         }
 
-        // set the samplers
-        context->m_Renderer->SetSamplerState(m_SamplerState, 0);
-        context->m_Renderer->SetSamplerState(m_SamplerState, 1);
+        // set the textures
+        for (int i = 0; i < 4; ++i) {
+            IRenderBlock::BindTexture(i, m_SamplerState);
+        }
 
         // set the constant buffers
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 12, m_cbRBIInfo);
@@ -654,7 +657,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         }
     }
 
-    virtual void DrawUI() override final
+    virtual void DrawContextMenu() override final
     {
         // clang-format off
         static std::array flag_labels = {
@@ -665,7 +668,12 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         };
         // clang-format on
 
-        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    }
+
+    virtual void DrawUI() override final
+    {
+        ImGui::Text(ICON_FA_COGS "  Attributes");
 
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
 
@@ -674,5 +682,16 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         ImGuiCustom::PushDisabled(!(m_Block.attributes.flags & DYNAMIC_EMISSIVE));
         ImGui::SliderFloat("Emissive Scale", &m_Block.attributes.emissiveTODScale, 0, 1);
         ImGuiCustom::PopDisabled();
+
+        // Textures
+        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
+        ImGui::Columns(3, nullptr, false);
+        {
+            IRenderBlock::DrawTexture("Albedo1Map", 0);
+            IRenderBlock::DrawTexture("Gloss1Map", 1);
+            IRenderBlock::DrawTexture("Metallic1Map", 2);
+            IRenderBlock::DrawTexture("Normal1Map", 3);
+        }
+        ImGui::EndColumns();
     }
 };

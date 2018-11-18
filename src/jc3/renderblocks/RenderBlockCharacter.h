@@ -43,6 +43,7 @@ class RenderBlockCharacter : public IRenderBlock
         USE_FEATURE_MAP            = 0x10,
         USE_WRINKLE_MAP            = 0x20,
         USE_CAMERA_LIGHTING        = 0x40,
+        USE_EYE_REFLECTION         = 0x80,
     };
 
     enum CharacterAttributeFlags {
@@ -387,6 +388,8 @@ class RenderBlockCharacter : public IRenderBlock
 
         IRenderBlock::Setup(context);
 
+        const auto flags = m_Block.attributes.flags;
+
         // setup the constant buffer
         {
             static auto world = glm::mat4(1);
@@ -400,13 +403,8 @@ class RenderBlockCharacter : public IRenderBlock
             //
         }
 
-        // set the sampler states
-        context->m_Renderer->SetSamplerState(m_SamplerState, 0);
-        context->m_Renderer->SetSamplerState(m_SamplerState, 1);
-        context->m_Renderer->SetSamplerState(m_SamplerState, 2);
-        context->m_Renderer->SetSamplerState(m_SamplerState, 3);
-        context->m_Renderer->SetSamplerState(m_SamplerState, 4);
-        context->m_Renderer->SetSamplerState(m_SamplerState, 9);
+        // set the textures
+        IRenderBlock::BindTexture(0, m_SamplerState);
 
         // set the constant buffers
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbLocalConsts);
@@ -414,20 +412,37 @@ class RenderBlockCharacter : public IRenderBlock
         context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts);
 
         // set the culling mode
-        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
-                                                                                                  : D3D11_CULL_NONE);
+        context->m_Renderer->SetCullMode((!(flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 
         // toggle alpha mask
-        if (m_Block.attributes.flags & ALPHA_MASK) {
+        if (flags & ALPHA_MASK) {
             context->m_Renderer->SetAlphaTestEnabled(true);
             context->m_Renderer->SetBlendingEnabled(false);
         } else {
             context->m_Renderer->SetAlphaTestEnabled(false);
         }
 
-        // setup blending
-        switch (m_Block.attributes.flags & BODY_PART) {
+        // setup textures and blending
+        switch (flags & BODY_PART) {
             case GEAR: {
+                IRenderBlock::BindTexture(1, m_SamplerState);
+                IRenderBlock::BindTexture(2, m_SamplerState);
+                IRenderBlock::BindTexture(3, m_SamplerState);
+                IRenderBlock::BindTexture(4, m_SamplerState);
+                IRenderBlock::BindTexture(9, m_SamplerState);
+
+                if (flags & USE_FEATURE_MAP) {
+                    IRenderBlock::BindTexture(5, m_SamplerState);
+                }
+
+                if (flags & USE_WRINKLE_MAP) {
+                    IRenderBlock::BindTexture(7, 6, m_SamplerState);
+                }
+
+                if (flags & USE_CAMERA_LIGHTING) {
+                    IRenderBlock::BindTexture(8, m_SamplerState);
+                }
+
                 if (m_Block.attributes.flags & TRANSPARENCY_ALPHABLENDING) {
                     context->m_Renderer->SetBlendingEnabled(true);
                     context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE,
@@ -439,6 +454,10 @@ class RenderBlockCharacter : public IRenderBlock
             }
 
             case EYES: {
+                if (m_Block.attributes.flags & USE_EYE_REFLECTION) {
+                    IRenderBlock::BindTexture(10, 11, m_SamplerState);
+                }
+
                 context->m_Renderer->SetBlendingEnabled(true);
                 context->m_Renderer->SetBlendingFunc(D3D11_BLEND_ONE, D3D11_BLEND_ONE, D3D11_BLEND_SRC_ALPHA,
                                                      D3D11_BLEND_ONE);
@@ -446,6 +465,9 @@ class RenderBlockCharacter : public IRenderBlock
             }
 
             case HAIR: {
+                IRenderBlock::BindTexture(1, m_SamplerState);
+                IRenderBlock::BindTexture(2, m_SamplerState);
+
                 if (m_Block.attributes.flags & TRANSPARENCY_ALPHABLENDING) {
                     context->m_Renderer->SetBlendingEnabled(true);
                     context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE,
@@ -466,21 +488,75 @@ class RenderBlockCharacter : public IRenderBlock
         IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
     }
 
-    virtual void DrawUI() override final
+    virtual void DrawContextMenu() override final
     {
         // clang-format off
         static std::array flag_labels = {
             "Disable Backface Culling",     "Eight Bones",                  "Use Alpha Mask",               "Transparency Alpha Blending",
-            "Use Feature Map",              "Use Wrinkle Map",              "Use Camera Lighting",          "",
+            "Use Feature Map",              "Use Wrinkle Map",              "Use Camera Lighting",          "Use Eye Reflection",
         };
         // clang-format on
 
-        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    }
+
+    virtual void DrawUI() override final
+    {
+        ImGui::Text(ICON_FA_COGS "  Attributes");
+
+        if (ImGui::RadioButton("Gear", ((m_Block.attributes.flags & BODY_PART) == GEAR))) {
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::RadioButton("Eyes", ((m_Block.attributes.flags & BODY_PART) == EYES))) {
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::RadioButton("Hair", ((m_Block.attributes.flags & BODY_PART) == HAIR))) {
+        }
 
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
 
         ImGui::SliderFloat4("Unknown #1", glm::value_ptr(m_cbInstanceConsts._unknown), 0, 1);
         ImGui::ColorEdit4("Diffuse Colour", glm::value_ptr(m_cbInstanceConsts.DiffuseColour));
         ImGui::SliderFloat4("Unknown #2", glm::value_ptr(m_cbInstanceConsts._unknown2), 0, 1);
+
+        // Textures
+        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
+        ImGui::Columns(3, nullptr, false);
+        {
+            const auto flags = m_Block.attributes.flags;
+
+            IRenderBlock::DrawTexture("DiffuseMap", 0);
+
+            if ((flags & BODY_PART) == GEAR || (flags & BODY_PART) == HAIR) {
+                IRenderBlock::DrawTexture("NormalMap", 1);
+                IRenderBlock::DrawTexture("PropertiesMap", 2);
+            }
+
+            if ((flags & BODY_PART) == GEAR) {
+                IRenderBlock::DrawTexture("DetailDiffuseMap", 3);
+                IRenderBlock::DrawTexture("DetailNormalMap", 4);
+
+                if (m_Block.attributes.flags & USE_FEATURE_MAP) {
+                    IRenderBlock::DrawTexture("FeatureMap", 5);
+                }
+
+                if (m_Block.attributes.flags & USE_WRINKLE_MAP) {
+                    IRenderBlock::DrawTexture("WrinkleMap", 7);
+                }
+
+                if (m_Block.attributes.flags & USE_CAMERA_LIGHTING) {
+                    IRenderBlock::DrawTexture("CameraMap", 8);
+                }
+
+                IRenderBlock::DrawTexture("MetallicMap", 9);
+            } else if ((flags & BODY_PART) == EYES && flags & USE_EYE_REFLECTION) {
+                IRenderBlock::DrawTexture("ReflectionMap", 10);
+            }
+        }
+        ImGui::EndColumns();
     }
 };

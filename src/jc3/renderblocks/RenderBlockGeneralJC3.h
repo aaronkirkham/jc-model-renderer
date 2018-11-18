@@ -275,6 +275,11 @@ class RenderBlockGeneralJC3 : public IRenderBlock
             m_cbFragmentInstanceConsts.colour           = glm::vec4(1, 1, 1, 0);
         }
 
+        // set the textures
+        for (int i = 0; i < m_Textures.size(); ++i) {
+            IRenderBlock::BindTexture(i, m_SamplerState);
+        }
+
         // set the constant buffers
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 1, m_cbVertexInstanceConsts);
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[1], 2, m_cbVertexMaterialConsts);
@@ -291,7 +296,7 @@ class RenderBlockGeneralJC3 : public IRenderBlock
         }
     }
 
-    virtual void DrawUI() override final
+    virtual void DrawContextMenu() override final
     {
         // clang-format off
         static std::array flag_labels = {
@@ -300,7 +305,12 @@ class RenderBlockGeneralJC3 : public IRenderBlock
         };
         // clang-format on
 
-        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    }
+
+    virtual void DrawUI() override final
+    {
+        ImGui::Text(ICON_FA_COGS "  Attributes");
 
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.1f, 10.0f);
         ImGui::SliderFloat("Depth Bias", &m_Block.attributes.depthBias, 0.0f, 10.0f);
@@ -313,5 +323,16 @@ class RenderBlockGeneralJC3 : public IRenderBlock
         ImGui::SliderFloat("Back Light", &m_Block.attributes.backLight, 0.0f, 10.0f);
         ImGui::SliderFloat("Unknown #2", &m_Block.attributes._unknown2, 0.0f, 10.0f);
         ImGui::InputFloat("Fade Out Distance Emissive", &m_Block.attributes.startFadeOutDistanceEmissiveSq);
+
+        // Textures
+        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
+        ImGui::Columns(3, nullptr, false);
+        {
+            IRenderBlock::DrawTexture("DiffuseMap", 0);
+            IRenderBlock::DrawTexture("NormalMap", 1);
+            IRenderBlock::DrawTexture("PropertiesMap", 2);
+            IRenderBlock::DrawTexture("AOBlendMap", 3);
+        }
+        ImGui::EndColumns();
     }
 };
