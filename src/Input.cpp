@@ -56,7 +56,7 @@ bool Input::HandleMessage(MSG* event)
                                       static_cast<float>(GET_Y_LPARAM(event->lParam))};
             m_InputEvents.MousePress(message, position);
 
-            m_LastClickPosition = position;
+            m_LastClickPosition      = position;
             m_LastClickWorldPosition = Camera::Get()->ScreenToWorld(position);
             break;
         }
@@ -66,7 +66,7 @@ bool Input::HandleMessage(MSG* event)
                                       static_cast<float>(GET_Y_LPARAM(event->lParam))};
             m_InputEvents.MouseMove((m_MousePosition - position));
 
-            m_MousePosition = position;
+            m_MousePosition      = position;
             m_MouseWorldPosition = Camera::Get()->ScreenToWorld(position);
             break;
         }

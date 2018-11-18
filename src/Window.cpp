@@ -131,8 +131,10 @@ void Window::Run()
                 goto shutdown;
             }
 
-            //TEMP
-            Input::Get()->HandleMessage(&msg);
+            // if the window has focus, pass input to the input handler
+            if (HasFocus()) {
+                Input::Get()->HandleMessage(&msg);
+            }
 
             TranslateMessage(&msg);
             DispatchMessage(&msg);

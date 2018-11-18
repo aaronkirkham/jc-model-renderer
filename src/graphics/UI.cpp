@@ -34,55 +34,37 @@ static bool g_CheckForUpdatesEnabled = false;
 static bool g_CheckForUpdatesEnabled = true;
 #endif
 
-static bool     _is_dragging       = false;
-static fs::path _dragdrop_filename = "";
-
 UI::UI()
 {
     Window::Get()->Events().DragEnter.connect([&](const fs::path& filename) {
-        _is_dragging       = true;
-        _dragdrop_filename = filename;
-
-        ImGuiIO& io     = ImGui::GetIO();
-        io.MouseDown[0] = true;
+        m_IsDragDrop                = true;
+        m_DragDropPayload           = filename.generic_string();
+        ImGui::GetIO().MouseDown[0] = true;
     });
 
-    Window::Get()->Events().DragLeave.connect([&] {
-        _is_dragging = false;
+    static const auto ResetDragDrop = [&] {
+        m_IsDragDrop                = false;
+        ImGui::GetIO().MouseDown[0] = false;
+    };
 
-        ImGuiIO& io     = ImGui::GetIO();
-        io.MouseDown[0] = false;
-    });
-
-    Window::Get()->Events().DragDropped.connect([&] {
-        _is_dragging = false;
-
-        ImGuiIO& io     = ImGui::GetIO();
-        io.MouseDown[0] = false;
-
-        // if nothing handled the drag drop payload, pass it back to the window events
-        if (!ImGui::IsDragDropPayloadBeingAccepted()) {
-            // Window::Get()->Events().UnhandledDragDropped(_dragdrop_filename);
-        }
-    });
+    Window::Get()->Events().DragLeave.connect(ResetDragDrop);
+    Window::Get()->Events().DragDropped.connect(ResetDragDrop);
 }
 
 void UI::Render(RenderContext_t* context)
 {
     const auto& window_size = Window::Get()->GetSize();
 
-#if 0
-    if (_is_dragging) {
-        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern)) {
-            static uint32_t test = 0x10;
-            ImGui::SetDragDropPayload("_ADD_FILE", &test, 1);
+    // handle external drag drop payloads
+    if (m_IsDragDrop && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern)) {
+        DragDropPayload payload;
+        payload.type = DROPPAYLOAD_UNKNOWN;
+        payload.data = m_DragDropPayload.c_str();
 
-            ImGui::Text(_dragdrop_filename.filename().string().c_str());
-
-            ImGui::EndDragDropSource();
-        }
+        ImGui::SetDragDropPayload("_123_", (void*)&payload, sizeof(payload), ImGuiCond_Once);
+        ImGui::Text(m_DragDropPayload.c_str());
+        ImGui::EndDragDropSource();
     }
-#endif
 
     // main menu bar
     if (ImGui::BeginMainMenuBar()) {
@@ -202,6 +184,16 @@ void UI::Render(RenderContext_t* context)
             ImGui::EndMenu();
         }
 
+        // fps counter
+        {
+            char buffer[10];
+            sprintf(buffer, "%.01f fps", ImGui::GetIO().Framerate);
+
+            const auto& text_size = ImGui::CalcTextSize(buffer);
+            ImGui::SameLine(ImGui::GetWindowWidth() - text_size.x - 20);
+            ImGui::TextColored(ImVec4(1, 1, 1, .5), buffer);
+        }
+
         ImGui::EndMainMenuBar();
     }
 
@@ -245,25 +237,31 @@ void UI::Render(RenderContext_t* context)
         ImGui::EndPopup();
     }
 
-    ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::SetNextWindowPos({0, m_MainMenuBarHeight});
     ImGui::SetNextWindowSize({window_size.x - m_SidebarWidth, window_size.y - m_MainMenuBarHeight});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0, 0});
 
     // draw scene view
     if (ImGui::Begin("Scene", nullptr,
-                     (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs
-                      | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings
-                      | ImGuiWindowFlags_NoTitleBar))) {
+                     (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
+                      | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus
+                      | ImGuiWindowFlags_NoInputs))) {
         const auto& size = ImGui::GetWindowSize();
         m_SceneWidth     = size.x;
 
         // update camera projection if needed
         Camera::Get()->UpdateViewport({size.x, size.y});
 
+        // render gbuffer texture
+        ImGui::Image(Renderer::Get()->GetGBufferSRV(m_CurrentActiveGBuffer), ImGui::GetWindowSize());
+
+        // drag drop target
+        if (const auto payload = UI::Get()->GetDropPayload(DROPPAYLOAD_UNKNOWN)) {
+            FileLoader::Get()->ReadFileFromDisk(payload->data);
+        }
+
         m_SceneDrawList = ImGui::GetWindowDrawList();
 
-        ImGui::Image(Renderer::Get()->GetGBufferSRV(m_CurrentActiveGBuffer), ImGui::GetWindowSize());
         ImGui::End();
     }
 
@@ -271,17 +269,6 @@ void UI::Render(RenderContext_t* context)
 
     // file tree view
     RenderFileTreeView();
-
-    // Stats
-    ImGui::SetNextWindowBgAlpha(0.0f);
-    ImGui::SetNextWindowPos({10, (window_size.y - 35 - 24)});
-    if (ImGui::Begin("Stats", nullptr,
-                     (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs
-                      | ImGuiWindowFlags_NoSavedSettings))) {
-        ImGui::Text("%.01f fps (%.02f ms) (%.0f x %.0f)", ImGui::GetIO().Framerate,
-                    (1000.0f / ImGui::GetIO().Framerate), window_size.x, window_size.y);
-        ImGui::End();
-    }
 
     // Status
     ImGui::SetNextWindowBgAlpha(0.0f);
@@ -384,6 +371,7 @@ void UI::RenderFileTreeView()
                     auto open          = ImGui::CollapsingHeader(filename.string().c_str(), &is_still_open);
 
                     // drag drop target
+#if 0
                     if (ImGui::BeginDragDropTarget()) {
                         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_ADD_FILE")) {
                             archive->AddDirectory(_dragdrop_filename, _dragdrop_filename.parent_path());
@@ -391,6 +379,7 @@ void UI::RenderFileTreeView()
 
                         ImGui::EndDragDropTarget();
                     }
+#endif
 
                     // context menu
                     RenderContextMenu(archive->GetFilePath(), 0, CTX_ARCHIVE);
@@ -649,7 +638,6 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
         // context menu
         RenderContextMenu(filename_with_path, ImGui::GetColumnIndex(), ContextMenuFlags::CTX_TEXTURE);
 
-#if 0
         // dragdrop payload
         if (const auto payload = UI::Get()->GetDropPayload(DROPPAYLOAD_UNKNOWN)) {
             DEBUG_LOG("DropPayload (" << title << "): " << payload->data);
@@ -673,7 +661,6 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
             }
 #endif
         }
-#endif
     }
     ImGui::EndGroup();
     ImGui::NextColumn();
@@ -693,6 +680,20 @@ void UI::PopStatusText(uint64_t id)
 {
     std::lock_guard<std::recursive_mutex> _lk{m_StatusTextsMutex};
     m_StatusTexts.erase(id);
+}
+
+DragDropPayload* UI::GetDropPayload(DragDropPayloadType payload_type)
+{
+    DragDropPayload* result = nullptr;
+    if (ImGui::BeginDragDropTarget()) {
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_123_")) {
+            result = reinterpret_cast<DragDropPayload*>(payload->Data);
+        }
+
+        ImGui::EndDragDropTarget();
+    }
+
+    return result;
 }
 
 void UI::RegisterContextMenuCallback(const std::vector<std::string>& extensions, ContextMenuCallback fn)

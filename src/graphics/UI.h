@@ -33,8 +33,16 @@ enum TreeViewTab {
     TAB_TOTAL,
 };
 
-using ContextMenuCallback = std::function<void(const fs::path& filename)>;
+enum DragDropPayloadType {
+    DROPPAYLOAD_UNKNOWN,
+};
 
+struct DragDropPayload {
+    DragDropPayloadType type;
+    const char*         data;
+};
+
+using ContextMenuCallback = std::function<void(const fs::path& filename)>;
 static constexpr auto MIN_SIDEBAR_WIDTH = 400.0f;
 
 class UI : public Singleton<UI>
@@ -47,6 +55,9 @@ class UI : public Singleton<UI>
     std::map<std::string, ContextMenuCallback> m_ContextMenuCallbacks;
     TreeViewTab                                m_TabToSwitch          = TAB_FILE_EXPLORER;
     uint8_t                                    m_CurrentActiveGBuffer = 0;
+
+    bool        m_IsDragDrop = false;
+    std::string m_DragDropPayload;
 
     ImDrawList* m_SceneDrawList = nullptr;
     float       m_SceneWidth    = 0.0f;
@@ -71,6 +82,8 @@ class UI : public Singleton<UI>
 
     uint64_t PushStatusText(const std::string& str);
     void     PopStatusText(uint64_t id);
+
+    DragDropPayload* GetDropPayload(DragDropPayloadType payload_type);
 
     void SwitchToTab(const TreeViewTab tab)
     {

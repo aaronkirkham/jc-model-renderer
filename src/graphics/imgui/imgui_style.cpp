@@ -17,7 +17,7 @@ void SetupImGuiStyle()
     style.ItemSpacing.y     = 6.0f;
     style.WindowBorderSize  = 0.0f;
 
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.IniFilename            = nullptr;
     io.ConfigDockingWithShift = false;
 
