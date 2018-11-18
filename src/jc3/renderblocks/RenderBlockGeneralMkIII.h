@@ -657,7 +657,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         }
     }
 
-    virtual void DrawUI() override final
+    virtual void DrawContextMenu() override final
     {
         // clang-format off
         static std::array flag_labels = {
@@ -668,9 +668,12 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         };
         // clang-format on
 
-        ImGui::Text(ICON_FA_COGS "  Attributes");
+        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    }
 
-        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+    virtual void DrawUI() override final
+    {
+        ImGui::Text(ICON_FA_COGS "  Attributes");
 
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
 
@@ -684,10 +687,10 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
         ImGui::Columns(3, nullptr, false);
         {
-            UI::Get()->RenderBlockTexture("Albedo1Map", m_Textures[0]);
-            UI::Get()->RenderBlockTexture("Gloss1Map", m_Textures[1]);
-            UI::Get()->RenderBlockTexture("Metallic1Map", m_Textures[2]);
-            UI::Get()->RenderBlockTexture("Normal1Map", m_Textures[3]);
+            IRenderBlock::DrawTexture("Albedo1Map", 0);
+            IRenderBlock::DrawTexture("Gloss1Map", 1);
+            IRenderBlock::DrawTexture("Metallic1Map", 2);
+            IRenderBlock::DrawTexture("Normal1Map", 3);
         }
         ImGui::EndColumns();
     }

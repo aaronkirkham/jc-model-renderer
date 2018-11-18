@@ -111,14 +111,19 @@ void Texture::UseVS(uint32_t slot)
     }
 }
 
+void Texture::SetFileName(const fs::path& filename)
+{
+    m_Filename = filename;
+}
+
+const fs::path& Texture::GetFileName() const
+{
+    return m_Filename;
+}
+
 bool Texture::IsLoaded() const
 {
     return (m_Texture != nullptr && m_SRV != nullptr);
-}
-
-const fs::path& Texture::GetPath() const
-{
-    return m_Filename;
 }
 
 const uint32_t Texture::GetHash() const

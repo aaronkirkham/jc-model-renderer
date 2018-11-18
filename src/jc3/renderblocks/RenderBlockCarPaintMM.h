@@ -458,7 +458,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         }
     }
 
-    virtual void DrawUI() override final
+    virtual void DrawContextMenu() override final
     {
         // clang-format off
         static std::array flag_labels = {
@@ -469,9 +469,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         };
         // clang-format on
 
-        ImGui::Text(ICON_FA_COGS "  Attributes");
-
-        if (ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels)) {
+        if (ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels)) {
             // update static material params
             m_cbStaticMaterialParams.SupportDecals   = m_Block.attributes.flags & SUPPORT_DECALS;
             m_cbStaticMaterialParams.SupportDmgBlend = m_Block.attributes.flags & SUPPORT_DAMAGE_BLEND;
@@ -480,6 +478,11 @@ class RenderBlockCarPaintMM : public IRenderBlock
             m_cbStaticMaterialParams.SupportDirt     = m_Block.attributes.flags & SUPPORT_DIRT;
             m_cbStaticMaterialParams.SupportSoftTint = m_Block.attributes.flags & SUPPORT_SOFT_TINT;
         }
+    }
+
+    virtual void DrawUI() override final
+    {
+        ImGui::Text(ICON_FA_COGS "  Attributes");
 
         ImGui::ColorEdit3("Diffuse Colour", glm::value_ptr(m_cbRBIInfo.ModelDiffuseColor));
 
@@ -536,23 +539,23 @@ class RenderBlockCarPaintMM : public IRenderBlock
         ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
         ImGui::Columns(3, nullptr, false);
         {
-            UI::Get()->RenderBlockTexture("DiffuseMap", m_Textures[0]);
-            UI::Get()->RenderBlockTexture("NormalMap", m_Textures[1]);
-            UI::Get()->RenderBlockTexture("PropertyMap", m_Textures[2]);
-            UI::Get()->RenderBlockTexture("TintMap", m_Textures[3]);
-            UI::Get()->RenderBlockTexture("DamageNormalMap", m_Textures[4]);
-            UI::Get()->RenderBlockTexture("DamageAlbedoMap", m_Textures[5]);
-            UI::Get()->RenderBlockTexture("DirtMap", m_Textures[6]);
-            UI::Get()->RenderBlockTexture("DecalAlbedoMap", m_Textures[7]);
-            UI::Get()->RenderBlockTexture("DecalNormalMap", m_Textures[8]);
-            UI::Get()->RenderBlockTexture("DecalPropertyMap", m_Textures[9]);
+            IRenderBlock::DrawTexture("DiffuseMap", 0);
+            IRenderBlock::DrawTexture("NormalMap", 1);
+            IRenderBlock::DrawTexture("PropertyMap", 2);
+            IRenderBlock::DrawTexture("TintMap", 3);
+            IRenderBlock::DrawTexture("DamageNormalMap", 4);
+            IRenderBlock::DrawTexture("DamageAlbedoMap", 5);
+            IRenderBlock::DrawTexture("DirtMap", 6);
+            IRenderBlock::DrawTexture("DecalAlbedoMap", 7);
+            IRenderBlock::DrawTexture("DecalNormalMap", 8);
+            IRenderBlock::DrawTexture("DecalPropertyMap", 9);
 
             if (m_Block.attributes.flags & SUPPORT_LAYERED) {
-                UI::Get()->RenderBlockTexture("LayeredAlbedoMap", m_Textures[10]);
+                IRenderBlock::DrawTexture("LayeredAlbedoMap", 10);
             }
             
             if (m_Block.attributes.flags & SUPPORT_OVERLAY) {
-                UI::Get()->RenderBlockTexture("OverlayAlbedoMap", m_Textures[11]);
+                IRenderBlock::DrawTexture("OverlayAlbedoMap", 11);
             }
         }
         ImGui::EndColumns();

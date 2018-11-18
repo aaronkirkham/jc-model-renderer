@@ -6,7 +6,6 @@
 
 #include <graphics/Camera.h>
 #include <graphics/imgui/fonts/fontawesome5_icons.h>
-#include <graphics/imgui/imgui_buttondropdown.h>
 #include <graphics/imgui/imgui_rotate.h>
 #include <graphics/imgui/imgui_tabscrollcontent.h>
 
@@ -387,14 +386,14 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra, u
     ImGui::PopID();
 }
 
-void UI::RenderBlockTexture(const std::string& title, std::shared_ptr<Texture> texture)
+void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title, std::shared_ptr<Texture> texture)
 {
     if (!texture) {
         return;
     }
 
     const auto  col_width          = (ImGui::GetWindowWidth() / ImGui::GetColumnsCount());
-    const auto& filename_with_path = texture->GetPath();
+    const auto& filename_with_path = texture->GetFileName();
 
     ImGui::BeginGroup();
     {
@@ -404,7 +403,7 @@ void UI::RenderBlockTexture(const std::string& title, std::shared_ptr<Texture> t
 
         // tooltip
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(texture->GetPath().filename().string().c_str());
+            ImGui::SetTooltip(filename_with_path.filename().string().c_str());
         }
 
         // open texture preview
@@ -418,7 +417,25 @@ void UI::RenderBlockTexture(const std::string& title, std::shared_ptr<Texture> t
         // dragdrop payload
         if (const auto payload = UI::Get()->GetDropPayload(DROPPAYLOAD_UNKNOWN)) {
             DEBUG_LOG("DropPayload (" << title << "): " << payload->data);
+            fs::path payload_data(payload->data);
             texture->LoadFromFile(payload->data);
+
+            // generate the new file path
+            const auto parent   = render_block->GetParent();
+            auto       filename = parent->GetPath().parent_path();
+            filename /= "textures" / payload_data.filename();
+
+            // update the texture name
+            texture->SetFileName(filename);
+
+            // TODO: do we want this??
+#if 0
+            // add the file to the parent archive
+            const auto archive = parent->GetParentArchive();
+            if (archive) {
+                archive->AddFile(filename, texture->GetBuffer());
+            }
+#endif
         }
     }
     ImGui::EndGroup();

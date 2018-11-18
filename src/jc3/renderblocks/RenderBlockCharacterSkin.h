@@ -423,7 +423,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
         IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
     }
 
-    virtual void DrawUI() override final
+    virtual void DrawContextMenu() override final
     {
         // clang-format off
         static std::array flag_labels = {
@@ -432,9 +432,12 @@ class RenderBlockCharacterSkin : public IRenderBlock
         };
         // clang-format on
 
-        ImGui::Text(ICON_FA_COGS "  Attributes");
+        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    }
 
-        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+    virtual void DrawUI() override final
+    {
+        ImGui::Text(ICON_FA_COGS "  Attributes");
 
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
 
@@ -442,18 +445,18 @@ class RenderBlockCharacterSkin : public IRenderBlock
         ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
         ImGui::Columns(3, nullptr, false);
         {
-            UI::Get()->RenderBlockTexture("DiffuseMap", m_Textures[0]);
-            UI::Get()->RenderBlockTexture("NormalMap", m_Textures[1]);
-            UI::Get()->RenderBlockTexture("PropertiesMap", m_Textures[2]);
-            UI::Get()->RenderBlockTexture("DetailDiffuseMap", m_Textures[3]);
-            UI::Get()->RenderBlockTexture("DetailNormalMap", m_Textures[4]);
+            IRenderBlock::DrawTexture("DiffuseMap", 0);
+            IRenderBlock::DrawTexture("NormalMap", 1);
+            IRenderBlock::DrawTexture("PropertiesMap", 2);
+            IRenderBlock::DrawTexture("DetailDiffuseMap", 3);
+            IRenderBlock::DrawTexture("DetailNormalMap", 4);
 
             if (m_Block.attributes.flags & USE_FEATURE_MAP) {
-                UI::Get()->RenderBlockTexture("FeatureMap", m_Textures[7]);
+                IRenderBlock::DrawTexture("FeatureMap", 7);
             }
 
             if (m_Block.attributes.flags & USE_WRINKLE_MAP) {
-                UI::Get()->RenderBlockTexture("WrinkleMap", m_Textures[8]);
+                IRenderBlock::DrawTexture("WrinkleMap", 8);
             }
         }
         ImGui::EndColumns();

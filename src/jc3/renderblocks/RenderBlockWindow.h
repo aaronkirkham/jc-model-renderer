@@ -278,18 +278,21 @@ class RenderBlockWindow : public IRenderBlock
         IRenderBlock::Draw(context);
     }
 
-    virtual void DrawUI() override final
+    virtual void DrawContextMenu() override final
     {
         // clang-format off
         static std::array flag_labels = {
-            "Enable Backface Culling",      "Simple",                       "",                             "",
+            "Enable Backface Culling",      "Is Simple",                     "",                             "",
             "",                             "",                             "",                             ""
         };
         // clang-format on
 
-        ImGui::Text(ICON_FA_COGS "  Attributes");
+        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    }
 
-        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+    virtual void DrawUI() override final
+    {
+        ImGui::Text(ICON_FA_COGS "  Attributes");
 
         ImGui::SliderFloat("Specular Gloss", &m_Block.attributes.SpecGloss, 0, 1);
         ImGui::SliderFloat("Specular Fresnel", &m_Block.attributes.SpecFresnel, 0, 1);
@@ -303,16 +306,16 @@ class RenderBlockWindow : public IRenderBlock
         ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
         ImGui::Columns(3, nullptr, false);
         {
-            UI::Get()->RenderBlockTexture("DiffuseMap", m_Textures[0]);
+            IRenderBlock::DrawTexture("DiffuseMap", 0);
 
             if (!(m_Block.attributes.flags & SIMPLE)) {
-                UI::Get()->RenderBlockTexture("NormalMap", m_Textures[1]);
-                UI::Get()->RenderBlockTexture("PropertyMap", m_Textures[2]);
+                IRenderBlock::DrawTexture("NormalMap", 1);
+                IRenderBlock::DrawTexture("PropertyMap", 2);
             }
 
             // damage
-            UI::Get()->RenderBlockTexture("DamagePointNormalMap", m_Textures[3]);
-            UI::Get()->RenderBlockTexture("DamagePointPropertyMap", m_Textures[4]);
+            IRenderBlock::DrawTexture("DamagePointNormalMap", 3);
+            IRenderBlock::DrawTexture("DamagePointPropertyMap", 4);
         }
         ImGui::EndColumns();
     }

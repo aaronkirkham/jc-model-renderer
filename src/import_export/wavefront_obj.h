@@ -200,9 +200,9 @@ class Wavefront_Obj : public IImportExporter
             const auto& textures = block->GetTextures();
 
             // only diffuse texture for now
-            out_stream << "newmtl " << textures[0]->GetPath().stem() << std::endl;
-            out_stream << "map_Kd " << textures[0]->GetPath().stem() << ".dds" << std::endl;
-            out_stream << "usemtl " << textures[0]->GetPath().stem() << std::endl;
+            out_stream << "newmtl " << textures[0]->GetFileName().stem() << std::endl;
+            out_stream << "map_Kd " << textures[0]->GetFileName().stem() << ".dds" << std::endl;
+            out_stream << "usemtl " << textures[0]->GetFileName().stem() << std::endl;
 
             out_stream << std::endl;
         }

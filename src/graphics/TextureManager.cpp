@@ -22,7 +22,7 @@ TextureManager::TextureManager()
         for (auto it = m_PreviewTextures.begin(); it != m_PreviewTextures.end();) {
             bool       open    = true;
 
-            std::string title = ICON_FA_FILE_IMAGE "  " + (*it)->GetPath().filename().string();
+            std::string title = ICON_FA_FILE_IMAGE "  " + (*it)->GetFileName().filename().string();
 
             // maintain aspect ratio
             /*ImGui::SetNextWindowSizeConstraints({128, 128}, {FLT_MAX, FLT_MAX}, [](ImGuiSizeCallbackData* data) {
@@ -46,7 +46,7 @@ TextureManager::TextureManager()
                 ImGui::Image((*it)->GetSRV(), ImVec2((float)width, (float)height));
 
                 // render context menus so we can save/export from this window
-                UI::Get()->RenderContextMenu((*it)->GetPath(), 0, CTX_TEXTURE);
+                UI::Get()->RenderContextMenu((*it)->GetFileName(), 0, CTX_TEXTURE);
             }
             ImGui::End();
 
@@ -183,7 +183,7 @@ void TextureManager::Flush()
 
 void TextureManager::Delete(std::shared_ptr<Texture> texture)
 {
-    const auto& name = texture->GetPath().string();
+    const auto& name = texture->GetFileName().string();
     const auto  key  = fnv_1_32::hash(name.c_str(), name.length());
 
     m_LastUsedTextures.erase(std::remove(m_LastUsedTextures.begin(), m_LastUsedTextures.end(), key),

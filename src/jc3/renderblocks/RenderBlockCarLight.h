@@ -339,7 +339,7 @@ class RenderBlockCarLight : public IRenderBlock
         }
     }
 
-    virtual void DrawUI() override final
+    virtual void DrawContextMenu() override final
     {
         // clang-format off
         static std::array flag_labels = {
@@ -348,9 +348,12 @@ class RenderBlockCarLight : public IRenderBlock
         };
         // clang-format on
 
-        ImGui::Text(ICON_FA_COGS "  Attributes");
+        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    }
 
-        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+    virtual void DrawUI() override final
+    {
+        ImGui::Text(ICON_FA_COGS "  Attributes");
 
         ImGui::SliderFloat("Specular Gloss", &m_Block.attributes.specularGloss, 0, 1);
         ImGui::SliderFloat("Reflectivity", &m_Block.attributes.reflectivity, 0, 1);
@@ -362,12 +365,12 @@ class RenderBlockCarLight : public IRenderBlock
         ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
         ImGui::Columns(3, nullptr, false);
         {
-            UI::Get()->RenderBlockTexture("DiffuseMap", m_Textures[0]);
-            UI::Get()->RenderBlockTexture("NormalMap", m_Textures[1]);
-            UI::Get()->RenderBlockTexture("PropertyMap", m_Textures[2]);
+            IRenderBlock::DrawTexture("DiffuseMap", 0);
+            IRenderBlock::DrawTexture("NormalMap", 1);
+            IRenderBlock::DrawTexture("PropertyMap", 2);
             // 3 unknown
-            UI::Get()->RenderBlockTexture("NormalDetailMap", m_Textures[4]);
-            UI::Get()->RenderBlockTexture("EmissiveMap", m_Textures[5]);
+            IRenderBlock::DrawTexture("NormalDetailMap", 4);
+            IRenderBlock::DrawTexture("EmissiveMap", 5);
         }
         ImGui::EndColumns();
     }

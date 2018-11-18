@@ -31,10 +31,13 @@ void Widget_ModelExplorer::Render(RenderContext_t* context)
                 std::string label(render_block->GetTypeName());
                 label.append("##" + filename + "-" + std::to_string(index));
 
-                // TODO: transparent style if disabled
-
-                //
                 const bool tree_open = ImGui::TreeNode(label.c_str());
+
+                // draw render block context menu
+                if (ImGui::BeginPopupContextItem()) {
+                    render_block->DrawContextMenu();
+                    ImGui::EndPopup();
+                }
 
                 // draw render block info
                 if (tree_open) {
@@ -66,48 +69,6 @@ void Widget_ModelExplorer::Render(RenderContext_t* context)
                     } else {
                         // draw model attributes ui
                         render_block->DrawUI();
-
-#if 0
-                        // draw model textures ui
-                        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
-                        const auto& textures = render_block->GetTextures();
-                        if (!textures.empty()) {
-                            ImGui::Columns(3, 0, false);
-
-                            for (const auto texture : textures) {
-                                const auto& filename_with_path = texture->GetPath();
-                                const auto& filename           = filename_with_path.filename();
-                                const auto  is_loaded          = texture->IsLoaded();
-                                const auto  col_width          = (ImGui::GetWindowWidth() / ImGui::GetColumnsCount());
-
-                                ImGui::BeginGroup();
-                                {
-                                    // draw the texture srv
-                                    const auto srv = is_loaded ? texture->GetSRV()
-                                                               : TextureManager::Get()->GetMissingTexture()->GetSRV();
-                                    ImGui::Image(srv, ImVec2(col_width, (col_width / aspect_ratio)));
-
-                                    // show tooltip
-                                    if (ImGui::IsItemHovered()) {
-                                        ImGui::SetTooltip(filename.string().c_str());
-                                    }
-
-                                    // open texture preview
-                                    if (is_loaded && ImGui::IsItemClicked()) {
-                                        TextureManager::Get()->PreviewTexture(texture);
-                                    }
-
-                                    // context menu
-                                    UI::Get()->RenderContextMenu(filename_with_path, ImGui::GetColumnIndex(),
-                                                                 ContextMenuFlags::CTX_TEXTURE);
-                                }
-                                ImGui::EndGroup();
-                                ImGui::NextColumn();
-                            }
-
-                            ImGui::Columns();
-                        }
-#endif
                     }
 
                     ImGui::TreePop();

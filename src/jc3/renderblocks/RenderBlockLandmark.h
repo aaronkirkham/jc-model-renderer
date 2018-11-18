@@ -230,7 +230,7 @@ class RenderBlockLandmark : public IRenderBlock
             return;
     }*/
 
-    virtual void DrawUI() override final
+    virtual void DrawContextMenu() override final
     {
         // clang-format off
         static std::array flag_labels = {
@@ -239,9 +239,12 @@ class RenderBlockLandmark : public IRenderBlock
         };
         // clang-format on
 
-        ImGui::Text(ICON_FA_COGS "  Attributes");
+        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    }
 
-        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+    virtual void DrawUI() override final
+    {
+        ImGui::Text(ICON_FA_COGS "  Attributes");
 
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.1f, 10.0f);
         ImGui::SliderFloat("Depth Bias", &m_Block.attributes.depthBias, 0.0f, 10.0f);
@@ -259,8 +262,8 @@ class RenderBlockLandmark : public IRenderBlock
         ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
         ImGui::Columns(3, nullptr, false);
         {
-            UI::Get()->RenderBlockTexture("DiffuseMap", m_Textures[0]);
-            UI::Get()->RenderBlockTexture("PropertiesMap", m_Textures[2]);
+            IRenderBlock::DrawTexture("DiffuseMap", 0);
+            IRenderBlock::DrawTexture("PropertiesMap", 2);
         }
         ImGui::EndColumns();
     }

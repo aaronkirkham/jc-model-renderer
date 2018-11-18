@@ -6,15 +6,17 @@
 #include <graphics/Types.h>
 #include <graphics/UI.h>
 #include <graphics/imgui/fonts/fontawesome5_icons.h>
-#include <graphics/imgui/imgui_bitfield.h>
+#include <graphics/imgui/imgui_buttondropdown.h>
 #include <graphics/imgui/imgui_disabled.h>
 #include <jc3/Types.h>
 
+class RenderBlockModel;
 class IRenderBlock
 {
   protected:
-    bool  m_Visible       = true;
-    float m_ScaleModifier = 1.0f;
+    RenderBlockModel* m_Parent        = nullptr;
+    bool              m_Visible       = true;
+    float             m_ScaleModifier = 1.0f;
 
     VertexBuffer_t*                       m_VertexBuffer      = nullptr;
     IndexBuffer_t*                        m_IndexBuffer       = nullptr;
@@ -36,6 +38,16 @@ class IRenderBlock
         Renderer::Get()->DestroyBuffer(m_IndexBuffer);
         Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
         Renderer::Get()->DestroySamplerState(m_SamplerState);
+    }
+
+    void SetParent(RenderBlockModel* parent)
+    {
+        m_Parent = parent;
+    }
+
+    RenderBlockModel* GetParent()
+    {
+        return m_Parent;
     }
 
     virtual const char* GetTypeName()       = 0;
@@ -193,11 +205,17 @@ class IRenderBlock
         stream.write((char*)&count, sizeof(count));
 
         for (uint32_t i = 0; i < count; ++i) {
-            const auto& filename = m_Textures[i]->GetPath().generic_string();
-            const auto  length   = static_cast<uint32_t>(filename.length());
+            const auto& texture = m_Textures[i];
+            if (texture) {
+                const auto& filename = m_Textures[i]->GetFileName().generic_string();
+                const auto  length   = static_cast<uint32_t>(filename.length());
 
-            stream.write((char*)&length, sizeof(length));
-            stream.write(filename.c_str(), length);
+                stream.write((char*)&length, sizeof(length));
+                stream.write(filename.c_str(), length);
+            } else {
+                static auto ZERO = 0;
+                stream.write((char*)&ZERO, sizeof(ZERO));
+            }
         }
 
         stream.write((char*)&m_MaterialParams, sizeof(m_MaterialParams));
@@ -275,5 +293,11 @@ class IRenderBlock
         }
     }
 
-    virtual void DrawUI() = 0;
+    virtual void DrawContextMenu() = 0;
+    virtual void DrawUI()          = 0;
+
+    inline void DrawTexture(const std::string& title, uint32_t texture_slot)
+    {
+        UI::Get()->RenderBlockTexture(this, title, m_Textures[texture_slot]);
+    }
 };

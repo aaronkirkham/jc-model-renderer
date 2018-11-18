@@ -69,6 +69,11 @@ class RenderBlock___ : public IRenderBlock
             return;
     }
 
+    virtual void DrawContextMenu() override final
+    {
+        //
+    }
+
     virtual void DrawUI() override final
     {
         //

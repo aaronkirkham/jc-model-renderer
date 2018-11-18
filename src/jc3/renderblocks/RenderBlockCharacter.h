@@ -488,7 +488,7 @@ class RenderBlockCharacter : public IRenderBlock
         IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
     }
 
-    virtual void DrawUI() override final
+    virtual void DrawContextMenu() override final
     {
         // clang-format off
         static std::array flag_labels = {
@@ -497,9 +497,25 @@ class RenderBlockCharacter : public IRenderBlock
         };
         // clang-format on
 
+        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    }
+
+    virtual void DrawUI() override final
+    {
         ImGui::Text(ICON_FA_COGS "  Attributes");
 
-        ImGuiCustom::BitFieldTooltip("Flags", &m_Block.attributes.flags, flag_labels);
+        if (ImGui::RadioButton("Gear", ((m_Block.attributes.flags & BODY_PART) == GEAR))) {
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::RadioButton("Eyes", ((m_Block.attributes.flags & BODY_PART) == EYES))) {
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::RadioButton("Hair", ((m_Block.attributes.flags & BODY_PART) == HAIR))) {
+        }
 
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
 
@@ -513,32 +529,32 @@ class RenderBlockCharacter : public IRenderBlock
         {
             const auto flags = m_Block.attributes.flags;
 
-            UI::Get()->RenderBlockTexture("DiffuseMap", m_Textures[0]);
+            IRenderBlock::DrawTexture("DiffuseMap", 0);
 
             if ((flags & BODY_PART) == GEAR || (flags & BODY_PART) == HAIR) {
-                UI::Get()->RenderBlockTexture("NormalMap", m_Textures[1]);
-                UI::Get()->RenderBlockTexture("PropertiesMap", m_Textures[2]);
+                IRenderBlock::DrawTexture("NormalMap", 1);
+                IRenderBlock::DrawTexture("PropertiesMap", 2);
             }
 
             if ((flags & BODY_PART) == GEAR) {
-                UI::Get()->RenderBlockTexture("DetailDiffuseMap", m_Textures[3]);
-                UI::Get()->RenderBlockTexture("DetailNormalMap", m_Textures[4]);
+                IRenderBlock::DrawTexture("DetailDiffuseMap", 3);
+                IRenderBlock::DrawTexture("DetailNormalMap", 4);
 
                 if (m_Block.attributes.flags & USE_FEATURE_MAP) {
-                    UI::Get()->RenderBlockTexture("FeatureMap", m_Textures[5]);
+                    IRenderBlock::DrawTexture("FeatureMap", 5);
                 }
 
                 if (m_Block.attributes.flags & USE_WRINKLE_MAP) {
-                    UI::Get()->RenderBlockTexture("WrinkleMap", m_Textures[7]);
+                    IRenderBlock::DrawTexture("WrinkleMap", 7);
                 }
 
                 if (m_Block.attributes.flags & USE_CAMERA_LIGHTING) {
-                    UI::Get()->RenderBlockTexture("CameraMap", m_Textures[8]);
+                    IRenderBlock::DrawTexture("CameraMap", 8);
                 }
 
-                UI::Get()->RenderBlockTexture("MetallicMap", m_Textures[9]);
+                IRenderBlock::DrawTexture("MetallicMap", 9);
             } else if ((flags & BODY_PART) == EYES && flags & USE_EYE_REFLECTION) {
-                UI::Get()->RenderBlockTexture("ReflectionMap", m_Textures[10]);
+                IRenderBlock::DrawTexture("ReflectionMap", 10);
             }
         }
         ImGui::EndColumns();

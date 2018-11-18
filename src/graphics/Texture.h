@@ -22,8 +22,10 @@ class Texture
     void Use(uint32_t slot, SamplerState_t* sampler = nullptr);
     void UseVS(uint32_t slot);
 
+    void            SetFileName(const fs::path& filename);
+    const fs::path& GetFileName() const;
+
     bool              IsLoaded() const;
-    const fs::path&   GetPath() const;
     const uint32_t    GetHash() const;
     const glm::vec2&  GetSize() const;
     const FileBuffer& GetBuffer() const;
