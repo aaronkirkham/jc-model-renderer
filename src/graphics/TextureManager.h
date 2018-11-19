@@ -11,7 +11,6 @@ class TextureManager : public Singleton<TextureManager>
   private:
     std::unordered_map<uint32_t, std::shared_ptr<Texture>> m_Textures;
     std::vector<uint32_t>                                  m_LastUsedTextures;
-    std::unique_ptr<Texture>                               m_MissingTexture;
     std::vector<std::shared_ptr<Texture>>                  m_PreviewTextures;
 
   public:
@@ -48,10 +47,5 @@ class TextureManager : public Singleton<TextureManager>
     std::size_t GetCacheSize() const
     {
         return m_Textures.size();
-    }
-
-    Texture* GetMissingTexture()
-    {
-        return m_MissingTexture.get();
     }
 };

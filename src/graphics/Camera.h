@@ -15,7 +15,7 @@ class Camera : public Singleton<Camera>
     bool m_IsRotatingView    = false;
 
     float     m_FOV            = 45.0f;
-    float     m_NearClip       = 0.1f;
+    float     m_NearClip       = 0.001f;
     float     m_FarClip        = 10000.0f;
     glm::mat4 m_View           = glm::mat4(1);
     glm::mat4 m_Projection     = glm::mat4(1);
