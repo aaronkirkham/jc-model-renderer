@@ -10,7 +10,7 @@ import lookup3
 import json
 from pathlib import Path
 
-ROOT = os.path.dirname(os.path.dirname(os.path.realpath(sys.argv[0])))
+ROOT = os.path.dirname(os.path.realpath(sys.argv[0]))
 FILELIST_DIRECTORIES = ["archives_win64", "patch_win64", "dlc_win64/bavarium_sea_heist", "dlc_win64/bavarium_sea_heist/arc", "dlc_win64/mech_land_assault", "dlc_win64/mech_land_assault/arc", "dlc_win64/skin_flame", "dlc_win64/sky_fortress", "dlc_win64/v0300_preorder", "dlc_win64/v0604_preorder", "dlc_win64/v0805_sportmech", "dlc_win64/v0805_sportmech/arc", "dlc_win64/v1401_preorder", "dlc_win64/w142_preorder", "dlc_win64/w163_preorder", "dlc_win64/w901_scorpiongun", "dlc_win64/w901_scorpiongun/arc"]
 PATH_SORT_HIERARCHY = ["dlc_win64", "patch_win64", "archives_win64"]
 FILELIST = {}

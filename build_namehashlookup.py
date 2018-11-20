@@ -12,7 +12,7 @@ import lookup3
 import json
 from decimal import Decimal
 
-ROOT = os.path.dirname(os.path.dirname(os.path.realpath(sys.argv[0])))
+ROOT = os.path.dirname(os.path.realpath(sys.argv[0]))
 GENERATED_HASHES = "%s\\assets\\filelist\\namehashlookup_generated.txt" % ROOT
 CUSTOM_HASHES = "%s\\assets\\filelist\\namehashlookup_custom.txt" % ROOT
 OUT_PATH = "%s\\assets\\" % ROOT
