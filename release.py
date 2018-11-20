@@ -15,13 +15,9 @@ def GetCurrentVersion():
 
 VERSION = GetCurrentVersion()
 
-# build
-call(["python", "build.py"])
-
 # create the application and assets zip
 zipf = ZipFile("jc3-rbm-renderer.zip", "w")
 zipf.write("out/Release/jc3-rbm-renderer.exe", "jc3-rbm-renderer.exe")
-zipf.write("assets/missing-texture.dds")
 zipf.write("assets/shaders/carlight.fb")
 zipf.write("assets/shaders/carpaintmm.fb")
 zipf.write("assets/shaders/carpaintmm.vb")
@@ -55,11 +51,14 @@ zipf.close()
 # create the artifacts zip
 zipf = ZipFile("artifacts.zip", "w")
 zipf.write("out/Release/jc3-rbm-renderer.pdb", "jc3-rbm-renderer.pdb")
-zipf.write("out/Release/obj/imgui/imgui.pdb", "imgui.pdb")
-zipf.write("out/Release/obj/jc3-rbm-renderer/vc141.pdb", "vc141.pdb")
-zipf.write("out/Release/obj/zlib/zlib.pdb", "zlib.pdb")
+zipf.write("out/Release/imgui/imgui.pdb", "imgui.pdb")
+zipf.write("out/Release/jc3-rbm-renderer/vc141.pdb", "vc141.pdb")
+zipf.write("out/Release/zlib/zlib.pdb", "zlib.pdb")
 zipf.close()
 
-# copy output files to release directory
-os.rename("jc3-rbm-renderer.zip", "out/Release/jc3-rbm-renderer-{0}.zip".format(VERSION))
-os.rename("artifacts.zip", "out/Release/artifacts.zip")
+# create the output directory
+os.makedirs("out/bin")
+
+# copy files to output directory
+os.rename("jc3-rbm-renderer.zip", "out/bin/jc3-rbm-renderer-{0}.zip".format(VERSION))
+os.rename("artifacts.zip", "out/bin/artifacts.zip")

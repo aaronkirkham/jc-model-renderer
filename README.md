@@ -5,14 +5,13 @@ An application to preview Just Cause 3's Render Block Model files without the ne
 
 ### Build Requirements
  - Visual Studio 2017.3 or later
- - Python 2.7
  
 ### Installation
 Download a version from [releases](https://github.com/aaronkirkham/jc3-rbm-renderer/releases) __or__ build it yourself:
  - Clone this repository
- - Run `git submodule update --init --recursive`
- - Run `python configure.py`
- - Build `out/jc3-rbm-renderer.sln` in Visual Studio or Run `python build.py`
+ - Run `git submodule update --init`
+ - Run `configure.bat`
+ - Build `out/jc3-rbm-renderer.sln` in Visual Studio
  
 #### License
 Permission is hereby granted, free of charge, to any person obtaining a copy
