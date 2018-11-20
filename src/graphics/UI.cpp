@@ -189,8 +189,8 @@ void UI::Render(RenderContext_t* context)
 
         // fps counter
         {
-            char buffer[10];
-            sprintf(buffer, "%.01f fps", ImGui::GetIO().Framerate);
+            static char buffer[16];
+            sprintf_s(buffer, sizeof(buffer), "%.01f fps", ImGui::GetIO().Framerate);
 
             const auto& text_size = ImGui::CalcTextSize(buffer);
             ImGui::SameLine(ImGui::GetWindowWidth() - text_size.x - 20);
@@ -240,68 +240,79 @@ void UI::Render(RenderContext_t* context)
         ImGui::EndPopup();
     }
 
-    ImGui::SetNextWindowPos({0, m_MainMenuBarHeight});
-    ImGui::SetNextWindowSize({window_size.x - m_SidebarWidth, window_size.y - m_MainMenuBarHeight});
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0, 0});
+    // gbuffer view
+    {
+        ImGui::SetNextWindowPos({0, m_MainMenuBarHeight});
+        ImGui::SetNextWindowSize({window_size.x - m_SidebarWidth, window_size.y - m_MainMenuBarHeight});
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0, 0});
 
-    // draw scene view
-    if (ImGui::Begin("Scene", nullptr,
-                     (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
-                      | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus))) {
-        const auto& size = ImGui::GetWindowSize();
-        m_SceneWidth     = size.x;
+        const auto result =
+            ImGui::Begin("Scene", nullptr,
+                         (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
+                          | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus));
 
-        // update camera projection if needed
-        Camera::Get()->UpdateViewport({size.x, size.y});
+        ImGui::PopStyleVar();
+        if (result) {
+            const auto& size = ImGui::GetWindowSize();
+            m_SceneWidth     = size.x;
 
-        // render gbuffer texture
-        ImGui::Image(Renderer::Get()->GetGBufferSRV(m_CurrentActiveGBuffer), ImGui::GetWindowSize());
+            // update camera projection if needed
+            Camera::Get()->UpdateViewport({size.x, size.y});
 
-        // drag drop target
-        if (const auto payload = UI::Get()->GetDropPayload(DROPPAYLOAD_UNKNOWN)) {
-            FileLoader::Get()->ReadFileFromDisk(payload->data);
-        }
+            // render gbuffer texture
+            ImGui::Image(Renderer::Get()->GetGBufferSRV(m_CurrentActiveGBuffer), ImGui::GetWindowSize());
 
-        m_SceneDrawList = ImGui::GetWindowDrawList();
+            // drag drop target
+            if (const auto payload = UI::Get()->GetDropPayload(DROPPAYLOAD_UNKNOWN)) {
+                FileLoader::Get()->ReadFileFromDisk(payload->data);
+            }
 
-        // handle input
-        {
-            const auto& io        = ImGui::GetIO();
-            const auto& mouse_pos = glm::vec2(io.MousePos.x, io.MousePos.y);
+            m_SceneDrawList = ImGui::GetWindowDrawList();
 
-            // because we manually toggle the mouse down when drag/dropping from an external source, we need to check
-            // this or the camera will be moved
-            if (!UI::Get()->IsDragDropping()) {
-                // handle mouse press
-                for (int i = 0; i < 2; ++i) {
-                    if (ImGui::IsMouseDown(i)) {
-                        if (!m_SceneMouseState[i] && ImGui::IsItemHovered()) {
-                            m_SceneMouseState[i] = true;
-                            Camera::Get()->OnMousePress(i, true, mouse_pos);
+            // handle input
+            {
+                const auto& io        = ImGui::GetIO();
+                const auto& mouse_pos = glm::vec2(io.MousePos.x, io.MousePos.y);
+
+                // because we manually toggle the mouse down when drag/dropping from an external source, we need to
+                // check this or the camera will be moved
+                if (!UI::Get()->IsDragDropping()) {
+                    // handle mouse press
+                    for (int i = 0; i < 2; ++i) {
+                        if (ImGui::IsMouseDown(i)) {
+                            if (!m_SceneMouseState[i] && ImGui::IsItemHovered()) {
+                                m_SceneMouseState[i] = true;
+                                Camera::Get()->OnMousePress(i, true, mouse_pos);
+                            }
+                            // handle mouse move
+                            else if (m_SceneMouseState[i]) {
+                                Camera::Get()->OnMouseMove({-io.MouseDelta.x, -io.MouseDelta.y});
+                            }
                         }
-                        // handle mouse move
+                        // handle mouse release
                         else if (m_SceneMouseState[i]) {
-                            Camera::Get()->OnMouseMove({-io.MouseDelta.x, -io.MouseDelta.y});
+                            m_SceneMouseState[i] = false;
+                            Camera::Get()->OnMousePress(i, false, mouse_pos);
                         }
                     }
-                    // handle mouse release
-                    else if (m_SceneMouseState[i]) {
-                        m_SceneMouseState[i] = false;
-                        Camera::Get()->OnMousePress(i, false, mouse_pos);
+
+                    // handle mouse scroll
+                    if (io.MouseWheel != 0 && ImGui::IsItemHovered()) {
+                        Camera::Get()->OnMouseScroll(io.MouseWheel);
                     }
                 }
 
-                // handle mouse scroll
-                if (io.MouseWheel != 0 && ImGui::IsItemHovered()) {
-                    Camera::Get()->OnMouseScroll(io.MouseWheel);
+#if 0
+                const auto render_block = Camera::Get()->Pick(mouse_pos);
+                if (render_block) {
+                    ImGui::SetTooltip(render_block->GetFileName().c_str());
                 }
+#endif
             }
         }
 
         ImGui::End();
     }
-
-    ImGui::PopStyleVar();
 
     // file tree view
     RenderFileTreeView();
