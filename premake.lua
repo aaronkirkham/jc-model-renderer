@@ -8,6 +8,7 @@ workspace "jc3-rbm-renderer"
   cppdialect "c++17"
   characterset "MBCS"
   architecture "x64"
+  disablewarnings { "26451", "26491", "26495", "28020" }
 
   filter "configurations:Debug"
     defines { "DEBUG", "_DEBUG", "_ITERATOR_DEBUG_LEVEL=0" }
@@ -40,7 +41,7 @@ project "jc3-rbm-renderer"
     "vendor/zlib"
   }
 
-  disablewarnings { "4244", "4267" }
+  disablewarnings { "4244", "4267", "6031", "6262" }
 
 -- ImGui
 project "imgui"
