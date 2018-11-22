@@ -18,7 +18,7 @@
 // http://go.microsoft.com/fwlink/?LinkId=248929
 //--------------------------------------------------------------------------------------
 
-#include <graphics/DDSTextureLoader.h>
+#include "dds_texture_loader.h"
 
 #include <algorithm>
 #include <assert.h>

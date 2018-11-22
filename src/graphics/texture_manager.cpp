@@ -1,19 +1,20 @@
-#include <Window.h>
-#include <fnv1.h>
-#include <graphics/DDSTextureLoader.h>
-#include <graphics/Renderer.h>
-#include <graphics/TextureManager.h>
-#include <jc3/FileLoader.h>
+#include "texture_manager.h"
+#include "../fnv1.h"
+#include "../jc3/file_loader.h"
+#include "dds_texture_loader.h"
+#include "imgui/fonts/fontawesome5_icons.h"
+#include "renderer.h"
+#include "texture.h"
+#include "ui.h"
+#include "window.h"
 
-#include <graphics/imgui/fonts/fontawesome5_icons.h>
-
-#include <graphics/UI.h>
+#include <imgui.h>
 
 TextureManager::TextureManager()
 {
     Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {
         for (auto it = m_PreviewTextures.begin(); it != m_PreviewTextures.end();) {
-            bool       open    = true;
+            bool open = true;
 
             std::string title = ICON_FA_FILE_IMAGE "  " + (*it)->GetFileName().filename().string();
 
@@ -61,7 +62,7 @@ void TextureManager::Shutdown()
     m_PreviewTextures.clear();
 }
 
-std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, uint8_t flags)
+std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path& filename, uint8_t flags)
 {
     const auto& name = filename.string();
     const auto  key  = fnv_1_32::hash(name.c_str(), name.length());
@@ -100,7 +101,8 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, ui
     return nullptr;
 }
 
-std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, FileBuffer* buffer, uint8_t flags)
+std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path& filename, FileBuffer* buffer,
+                                                    uint8_t flags)
 {
     const auto& name = filename.generic_string();
     const auto  key  = fnv_1_32::hash(name.c_str(), name.length());
@@ -136,7 +138,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const fs::path& filename, Fi
     return nullptr;
 }
 
-bool TextureManager::HasTexture(const fs::path& filename)
+bool TextureManager::HasTexture(const std::filesystem::path& filename)
 {
     const auto& name = filename.string();
     const auto  key  = fnv_1_32::hash(name.c_str(), name.length());

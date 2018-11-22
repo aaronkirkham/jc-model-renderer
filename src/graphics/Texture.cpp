@@ -1,10 +1,14 @@
-#include <Window.h>
-#include <graphics/DDSTextureLoader.h>
-#include <graphics/Renderer.h>
-#include <graphics/Texture.h>
-#include <jc3/hashlittle.h>
+#include <fstream>
 
-Texture::Texture(const fs::path& filename)
+#include "texture.h"
+#include "dds_texture_loader.h"
+#include "renderer.h"
+
+#include "../window.h"
+
+#include "../jc3/hashlittle.h"
+
+Texture::Texture(const std::filesystem::path& filename)
     : m_Filename(filename)
     , m_NameHash(hashlittle(m_Filename.generic_string().c_str()))
 {
@@ -69,7 +73,7 @@ bool Texture::LoadFromBuffer(FileBuffer* buffer)
     return SUCCEEDED(result);
 }
 
-bool Texture::LoadFromFile(const fs::path& filename)
+bool Texture::LoadFromFile(const std::filesystem::path& filename)
 {
     m_Filename = filename;
 
@@ -80,7 +84,7 @@ bool Texture::LoadFromFile(const fs::path& filename)
         return false;
     }
 
-    const auto size = fs::file_size(filename);
+    const auto size = std::filesystem::file_size(filename);
 
     FileBuffer buffer;
     buffer.resize(size);
@@ -111,12 +115,12 @@ void Texture::UseVS(uint32_t slot)
     }
 }
 
-void Texture::SetFileName(const fs::path& filename)
+void Texture::SetFileName(const std::filesystem::path& filename)
 {
     m_Filename = filename;
 }
 
-const fs::path& Texture::GetFileName() const
+const std::filesystem::path& Texture::GetFileName() const
 {
     return m_Filename;
 }

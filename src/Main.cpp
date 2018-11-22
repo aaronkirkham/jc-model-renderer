@@ -1,29 +1,32 @@
-#include <Settings.h>
-#include <Window.h>
-#include <graphics/Renderer.h>
-#include <graphics/UI.h>
+#include <Windows.h>
 
 #include <DbgHelp.h>
 #include <shellapi.h>
-#include <vector>
+
+#include "settings.h"
+#include "version.h"
+#include "window.h"
+
+#include "graphics/renderer.h"
+#include "graphics/texture_manager.h"
+
+#include "jc3/file_loader.h"
+#include "jc3/formats/avalanche_archive.h"
+#include "jc3/formats/render_block_model.h"
+#include "jc3/formats/runtime_container.h"
+#include "jc3/render_block_factory.h"
+#include "jc3/renderblocks/irenderblock.h"
+
+#include "import_export/avalanche_archive.h"
+#include "import_export/ddsc.h"
+#include "import_export/import_export_manager.h"
+#include "import_export/wavefront_obj.h"
 
 #include <httplib.h>
-#include <json.hpp>
 
-#include <jc3/FileLoader.h>
-#include <jc3/RenderBlockFactory.h>
-#include <jc3/formats/AvalancheArchive.h>
-#include <jc3/formats/RenderBlockModel.h>
-#include <jc3/formats/RuntimeContainer.h>
-
-#include <import_export/AvalancheArchive.h>
-#include <import_export/DDSC.h>
-#include <import_export/ImportExportManager.h>
-#include <import_export/wavefront_obj.h>
-
-extern fs::path g_JC3Directory      = "";
-extern bool     g_DrawBoundingBoxes = true;
-extern bool     g_ShowModelLabels   = true;
+extern std::filesystem::path g_JC3Directory      = "";
+extern bool                  g_DrawBoundingBoxes = true;
+extern bool                  g_ShowModelLabels   = true;
 
 void CheckForUpdates(bool show_no_update_messagebox)
 {
@@ -34,7 +37,7 @@ void CheckForUpdates(bool show_no_update_messagebox)
             httplib::Client client("kirkh.am");
             auto            res = client.get("/jc3-rbm-renderer/latest.json");
             if (res && res->status == 200) {
-                auto data        = json::parse(res->body);
+                auto data        = nlohmann::json::parse(res->body);
                 auto version_str = data["version"].get<std::string>();
 
                 int32_t latest_version[3] = {0};
@@ -67,7 +70,7 @@ void SelectJustCause3Directory()
     // ask the user to select their jc3 directory, we can't find it!
     Window::Get()->ShowFolderSelection(
         "Please select your Just Cause 3 install folder.",
-        [&](const fs::path& selected) {
+        [&](const std::filesystem::path& selected) {
             Settings::Get()->SetValue("jc3_directory", selected.string());
             g_JC3Directory = selected;
         },
@@ -111,17 +114,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
     // folder.
 
     // is the directory invalid?
-    if (g_JC3Directory.empty() || !fs::exists(g_JC3Directory)) {
+    if (g_JC3Directory.empty() || !std::filesystem::exists(g_JC3Directory)) {
         // try find the install directory via the steam install folder
         char steam_path[MAX_PATH] = {0};
         if (ReadRegistryKeyString(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam", "SteamPath", steam_path, MAX_PATH)) {
-            g_JC3Directory = fs::path(steam_path) / "steamapps" / "common" / "Just Cause 3";
+            g_JC3Directory = std::filesystem::path(steam_path) / "steamapps" / "common" / "Just Cause 3";
 
             // TODO: Parse C:/Program Files (x86)/Steam/steamapps/libraryfolders.vdf to check all library folders for
             // the game location
 
             // if the directory exists, save the settings now
-            if (fs::exists(g_JC3Directory)) {
+            if (std::filesystem::exists(g_JC3Directory)) {
                 Settings::Get()->SetValue("jc3_directory", g_JC3Directory.string());
             }
         }
@@ -129,13 +132,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
     if (Window::Get()->Initialise(hInstance)) {
         // do we need to select the install directory manually?
-        if (g_JC3Directory.empty() || !fs::exists(g_JC3Directory)) {
+        if (g_JC3Directory.empty() || !std::filesystem::exists(g_JC3Directory)) {
             SelectJustCause3Directory();
         }
 
 #ifndef DEBUG
         // check for any updates
-        CheckForUpdates();
+        CheckForUpdates(false);
 #endif
 
 #ifdef DEBUG
@@ -148,7 +151,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 }
 
                 if (GetAsyncKeyState(VK_F2) & 1) {
-                    fs::path filename = "editor/entities/gameobjects/main_character.ee";
+                    std::filesystem::path filename = "editor/entities/gameobjects/main_character.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                         if (success) {
                             auto archive = AvalancheArchive::make(filename, data);
@@ -156,14 +159,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
                             }
 
-                            fs::path rbm = "models/jc_characters/main_characters/rico/rico_body_lod1.rbm";
+                            std::filesystem::path rbm = "models/jc_characters/main_characters/rico/rico_body_lod1.rbm";
                             RenderBlockModel::Load(rbm);
                         }
                     });
                 }
 
                 if (GetAsyncKeyState(VK_F3) & 1) {
-                    fs::path filename = "editor/entities/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13.ee";
+                    std::filesystem::path filename =
+                        "editor/entities/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                         if (success) {
                             auto archive = AvalancheArchive::make(filename, data);
@@ -171,30 +175,33 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
                             }
 
-                            fs::path rbm = "models/jc_weapons/02_two_handed/w141_rpg_uvk_13/"
-                                           "w141_rpg_uvk_13_base_body_lod1.rbm";
+                            std::filesystem::path rbm = "models/jc_weapons/02_two_handed/w141_rpg_uvk_13/"
+                                                        "w141_rpg_uvk_13_base_body_lod1.rbm";
                             RenderBlockModel::Load(rbm);
                         }
                     });
                 }
 
                 if (GetAsyncKeyState(VK_F4) & 1) {
-                    fs::path filename = "editor/entities/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/"
-                                        "v0405_car_mugello_moderncircuitracer_civilian_01.ee";
+                    std::filesystem::path filename =
+                        "editor/entities/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/"
+                        "v0405_car_mugello_moderncircuitracer_civilian_01.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                         if (success) {
                             AvalancheArchive::make(filename, data);
 
-                            fs::path rbm = "models/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/"
-                                           "moderncircuitracer_body_lod1.rbm";
+                            std::filesystem::path rbm =
+                                "models/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/"
+                                "moderncircuitracer_body_lod1.rbm";
                             RenderBlockModel::Load(rbm);
                         }
                     });
                 }
 
                 if (GetAsyncKeyState(VK_F5) & 1) {
-                    fs::path filename = "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/"
-                                        "v4602_plane_urga_fighterbomber_debug.ee";
+                    std::filesystem::path filename =
+                        "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/"
+                        "v4602_plane_urga_fighterbomber_debug.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                         if (success) {
                             auto archive = AvalancheArchive::make(filename, data);
@@ -202,8 +209,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
                             }
 
-                            fs::path epe = "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/"
-                                           "v4602_plane_urga_fighterbomber_debug.epe";
+                            std::filesystem::path epe =
+                                "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/"
+                                "v4602_plane_urga_fighterbomber_debug.epe";
                             auto rc = RuntimeContainer::get(epe.string());
 
                             if (rc) {
@@ -218,8 +226,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 }
 
                 if (GetAsyncKeyState(VK_F6) & 1) {
-                    fs::path filename = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/"
-                                        "v0803_car_na_monstertruck_civilian_01.ee";
+                    std::filesystem::path filename = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/"
+                                                     "v0803_car_na_monstertruck_civilian_01.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                         if (success) {
                             auto archive = AvalancheArchive::make(filename, data);
@@ -227,8 +235,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
                             }
 
-                            fs::path epe = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/"
-                                           "v0803_car_na_monstertruck_civilian_01.epe";
+                            std::filesystem::path epe = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/"
+                                                        "v0803_car_na_monstertruck_civilian_01.epe";
                             auto rc = RuntimeContainer::get(epe.string());
 
                             if (rc) {
@@ -243,7 +251,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 }
 
                 if (GetAsyncKeyState(VK_F7) & 1) {
-                    /*fs::path filename = "editor/entities/gameobjects/main_character.epe";
+                    /*std::filesystem::path filename = "editor/entities/gameobjects/main_character.epe";
                     RuntimeContainer::Load(filename, [&](std::shared_ptr<RuntimeContainer> rc) {
                         FileLoader::Get()->WriteRuntimeContainer(rc.get());
                     });*/
@@ -266,6 +274,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         });
                 }
 
+                if (GetAsyncKeyState(VK_F8) & 1) {
+                    auto adf =
+                        FileLoader::Get()->ReadAdf("D:/Steam/steamapps/common/Just Cause 3/Shaders_F.shader_bundle");
+                }
+
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         })
@@ -276,7 +289,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterReadCallback({".rbm"}, RenderBlockModel::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({".epe", ".blo"}, RuntimeContainer::ReadFileCallback);
-        FileLoader::Get()->RegisterReadCallback({".dds", ".ddsc", ".hmddsc"}, [&](const fs::path& filename,
+        FileLoader::Get()->RegisterReadCallback({".dds", ".ddsc", ".hmddsc"}, [&](const std::filesystem::path& filename,
                                                                                   FileBuffer data, bool external) {
             // parse the compressed texture if the file was loaded from an external source
             if (external) {
@@ -353,10 +366,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
             }
         });
 
-#if 0
-        auto adf = FileLoader::Get()->ReadAdf("D:/Steam/steamapps/common/Just Cause 3/Shaders_F.shader_bundle");
-#endif
-
         // run!
         Window::Get()->Run();
     }
@@ -380,7 +389,7 @@ LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS* exception_poin
     auto time = std::put_time(&tm, "%d-%m-%Y-%H-%M-%S");
 
     std::stringstream filename;
-    filename << fs::current_path();
+    filename << std::filesystem::current_path();
     filename << "\\" << VER_PRODUCTNAME_STR << "-" << VER_FILE_VERSION_STR << "-" << time << ".dmp";
 
     auto file = CreateFile(filename.str().c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, CREATE_ALWAYS,

@@ -1,14 +1,14 @@
 #pragma once
 
 #include <any>
+#include <filesystem>
 #include <fstream>
 #include <functional>
-#include <thread>
 
 enum ImportExportType { IE_TYPE_IMPORTER = 0, IE_TYPE_EXPORTER, IE_TYPE_BOTH };
 
-using ImportFinishedCallback       = std::function<void(bool, std::any)>;
-using ExportFinishedCallback       = std::function<void(bool)>;
+using ImportFinishedCallback = std::function<void(bool, std::any)>;
+using ExportFinishedCallback = std::function<void(bool)>;
 
 class RenderBlockModel;
 class IImportExporter
@@ -23,13 +23,14 @@ class IImportExporter
     virtual const char*              GetExportExtension() = 0;
 
     // NOTE: callback can be nullptr! remember to check this correctly in overrides of this function!
-    virtual void Import(const fs::path& filename, ImportFinishedCallback callback = {})                     = 0;
-    virtual void Export(const fs::path& filename, const fs::path& to, ExportFinishedCallback callback = {}) = 0;
+    virtual void Import(const std::filesystem::path& filename, ImportFinishedCallback callback = {}) = 0;
+    virtual void Export(const std::filesystem::path& filename, const std::filesystem::path& to,
+                        ExportFinishedCallback callback = {})                                        = 0;
 
-    bool WriteBufferToFile(const fs::path& file, const FileBuffer* buffer) noexcept
+    bool WriteBufferToFile(const std::filesystem::path& file, const FileBuffer* buffer) noexcept
     {
         // create the directories for the file
-        fs::create_directories(file.parent_path());
+        std::filesystem::create_directories(file.parent_path());
 
         // open the stream
         std::ofstream stream(file, std::ios::binary);

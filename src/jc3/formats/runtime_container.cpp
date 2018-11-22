@@ -1,9 +1,9 @@
-#include <Window.h>
-#include <glm.hpp>
-#include <jc3/FileLoader.h>
-#include <jc3/formats/RenderBlockModel.h>
-#include <jc3/formats/RuntimeContainer.h>
-#include <jc3/hashlittle.h>
+#include "runtime_container.h"
+#include "../file_loader.h"
+#include "../hashlittle.h"
+#include "../name_hash_lookup.h"
+#include "render_block_model.h"
+
 #include <misc/cpp/imgui_stdlib.h>
 
 std::recursive_mutex                                  Factory<RuntimeContainer>::InstancesMutex;
@@ -23,7 +23,7 @@ RuntimeContainerProperty::RuntimeContainerProperty(uint32_t name_hash, uint8_t t
     }
 }
 
-RuntimeContainer::RuntimeContainer(uint32_t name_hash, const fs::path& filename)
+RuntimeContainer::RuntimeContainer(uint32_t name_hash, const std::filesystem::path& filename)
     : m_NameHash(name_hash)
     , m_Filename(filename)
 {
@@ -164,7 +164,7 @@ std::vector<RuntimeContainerProperty*> RuntimeContainer::GetSortedProperties()
     return properties;
 }
 
-void RuntimeContainer::ReadFileCallback(const fs::path& filename, const FileBuffer& data, bool external)
+void RuntimeContainer::ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external)
 {
     DEBUG_LOG("RuntimeContainer::FileReadCallback");
     DEBUG_LOG(filename);
@@ -293,7 +293,7 @@ void RuntimeContainer::DrawUI(uint8_t depth)
     }
 }
 
-void RuntimeContainer::ContextMenuUI(const fs::path& filename)
+void RuntimeContainer::ContextMenuUI(const std::filesystem::path& filename)
 {
     if (ImGui::Selectable("Load models")) {
         auto rc = get(filename.string());
@@ -309,7 +309,8 @@ void RuntimeContainer::ContextMenuUI(const fs::path& filename)
     }
 }
 
-void RuntimeContainer::Load(const fs::path& filename, std::function<void(std::shared_ptr<RuntimeContainer>)> callback)
+void RuntimeContainer::Load(const std::filesystem::path&                           filename,
+                            std::function<void(std::shared_ptr<RuntimeContainer>)> callback)
 {
     FileLoader::Get()->ReadFile(filename, [&, filename, callback](bool success, FileBuffer data) {
         if (success) {

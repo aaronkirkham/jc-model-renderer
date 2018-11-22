@@ -1,9 +1,10 @@
-#include <Window.h>
-#include <fnv1.h>
-#include <graphics/Renderer.h>
-#include <graphics/ShaderManager.h>
+#include <fstream>
 
-#include <streambuf>
+#include "../fnv1.h"
+#include "../window.h"
+#include "renderer.h"
+#include "shader_manager.h"
+#include "types.h"
 
 void ShaderManager::Shutdown()
 {
@@ -27,9 +28,9 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
     }
 
 #ifdef DEBUG
-    fs::path file = "../assets/shaders/" + name + ".vb";
+    std::filesystem::path file = "../assets/shaders/" + name + ".vb";
 #else
-    fs::path file = "assets/shaders/" + name + ".vb";
+    std::filesystem::path file = "assets/shaders/" + name + ".vb";
 #endif
 
     // read
@@ -40,7 +41,7 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
         return nullptr;
     }
 
-    const auto file_size = fs::file_size(file);
+    const auto file_size = std::filesystem::file_size(file);
 
     // resize
     FileBuffer data;
@@ -83,9 +84,9 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
     }
 
 #ifdef DEBUG
-    fs::path file = "../assets/shaders/" + name + ".fb";
+    std::filesystem::path file = "../assets/shaders/" + name + ".fb";
 #else
-    fs::path file = "assets/shaders/" + name + ".fb";
+    std::filesystem::path file = "assets/shaders/" + name + ".fb";
 #endif
 
     // read
@@ -96,7 +97,7 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
         return nullptr;
     }
 
-    const auto file_size = fs::file_size(file);
+    const auto file_size = std::filesystem::file_size(file);
 
     // resize
     FileBuffer data;

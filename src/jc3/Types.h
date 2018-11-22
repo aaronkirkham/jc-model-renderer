@@ -1,7 +1,8 @@
 #pragma once
 
 #include <cstdint>
-#include <glm.hpp>
+#include <glm/glm.hpp>
+#include <dxgiformat.h>
 
 #pragma pack(push, 1)
 namespace JustCause3
@@ -516,7 +517,7 @@ namespace AvalancheDataFormat
         StringHash  = 9,
     };
 
-    enum class TypeHashes : uint32_t {
+    enum class TypeMemberHash : uint32_t {
         Int8   = 0x580D0A62,
         UInt8  = 0xCA2821D,
         Int16  = 0xD13FCF93,
@@ -567,6 +568,15 @@ namespace AvalancheDataFormat
         uint32_t           m_ElementLength;
     };
 
+    struct MemeberDefinition {
+        int64_t        m_NameIndex;
+        TypeMemberHash m_TypeHash;
+        uint32_t       m_Size;
+        uint32_t       m_Offset;
+        uint32_t       m_DefaultType;
+        uint64_t       m_DefaultValue;
+    };
+
     struct InstanceInfo {
         uint32_t m_NameHash;
         uint32_t m_TypeHash;
@@ -577,6 +587,7 @@ namespace AvalancheDataFormat
 
     static_assert(sizeof(Header) == 0x48, "AvalancheDataFormat Header alignment is wrong!");
     static_assert(sizeof(TypeDefinition) == 0x24, "AvalancheDataFormat TypeDefinition alignment is wrong!");
+    static_assert(sizeof(MemeberDefinition) == 0x20, "AvalancheDataFormat MemeberDefinition alignment is wrong!");
     static_assert(sizeof(InstanceInfo) == 0x18, "AvalancheDataFormat InstanceInfo alignment is wrong!");
 } // namespace AvalancheDataFormat
 

@@ -1,13 +1,22 @@
+#include "avalanche_archive.h"
+#include "render_block_model.h"
+
+#include "../../graphics/ui.h"
+#include "../../window.h"
+#include "../file_loader.h"
+
+#if 0
 #include <Window.h>
 #include <graphics/UI.h>
 #include <jc3/FileLoader.h>
-#include <jc3/formats/AvalancheArchive.h>
 #include <jc3/formats/RenderBlockModel.h>
+#include <jc3/formats/avalanche_archive.h>
+#endif
 
 std::recursive_mutex                                  Factory<AvalancheArchive>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<AvalancheArchive>> Factory<AvalancheArchive>::Instances;
 
-AvalancheArchive::AvalancheArchive(const fs::path& filename, const FileBuffer& buffer, bool external)
+AvalancheArchive::AvalancheArchive(const std::filesystem::path& filename, const FileBuffer& buffer, bool external)
     : m_File(filename)
 {
     // read the stream archive
@@ -21,10 +30,10 @@ AvalancheArchive::AvalancheArchive(const fs::path& filename, const FileBuffer& b
                                              m_FileList->Parse(m_StreamArchive.get());
                                          });
 
-    //UI::Get()->SwitchToTab(TAB_ARCHIVES);
+    // UI::Get()->SwitchToTab(TAB_ARCHIVES);
 }
 
-void AvalancheArchive::AddFile(const fs::path& filename, const FileBuffer& data)
+void AvalancheArchive::AddFile(const std::filesystem::path& filename, const FileBuffer& data)
 {
     assert(m_StreamArchive);
     assert(m_FileList);
@@ -39,28 +48,35 @@ void AvalancheArchive::AddFile(const fs::path& filename, const FileBuffer& data)
     m_HasUnsavedChanged = true;
 }
 
-void AvalancheArchive::AddDirectory(const fs::path& filename, const fs::path& root)
+void AvalancheArchive::AddDirectory(const std::filesystem::path& filename, const std::filesystem::path& root)
 {
     // TODO: only add files which are a supported format
     // generic textures, models, etc
 
-    if (fs::is_directory(filename)) {
-        for (const auto& f : fs::directory_iterator(filename)) {
+    if (std::filesystem::is_directory(filename)) {
+        for (const auto& f : std::filesystem::directory_iterator(filename)) {
             AddDirectory(f.path(), root);
         }
     } else {
-        // TEMP (no relative/lexically_relative in experimental::fs, but moving to ::filesystem seems to break things)
-        std::filesystem::path fn(filename);
-        std::filesystem::path r(root);
+
+        std::ifstream stream(filename, std::ios::binary);
+        if (stream.fail()) {
+            DEBUG_LOG("AvalancheArchive::AddDirectory - Failed to open stream!");
+#ifdef DEBUG
+            __debugbreak();
+#endif
+            return;
+        }
 
         // strip the root directory from the path
-        auto       name = fn.lexically_relative(r).string();
-        const auto size = fs::file_size(filename);
+        const auto& name = filename.lexically_relative(root);
+        const auto  size = std::filesystem::file_size(filename);
 
+        DEBUG_LOG(name);
+
+        // read the file buffer
         FileBuffer buffer;
         buffer.resize(size);
-        std::ifstream stream(filename, std::ios::binary);
-        assert(!stream.fail());
         stream.read((char*)buffer.data(), size);
         stream.close();
 
@@ -68,18 +84,18 @@ void AvalancheArchive::AddDirectory(const fs::path& filename, const fs::path& ro
     }
 }
 
-bool AvalancheArchive::HasFile(const fs::path& filename)
+bool AvalancheArchive::HasFile(const std::filesystem::path& filename)
 {
     assert(m_StreamArchive);
     return m_StreamArchive->HasFile(filename.generic_string());
 }
 
-void AvalancheArchive::ReadFileCallback(const fs::path& filename, const FileBuffer& data, bool external)
+void AvalancheArchive::ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external)
 {
     AvalancheArchive::make(filename, data, external);
 }
 
-bool AvalancheArchive::SaveFileCallback(const fs::path& filename, const fs::path& directory)
+bool AvalancheArchive::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& directory)
 {
     DEBUG_LOG("AvalancheArchive::SaveFileCallback");
 

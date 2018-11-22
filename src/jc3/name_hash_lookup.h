@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Window.h>
-#include <string>
-#include <unordered_map>
+#include "../window.h"
+
+#include <json.hpp>
 
 class NameHashLookup
 {
@@ -29,7 +29,7 @@ class NameHashLookup
 
                 // parse the file list json
                 auto  str        = static_cast<const char*>(LockResource(data));
-                auto& dictionary = json::parse(str);
+                auto& dictionary = nlohmann::json::parse(str);
 
                 // generate the lookup table
                 for (auto& it = dictionary.begin(); it != dictionary.end(); ++it) {

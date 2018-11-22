@@ -1,6 +1,7 @@
-#include <graphics/imgui/fonts/fontawesome5.h>
-#include <graphics/imgui/fonts/fontawesome5_icons.h>
-#include <graphics/imgui/fonts/roboto_medium.h>
+#include "fonts/fontawesome5.h"
+#include "fonts/fontawesome5_icons.h"
+#include "fonts/roboto_medium.h"
+
 #include <imgui.h>
 
 // https://gist.github.com/ongamex/4ee36fb23d6c527939d0f4ba72144d29

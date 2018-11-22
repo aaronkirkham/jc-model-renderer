@@ -1,11 +1,12 @@
 #pragma once
 
-#include <StdInc.h>
-#include <graphics/Texture.h>
-#include <singleton.h>
-#include <thread>
+#include <unordered_map>
+
+#include "../singleton.h"
+#include "texture.h"
 
 struct DDS_PIXELFORMAT;
+
 class TextureManager : public Singleton<TextureManager>
 {
   private:
@@ -25,11 +26,11 @@ class TextureManager : public Singleton<TextureManager>
 
     void Shutdown();
 
-    std::shared_ptr<Texture> GetTexture(const fs::path& filename, uint8_t flags = CREATE_IF_NOT_EXISTS);
-    std::shared_ptr<Texture> GetTexture(const fs::path& filename, FileBuffer* buffer,
+    std::shared_ptr<Texture> GetTexture(const std::filesystem::path& filename, uint8_t flags = CREATE_IF_NOT_EXISTS);
+    std::shared_ptr<Texture> GetTexture(const std::filesystem::path& filename, FileBuffer* buffer,
                                         uint8_t flags = CREATE_IF_NOT_EXISTS);
 
-    bool HasTexture(const fs::path& filename);
+    bool HasTexture(const std::filesystem::path& filename);
 
     void Flush();
     void Delete(std::shared_ptr<Texture> texture);

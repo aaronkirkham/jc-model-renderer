@@ -2,11 +2,14 @@
 
 #include <cstdint>
 #include <d3d11.h>
+#include <glm/glm.hpp>
 #include <vector>
+#include <filesystem>
 
 using floats_t    = std::vector<float>;
 using uint16s_t   = std::vector<uint16_t>;
-using materials_t = std::vector<fs::path>;
+using materials_t = std::vector<std::filesystem::path>;
+using FileBuffer  = std::vector<uint8_t>;
 
 class Renderer;
 struct RenderContext_t {

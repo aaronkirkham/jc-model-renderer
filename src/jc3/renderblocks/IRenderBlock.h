@@ -1,14 +1,18 @@
 #pragma once
 
-#include <graphics/Renderer.h>
-#include <graphics/ShaderManager.h>
-#include <graphics/TextureManager.h>
-#include <graphics/Types.h>
-#include <graphics/UI.h>
-#include <graphics/imgui/fonts/fontawesome5_icons.h>
-#include <graphics/imgui/imgui_buttondropdown.h>
-#include <graphics/imgui/imgui_disabled.h>
-#include <jc3/Types.h>
+#include "../../graphics/imgui/fonts/fontawesome5_icons.h"
+#include "../../graphics/imgui/imgui_buttondropdown.h"
+#include "../../graphics/imgui/imgui_disabled.h"
+#include "../../graphics/renderer.h"
+#include "../../graphics/shader_manager.h"
+#include "../../graphics/texture_manager.h"
+#include "../../graphics/types.h"
+#include "../../graphics/ui.h"
+#include "../types.h"
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 class RenderBlockModel;
 class IRenderBlock

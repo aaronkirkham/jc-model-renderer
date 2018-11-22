@@ -1,28 +1,30 @@
-#include <graphics/DDSTextureLoader.h>
-#include <graphics/TextureManager.h>
-#include <graphics/UI.h>
-#include <jc3/FileLoader.h>
-#include <jc3/RenderBlockFactory.h>
-
 #include <istream>
 #include <queue>
 #include <thread>
 
-#include <jc3/formats/AvalancheArchive.h>
-#include <jc3/formats/RenderBlockModel.h>
-#include <jc3/formats/RuntimeContainer.h>
+#include "file_loader.h"
+#include "name_hash_lookup.h"
 
-#include <import_export/ImportExportManager.h>
+#include "../graphics/dds_texture_loader.h"
+#include "../graphics/texture_manager.h"
+#include "../graphics/ui.h"
 
-#include <fnv1.h>
-#include <jc3/hashlittle.h>
+#include "../jc3/formats/avalanche_archive.h"
+#include "../jc3/formats/render_block_model.h"
+#include "../jc3/formats/runtime_container.h"
+#include "../jc3/render_block_factory.h"
+
+#include "../import_export/import_export_manager.h"
+
+#include "../fnv1.h"
+#include "hashlittle.h"
 #include <zlib.h>
 
 // Credit to gibbed for most of the file formats
 // http://gib.me
 
-extern fs::path g_JC3Directory;
-static uint64_t g_ArchiveLoadCount = 0;
+extern std::filesystem::path g_JC3Directory;
+static uint64_t              g_ArchiveLoadCount = 0;
 
 std::unordered_map<uint32_t, std::string> NameHashLookup::LookupTable;
 
@@ -46,7 +48,7 @@ FileLoader::FileLoader()
 
             // parse the file list json
             auto  str        = static_cast<const char*>(LockResource(data));
-            auto& dictionary = json::parse(str);
+            auto& dictionary = nlohmann::json::parse(str);
             m_FileList->Parse(&dictionary);
 
             // parse the dictionary
@@ -61,7 +63,7 @@ FileLoader::FileLoader()
                     paths.emplace_back(path.get<std::string>());
                 }
 
-                m_Dictionary[namehash] = std::make_pair(key, paths);
+                m_Dictionary[namehash] = std::make_pair(key, std::move(paths));
             }
         } catch (const std::exception& e) {
             DEBUG_LOG("[ERROR] FileLoader - Failed to load file list dictionary (" << e.what() << ")");
@@ -83,7 +85,7 @@ FileLoader::FileLoader()
     // TODO: move the events to a better location?
 
     // trigger the file type callbacks
-    UI::Get()->Events().FileTreeItemSelected.connect([&](const fs::path& file, AvalancheArchive* archive) {
+    UI::Get()->Events().FileTreeItemSelected.connect([&](const std::filesystem::path& file, AvalancheArchive* archive) {
         // do we have a registered callback for this file type?
         if (m_FileTypeCallbacks.find(file.extension().string()) != m_FileTypeCallbacks.end()) {
             ReadFile(file, [&, file](bool success, FileBuffer data) {
@@ -110,37 +112,38 @@ FileLoader::FileLoader()
     });
 
     // save file
-    UI::Get()->Events().SaveFileRequest.connect([&](const fs::path& file, const fs::path& directory) {
-        DEBUG_LOG("SaveFileRequest - want to save file \"" << file << "\" to \"" << directory << "\"..");
-        bool was_handled = false;
-        // try use a handler
-        if (m_SaveFileCallbacks.find(file.extension().string()) != m_SaveFileCallbacks.end()) {
-            for (const auto& fn : m_SaveFileCallbacks[file.extension().string()]) {
-                was_handled = fn(file, directory);
-            }
-        }
-
-        // no handlers, fallback to just reading the raw data
-        if (!was_handled) {
-            FileLoader::Get()->ReadFile(file, [&, file, directory](bool success, FileBuffer data) {
-                if (success) {
-                    const auto& path = directory / file.filename();
-
-                    // write the file data
-                    std::ofstream stream(path, std::ios::binary);
-                    if (!stream.fail()) {
-                        stream.write((char*)data.data(), data.size());
-                        stream.close();
-                        return;
-                    }
+    UI::Get()->Events().SaveFileRequest.connect(
+        [&](const std::filesystem::path& file, const std::filesystem::path& directory) {
+            DEBUG_LOG("SaveFileRequest - want to save file \"" << file << "\" to \"" << directory << "\"..");
+            bool was_handled = false;
+            // try use a handler
+            if (m_SaveFileCallbacks.find(file.extension().string()) != m_SaveFileCallbacks.end()) {
+                for (const auto& fn : m_SaveFileCallbacks[file.extension().string()]) {
+                    was_handled = fn(file, directory);
                 }
+            }
 
-                DEBUG_LOG("[ERROR] FileLoader (SaveFileRequest) - Failed to save \"" + file.filename().string()
-                          + "\".");
-                Window::Get()->ShowMessageBox("Failed to save \"" + file.filename().string() + "\".");
-            });
-        }
-    });
+            // no handlers, fallback to just reading the raw data
+            if (!was_handled) {
+                FileLoader::Get()->ReadFile(file, [&, file, directory](bool success, FileBuffer data) {
+                    if (success) {
+                        const auto& path = directory / file.filename();
+
+                        // write the file data
+                        std::ofstream stream(path, std::ios::binary);
+                        if (!stream.fail()) {
+                            stream.write((char*)data.data(), data.size());
+                            stream.close();
+                            return;
+                        }
+                    }
+
+                    DEBUG_LOG("[ERROR] FileLoader (SaveFileRequest) - Failed to save \"" + file.filename().string()
+                              + "\".");
+                    Window::Get()->ShowMessageBox("Failed to save \"" + file.filename().string() + "\".");
+                });
+            }
+        });
 
     // import file
     UI::Get()->Events().ImportFileRequest.connect([&](IImportExporter* importer, ImportFinishedCallback callback) {
@@ -151,7 +154,7 @@ FileLoader::FileLoader()
         filter.push_back('\0');
 
         Window::Get()->ShowFileSelection(
-            "Select a file to import", filter, [&, importer, callback](const fs::path& selected) {
+            "Select a file to import", filter, [&, importer, callback](const std::filesystem::path& selected) {
                 DEBUG_LOG("ImportFileRequest - want to import file " << selected);
 
                 std::thread([&, importer, selected, callback] { importer->Import(selected, callback); }).detach();
@@ -159,9 +162,9 @@ FileLoader::FileLoader()
     });
 
     // export file
-    UI::Get()->Events().ExportFileRequest.connect([&](const fs::path& file, IImportExporter* exporter) {
+    UI::Get()->Events().ExportFileRequest.connect([&](const std::filesystem::path& file, IImportExporter* exporter) {
         Window::Get()->ShowFolderSelection(
-            "Select a folder to export the file to.", [&, file, exporter](const fs::path& selected) {
+            "Select a folder to export the file to.", [&, file, exporter](const std::filesystem::path& selected) {
                 DEBUG_LOG("ExportFileRequest - want to export file '" << file << "' to '" << selected << "'");
 
                 auto _exporter = exporter;
@@ -178,8 +181,8 @@ FileLoader::FileLoader()
 
                 // if we have a valid exporter, read the file and export it
                 if (_exporter) {
-                    std::string status_text = "Exporting \"" + file.generic_string() + "\"...";
-                    const auto status_text_id = UI::Get()->PushStatusText(status_text);
+                    std::string status_text    = "Exporting \"" + file.generic_string() + "\"...";
+                    const auto  status_text_id = UI::Get()->PushStatusText(status_text);
 
                     std::thread([&, file, selected, status_text_id] {
                         _exporter->Export(file, selected, [&, file, status_text_id](bool success) {
@@ -198,13 +201,13 @@ FileLoader::FileLoader()
     });
 }
 
-void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback, uint8_t flags) noexcept
+void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileCallback callback, uint8_t flags) noexcept
 {
     uint64_t status_text_id = 0;
 
     if (!UseBatches) {
         std::string status_text = "Reading \"" + filename.generic_string() + "\"...";
-        status_text_id = UI::Get()->PushStatusText(status_text);
+        status_text_id          = UI::Get()->PushStatusText(status_text);
     }
 
     // are we trying to load textures?
@@ -261,7 +264,7 @@ void FileLoader::ReadFile(const fs::path& filename, ReadFileCallback callback, u
         .detach();
 }
 
-void FileLoader::ReadFileBatched(const fs::path& filename, ReadFileCallback callback) noexcept
+void FileLoader::ReadFileBatched(const std::filesystem::path& filename, ReadFileCallback callback) noexcept
 {
     std::lock_guard<std::recursive_mutex> _lk{m_BatchesMutex};
     m_PathBatches[filename.string()].emplace_back(callback);
@@ -314,7 +317,7 @@ void FileLoader::RunFileBatches() noexcept
             const auto& tab_file = g_JC3Directory / directory / (archive + ".tab");
 
             // if the arc/tab files don't exist, get out now
-            if (!fs::exists(tab_file) || !fs::exists(arc_file)) {
+            if (!std::filesystem::exists(tab_file) || !std::filesystem::exists(arc_file)) {
                 DEBUG_LOG("FileLoader::RunFileBatches - can't find .arc/.tab file (jc3: "
                           << g_JC3Directory << ", dir: " << directory << ", archive: " << archive << ")");
                 continue;
@@ -381,13 +384,13 @@ void FileLoader::RunFileBatches() noexcept
         .detach();
 }
 
-void FileLoader::ReadFileFromDisk(const fs::path& filename) noexcept
+void FileLoader::ReadFileFromDisk(const std::filesystem::path& filename) noexcept
 {
     const auto& extension = filename.extension().string();
 
     // do we have a registered callback for this file type?
     if (m_FileTypeCallbacks.find(extension) != m_FileTypeCallbacks.end()) {
-        const auto size = fs::file_size(filename);
+        const auto size = std::filesystem::file_size(filename);
 
         FileBuffer data;
         data.resize(size);
@@ -403,7 +406,8 @@ void FileLoader::ReadFileFromDisk(const fs::path& filename) noexcept
             fn(filename.filename(), data, true);
         }
     } else {
-        DEBUG_LOG("[ERROR] FileLoader (ReadFileWithTypeCallback) - Unknown file type extension \"" << filename.filename() << "\".");
+        DEBUG_LOG("[ERROR] FileLoader (ReadFileWithTypeCallback) - Unknown file type extension \""
+                  << filename.filename() << "\".");
 
         std::string error = "Unable to read the \"" + extension + "\" extension.\n\n";
         error += "Want to help? Check out our GitHub page for information on how to contribute.";
@@ -411,7 +415,8 @@ void FileLoader::ReadFileFromDisk(const fs::path& filename) noexcept
     }
 }
 
-bool FileLoader::ReadArchiveTable(const fs::path& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept
+bool FileLoader::ReadArchiveTable(const std::filesystem::path&          filename,
+                                  JustCause3::ArchiveTable::VfsArchive* output) noexcept
 {
     std::ifstream stream(filename, std::ios::binary);
     if (stream.fail()) {
@@ -520,7 +525,7 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(FileBuffer* sarc
     return result;
 }
 
-void FileLoader::ReadStreamArchive(const fs::path& filename, const FileBuffer& data, bool external_source,
+void FileLoader::ReadStreamArchive(const std::filesystem::path& filename, const FileBuffer& data, bool external_source,
                                    ReadArchiveCallback callback) noexcept
 {
     static auto read_archive = [&, filename](const FileBuffer* data,
@@ -741,7 +746,7 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
     return true;
 }
 
-void FileLoader::WriteTOC(const fs::path& filename, StreamArchive_t* archive) noexcept
+void FileLoader::WriteTOC(const std::filesystem::path& filename, StreamArchive_t* archive) noexcept
 {
     assert(archive);
 
@@ -781,7 +786,7 @@ static void DEBUG_TEXTURE_FLAGS(const JustCause3::AvalancheTexture::Header* head
     }
 }
 
-void FileLoader::ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept
+void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCallback callback) noexcept
 {
     FileLoader::Get()->ReadFile(
         filename,
@@ -1100,8 +1105,8 @@ void FileLoader::WriteRuntimeContainer(RuntimeContainer* runtime_container) noex
     }
 }
 
-std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const fs::path&   filename,
-                                                                    const FileBuffer& buffer) noexcept
+std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::filesystem::path& filename,
+                                                                    const FileBuffer&            buffer) noexcept
 {
     std::istringstream stream(std::string{(char*)buffer.data(), buffer.size()});
 
@@ -1301,21 +1306,20 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const fs::pa
     return root_container;
 }
 
-std::unique_ptr<AvalancheDataFormat> FileLoader::ReadAdf(const fs::path& filename) noexcept
+std::unique_ptr<AvalancheDataFormat> FileLoader::ReadAdf(const std::filesystem::path& filename) noexcept
 {
-    if (!fs::exists(filename)) {
+    if (!std::filesystem::exists(filename)) {
         DEBUG_LOG("FileLoader::ReadAdf - Input file doesn't exist");
         return nullptr;
     }
 
-    std::ifstream stream(filename, std::ios::binary | std::ios::ate);
+    std::ifstream stream(filename, std::ios::binary);
     if (stream.fail()) {
         DEBUG_LOG("FileLoader::ReadAdf - Failed to open stream");
         return nullptr;
     }
 
-    auto size = stream.tellg();
-    stream.seekg(std::ios::beg);
+    const auto size = std::filesystem::file_size(filename);
 
     FileBuffer data;
     data.resize(size);
@@ -1331,7 +1335,7 @@ std::unique_ptr<AvalancheDataFormat> FileLoader::ReadAdf(const fs::path& filenam
 }
 
 std::tuple<StreamArchive_t*, StreamArchiveEntry_t>
-FileLoader::GetStreamArchiveFromFile(const fs::path& file, StreamArchive_t* archive) noexcept
+FileLoader::GetStreamArchiveFromFile(const std::filesystem::path& file, StreamArchive_t* archive) noexcept
 {
     if (archive) {
         for (const auto& entry : archive->m_Files) {
@@ -1368,7 +1372,7 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
     DEBUG_LOG(arc_file);
 
     // ensure the arc/tab file exists
-    if (!fs::exists(tab_file) || !fs::exists(arc_file)) {
+    if (!std::filesystem::exists(tab_file) || !std::filesystem::exists(arc_file)) {
         DEBUG_LOG("FileLoader::ReadFileFromArchive - Can't find .arc/.tab file");
         return false;
     }
@@ -1411,7 +1415,7 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
     return false;
 }
 
-DictionaryLookupResult FileLoader::LocateFileInDictionary(const fs::path& filename) noexcept
+DictionaryLookupResult FileLoader::LocateFileInDictionary(const std::filesystem::path& filename) noexcept
 {
     const auto& _filename = filename.generic_string();
     auto        _namehash = hashlittle(_filename.c_str());
@@ -1429,17 +1433,18 @@ DictionaryLookupResult FileLoader::LocateFileInDictionary(const fs::path& filena
     return {path.substr(0, pos), path.substr(pos + 1, path.length()), file.first};
 }
 
-DictionaryLookupResult FileLoader::LocateFileInDictionaryByPartOfName(const fs::path& filename) noexcept
+DictionaryLookupResult FileLoader::LocateFileInDictionaryByPartOfName(const std::filesystem::path& filename) noexcept
 {
     const auto& _filename = filename.generic_string();
 
-    auto it = std::find_if(m_Dictionary.begin(), m_Dictionary.end(),
-                           [&](const std::pair<uint32_t, std::pair<fs::path, std::vector<std::string>>>& item) {
-                               const auto& item_fn = item.second.first;
-                               return item_fn == _filename
-                                      || (item_fn.generic_string().find(_filename) != std::string::npos
-                                          && item_fn.extension() == filename.extension());
-                           });
+    auto it =
+        std::find_if(m_Dictionary.begin(), m_Dictionary.end(),
+                     [&](const std::pair<uint32_t, std::pair<std::filesystem::path, std::vector<std::string>>>& item) {
+                         const auto& item_fn = item.second.first;
+                         return item_fn == _filename
+                                || (item_fn.generic_string().find(_filename) != std::string::npos
+                                    && item_fn.extension() == filename.extension());
+                     });
 
     if (it == m_Dictionary.end()) {
         return {};

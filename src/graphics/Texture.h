@@ -1,29 +1,33 @@
 #pragma once
 
-#include <StdInc.h>
+#include <filesystem>
+
+#include "types.h"
 
 struct SamplerState_t;
+
 class Texture
 {
   private:
     ID3D11Resource*           m_Texture  = nullptr;
     ID3D11ShaderResourceView* m_SRV      = nullptr;
-    fs::path                  m_Filename = "";
+    std::filesystem::path     m_Filename = "";
     uint32_t                  m_NameHash = 0;
     glm::vec2                 m_Size     = glm::vec2(0);
     FileBuffer                m_Buffer;
 
   public:
-    Texture(const fs::path& filename);
+    Texture(const std::filesystem::path& filename);
     virtual ~Texture();
 
     bool LoadFromBuffer(FileBuffer* buffer);
-    bool LoadFromFile(const fs::path& filename);
+    bool LoadFromFile(const std::filesystem::path& filename);
+
     void Use(uint32_t slot, SamplerState_t* sampler = nullptr);
     void UseVS(uint32_t slot);
 
-    void            SetFileName(const fs::path& filename);
-    const fs::path& GetFileName() const;
+    void                         SetFileName(const std::filesystem::path& filename);
+    const std::filesystem::path& GetFileName() const;
 
     bool              IsLoaded() const;
     const uint32_t    GetHash() const;

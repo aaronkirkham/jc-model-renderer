@@ -1,8 +1,10 @@
 #pragma once
 
-#include <import_export/IImportExporter.h>
-#include <singleton.h>
+#include <algorithm>
 #include <vector>
+
+#include "iimportexporter.h"
+#include "../singleton.h"
 
 class ImportExportManager : public Singleton<ImportExportManager>
 {

@@ -1,6 +1,10 @@
 #pragma once
 
-#include "IImportExporter.h"
+#include "iimportexporter.h"
+
+#include "../window.h"
+
+#include "../jc3/file_loader.h"
 
 namespace import_export
 {
@@ -31,12 +35,13 @@ class DDSC : public IImportExporter
         return ".dds";
     }
 
-    void Import(const fs::path& filename, ImportFinishedCallback callback) override final
+    void Import(const std::filesystem::path& filename, ImportFinishedCallback callback) override final
     {
         //
     }
 
-    void Export(const fs::path& filename, const fs::path& to, ExportFinishedCallback callback) override final
+    void Export(const std::filesystem::path& filename, const std::filesystem::path& to,
+                ExportFinishedCallback callback) override final
     {
         auto& path = to / filename.stem();
         path += GetExportExtension();

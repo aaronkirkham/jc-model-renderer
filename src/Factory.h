@@ -1,8 +1,10 @@
 #pragma once
 
-#include <fnv1.h>
 #include <map>
-#include <memory.h>
+#include <memory>
+#include <mutex>
+
+#include "fnv1.h"
 
 template <typename T> class Factory
 {

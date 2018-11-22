@@ -1,6 +1,11 @@
 #pragma once
 
-#include "IImportExporter.h"
+#include "iimportexporter.h"
+
+#include "../window.h"
+
+#include "../jc3/file_loader.h"
+#include "../jc3/formats/avalanche_archive.h"
 
 namespace import_export
 {
@@ -31,14 +36,14 @@ class AvalancheArchive : public IImportExporter
         return "/";
     }
 
-    void WriteArchiveFiles(const fs::path& path, ::AvalancheArchive* archive)
+    void WriteArchiveFiles(const std::filesystem::path& path, ::AvalancheArchive* archive)
     {
         assert(archive);
         assert(archive->GetStreamArchive());
 
         // create the directory if we need to
-        if (!fs::exists(path)) {
-            fs::create_directory(path);
+        if (!std::filesystem::exists(path)) {
+            std::filesystem::create_directory(path);
         }
 
         // write files
@@ -55,12 +60,13 @@ class AvalancheArchive : public IImportExporter
         }
     }
 
-    void Import(const fs::path& filename, ImportFinishedCallback callback) override final
+    void Import(const std::filesystem::path& filename, ImportFinishedCallback callback) override final
     {
         //
     }
 
-    void Export(const fs::path& filename, const fs::path& to, ExportFinishedCallback callback) override final
+    void Export(const std::filesystem::path& filename, const std::filesystem::path& to,
+                ExportFinishedCallback callback) override final
     {
         const auto& path = to / filename.stem();
         DEBUG_LOG("AvalancheArchive::Export - Exporting archive to '" << path << "'...");

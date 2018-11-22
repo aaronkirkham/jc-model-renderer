@@ -1,13 +1,13 @@
 #pragma once
 
-#include <StdInc.h>
 #include <array>
-#include <graphics/Types.h>
-#include <imgui.h>
-#include <singleton.h>
+#include <d3d11.h>
+#include <mutex>
 
-#include <examples/imgui_impl_dx11.h>
-#include <examples/imgui_impl_win32.h>
+#include "../singleton.h"
+#include "types.h"
+#include <glm/glm.hpp>
+#include <ksignals.h>
 
 #define SAFE_DELETE(ptr)                                                                                               \
     if (ptr) {                                                                                                         \

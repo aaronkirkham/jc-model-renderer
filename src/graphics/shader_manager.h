@@ -1,9 +1,11 @@
 #pragma once
 
-#include <StdInc.h>
-#include <graphics/Types.h>
-#include <singleton.h>
+#include <unordered_map>
 
+#include "../singleton.h"
+
+struct VertexShader_t;
+struct PixelShader_t;
 class ShaderManager : public Singleton<ShaderManager>
 {
   private:
@@ -15,7 +17,6 @@ class ShaderManager : public Singleton<ShaderManager>
     virtual ~ShaderManager() = default;
 
     void Shutdown();
-
     void Empty();
 
     std::shared_ptr<VertexShader_t> GetVertexShader(const std::string& name);

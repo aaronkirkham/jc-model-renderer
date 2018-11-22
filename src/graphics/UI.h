@@ -1,10 +1,12 @@
 #pragma once
 
-#include <StdInc.h>
-#include <memory.h>
-#include <singleton.h>
+#include <map>
+#include <array>
 
-#include <import_export/IImportExporter.h>
+#include "../import_export/IImportExporter.h"
+#include "../singleton.h"
+
+#include <ksignals.h>
 
 struct ImDrawList;
 struct BoundingBox;
@@ -14,10 +16,10 @@ class IRenderBlock;
 class AvalancheArchive;
 
 struct UIEvents {
-    ksignals::Event<void(const fs::path& file, AvalancheArchive* archive)>            FileTreeItemSelected;
-    ksignals::Event<void(const fs::path& file, const fs::path& directory)>            SaveFileRequest;
-    ksignals::Event<void(IImportExporter* importer, ImportFinishedCallback callback)> ImportFileRequest;
-    ksignals::Event<void(const fs::path& file, IImportExporter* exporter)>            ExportFileRequest;
+    ksignals::Event<void(const std::filesystem::path& file, AvalancheArchive* archive)> FileTreeItemSelected;
+    ksignals::Event<void(const std::filesystem::path& file, const std::filesystem::path& directory)> SaveFileRequest;
+    ksignals::Event<void(IImportExporter* importer, ImportFinishedCallback callback)>                ImportFileRequest;
+    ksignals::Event<void(const std::filesystem::path& file, IImportExporter* exporter)>              ExportFileRequest;
 };
 
 enum ContextMenuFlags {
@@ -42,7 +44,7 @@ struct DragDropPayload {
     const char*         data;
 };
 
-using ContextMenuCallback               = std::function<void(const fs::path& filename)>;
+using ContextMenuCallback               = std::function<void(const std::filesystem::path& filename)>;
 static constexpr auto MIN_SIDEBAR_WIDTH = 400.0f;
 
 class UI : public Singleton<UI>
@@ -77,7 +79,7 @@ class UI : public Singleton<UI>
 
     void Render(RenderContext_t* context);
     void RenderSpinner(const std::string& str);
-    void RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra = 0, uint32_t flags = 0);
+    void RenderContextMenu(const std::filesystem::path& filename, uint32_t unique_id_extra = 0, uint32_t flags = 0);
 
     void RenderBlockTexture(IRenderBlock* render_block, const std::string& title, std::shared_ptr<Texture> texture);
 

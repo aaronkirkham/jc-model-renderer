@@ -1,15 +1,14 @@
-#include <jc3/RenderBlockFactory.h>
-#include <jc3/renderblocks/RenderBlockBuildingJC3.h>
-#include <jc3/renderblocks/RenderBlockCarLight.h>
-#include <jc3/renderblocks/RenderBlockCarPaintMM.h>
-#include <jc3/renderblocks/RenderBlockCharacter.h>
-#include <jc3/renderblocks/RenderBlockCharacterSkin.h>
-#include <jc3/renderblocks/RenderBlockGeneralJC3.h>
-#include <jc3/renderblocks/RenderBlockGeneralMkIII.h>
-#include <jc3/renderblocks/RenderBlockLandmark.h>
-#include <jc3/renderblocks/RenderBlockWindow.h>
-
-#include <jc3/hashlittle.h>
+#include "render_block_factory.h"
+#include "renderblocks/renderblockbuildingjc3.h"
+#include "renderblocks/renderblockcarlight.h"
+#include "renderblocks/renderblockcarpaintmm.h"
+#include "renderblocks/renderblockcharacter.h"
+#include "renderblocks/renderblockcharacterskin.h"
+#include "renderblocks/renderblockgeneraljc3.h"
+#include "renderblocks/renderblockgeneralmkiii.h"
+#include "renderblocks/renderblocklandmark.h"
+#include "renderblocks/renderblockwindow.h"
+#include "hashlittle.h"
 
 IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type)
 {

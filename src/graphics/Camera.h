@@ -1,10 +1,12 @@
 #pragma once
 
-#include <StdInc.h>
-#include <graphics/Types.h>
+#include <glm/glm.hpp>
+#include <memory>
 #include <singleton.h>
 
+struct RenderContext_t;
 class RenderBlockModel;
+
 class Camera : public Singleton<Camera>
 {
   private:

@@ -1,7 +1,8 @@
 #pragma once
 
 #include <ShObjIdl.h>
-#include <StdInc.h>
+
+#include <chrono>
 
 class DropTarget : public IDropTarget
 {

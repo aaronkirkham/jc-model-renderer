@@ -1,32 +1,35 @@
-#include <Settings.h>
-#include <Window.h>
-#include <graphics/UI.h>
-#include <imgui.h>
-#include <json.hpp>
-
-#include <graphics/Camera.h>
-#include <graphics/imgui/fonts/fontawesome5_icons.h>
-#include <graphics/imgui/imgui_buttondropdown.h>
-#include <graphics/imgui/imgui_rotate.h>
-#include <graphics/imgui/imgui_tabscrollcontent.h>
-
-#include <Jc3/RenderBlockFactory.h>
-#include <jc3/FileLoader.h>
-#include <jc3/formats/AvalancheArchive.h>
-#include <jc3/formats/RenderBlockModel.h>
-#include <jc3/formats/RuntimeContainer.h>
-
-#include <import_export/ImportExportManager.h>
-
-#include <gtc/type_ptr.hpp>
+#include <Windows.h>
 
 #include <atomic>
 #include <shellapi.h>
 
-extern bool     g_DrawBoundingBoxes;
-extern bool     g_ShowModelLabels;
-extern fs::path g_JC3Directory;
-static bool     g_ShowAboutWindow = false;
+#include "camera.h"
+#include "imgui/fonts/fontawesome5_icons.h"
+#include "imgui/imgui_rotate.h"
+#include "imgui/imgui_tabscrollcontent.h"
+#include "renderer.h"
+#include "texture_manager.h"
+#include "ui.h"
+
+#include "../settings.h"
+#include "../version.h"
+#include "../window.h"
+
+#include "../jc3/file_loader.h"
+#include "../jc3/formats/avalanche_archive.h"
+#include "../jc3/formats/render_block_model.h"
+#include "../jc3/formats/runtime_container.h"
+#include "../jc3/renderblocks/irenderblock.h"
+
+#include "../import_export/import_export_manager.h"
+
+#include <glm/gtc/type_ptr.hpp>
+#include <imgui.h>
+
+extern bool                  g_DrawBoundingBoxes;
+extern bool                  g_ShowModelLabels;
+extern std::filesystem::path g_JC3Directory;
+static bool                  g_ShowAboutWindow = false;
 
 #ifdef DEBUG
 static bool g_CheckForUpdatesEnabled = false;
@@ -36,7 +39,7 @@ static bool g_CheckForUpdatesEnabled = true;
 
 UI::UI()
 {
-    Window::Get()->Events().DragEnter.connect([&](const fs::path& filename) {
+    Window::Get()->Events().DragEnter.connect([&](const std::filesystem::path& filename) {
         m_IsDragDrop                = true;
         m_DragDropPayload           = filename.generic_string();
         ImGui::GetIO().MouseDown[0] = true;
@@ -76,7 +79,7 @@ void UI::Render(RenderContext_t* context)
         // file
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem(ICON_FA_FOLDER "  Select JC3 path")) {
-                SelectJustCause3Directory();
+                // SelectJustCause3Directory();
             }
 
             if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit")) {
@@ -176,7 +179,7 @@ void UI::Render(RenderContext_t* context)
             }
 
             if (ImGui::MenuItem(ICON_FA_SYNC "  Check for updates", nullptr, false, g_CheckForUpdatesEnabled)) {
-                CheckForUpdates(true);
+                //CheckForUpdates(true);
             }
 
             if (ImGui::MenuItem(ICON_FA_EXTERNAL_LINK_ALT "  View on GitHub")) {
@@ -597,7 +600,7 @@ void UI::RenderSpinner(const std::string& str)
     ImGui::Text(str.c_str());
 }
 
-void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra, uint32_t flags)
+void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t unique_id_extra, uint32_t flags)
 {
     std::stringstream unique_id;
     unique_id << "context-menu-" << filename << "-" << unique_id_extra;
@@ -608,9 +611,10 @@ void UI::RenderContextMenu(const fs::path& filename, uint32_t unique_id_extra, u
     if (ImGui::BeginPopupContextItem("Context Menu")) {
         // general save file
         if (ImGui::Selectable(ICON_FA_SAVE "  Save file")) {
-            Window::Get()->ShowFolderSelection("Select a folder to save the file to.", [&](const fs::path& selected) {
-                UI::Get()->Events().SaveFileRequest(filename, selected);
-            });
+            Window::Get()->ShowFolderSelection("Select a folder to save the file to.",
+                                               [&](const std::filesystem::path& selected) {
+                                                   UI::Get()->Events().SaveFileRequest(filename, selected);
+                                               });
         }
 
 #if 0
@@ -688,7 +692,7 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
         // dragdrop payload
         if (const auto payload = UI::Get()->GetDropPayload(DROPPAYLOAD_UNKNOWN)) {
             DEBUG_LOG("DropPayload (" << title << "): " << payload->data);
-            fs::path payload_data(payload->data);
+            std::filesystem::path payload_data(payload->data);
             texture->LoadFromFile(payload->data);
 
             // generate the new file path

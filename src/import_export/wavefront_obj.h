@@ -1,6 +1,13 @@
 #pragma once
 
-#include "IImportExporter.h"
+#include "iimportexporter.h"
+
+#include "../version.h"
+#include "../window.h"
+
+#include "../jc3/file_loader.h"
+#include "../jc3/formats/render_block_model.h"
+#include "../jc3/renderblocks/irenderblock.h"
 
 template <typename T> static size_t RemoveDuplicates(std::vector<T>& vec)
 {
@@ -48,7 +55,7 @@ class Wavefront_Obj : public IImportExporter
         return ".obj";
     }
 
-    void Import(const fs::path& filename, ImportFinishedCallback callback) override final
+    void Import(const std::filesystem::path& filename, ImportFinishedCallback callback) override final
     {
         DEBUG_LOG("Wavefront_Obj::Import - Importing " << filename << "...");
 
@@ -136,7 +143,7 @@ class Wavefront_Obj : public IImportExporter
         }
 
         for (int i = 0; i < vertex_indices.size(); ++i) {
-            //auto vi = vertex_indices[i];
+            // auto vi = vertex_indices[i];
             auto ui = uv_indices[i];
             auto ni = normal_indices[i];
 
@@ -154,7 +161,7 @@ class Wavefront_Obj : public IImportExporter
         callback(true, std::make_tuple(_out_vertices, _out_uvs, _out_normals, _out_indices));
     }
 
-    void WriteModelFile(const fs::path& path, ::RenderBlockModel* model)
+    void WriteModelFile(const std::filesystem::path& path, ::RenderBlockModel* model)
     {
         assert(model);
 
@@ -169,7 +176,7 @@ class Wavefront_Obj : public IImportExporter
         for (const auto& block : model->GetRenderBlocks()) {
             out_stream << "g " << block->GetTypeName() << std::endl;
 
-            const auto & [vertices, indices, uvs] = block->GetData();
+            const auto& [vertices, indices, uvs] = block->GetData();
 
             // vertices
             for (auto i = 0; i < vertices.size(); i += 3) {
@@ -208,7 +215,8 @@ class Wavefront_Obj : public IImportExporter
         }
     }
 
-    void Export(const fs::path& filename, const fs::path& to, ExportFinishedCallback callback) override final
+    void Export(const std::filesystem::path& filename, const std::filesystem::path& to,
+                ExportFinishedCallback callback) override final
     {
         auto& path = to / filename.stem();
         path += GetExportExtension();

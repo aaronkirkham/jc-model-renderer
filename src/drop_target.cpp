@@ -1,10 +1,10 @@
-#include <DropTarget.h>
-#include <Window.h>
-#include <graphics/Renderer.h>
-
 #include <ShObjIdl.h>
 #include <shellapi.h>
 #include <shlobj.h>
+
+#include "drop_target.h"
+#include "graphics/renderer.h"
+#include "window.h"
 
 DropTarget::DropTarget(HWND hwnd)
     : m_Hwnd(hwnd)

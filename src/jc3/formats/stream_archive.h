@@ -1,7 +1,10 @@
 #pragma once
 
-#include <jc3/Types.h>
+#include <filesystem>
 #include <vector>
+
+#include "../../graphics/types.h"
+#include "../types.h"
 
 struct StreamArchiveEntry_t {
     std::string m_Filename;
@@ -10,7 +13,7 @@ struct StreamArchiveEntry_t {
 };
 
 struct StreamArchive_t {
-    fs::path                              m_Filename = "";
+    std::filesystem::path                 m_Filename = "";
     JustCause3::StreamArchive::SARCHeader m_Header;
     std::vector<uint8_t>                  m_SARCBytes;
     std::vector<StreamArchiveEntry_t>     m_Files;
@@ -22,7 +25,7 @@ struct StreamArchive_t {
         std::memcpy(m_SARCBytes.data(), &m_Header, sizeof(m_Header));
     }
 
-    StreamArchive_t(const fs::path& filename)
+    StreamArchive_t(const std::filesystem::path& filename)
     {
         m_Filename = filename;
 

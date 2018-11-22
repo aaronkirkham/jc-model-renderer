@@ -1,21 +1,23 @@
-#include <graphics/Camera.h>
-#include <graphics/Renderer.h>
-#include <graphics/ShaderManager.h>
-#include <graphics/TextureManager.h>
-#include <graphics/UI.h>
-#include <jc3/renderblocks/IRenderBlock.h>
+#include "renderer.h"
+#include "../jc3/renderblocks/irenderblock.h"
+#include "../window.h"
+#include "camera.h"
+#include "shader_manager.h"
+#include "texture_manager.h"
+#include "types.h"
+#include "ui.h"
 
-#include <Window.h>
+#include <examples/imgui_impl_dx11.h>
+#include <examples/imgui_impl_win32.h>
+#include <imgui.h>
 
-#include <gtc/type_ptr.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 void SetupImGuiStyle();
 
 Renderer::Renderer()
 {
-    Window::Get()->Events().SizeChanged.connect([this](const glm::vec2& size) {
-        SetResolution(size);
-    });
+    Window::Get()->Events().SizeChanged.connect([this](const glm::vec2& size) { SetResolution(size); });
 
     // draw render blocks
     m_RenderEvents.PreRender.connect([this](RenderContext_t* context) {

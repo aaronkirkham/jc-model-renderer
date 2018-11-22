@@ -1,7 +1,12 @@
-#include <Window.h>
-#include <graphics/Camera.h>
-#include <graphics/Renderer.h>
-#include <jc3/formats/RenderBlockModel.h>
+#include "../jc3/formats/render_block_model.h"
+#include "../window.h"
+#include "camera.h"
+#include "types.h"
+
+#include <imgui.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 static constexpr auto g_MouseSensitivity       = 0.0025f;
 static constexpr auto g_MovementSensitivity    = 0.05f;

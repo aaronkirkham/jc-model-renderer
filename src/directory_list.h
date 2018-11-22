@@ -1,13 +1,12 @@
 #pragma once
 
+#include <filesystem>
 #include <json.hpp>
-#include <memory.h>
-#include <string.h>
 
-#include <jc3/formats/StreamArchive.h>
+#include "jc3/formats/stream_archive.h"
+#include "graphics/imgui/fonts/fontawesome5_icons.h"
+#include "graphics/ui.h"
 
-#include <graphics/UI.h>
-#include <graphics/imgui/fonts/fontawesome5_icons.h>
 #include <imgui.h>
 
 static constexpr auto DIRECTORYLIST_ROOT = "zzzzz_root";
@@ -41,7 +40,7 @@ class DirectoryList
         }
     }
 
-    inline const char* GetFileTypeIcon(const fs::path& filename)
+    inline const char* GetFileTypeIcon(const std::filesystem::path& filename)
     {
         const auto& ext = filename.extension();
 
@@ -66,43 +65,24 @@ class DirectoryList
         split(filename, m_Structure);
     }
 
-    void Parse(nlohmann::json* structure, const std::vector<std::string>& include_only = {})
+    void Parse(nlohmann::json* tree)
     {
-        if (structure) {
+        if (tree) {
             m_Structure.clear();
 
-            for (auto it = structure->begin(); it != structure->end(); ++it) {
-                const auto& key = it.key();
-
-                // should we only parse specific includes?
-                if (!include_only.empty()) {
-                    for (const auto& extension : include_only) {
-                        if (key.find(extension) != std::string::npos) {
-                            split(key, m_Structure);
-                        }
-                    }
-                } else {
-                    split(key, m_Structure);
-                }
+            for (auto it = tree->begin(); it != tree->end(); ++it) {
+                split(it.key(), m_Structure);
             }
         }
     }
 
-    void Parse(StreamArchive_t* archive, const std::vector<std::string>& include_only = {})
+    void Parse(StreamArchive_t* archive)
     {
         if (archive) {
             m_Structure.clear();
 
             for (auto& file : archive->m_Files) {
-                if (!include_only.empty()) {
-                    for (auto& extension : include_only) {
-                        if (file.m_Filename.find(extension) != std::string::npos) {
-                            split(file.m_Filename, m_Structure);
-                        }
-                    }
-                } else {
-                    split(file.m_Filename, m_Structure);
-                }
+                split(file.m_Filename, m_Structure);
             }
         }
     }

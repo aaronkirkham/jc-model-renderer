@@ -1,18 +1,15 @@
-#include <jc3/FileLoader.h>
-#include <jc3/RenderBlockFactory.h>
-#include <jc3/formats/AvalancheArchive.h>
-#include <jc3/formats/RenderBlockModel.h>
-#include <jc3/formats/RuntimeContainer.h>
+#include "render_block_model.h"
+#include "avalanche_archive.h"
+#include "runtime_container.h"
 
-#include <Window.h>
+#include "../file_loader.h"
+#include "../render_block_factory.h"
+#include "../renderblocks/irenderblock.h"
 
-#include <graphics/Camera.h>
-#include <graphics/Renderer.h>
-#include <graphics/UI.h>
-#include <graphics/imgui/fonts/fontawesome5_icons.h>
-#include <imgui.h>
-
-#include <any>
+#include "../../graphics/camera.h"
+#include "../../graphics/renderer.h"
+#include "../../graphics/ui.h"
+#include "../../window.h"
 
 extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;
@@ -20,7 +17,7 @@ extern bool g_ShowModelLabels;
 std::recursive_mutex                                  Factory<RenderBlockModel>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<RenderBlockModel>> Factory<RenderBlockModel>::Instances;
 
-RenderBlockModel::RenderBlockModel(const fs::path& filename)
+RenderBlockModel::RenderBlockModel(const std::filesystem::path& filename)
     : m_Filename(filename)
 {
     // find the parent archive
@@ -186,14 +183,14 @@ void RenderBlockModel::DrawGizmos()
 
     // draw bounding boxes
     if (g_DrawBoundingBoxes) {
-        //auto mouse_pos = Input::Get()->GetMouseWorldPosition();
+        // auto mouse_pos = Input::Get()->GetMouseWorldPosition();
 
-        //Ray   ray(mouse_pos, {0, 0, 1});
-        //float distance = 0.0f;
+        // Ray   ray(mouse_pos, {0, 0, 1});
+        // float distance = 0.0f;
         // auto  intersects = m_BoundingBox.Intersect(ray, &distance);
 
-        static auto red   = glm::vec4{1, 0, 0, 1};
-        //static auto green = glm::vec4{0, 1, 0, 1};
+        static auto red = glm::vec4{1, 0, 0, 1};
+        // static auto green = glm::vec4{0, 1, 0, 1};
 
         UI::Get()->DrawBoundingBox(m_BoundingBox, red);
 
@@ -201,14 +198,14 @@ void RenderBlockModel::DrawGizmos()
     }
 }
 
-void RenderBlockModel::ReadFileCallback(const fs::path& filename, const FileBuffer& data, bool external)
+void RenderBlockModel::ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external)
 {
     auto rbm = RenderBlockModel::make(filename);
     assert(rbm);
     rbm->Parse(data);
 }
 
-bool RenderBlockModel::SaveFileCallback(const fs::path& filename, const fs::path& directory)
+bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& directory)
 {
     const auto rbm = RenderBlockModel::get(filename.string());
     if (rbm) {
@@ -246,7 +243,7 @@ bool RenderBlockModel::SaveFileCallback(const fs::path& filename, const fs::path
     return false;
 }
 
-void RenderBlockModel::ContextMenuUI(const fs::path& filename)
+void RenderBlockModel::ContextMenuUI(const std::filesystem::path& filename)
 {
 #if 0
     if (ImGui::Selectable("New Render Block (GeneralMkIII)")) {
@@ -261,7 +258,7 @@ void RenderBlockModel::ContextMenuUI(const fs::path& filename)
 #endif
 }
 
-void RenderBlockModel::Load(const fs::path& filename)
+void RenderBlockModel::Load(const std::filesystem::path& filename)
 {
     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
         if (success) {
@@ -274,7 +271,8 @@ void RenderBlockModel::Load(const fs::path& filename)
     });
 }
 
-void RenderBlockModel::LoadFromRuntimeContainer(const fs::path& filename, std::shared_ptr<RuntimeContainer> rc)
+void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&      filename,
+                                                std::shared_ptr<RuntimeContainer> rc)
 {
     assert(rc);
 
@@ -290,7 +288,7 @@ void RenderBlockModel::LoadFromRuntimeContainer(const fs::path& filename, std::s
             auto filename = std::any_cast<std::string>(name->GetValue());
             filename += "_lod1.rbm";
 
-            fs::path modelname = path;
+            std::filesystem::path modelname = path;
             modelname /= filename;
 
             DEBUG_LOG(modelname);

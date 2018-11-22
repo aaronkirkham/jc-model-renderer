@@ -1,21 +1,25 @@
 #pragma once
 
-#include <StdInc.h>
-#include <singleton.h>
+#include <filesystem>
+#include <fstream>
+
+#include "singleton.h"
+
+#include <json.hpp>
 
 class Settings : public Singleton<Settings>
 {
   private:
-    fs::path m_SettingsFile = (fs::current_path() / "settings.json");
-    json     m_Settings     = json::object();
+    std::filesystem::path m_SettingsFile = (std::filesystem::current_path() / "settings.json");
+    nlohmann::json        m_Settings     = nlohmann::json::object();
 
   public:
     Settings()
     {
-        if (fs::exists(m_SettingsFile)) {
+        if (std::filesystem::exists(m_SettingsFile)) {
             try {
                 std::ifstream settings_file(m_SettingsFile);
-                m_Settings = json::parse(settings_file);
+                m_Settings = nlohmann::json::parse(settings_file);
             } catch (...) {
             }
         }

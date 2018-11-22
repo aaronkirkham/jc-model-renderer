@@ -1,20 +1,17 @@
 #pragma once
 
-#include <StdInc.h>
-
-#include <DirectoryList.h>
-
-#include <jc3/NameHashLookup.h>
-#include <jc3/Types.h>
-#include <jc3/formats/AvalancheDataFormat.h>
-#include <jc3/formats/StreamArchive.h>
-#include <jc3/renderblocks/IRenderBlock.h>
-
 #include <functional>
 
-using ReadFileCallback       = std::function<void(bool success, FileBuffer data)>;
-using FileTypeCallback       = std::function<void(const fs::path& filename, FileBuffer data, bool external)>;
-using FileSaveCallback       = std::function<bool(const fs::path& filename, const fs::path& directory)>;
+#include "directory_list.h"
+
+#include "formats/avalanche_data_format.h"
+#include "formats/stream_archive.h"
+#include "types.h"
+
+using ReadFileCallback = std::function<void(bool success, FileBuffer data)>;
+using FileTypeCallback = std::function<void(const std::filesystem::path& filename, FileBuffer data, bool external)>;
+using FileSaveCallback =
+    std::function<bool(const std::filesystem::path& filename, const std::filesystem::path& directory)>;
 using ReadArchiveCallback    = std::function<void(std::unique_ptr<StreamArchive_t>)>;
 using DictionaryLookupResult = std::tuple<std::string, std::string, uint32_t>;
 
@@ -29,7 +26,7 @@ class FileLoader : public Singleton<FileLoader>
     std::unique_ptr<DirectoryList> m_FileList = nullptr;
 
     // file list dictionary
-    std::unordered_map<uint32_t, std::pair<fs::path, std::vector<std::string>>> m_Dictionary;
+    std::unordered_map<uint32_t, std::pair<std::filesystem::path, std::vector<std::string>>> m_Dictionary;
 
     // file types
     std::unordered_map<std::string, std::vector<FileTypeCallback>> m_FileTypeCallbacks;
@@ -48,19 +45,19 @@ class FileLoader : public Singleton<FileLoader>
     FileLoader();
     virtual ~FileLoader() = default;
 
-    void ReadFile(const fs::path& filename, ReadFileCallback callback, uint8_t flags = 0) noexcept;
-    void ReadFileBatched(const fs::path& filename, ReadFileCallback callback) noexcept;
+    void ReadFile(const std::filesystem::path& filename, ReadFileCallback callback, uint8_t flags = 0) noexcept;
+    void ReadFileBatched(const std::filesystem::path& filename, ReadFileCallback callback) noexcept;
     void RunFileBatches() noexcept;
 
-    void ReadFileFromDisk(const fs::path& filename) noexcept;
+    void ReadFileFromDisk(const std::filesystem::path& filename) noexcept;
 
     // archives
-    bool ReadArchiveTable(const fs::path& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept;
+    bool ReadArchiveTable(const std::filesystem::path& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept;
     bool ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash,
                              FileBuffer* output) noexcept;
 
     // stream archive
-    void ReadStreamArchive(const fs::path& filename, const FileBuffer& buffer, bool external_source,
+    void ReadStreamArchive(const std::filesystem::path& filename, const FileBuffer& buffer, bool external_source,
                            ReadArchiveCallback callback) noexcept;
     void CompressArchive(std::ostream& stream, JustCause3::AvalancheArchive::Header* header,
                          std::vector<JustCause3::AvalancheArchive::Chunk>* chunks) noexcept;
@@ -68,26 +65,26 @@ class FileLoader : public Singleton<FileLoader>
     bool DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept;
 
     // toc
-    void WriteTOC(const fs::path& filename, StreamArchive_t* archive) noexcept;
+    void WriteTOC(const std::filesystem::path& filename, StreamArchive_t* archive) noexcept;
 
     // textures
-    void ReadTexture(const fs::path& filename, ReadFileCallback callback) noexcept;
+    void ReadTexture(const std::filesystem::path& filename, ReadFileCallback callback) noexcept;
     bool ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) noexcept;
     void ParseHMDDSCTexture(FileBuffer* data, FileBuffer* outData) noexcept;
 
     // runtime containers
     void                              WriteRuntimeContainer(RuntimeContainer* runtime_container) noexcept;
-    std::shared_ptr<RuntimeContainer> ParseRuntimeContainer(const fs::path&   filename,
-                                                            const FileBuffer& buffer) noexcept;
+    std::shared_ptr<RuntimeContainer> ParseRuntimeContainer(const std::filesystem::path& filename,
+                                                            const FileBuffer&            buffer) noexcept;
 
     // shader bundles
-    std::unique_ptr<AvalancheDataFormat> ReadAdf(const fs::path& filename) noexcept;
+    std::unique_ptr<AvalancheDataFormat> ReadAdf(const std::filesystem::path& filename) noexcept;
 
     // stream archive caching
     std::tuple<StreamArchive_t*, StreamArchiveEntry_t>
-                           GetStreamArchiveFromFile(const fs::path& file, StreamArchive_t* archive = nullptr) noexcept;
-    DictionaryLookupResult LocateFileInDictionary(const fs::path& filename) noexcept;
-    DictionaryLookupResult LocateFileInDictionaryByPartOfName(const fs::path& filename) noexcept;
+                           GetStreamArchiveFromFile(const std::filesystem::path& file, StreamArchive_t* archive = nullptr) noexcept;
+    DictionaryLookupResult LocateFileInDictionary(const std::filesystem::path& filename) noexcept;
+    DictionaryLookupResult LocateFileInDictionaryByPartOfName(const std::filesystem::path& filename) noexcept;
 
     DirectoryList* GetDirectoryList()
     {

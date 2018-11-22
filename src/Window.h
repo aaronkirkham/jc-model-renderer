@@ -1,9 +1,12 @@
 #pragma once
 
-#include <DropTarget.h>
-#include <StdInc.h>
-#include <chrono>
-#include <singleton.h>
+#include <sstream>
+
+#include "drop_target.h"
+#include "singleton.h"
+
+#include <glm/vec2.hpp>
+#include <ksignals.h>
 
 #ifdef DEBUG
 static constexpr auto g_WindowName = "JC3 Render Block Model Renderer (DEBUG)";
@@ -23,12 +26,12 @@ static constexpr auto g_WindowName = "JC3 Render Block Model Renderer";
 #endif
 
 struct WindowEvents {
-    ksignals::Event<void(const glm::vec2& size)>    SizeChanged;
-    ksignals::Event<void()>                         FocusLost;
-    ksignals::Event<void()>                         FocusGained;
-    ksignals::Event<void(const fs::path& filename)> DragEnter;
-    ksignals::Event<void()>                         DragLeave;
-    ksignals::Event<void()>                         DragDropped;
+    ksignals::Event<void(const glm::vec2& size)>                 SizeChanged;
+    ksignals::Event<void()>                                      FocusLost;
+    ksignals::Event<void()>                                      FocusGained;
+    ksignals::Event<void(const std::filesystem::path& filename)> DragEnter;
+    ksignals::Event<void()>                                      DragLeave;
+    ksignals::Event<void()>                                      DragDropped;
 };
 
 class Window : public Singleton<Window>
@@ -82,8 +85,8 @@ class Window : public Singleton<Window>
 
     int32_t ShowMessageBox(const std::string& message, uint32_t type = MB_ICONWARNING | MB_OK);
     void    ShowFileSelection(const std::string& title, const std::string& filter,
-                              std::function<void(const fs::path&)> fn_selected);
-    void    ShowFolderSelection(const std::string& title, std::function<void(const fs::path&)> fn_selected,
+                              std::function<void(const std::filesystem::path&)> fn_selected);
+    void    ShowFolderSelection(const std::string& title, std::function<void(const std::filesystem::path&)> fn_selected,
                                 std::function<void()> fn_cancelled = {});
 
     const HWND& GetHwnd() const

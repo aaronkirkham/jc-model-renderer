@@ -1,6 +1,6 @@
 #pragma once
 
-#include <jc3/renderblocks/IRenderBlock.h>
+#include "irenderblock.h"
 
 #pragma pack(push, 1)
 struct LandmarkAttributes {

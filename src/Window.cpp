@@ -1,15 +1,17 @@
-#include <Window.h>
-#include <graphics/Renderer.h>
-
-#include <examples/imgui_impl_win32.h>
-
-#include <jc3/formats/AvalancheArchive.h>
-#include <jc3/formats/RenderBlockModel.h>
-#include <jc3/formats/RuntimeContainer.h>
-
+#include <Windows.h>
 #include <commdlg.h>
 #include <shellapi.h>
-#include <shlobj.h>
+#include <ShlObj.h>
+
+#include "graphics/renderer.h"
+#include "window.h"
+
+#include "jc3/formats/avalanche_archive.h"
+#include "jc3/formats/render_block_model.h"
+#include "jc3/formats/runtime_container.h"
+
+#include <examples/imgui_impl_win32.h>
+#include <imgui.h>
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
@@ -199,7 +201,7 @@ int32_t Window::ShowMessageBox(const std::string& message, uint32_t type)
 }
 
 void Window::ShowFileSelection(const std::string& title, const std::string& filter,
-                               std::function<void(const fs::path&)> fn_selected)
+                               std::function<void(const std::filesystem::path&)> fn_selected)
 {
     char         filename[MAX_PATH] = {0};
     OPENFILENAME ofn                = {0};
@@ -217,8 +219,9 @@ void Window::ShowFileSelection(const std::string& title, const std::string& filt
     }
 }
 
-void Window::ShowFolderSelection(const std::string& title, std::function<void(const fs::path&)> fn_selected,
-                                 std::function<void()> fn_cancelled)
+void Window::ShowFolderSelection(const std::string&                                title,
+                                 std::function<void(const std::filesystem::path&)> fn_selected,
+                                 std::function<void()>                             fn_cancelled)
 {
     TCHAR      path[MAX_PATH] = {0};
     BROWSEINFO browse_info    = {0};
