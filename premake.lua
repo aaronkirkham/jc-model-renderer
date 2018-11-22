@@ -9,6 +9,7 @@ workspace "jc3-rbm-renderer"
   characterset "MBCS"
   architecture "x64"
   disablewarnings { "26451", "26491", "26495", "28020" }
+  defines { "WIN32", "WIN32_LEAN_AND_MEAN", "_CRT_SECURE_NO_WARNINGS", "_CRT_NONSTDC_NO_DEPRECATE" }
 
   filter "configurations:Debug"
     defines { "DEBUG", "_DEBUG", "_ITERATOR_DEBUG_LEVEL=0" }
@@ -20,20 +21,14 @@ workspace "jc3-rbm-renderer"
 -- Application
 project "jc3-rbm-renderer"
   kind "WindowedApp"
-  defines {
-    "_CRT_SECURE_NO_WARNINGS",
-    "_CRT_NONSTDC_NO_DEPRECATE",
-    "WIN32",
-    "WIN32_LEAN_AND_MEAN",
-    "CPPHTTPLIB_ZLIB_SUPPORT"
-  }
+  defines "CPPHTTPLIB_ZLIB_SUPPORT"
   dependson { "imgui", "zlib" }
   links { "Advapi32", "Comdlg32", "d3d11", "D3DCompiler", "dxgi", "Gdi32", "Ole32", "Shell32", "ws2_32", "out/%{cfg.buildcfg}/imgui", "out/%{cfg.buildcfg}/zlib" }
   files { "src/assets.rc", "src/**.h", "src/**.cpp" }
 
   includedirs {
     "src",
-    "vendor/glm/glm",
+    "vendor/glm",
     "vendor/httplib",
     "vendor/imgui",
     "vendor/json/single_include/nlohmann",
@@ -65,13 +60,10 @@ project "imgui"
     "vendor/imgui/misc/cpp"
   }
 
-  filter "configurations:Debug"
-    defines "_ITERATOR_DEBUG_LEVEL=0"
-
 -- zlib
 project "zlib"
   kind "StaticLib"
-  defines { "_CRT_SECURE_NO_WARNINGS", "DEF_WBITS=-15" }
+  defines "DEF_WBITS=-15"
   files { "vendor/zlib/*.c", "vendor/zlib/*.h" }
   includedirs { "vendor/zlib" }
   disablewarnings { "4996", "4267" }
