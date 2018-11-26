@@ -17,14 +17,14 @@
 #include "../import_export/import_export_manager.h"
 
 #include "../fnv1.h"
+#include "../settings.h"
 #include "hashlittle.h"
 #include <zlib.h>
 
 // Credit to gibbed for most of the file formats
 // http://gib.me
 
-extern std::filesystem::path g_JC3Directory;
-static uint64_t              g_ArchiveLoadCount = 0;
+static uint64_t g_ArchiveLoadCount = 0;
 
 std::unordered_map<uint32_t, std::string> NameHashLookup::LookupTable;
 
@@ -66,7 +66,7 @@ FileLoader::FileLoader()
                 m_Dictionary[namehash] = std::make_pair(key, std::move(paths));
             }
         } catch (const std::exception& e) {
-            DEBUG_LOG("[ERROR] FileLoader - Failed to load file list dictionary (" << e.what() << ")");
+            LOG_ERROR("Failed to load file list dictionary. ({})", e.what());
 
             std::string error = "Failed to load file list dictionary. (";
             error += e.what();
@@ -76,8 +76,7 @@ FileLoader::FileLoader()
         }
 
         UI::Get()->PopStatusText(status_text_id);
-    })
-        .detach();
+    }).detach();
 
     // init the namehash lookup table
     NameHashLookup::Init();
@@ -94,7 +93,7 @@ FileLoader::FileLoader()
                         fn(file, data, false);
                     }
                 } else {
-                    DEBUG_LOG("[ERROR] FileLoader (FileTreeItemSelected) - Failed to load \"" << file << "\".");
+                    LOG_ERROR("(FileTreeItemSelected) Failed to load \"{}\"", file.string());
 
                     std::string error = "Failed to load \"" + file.filename().string() + "\".\n\n";
                     error += "Make sure you have selected the correct Just Cause 3 directory.";
@@ -102,8 +101,8 @@ FileLoader::FileLoader()
                 }
             });
         } else {
-            DEBUG_LOG("[ERROR] FileLoader (FileTreeItemSelected) - Unknown file type extension \""
-                      << file.extension() << "\". (" << file << ")");
+            LOG_ERROR("(FileTreeItemSelected) Unknown file type extension \"{}\" (\"{}\")", file.extension().string(),
+                      file.string());
 
             std::string error = "Unable to read the \"" + file.extension().string() + "\" extension.\n\n";
             error += "Want to help? Check out our GitHub page for information on how to contribute.";
@@ -114,7 +113,6 @@ FileLoader::FileLoader()
     // save file
     UI::Get()->Events().SaveFileRequest.connect(
         [&](const std::filesystem::path& file, const std::filesystem::path& directory) {
-            DEBUG_LOG("SaveFileRequest - want to save file \"" << file << "\" to \"" << directory << "\"..");
             bool was_handled = false;
             // try use a handler
             if (m_SaveFileCallbacks.find(file.extension().string()) != m_SaveFileCallbacks.end()) {
@@ -138,8 +136,7 @@ FileLoader::FileLoader()
                         }
                     }
 
-                    DEBUG_LOG("[ERROR] FileLoader (SaveFileRequest) - Failed to save \"" + file.filename().string()
-                              + "\".");
+                    LOG_ERROR("(SaveFileRequest) Failed to save \"{}\"", file.filename().string());
                     Window::Get()->ShowMessageBox("Failed to save \"" + file.filename().string() + "\".");
                 });
             }
@@ -155,8 +152,7 @@ FileLoader::FileLoader()
 
         Window::Get()->ShowFileSelection(
             "Select a file to import", filter, [&, importer, callback](const std::filesystem::path& selected) {
-                DEBUG_LOG("ImportFileRequest - want to import file " << selected);
-
+                LOG_INFO("(ImportFileRequest) Want to import file \"{}\"", selected.string());
                 std::thread([&, importer, selected, callback] { importer->Import(selected, callback); }).detach();
             });
     });
@@ -165,16 +161,10 @@ FileLoader::FileLoader()
     UI::Get()->Events().ExportFileRequest.connect([&](const std::filesystem::path& file, IImportExporter* exporter) {
         Window::Get()->ShowFolderSelection(
             "Select a folder to export the file to.", [&, file, exporter](const std::filesystem::path& selected) {
-                DEBUG_LOG("ExportFileRequest - want to export file '" << file << "' to '" << selected << "'");
-
                 auto _exporter = exporter;
                 if (!exporter) {
-                    DEBUG_LOG("ExportFileRequest - Finding a suitable exporter for '" << file.extension() << "'...");
-
                     const auto& exporters = ImportExportManager::Get()->GetExporters(file.extension().string());
                     if (exporters.size() > 0) {
-                        DEBUG_LOG("ExportFileRequest - Using exporter '" << exporters.at(0)->GetName() << "'");
-
                         _exporter = exporters.at(0);
                     }
                 }
@@ -189,13 +179,11 @@ FileLoader::FileLoader()
                             UI::Get()->PopStatusText(status_text_id);
 
                             if (!success) {
-                                DEBUG_LOG("[ERROR] FileLoader (ExportFileRequest) - Failed to export \""
-                                          + file.filename().string() + "\".");
+                                LOG_ERROR("(ExportFileRequest) Failed to export \"{}\"", file.filename().string());
                                 Window::Get()->ShowMessageBox("Failed to export \"" + file.filename().string() + "\".");
                             }
                         });
-                    })
-                        .detach();
+                    }).detach();
                 }
             });
     });
@@ -235,15 +223,14 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileCallbac
     }
 #ifdef DEBUG
     else if (archive && (entry.m_Offset == 0 || entry.m_Offset == -1)) {
-        DEBUG_LOG("[NOTE] FileLoader::ReadFile - \""
-                  << filename.filename()
-                  << "\" exists in archive but has been patched. Reading the patched version instead.");
+        LOG_INFO("\"{}\" exists in archive but ahs been patched. Will read the patch version instead.",
+                 filename.filename().string());
     }
 #endif
 
     // should we use file batching?
     if (UseBatches) {
-        DEBUG_LOG("FileLoader::ReadFile - Using batches for \"" << filename << "\"");
+        LOG_TRACE("Using batches for \"{}\"", filename.string());
         return ReadFileBatched(filename, callback);
     }
 
@@ -260,8 +247,7 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileCallbac
 
         UI::Get()->PopStatusText(status_text_id);
         return callback(false, {});
-    })
-        .detach();
+    }).detach();
 }
 
 void FileLoader::ReadFileBatched(const std::filesystem::path& filename, ReadFileCallback callback) noexcept
@@ -299,7 +285,7 @@ void FileLoader::RunFileBatches() noexcept
                 c += file.second.size();
             }
 
-            DEBUG_LOG("FileLoader::RunFileBatches - will read " << c << " files from \"" << batch.first << "\".");
+            LOG_INFO("Will read {} files from \"{}\"", c, batch.first);
         }
 #endif
 
@@ -313,13 +299,19 @@ void FileLoader::RunFileBatches() noexcept
             const auto& archive   = archive_path.substr(sep + 1, archive_path.length());
 
             // get the path names
-            const auto& arc_file = g_JC3Directory / directory / (archive + ".arc");
-            const auto& tab_file = g_JC3Directory / directory / (archive + ".tab");
+            std::filesystem::path jc3_directory = Settings::Get()->GetValue<std::string>("jc3_directory");
+            const auto            tab_file      = jc3_directory / directory / (archive + ".tab");
+            const auto            arc_file      = jc3_directory / directory / (archive + ".arc");
 
-            // if the arc/tab files don't exist, get out now
-            if (!std::filesystem::exists(tab_file) || !std::filesystem::exists(arc_file)) {
-                DEBUG_LOG("FileLoader::RunFileBatches - can't find .arc/.tab file (jc3: "
-                          << g_JC3Directory << ", dir: " << directory << ", archive: " << archive << ")");
+			// ensure the tab file exists
+            if (!std::filesystem::exists(tab_file)) {
+                LOG_ERROR("Can't find TAB file (\"{}\")", tab_file.string());
+                continue;
+            }
+
+            // ensure the arc file exists
+            if (!std::filesystem::exists(arc_file)) {
+                LOG_ERROR("Can't find ARC file (\"{}\")", arc_file.string());
                 continue;
             }
 
@@ -329,13 +321,13 @@ void FileLoader::RunFileBatches() noexcept
                 // open the arc file
                 std::ifstream stream(arc_file, std::ios::binary);
                 if (stream.fail()) {
-                    DEBUG_LOG("FileLoader::RunFileBatches - invalid arc file stream!");
+                    LOG_ERROR("Invalid ARC file stream!");
                     continue;
                 }
 
 #ifdef DEBUG
                 g_ArchiveLoadCount++;
-                DEBUG_LOG("[PERF] Archive load count: " << g_ArchiveLoadCount);
+                LOG_INFO("Total archive load count: {}", g_ArchiveLoadCount);
 #endif
 
                 // iterate over all the files
@@ -365,7 +357,7 @@ void FileLoader::RunFileBatches() noexcept
 
                     // have we not found the file?
                     if (!has_found_file) {
-                        DEBUG_LOG("FileLoader::RunFileBatches ERROR - didn't find \"" << file.first << "\".");
+                        LOG_ERROR("Didn't find {}", file.first);
 
                         for (const auto& callback : file.second) {
                             callback(false, {});
@@ -380,8 +372,7 @@ void FileLoader::RunFileBatches() noexcept
         // clear the batches
         m_PathBatches.clear();
         m_Batches.clear();
-    })
-        .detach();
+    }).detach();
 }
 
 void FileLoader::ReadFileFromDisk(const std::filesystem::path& filename) noexcept
@@ -406,8 +397,7 @@ void FileLoader::ReadFileFromDisk(const std::filesystem::path& filename) noexcep
             fn(filename.filename(), data, true);
         }
     } else {
-        DEBUG_LOG("[ERROR] FileLoader (ReadFileWithTypeCallback) - Unknown file type extension \""
-                  << filename.filename() << "\".");
+        LOG_ERROR("Unknown file type extension \"{}\"", filename.filename().string());
 
         std::string error = "Unable to read the \"" + extension + "\" extension.\n\n";
         error += "Want to help? Check out our GitHub page for information on how to contribute.";
@@ -420,7 +410,7 @@ bool FileLoader::ReadArchiveTable(const std::filesystem::path&          filename
 {
     std::ifstream stream(filename, std::ios::binary);
     if (stream.fail()) {
-        DEBUG_LOG("FileLoader::ReadArchiveTable - Failed to open stream");
+        LOG_ERROR("Failed to open file stream!");
         return false;
     }
 
@@ -428,7 +418,7 @@ bool FileLoader::ReadArchiveTable(const std::filesystem::path&          filename
     stream.read((char*)&header, sizeof(header));
 
     if (header.m_Magic != 0x424154) {
-        DEBUG_LOG("FileLoader::ReadArchiveTable - Invalid header magic. Input file probably isn't a TAB file.");
+        LOG_ERROR("Invalid header magic");
         return false;
     }
 
@@ -448,7 +438,7 @@ bool FileLoader::ReadArchiveTable(const std::filesystem::path&          filename
         output->m_Entries.emplace_back(entry);
     }
 
-    DEBUG_LOG("FileLoader::ReadArchiveTable - " << output->m_Entries.size() << " files in archive");
+    LOG_INFO("{} files in archive", output->m_Entries.size());
 
     stream.close();
     return true;
@@ -463,8 +453,7 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(FileBuffer* sarc
 
     // ensure the header magic is correct
     if (strncmp(header.m_Magic, "SARC", 4) != 0) {
-        DEBUG_LOG(
-            "FileLoader::ParseStreamArchive - Invalid header magic. Input file probably isn't a StreamArchive file.");
+        LOG_ERROR("Invalid header magic");
         return nullptr;
     }
 
@@ -474,7 +463,7 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(FileBuffer* sarc
 
     // read the toc header for the filelist
     if (toc_buffer) {
-        DEBUG_LOG("FileLoader::ParseStreamArchive - Using .toc buffer for archive filelist");
+        LOG_INFO("Using TOC buffer for archive filelist");
 
         std::istringstream toc_stream(std::string{(char*)toc_buffer->data(), toc_buffer->size()});
         while (static_cast<size_t>(toc_stream.tellg()) < toc_buffer->size()) {
@@ -559,9 +548,9 @@ void FileLoader::ReadStreamArchive(const std::filesystem::path& filename, const 
                      return callback(read_archive(&compressed_data, success ? &data : nullptr));
                  });
     } else {
-        std::thread(
-            [this, compressed_data = std::move(data), callback] { callback(read_archive(&compressed_data, nullptr)); })
-            .detach();
+        std::thread([this, compressed_data = std::move(data), callback] {
+            callback(read_archive(&compressed_data, nullptr));
+        }).detach();
     }
 }
 
@@ -581,8 +570,7 @@ void FileLoader::CompressArchive(std::ostream& stream, JustCause3::AvalancheArch
         auto decompressed_size = (uLong)chunk.m_UncompressedSize;
         auto compressed_size   = compressBound(decompressed_size);
 
-        DEBUG_LOG("data size: " << chunk.m_DataSize);
-        DEBUG_LOG("expected compresed size: " << chunk.m_CompressedSize);
+        LOG_INFO("m_DataSize={}, m_CompressedSize={}", chunk.m_DataSize, chunk.m_CompressedSize);
 
         FileBuffer result;
         result.reserve(compressed_size);
@@ -592,7 +580,7 @@ void FileLoader::CompressArchive(std::ostream& stream, JustCause3::AvalancheArch
         // store the compressed size
         chunk.m_CompressedSize =
             static_cast<uint32_t>(compressed_size) - 6; // remove the header and checksum from the total size
-        DEBUG_LOG("actual compressed size: " << chunk.m_CompressedSize);
+        LOG_INFO("Actual compressed size: {}", chunk.m_CompressedSize);
 
         // calculate the distance to the 16-byte boundary after we write our data
         auto pos =
@@ -601,7 +589,7 @@ void FileLoader::CompressArchive(std::ostream& stream, JustCause3::AvalancheArch
 
         // generate the data size
         chunk.m_DataSize = (JustCause3::AvalancheArchive::CHUNK_SIZE + chunk.m_CompressedSize + padding);
-        DEBUG_LOG("data size: " << chunk.m_DataSize);
+        LOG_INFO("data size: {}", chunk.m_DataSize);
 
         // write the chunk
         stream.write((char*)&chunk.m_CompressedSize, sizeof(uint32_t));
@@ -613,7 +601,7 @@ void FileLoader::CompressArchive(std::ostream& stream, JustCause3::AvalancheArch
         stream.write((char*)result.data() + 2, chunk.m_CompressedSize);
 
         // write the padding
-        DEBUG_LOG("writing " << padding << " bytes of padding...");
+        LOG_INFO("Writing {} bytes of padding", padding);
         static uint32_t PADDING_BYTE = 0x30;
         for (decltype(padding) i = 0; i < padding; ++i) {
             stream.write((char*)&PADDING_BYTE, 1);
@@ -636,10 +624,8 @@ void FileLoader::CompressArchive(std::ostream& stream, StreamArchive_t* archive)
     header.m_UncompressedBufferSize = num_chunks > 1 ? max_chunk_size : archive->m_SARCBytes.size();
     header.m_ChunkCount             = num_chunks;
 
-    DEBUG_LOG("CompressArchive");
-    DEBUG_LOG(" - m_ChunkCount=" << header.m_ChunkCount);
-    DEBUG_LOG(" - TotalUncompressedSize=" << header.m_TotalUncompressedSize);
-    DEBUG_LOG(" - UncompressedBufferSize=" << header.m_UncompressedBufferSize);
+    LOG_INFO("ChunkCount={}, TotalUncompressedSize={}, UncompressedBufferSize={}", header.m_ChunkCount,
+             header.m_TotalUncompressedSize, header.m_UncompressedBufferSize);
 
     // generate the chunks
     std::vector<JustCause3::AvalancheArchive::Chunk> chunks;
@@ -666,7 +652,7 @@ void FileLoader::CompressArchive(std::ostream& stream, StreamArchive_t* archive)
             chunk.m_BlockData        = block_data;
         }
 
-        DEBUG_LOG("AAF chunk #" << i << ", UncompressedSize=" << chunk.m_UncompressedSize);
+        LOG_INFO("AAF chunk #{}, UncompressedSize={}", i, chunk.m_UncompressedSize);
 
         chunks.emplace_back(std::move(chunk));
     }
@@ -682,15 +668,12 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
 
     // ensure the header magic is correct
     if (strncmp(header.m_Magic, "AAF", 4) != 0) {
-        DEBUG_LOG("FileLoader::DecompressArchiveFromStream - Invalid header magic. Input probably isn't an "
-                  "AvalancheArchiveFormat file.");
+        LOG_ERROR("Invalid header magic");
         return false;
     }
 
-    DEBUG_LOG("AvalancheArchiveFormat v" << header.m_Version);
-    DEBUG_LOG(" - m_ChunkCount=" << header.m_ChunkCount);
-    DEBUG_LOG(" - m_TotalUncompressedSize=" << header.m_TotalUncompressedSize);
-    DEBUG_LOG(" - m_UncompressedBufferSize=" << header.m_UncompressedBufferSize);
+    LOG_INFO("ChunkCount={}, TotalUncompressedSize={}, UncompressedBufferSize={}", header.m_ChunkCount,
+             header.m_TotalUncompressedSize, header.m_UncompressedBufferSize);
 
     output->reserve(header.m_TotalUncompressedSize);
 
@@ -705,14 +688,13 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
         stream.read((char*)&chunk.m_DataSize, sizeof(chunk.m_DataSize));
         stream.read((char*)&chunk.m_Magic, sizeof(chunk.m_Magic));
 
-        DEBUG_LOG("AAF chunk #" << i << ", CompressedSize=" << chunk.m_CompressedSize << ", UncompressedSize="
-                                << chunk.m_UncompressedSize << ", DataSize=" << chunk.m_DataSize);
+        LOG_INFO("AAF chunk #{}, CompressedSize={}, UncompressedSize={}, DataSize={}", i, chunk.m_CompressedSize,
+                 chunk.m_UncompressedSize, chunk.m_DataSize);
 
         // make sure the block magic is correct
         if (chunk.m_Magic != 0x4D415745) {
             output->shrink_to_fit();
-
-            DEBUG_LOG("FileLoader::DecompressArchiveFromStream - Invalid chunk magic.");
+            LOG_ERROR("Invalid chunk magic");
             return false;
         }
 
@@ -781,7 +763,8 @@ static void DEBUG_TEXTURE_FLAGS(const JustCause3::AvalancheTexture::Header* head
 
         ss.seekp(-2, ss.cur);
         ss << ")";
-        DEBUG_LOG(ss.str());
+		LOG_INFO(ss.str());
+
         // clang-format on
     }
 }
@@ -794,14 +777,10 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
             using namespace JustCause3;
 
             if (!success) {
-                DEBUG_LOG("ReadTexture -> failed to read \"" << filename << "\".");
-
                 // look for hmddsc
                 if (filename.extension() == ".ddsc") {
                     auto hmddsc_filename = filename;
                     hmddsc_filename.replace_extension(".hmddsc");
-
-                    DEBUG_LOG("ReadTexture -> ddsc failed. looking for \"" << hmddsc_filename << "\".");
 
                     auto cb = [&, callback](bool success, FileBuffer data) {
                         if (success) {
@@ -845,7 +824,7 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
 
             // ensure the header magic is correct
             if (texture.m_Magic != 0x58545641) {
-                DEBUG_LOG("ReadTexture -> failed to read \"" << filename << "\". (invalid magic)");
+                LOG_ERROR("Invalid header magic");
                 return callback(false, {});
             }
 
@@ -912,7 +891,7 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
                 };
 
                 if (FileLoader::UseBatches) {
-                    DEBUG_LOG("FileLoader::ReadTexture - Using batches for \"" << source_filename << "\"");
+                    LOG_INFO("Using batches for \"{}\"", source_filename.string());
                     FileLoader::Get()->ReadFileBatched(source_filename, cb);
                 } else {
                     FileLoader::Get()->ReadFile(source_filename, cb, SKIP_TEXTURE_LOADER);
@@ -944,7 +923,7 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
 
     // ensure the header magic is correct
     if (texture.m_Magic != 0x58545641) {
-        DEBUG_LOG("ParseCompressedTexture -> invalid magic");
+        LOG_ERROR("Invalid header magic");
         return false;
     }
 
@@ -1067,7 +1046,7 @@ void FileLoader::WriteRuntimeContainer(RuntimeContainer* runtime_container) noex
         // write all the properties
 #if 0
         stream.seekp(prop_data_offset);
-        DEBUG_LOG("seek to " << prop_data_offset << " to write properties...");
+		LOG_TRACE("seek to {} to write properties...", prop_data_offset);
         for (const auto& prop : properties) {
             if (prop->GetType() == PropertyType::RTPC_TYPE_INTEGER || prop->GetType() == PropertyType::RTPC_TYPE_FLOAT) {
             }
@@ -1116,12 +1095,11 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
 
     // ensure the header magic is correct
     if (strncmp(header.m_Magic, "RTPC", 4) != 0) {
-        DEBUG_LOG(
-            "FileLoader::ParseRuntimeContainer - Invalid header magic. Input probably isn't a RuntimeContainer file.");
+        LOG_ERROR("Invalid header magic");
         return nullptr;
     }
 
-    DEBUG_LOG("RuntimePropertyContainer v" << header.m_Version);
+    LOG_INFO("RTPC v{}", header.m_Version);
 
     // read the root node
     JustCause3::RuntimeContainer::Node rootNode;
@@ -1309,13 +1287,13 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
 std::unique_ptr<AvalancheDataFormat> FileLoader::ReadAdf(const std::filesystem::path& filename) noexcept
 {
     if (!std::filesystem::exists(filename)) {
-        DEBUG_LOG("FileLoader::ReadAdf - Input file doesn't exist");
+        LOG_ERROR("Input file doesn't exist!");
         return nullptr;
     }
 
     std::ifstream stream(filename, std::ios::binary);
     if (stream.fail()) {
-        DEBUG_LOG("FileLoader::ReadAdf - Failed to open stream");
+        LOG_ERROR("Failed to open file stream!");
         return nullptr;
     }
 
@@ -1363,17 +1341,19 @@ FileLoader::GetStreamArchiveFromFile(const std::filesystem::path& file, StreamAr
 bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash,
                                      FileBuffer* output) noexcept
 {
-    const auto& tab_file = g_JC3Directory / directory / (archive + ".tab");
-    const auto& arc_file = g_JC3Directory / directory / (archive + ".arc");
+	std::filesystem::path jc3_directory = Settings::Get()->GetValue<std::string>("jc3_directory");
+	const auto            tab_file      = jc3_directory / directory / (archive + ".tab");
+	const auto            arc_file      = jc3_directory / directory / (archive + ".arc");
 
-    const auto arc_hash = fnv_1_32::hash(arc_file.string().c_str(), arc_file.string().length());
+    // ensure the tab file exists
+    if (!std::filesystem::exists(tab_file)) {
+        LOG_ERROR("Can't find TAB file (\"{}\")", tab_file.string());
+        return false;
+    }
 
-    DEBUG_LOG(tab_file);
-    DEBUG_LOG(arc_file);
-
-    // ensure the arc/tab file exists
-    if (!std::filesystem::exists(tab_file) || !std::filesystem::exists(arc_file)) {
-        DEBUG_LOG("FileLoader::ReadFileFromArchive - Can't find .arc/.tab file");
+	// ensure the arc file exists
+    if (!std::filesystem::exists(arc_file)) {
+        LOG_ERROR("Can't find ARC file (\"{}\")", arc_file.string());
         return false;
     }
 
@@ -1386,18 +1366,17 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
         // locate the data for the file
         for (const auto& entry : archiveTable.m_Entries) {
             if (entry.m_NameHash == namehash) {
-                DEBUG_LOG("FileLoader::ReadFileFromArchive - Found file in archive at "
-                          << entry.m_Offset << " (size: " << entry.m_Size << " bytes)");
+                LOG_INFO("Found file in archive at {} ({} bytes)", entry.m_Offset, entry.m_Size);
 
                 // open the file stream
                 std::ifstream stream(arc_file, std::ios::binary | std::ios::ate);
                 if (stream.fail()) {
-                    DEBUG_LOG("[ERROR] FileLoader::ReadFileFromArchive - Failed to open stream");
+                    LOG_ERROR("Failed to open file stream!");
                     return false;
                 }
 
                 g_ArchiveLoadCount++;
-                DEBUG_LOG("[PERF] Archive load count: " << g_ArchiveLoadCount);
+                LOG_INFO("Current archive load count: {}", g_ArchiveLoadCount);
 
                 // TODO: caching
 

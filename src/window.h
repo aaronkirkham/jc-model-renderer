@@ -9,20 +9,25 @@
 #include <ksignals.h>
 
 #ifdef DEBUG
+#include <spdlog/spdlog.h>
+#endif
+
+#ifdef DEBUG
 static constexpr auto g_WindowName = "JC3 Render Block Model Renderer (DEBUG)";
 #else
 static constexpr auto g_WindowName = "JC3 Render Block Model Renderer";
 #endif
 
 #ifdef DEBUG
-#define DEBUG_LOG(s)                                                                                                   \
-    {                                                                                                                  \
-        std::stringstream ss_;                                                                                         \
-        ss_ << s << std::endl;                                                                                         \
-        OutputDebugString(ss_.str().c_str());                                                                          \
-    }
+#define LOG_TRACE(...) Window::Get()->GetLog()->trace("[{}] {}", __FUNCTION__, fmt::format(__VA_ARGS__))
+#define LOG_INFO(...) Window::Get()->GetLog()->info("[{}] {}", __FUNCTION__, fmt::format(__VA_ARGS__));
+#define LOG_WARN(...) Window::Get()->GetLog()->warn("[{}] {}", __FUNCTION__, fmt::format(__VA_ARGS__))
+#define LOG_ERROR(...) Window::Get()->GetLog()->error("[{}] {}", __FUNCTION__, fmt::format(__VA_ARGS__))
 #else
-#define DEBUG_LOG(s)
+#define LOG_TRACE(...)
+#define LOG_INFO(...)
+#define LOG_WARN(...)
+#define LOG_ERROR(...)
 #endif
 
 struct WindowEvents {
@@ -38,6 +43,10 @@ class Window : public Singleton<Window>
 {
   private:
     WindowEvents m_WindowEvents;
+
+#ifdef DEBUG
+    std::shared_ptr<spdlog::logger> m_Log = nullptr;
+#endif
 
     bool                                           m_Running    = true;
     HINSTANCE                                      m_Instance   = nullptr;
@@ -93,8 +102,16 @@ class Window : public Singleton<Window>
     {
         return m_Hwnd;
     }
+
     bool HasFocus() const
     {
         return (GetForegroundWindow() == m_Hwnd);
     }
+
+#ifdef DEBUG
+    spdlog::logger* GetLog()
+    {
+        return m_Log.get();
+    }
+#endif
 };

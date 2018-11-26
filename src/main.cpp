@@ -24,9 +24,8 @@
 
 #include <httplib.h>
 
-extern std::filesystem::path g_JC3Directory      = "";
-extern bool                  g_DrawBoundingBoxes = true;
-extern bool                  g_ShowModelLabels   = true;
+extern bool g_DrawBoundingBoxes = true;
+extern bool g_ShowModelLabels   = true;
 
 void CheckForUpdates(bool show_no_update_messagebox)
 {
@@ -35,10 +34,10 @@ void CheckForUpdates(bool show_no_update_messagebox)
     std::thread([show_no_update_messagebox] {
         try {
             httplib::Client client("kirkh.am");
-            auto            res = client.get("/jc3-rbm-renderer/latest.json");
+            const auto      res = client.get("/jc3-rbm-renderer/latest.json");
             if (res && res->status == 200) {
-                auto data        = nlohmann::json::parse(res->body);
-                auto version_str = data["version"].get<std::string>();
+                const auto& data        = nlohmann::json::parse(res->body);
+                const auto& version_str = data["version"].get<std::string>();
 
                 int32_t latest_version[3] = {0};
                 std::sscanf(version_str.c_str(), "%d.%d.%d", &latest_version[0], &latest_version[1],
@@ -46,11 +45,10 @@ void CheckForUpdates(bool show_no_update_messagebox)
 
                 if (std::lexicographical_compare(current_version, current_version + 3, latest_version,
                                                  latest_version + 3)) {
-                    std::stringstream msg;
-                    msg << "A new version (" << version_str << ") is available for download." << std::endl << std::endl;
-                    msg << "Do you want to go to the release page on GitHub?";
+                    std::string msg = "A new version (" + version_str + ") is available for download.\n\n";
+                    msg.append("Do you want to go to the release page on GitHub?");
 
-                    if (Window::Get()->ShowMessageBox(msg.str(), MB_ICONQUESTION | MB_YESNO) == IDYES) {
+                    if (Window::Get()->ShowMessageBox(msg, MB_ICONQUESTION | MB_YESNO) == IDYES) {
                         ShellExecuteA(nullptr, "open",
                                       "https://github.com/aaronkirkham/jc3-rbm-renderer/releases/latest", nullptr,
                                       nullptr, SW_SHOWNORMAL);
@@ -60,6 +58,7 @@ void CheckForUpdates(bool show_no_update_messagebox)
                 }
             }
         } catch (...) {
+            LOG_ERROR("Failed to check for updates");
         }
     })
         .detach();
@@ -70,10 +69,7 @@ void SelectJustCause3Directory()
     // ask the user to select their jc3 directory, we can't find it!
     Window::Get()->ShowFolderSelection(
         "Please select your Just Cause 3 install folder.",
-        [&](const std::filesystem::path& selected) {
-            Settings::Get()->SetValue("jc3_directory", selected.string());
-            g_JC3Directory = selected;
-        },
+        [&](const std::filesystem::path& selected) { Settings::Get()->SetValue("jc3_directory", selected.string()); },
         [] {
             Window::Get()->ShowMessageBox(
                 "Unable to find Just Cause 3 root directory.\n\nSome features will be disabled.");
@@ -104,35 +100,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         return false;
     };
 
-    g_JC3Directory      = Settings::Get()->GetValue<std::string>("jc3_directory");
     g_DrawBoundingBoxes = Settings::Get()->GetValue<bool>("draw_bounding_boxes", false);
     g_ShowModelLabels   = Settings::Get()->GetValue<bool>("show_model_labels", false);
-
-    DEBUG_LOG("JC3 Directory: " << g_JC3Directory);
 
     // TODO: Validate the jc3 directory, make sure we can see some common stuff like JustCause3.exe / archives_win64
     // folder.
 
-    // is the directory invalid?
-    if (g_JC3Directory.empty() || !std::filesystem::exists(g_JC3Directory)) {
-        // try find the install directory via the steam install folder
+    // try find the jc3 directory from the steam installation folder
+    std::filesystem::path jc3_directory = Settings::Get()->GetValue<std::string>("jc3_directory");
+    if (jc3_directory.empty() || !std::filesystem::exists(jc3_directory)) {
         char steam_path[MAX_PATH] = {0};
         if (ReadRegistryKeyString(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam", "SteamPath", steam_path, MAX_PATH)) {
-            g_JC3Directory = std::filesystem::path(steam_path) / "steamapps" / "common" / "Just Cause 3";
+            jc3_directory = std::filesystem::path(steam_path) / "steamapps" / "common" / "Just Cause 3";
 
             // TODO: Parse C:/Program Files (x86)/Steam/steamapps/libraryfolders.vdf to check all library folders for
             // the game location
 
             // if the directory exists, save the settings now
-            if (std::filesystem::exists(g_JC3Directory)) {
-                Settings::Get()->SetValue("jc3_directory", g_JC3Directory.string());
+            if (std::filesystem::exists(jc3_directory)) {
+                Settings::Get()->SetValue("jc3_directory", jc3_directory.string());
             }
         }
     }
 
     if (Window::Get()->Initialise(hInstance)) {
+        LOG_INFO("Just cause 3 directory: \"{}\"", jc3_directory.string());
+
         // do we need to select the install directory manually?
-        if (g_JC3Directory.empty() || !std::filesystem::exists(g_JC3Directory)) {
+        if (jc3_directory.empty() || !std::filesystem::exists(jc3_directory)) {
             SelectJustCause3Directory();
         }
 
@@ -145,6 +140,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         // input thread
         std::thread([&] {
             while (true) {
+                if (!Window::Get()->HasFocus()) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                    continue;
+                }
+
                 if (GetAsyncKeyState(VK_F1) & 1) {
                     // FileLoader::Get()->LocateFileInDictionary("models/jc_environments/props/animation_prop/textures/bucket_dif.hmddsc");
                     FileLoader::Get()->LocateFileInDictionary("bucket_dif.hmddsc");
@@ -188,7 +188,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         "v0405_car_mugello_moderncircuitracer_civilian_01.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                         if (success) {
-                            AvalancheArchive::make(filename, data);
+                            auto archive = AvalancheArchive::make(filename, data);
+                            while (!archive->GetStreamArchive()) {
+                                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                            }
 
                             std::filesystem::path rbm =
                                 "models/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/"
@@ -275,8 +278,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 }
 
                 if (GetAsyncKeyState(VK_F8) & 1) {
-                    auto adf =
-                        FileLoader::Get()->ReadAdf("D:/Steam/steamapps/common/Just Cause 3/Shaders_F.shader_bundle");
+                    std::filesystem::path filename = Settings::Get()->GetValue<std::string>("jc3_directory");
+                    filename /= "Shaders_F.shader_bundle";
+
+                    auto adf = FileLoader::Get()->ReadAdf(filename);
                 }
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -389,8 +394,8 @@ LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS* exception_poin
     auto time = std::put_time(&tm, "%d-%m-%Y-%H-%M-%S");
 
     std::stringstream filename;
-    filename << std::filesystem::current_path();
-    filename << "\\" << VER_PRODUCTNAME_STR << "-" << VER_FILE_VERSION_STR << "-" << time << ".dmp";
+    filename << std::filesystem::current_path().generic_string();
+    filename << "/" << VER_PRODUCTNAME_STR << "-" << VER_FILE_VERSION_STR << "-" << time << ".dmp";
 
     auto file = CreateFile(filename.str().c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, CREATE_ALWAYS,
                            FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -406,12 +411,11 @@ LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS* exception_poin
     WriteDump(process, process_id, file, MiniDumpNormal, &except_info, nullptr, nullptr);
     CloseHandle(file);
 
-    std::stringstream msg;
-    msg << "Something somewhere somehow went wrong.\n\n";
-    msg << "A dump file was created at " << filename.str() << "\n\n";
-    msg << "Please create a bug report on our GitHub and attach the dump file and we'll try and fix it.";
+    std::string msg = "Something somewhere somehow went wrong.\n\n";
+    msg.append("A dump file was created at \"" + filename.str() + "\"\n\n");
+    msg.append("Please create a bug report on our GitHub and attach the dump file and we'll try and fix it.");
 
-    MessageBox(nullptr, msg.str().c_str(), nullptr, MB_ICONSTOP | MB_OK);
+    MessageBox(nullptr, msg.c_str(), nullptr, MB_ICONSTOP | MB_OK);
     return EXCEPTION_EXECUTE_HANDLER;
 }
 #endif

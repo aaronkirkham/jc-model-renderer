@@ -1,7 +1,7 @@
+#include <ShlObj.h>
 #include <Windows.h>
 #include <commdlg.h>
 #include <shellapi.h>
-#include <ShlObj.h>
 
 #include "graphics/renderer.h"
 #include "window.h"
@@ -12,6 +12,10 @@
 
 #include <examples/imgui_impl_win32.h>
 #include <imgui.h>
+
+#ifdef DEBUG
+#include <spdlog/sinks/stdout_color_sinks.h>
+#endif
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
@@ -56,11 +60,22 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPA
 
 bool Window::Initialise(const HINSTANCE& instance)
 {
+#ifdef DEBUG
+    if (AllocConsole()) {
+        freopen("CONOUT$", "w", stdout);
+        SetConsoleTitle("Debug Console");
+    }
+
+    spdlog::set_level(spdlog::level::trace);
+    spdlog::set_pattern("[%H:%M:%S] [%^%l%$] %v");
+
+    m_Log = spdlog::stdout_color_mt("console");
+#endif
+
     static auto size = glm::vec2{1480, 870};
     m_Instance       = instance;
 
-    WNDCLASSEX wc;
-
+    WNDCLASSEX wc{};
     wc.style         = (CS_HREDRAW | CS_VREDRAW | CS_OWNDC);
     wc.lpfnWndProc   = WndProc;
     wc.cbClsExtra    = 0;
@@ -111,6 +126,10 @@ void Window::Shutdown()
 
     UnregisterClass(g_WindowName, m_Instance);
     m_Instance = nullptr;
+
+#ifdef DEBUG
+    FreeConsole();
+#endif
 }
 
 void Window::Run()

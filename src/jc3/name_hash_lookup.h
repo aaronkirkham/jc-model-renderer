@@ -37,7 +37,7 @@ class NameHashLookup
                     LookupTable.insert(std::make_pair(namehash, it.value().get<std::string>()));
                 }
             } catch (const std::exception& e) {
-                DEBUG_LOG("[ERROR] NameHashLookup - Failed to load lookup table (" << e.what() << ")");
+                LOG_ERROR("Failed to load lookup table. ({})", e.what());
 
                 std::string error = "Failed to load namehash lookup table. (";
                 error += e.what();

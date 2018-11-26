@@ -69,7 +69,7 @@ class AvalancheArchive : public IImportExporter
                 ExportFinishedCallback callback) override final
     {
         const auto& path = to / filename.stem();
-        DEBUG_LOG("AvalancheArchive::Export - Exporting archive to '" << path << "'...");
+        LOG_INFO("Exporting archive to \"{}\"", path.string());
 
         auto archive = ::AvalancheArchive::get(filename.string());
         if (archive) {

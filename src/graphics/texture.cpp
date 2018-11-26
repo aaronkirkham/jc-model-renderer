@@ -1,8 +1,8 @@
 #include <fstream>
 
-#include "texture.h"
 #include "dds_texture_loader.h"
 #include "renderer.h"
+#include "texture.h"
 
 #include "../window.h"
 
@@ -16,8 +16,6 @@ Texture::Texture(const std::filesystem::path& filename)
 
 Texture::~Texture()
 {
-    DEBUG_LOG("Texture::~Texture - Deleting texture '" << m_Filename.filename() << "'...");
-
     SAFE_RELEASE(m_SRV);
     SAFE_RELEASE(m_Texture);
 }
@@ -30,7 +28,7 @@ bool Texture::LoadFromBuffer(FileBuffer* buffer)
 
 #ifdef DEBUG
     if (m_SRV || m_Texture) {
-        DEBUG_LOG("Texture::LoadFromBuffer - Deleting old texture before creating new one...");
+        LOG_INFO("Deleting existing texture before creating new one...");
     }
 #endif
 
@@ -66,7 +64,7 @@ bool Texture::LoadFromBuffer(FileBuffer* buffer)
     m_Buffer = *buffer;
 
     if (FAILED(result)) {
-        DEBUG_LOG("[ERROR] Texture::LoadFromBuffer - Failed to create texture '" << m_Filename.filename() << "'.");
+        LOG_ERROR("Failed to create texture \"{}\"", m_Filename.filename().string());
         return false;
     }
 
@@ -79,7 +77,7 @@ bool Texture::LoadFromFile(const std::filesystem::path& filename)
 
     std::ifstream stream(filename.c_str(), std::ios::binary);
     if (stream.fail()) {
-        DEBUG_LOG("[ERROR] Failed to create texture from file \"" << filename.filename() << "\".");
+        LOG_ERROR("Failed to create texture from file \"{}\"", filename.filename().string());
         Window::Get()->ShowMessageBox("Failed to open texture \"" + filename.generic_string() + "\".");
         return false;
     }
@@ -90,7 +88,7 @@ bool Texture::LoadFromFile(const std::filesystem::path& filename)
     buffer.resize(size);
     stream.read((char*)buffer.data(), size);
 
-    DEBUG_LOG("Texture::LoadFromFile - Read " << size << " bytes from " << filename.filename());
+    LOG_INFO("Read {} bytes from \"{}\"", size, filename.filename().string());
 
     auto result = LoadFromBuffer(&buffer);
     stream.close();

@@ -57,14 +57,15 @@ class Wavefront_Obj : public IImportExporter
 
     void Import(const std::filesystem::path& filename, ImportFinishedCallback callback) override final
     {
-        DEBUG_LOG("Wavefront_Obj::Import - Importing " << filename << "...");
+        LOG_INFO("Importing \"{}\"", filename.string());
+
+		if (!std::filesystem::exists(filename)) {
+            return callback(false, 0);
+		}
 
         std::ifstream stream(filename);
-        assert(!stream.fail());
-
         if (stream.fail()) {
-            callback(false, 0);
-            return;
+            return callback(false, 0);
         }
 
         floats_t  _out_vertices;
@@ -221,7 +222,7 @@ class Wavefront_Obj : public IImportExporter
         auto& path = to / filename.stem();
         path += GetExportExtension();
 
-        DEBUG_LOG("Wavefront_Obj::Export - Exporting model to '" << path << "'...");
+        LOG_INFO("Exporting model to \"{}\"", path.string());
 
         auto model = ::RenderBlockModel::get(filename.string());
         if (model) {

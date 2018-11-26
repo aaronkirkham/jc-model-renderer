@@ -53,16 +53,13 @@ bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
 
     // ensure the header magic is correct
     if (strncmp((char*)&header.m_Magic, "RBMDL", 5) != 0) {
-        DEBUG_LOG("RenderBlockModel::Parse - Invalid file header. Input file probably isn't a RenderBlockModel file.");
-
+        LOG_ERROR("Invalid header magic.");
         parse_success = false;
         goto end;
     }
 
-    DEBUG_LOG("RenderBlockModel v" << header.m_VersionMajor << "." << header.m_VersionMinor << "."
-                                   << header.m_VersionRevision);
-    DEBUG_LOG(" - m_NumberOfBlocks=" << header.m_NumberOfBlocks);
-    DEBUG_LOG(" - m_Flags=" << header.m_Flags);
+    LOG_INFO("RBM v{}.{}.{}. NumberOfBlocks={}, Flags={}", header.m_VersionMajor, header.m_VersionMinor,
+             header.m_VersionRevision, header.m_NumberOfBlocks, header.m_Flags);
 
     // ensure we can read the file version (TODO: when JC4 is released, check this)
     if (header.m_VersionMajor != 1 && header.m_VersionMinor != 16) {
@@ -101,16 +98,15 @@ bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
 
             // did we read the block correctly?
             if (checksum != RBM_END_OF_BLOCK) {
-                DEBUG_LOG("RenderBlockModel::Parse - Failed to read Render Block");
-
+                LOG_ERROR("Failed to read render block \"{}\" (checksum mismatch)",
+                          RenderBlockFactory::GetRenderBlockName(hash));
                 parse_success = false;
                 break;
             }
 
             m_RenderBlocks.emplace_back(render_block);
         } else {
-            DEBUG_LOG("[WARNING] RenderBlockModel::Parse - Unknown render block. \""
-                      << RenderBlockFactory::GetRenderBlockName(hash) << "\" - " << std::setw(4) << std::hex << hash);
+            LOG_ERROR("Unknown render block \"{}\" (0x{:x})", RenderBlockFactory::GetRenderBlockName(hash), hash);
 
             if (LoadingFromRC) {
                 std::stringstream error;
@@ -266,7 +262,7 @@ void RenderBlockModel::Load(const std::filesystem::path& filename)
             assert(rbm);
             rbm->Parse(data);
         } else {
-            DEBUG_LOG("RenderBlockModel::Load - Failed to read model \"" << filename << "\".");
+            LOG_ERROR("Failed to read model \"{}\"", filename.string());
         }
     });
 }
@@ -277,7 +273,7 @@ void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&    
     assert(rc);
 
     auto path = filename.parent_path().string();
-    path      = path.replace(path.find("editor\\entities"), strlen("editor\\entities"), "models");
+    path      = path.replace(path.find("editor/entities"), strlen("editor/entities"), "models");
 
     std::thread([&, rc, path] {
         FileLoader::UseBatches          = true;
@@ -291,7 +287,6 @@ void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&    
             std::filesystem::path modelname = path;
             modelname /= filename;
 
-            DEBUG_LOG(modelname);
             RenderBlockModel::Load(modelname);
         }
 
@@ -306,6 +301,5 @@ void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&    
 
         error << "\nA model might still be rendered, but some parts of it may be missing.";
         Window::Get()->ShowMessageBox(error.str(), MB_ICONINFORMATION | MB_OK);
-    })
-        .detach();
+    }).detach();
 }

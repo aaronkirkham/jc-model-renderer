@@ -104,15 +104,11 @@ bool Renderer::Initialise(const HWND& hwnd)
     m_RenderContext.m_Renderer      = this;
     m_RenderContext.m_Device        = m_Device;
     m_RenderContext.m_DeviceContext = m_DeviceContext;
-
-    DEBUG_LOG("Renderer is ready!");
     return true;
 }
 
 void Renderer::Shutdown()
 {
-    DEBUG_LOG("Renderer is shutting down...");
-
     TextureManager::Get()->Shutdown();
     ShaderManager::Get()->Shutdown();
 

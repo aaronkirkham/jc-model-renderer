@@ -1,7 +1,7 @@
 #pragma once
 
-#include <map>
 #include <array>
+#include <map>
 
 #include "../import_export/IImportExporter.h"
 #include "../singleton.h"

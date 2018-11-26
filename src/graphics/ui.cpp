@@ -26,10 +26,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 
-extern bool                  g_DrawBoundingBoxes;
-extern bool                  g_ShowModelLabels;
-extern std::filesystem::path g_JC3Directory;
-static bool                  g_ShowAboutWindow = false;
+extern bool g_DrawBoundingBoxes;
+extern bool g_ShowModelLabels;
+static bool g_ShowAboutWindow = false;
 
 #ifdef DEBUG
 static bool g_CheckForUpdatesEnabled = false;
@@ -179,7 +178,7 @@ void UI::Render(RenderContext_t* context)
             }
 
             if (ImGui::MenuItem(ICON_FA_SYNC "  Check for updates", nullptr, false, g_CheckForUpdatesEnabled)) {
-                //CheckForUpdates(true);
+                // CheckForUpdates(true);
             }
 
             if (ImGui::MenuItem(ICON_FA_EXTERNAL_LINK_ALT "  View on GitHub")) {
@@ -348,14 +347,12 @@ void UI::Render(RenderContext_t* context)
 
     // render runtime container stuff
     for (auto it = RuntimeContainer::Instances.begin(); it != RuntimeContainer::Instances.end();) {
-        std::stringstream ss;
-        ss << "Runtime Container Editor - ";
-        ss << (*it).second->GetFileName().filename();
+        std::string title = "Runtime Container Editor - " + (*it).second->GetFileName().filename().string();
 
         bool open = true;
         ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
         if (ImGui::Begin(
-                ss.str().c_str(), &open,
+                title.c_str(), &open,
                 (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking))) {
             (*it).second->DrawUI();
 
@@ -602,10 +599,9 @@ void UI::RenderSpinner(const std::string& str)
 
 void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t unique_id_extra, uint32_t flags)
 {
-    std::stringstream unique_id;
-    unique_id << "context-menu-" << filename << "-" << unique_id_extra;
+    std::string unique_id = "context-menu-" + filename.generic_string() + "-" + std::to_string(unique_id_extra);
 
-    ImGui::PushID(unique_id.str().c_str());
+    ImGui::PushID(unique_id.c_str());
     ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1);
 
     if (ImGui::BeginPopupContextItem("Context Menu")) {
@@ -620,8 +616,9 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
 #if 0
         // general save to dropzon
         if (ImGui::Selectable(ICON_FA_FLOPPY_O "  Save to dropzone")) {
-            DEBUG_LOG("save file request (dropzone)");
-            const auto dropzone = g_JC3Directory / "dropzone";
+            LOG_INFO("save file request (dropzone)");
+			const auto& jc3_directory = Settings::Get()->GetValue<std::filesystem::path>("jc3_directory");
+            const auto dropzone = jc3_directory / "dropzone";
             UI::Get()->Events().SaveFileRequest(filename, dropzone);
         }
 #endif
@@ -691,7 +688,7 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
 
         // dragdrop payload
         if (const auto payload = UI::Get()->GetDropPayload(DROPPAYLOAD_UNKNOWN)) {
-            DEBUG_LOG("DropPayload (" << title << "): " << payload->data);
+            LOG_TRACE("DropPayload \"{}\"", title);
             std::filesystem::path payload_data(payload->data);
             texture->LoadFromFile(payload->data);
 

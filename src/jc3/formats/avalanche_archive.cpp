@@ -61,7 +61,7 @@ void AvalancheArchive::AddDirectory(const std::filesystem::path& filename, const
 
         std::ifstream stream(filename, std::ios::binary);
         if (stream.fail()) {
-            DEBUG_LOG("AvalancheArchive::AddDirectory - Failed to open stream!");
+            LOG_ERROR("Failed to open file stream!");
 #ifdef DEBUG
             __debugbreak();
 #endif
@@ -71,8 +71,6 @@ void AvalancheArchive::AddDirectory(const std::filesystem::path& filename, const
         // strip the root directory from the path
         const auto& name = filename.lexically_relative(root);
         const auto  size = std::filesystem::file_size(filename);
-
-        DEBUG_LOG(name);
 
         // read the file buffer
         FileBuffer buffer;
@@ -97,15 +95,12 @@ void AvalancheArchive::ReadFileCallback(const std::filesystem::path& filename, c
 
 bool AvalancheArchive::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& directory)
 {
-    DEBUG_LOG("AvalancheArchive::SaveFileCallback");
-
     auto archive = AvalancheArchive::get(filename.string());
     if (archive) {
         assert(archive->m_StreamArchive);
 
-        std::stringstream status_text;
-        status_text << "Repacking \"" << filename.filename() << "\"...";
-        const auto status_text_id = UI::Get()->PushStatusText(status_text.str());
+        std::string status_text    = "Repacking \"" + filename.filename().string() + "\"...";
+        const auto  status_text_id = UI::Get()->PushStatusText(status_text);
 
         // TODO: we should read the archive filelist, grab a list of files which have offset 0 (in patches)
         // and check if we have edited any of those files. if so we need to include it in the repack of the SARC
@@ -125,8 +120,7 @@ bool AvalancheArchive::SaveFileCallback(const std::filesystem::path& filename, c
             stream.close();
 
             UI::Get()->PopStatusText(status_text_id);
-        })
-            .detach();
+        }).detach();
 
         return true;
     }

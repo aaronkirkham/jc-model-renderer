@@ -45,7 +45,7 @@ class DDSC : public IImportExporter
     {
         auto& path = to / filename.stem();
         path += GetExportExtension();
-        DEBUG_LOG("DDSC::Export - Exporting texture to '" << path << "'...");
+        LOG_INFO("Exporting texture to \"{}\"", path.string());
 
         FileLoader::Get()->ReadFile(filename, [&, path, callback](bool success, FileBuffer data) {
             if (success) {

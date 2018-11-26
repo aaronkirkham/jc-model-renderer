@@ -33,7 +33,8 @@ project "jc3-rbm-renderer"
     "vendor/imgui",
     "vendor/json/single_include/nlohmann",
     "vendor/ksignals",
-    "vendor/zlib"
+    "vendor/zlib",
+    "vendor/spdlog/include"
   }
 
   disablewarnings { "4244", "4267", "6031", "6262" }

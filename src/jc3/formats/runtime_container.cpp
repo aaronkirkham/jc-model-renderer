@@ -13,7 +13,6 @@ RuntimeContainerProperty::RuntimeContainerProperty(uint32_t name_hash, uint8_t t
     : m_NameHash(name_hash)
     , m_Type(static_cast<PropertyType>(type))
 {
-    // DEBUG_LOG("RuntimeContainerProperty::RuntimeContainerProperty");
     m_Name = NameHashLookup::GetName(name_hash);
 
     if (m_Name.empty()) {
@@ -27,7 +26,6 @@ RuntimeContainer::RuntimeContainer(uint32_t name_hash, const std::filesystem::pa
     : m_NameHash(name_hash)
     , m_Filename(filename)
 {
-    // DEBUG_LOG("RuntimeContainer::RuntimeContainer");
     m_Name = NameHashLookup::GetName(name_hash);
 }
 
@@ -166,9 +164,6 @@ std::vector<RuntimeContainerProperty*> RuntimeContainer::GetSortedProperties()
 
 void RuntimeContainer::ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external)
 {
-    DEBUG_LOG("RuntimeContainer::FileReadCallback");
-    DEBUG_LOG(filename);
-
     const auto rtpc = FileLoader::Get()->ParseRuntimeContainer(filename, data);
     assert(rtpc);
 }
@@ -317,7 +312,7 @@ void RuntimeContainer::Load(const std::filesystem::path&                        
             auto result = FileLoader::Get()->ParseRuntimeContainer(filename, data);
             callback(result);
         } else {
-            DEBUG_LOG("RuntimeContainer::Load - Failed to read runtime container \"" << filename << "\".");
+            LOG_ERROR("Failed to read runtime container \"{}\"", filename.string());
         }
     });
 }

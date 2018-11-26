@@ -36,7 +36,7 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
     // read
     std::ifstream stream(file, std::ios::binary);
     if (stream.fail()) {
-        DEBUG_LOG("[ERROR] ShaderManager::GetVertexShader - couldn't open \"" << file << "\".");
+        LOG_ERROR("Couldn't open vertex shader \"{}\"", file.string());
         Window::Get()->ShowMessageBox("Failed to open shader \"" + file.generic_string() + "\".", MB_ICONERROR | MB_OK);
         return nullptr;
     }
@@ -69,7 +69,7 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
     }
 
     m_VertexShaders[key] = std::move(shader);
-    DEBUG_LOG("ShaderManager: Cached vertex shader '" << name.c_str() << "'");
+    LOG_INFO("Cached vertex shader \"{}\"", name);
     return m_VertexShaders[key];
 }
 
@@ -92,7 +92,7 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
     // read
     std::ifstream stream(file, std::ios::binary);
     if (stream.fail()) {
-        DEBUG_LOG("[ERROR] ShaderManager::GetPixelShader - couldn't open \"" << file << "\".");
+        LOG_ERROR("Couldn't open pixel shader \"{}\"", file.string());
         Window::Get()->ShowMessageBox("Failed to open shader \"" + file.generic_string() + "\".", MB_ICONERROR | MB_OK);
         return nullptr;
     }
@@ -125,6 +125,6 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
     }
 
     m_PixelShaders[key] = std::move(shader);
-    DEBUG_LOG("ShaderManager: Cached pixel shader '" << name.c_str() << "'");
+    LOG_INFO("Cached pixel shader \"{}\"", name);
     return m_PixelShaders[key];
 }

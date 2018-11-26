@@ -8,7 +8,7 @@
 #define STRINGIFY_(s)               #s
 #define STRINGIFY(s)                STRINGIFY_(s)
 
-#define VER_FILE_DESCRIPTION_STR    "Just Cause 3 Render Block Model (.rbm) Renderer"
+#define VER_FILE_DESCRIPTION_STR    "Just Cause 3 Render Block Model Renderer"
 #define VER_FILE_VERSION            VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION
 #define VER_FILE_VERSION_STR        STRINGIFY(VERSION_MAJOR) "." STRINGIFY(VERSION_MINOR) "." STRINGIFY(VERSION_REVISION)
 
