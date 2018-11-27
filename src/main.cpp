@@ -60,8 +60,7 @@ void CheckForUpdates(bool show_no_update_messagebox)
         } catch (...) {
             LOG_ERROR("Failed to check for updates");
         }
-    })
-        .detach();
+    }).detach();
 }
 
 void SelectJustCause3Directory()
@@ -277,17 +276,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         });
                 }
 
-                if (GetAsyncKeyState(VK_F8) & 1) {
-                    std::filesystem::path filename = Settings::Get()->GetValue<std::string>("jc3_directory");
-                    filename /= "Shaders_F.shader_bundle";
-
-                    auto adf = FileLoader::Get()->ReadAdf(filename);
-                }
-
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-        })
-            .detach();
+        }).detach();
 #endif
 
         // register read file type callbacks
@@ -370,6 +361,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 model.second->DrawGizmos();
             }
         });
+
+        //
+        ShaderManager::Get()->Init();
 
         // run!
         Window::Get()->Run();

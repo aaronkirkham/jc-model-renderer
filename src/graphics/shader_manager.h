@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 
+#include "../jc3/formats/avalanche_data_format.h"
 #include "../singleton.h"
 
 struct VertexShader_t;
@@ -12,10 +13,13 @@ class ShaderManager : public Singleton<ShaderManager>
     std::unordered_map<uint32_t, std::shared_ptr<VertexShader_t>> m_VertexShaders;
     std::unordered_map<uint32_t, std::shared_ptr<PixelShader_t>>  m_PixelShaders;
 
+    std::unique_ptr<AvalancheDataFormat> m_ShaderBundle = nullptr;
+
   public:
     ShaderManager()          = default;
     virtual ~ShaderManager() = default;
 
+    void Init();
     void Shutdown();
     void Empty();
 
