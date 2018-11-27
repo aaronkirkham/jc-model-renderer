@@ -134,14 +134,14 @@ AdfTypeDefinition* AvalancheDataFormat::GetTypeDefinition(uint32_t type_hash)
 
 AdfInstanceMemberInfo* AvalancheDataFormat::GetMember(const std::string& name)
 {
-	for (const auto& instance : m_InstanceInfos) {
-		for (const auto& member : instance->m_Members) {
+    for (const auto& instance : m_InstanceInfos) {
+        for (const auto& member : instance->m_Members) {
             const auto found = GetMember(member.get(), name);
-			if (found) {
+            if (found) {
                 return found;
-			}
-		}
-	}
+            }
+        }
+    }
 
     return nullptr;
 }
@@ -150,22 +150,22 @@ AdfInstanceMemberInfo* AvalancheDataFormat::GetMember(AdfInstanceMemberInfo* inf
 {
     assert(info);
 
-	if (info->m_Name == name) {
+    if (info->m_Name == name) {
         return info;
-	}
+    }
 
-	for (const auto& member : info->m_Members) {
-		if (member->m_Name == name || member->m_StringData == name) {
+    for (const auto& member : info->m_Members) {
+        if (member->m_Name == name || member->m_StringData == name) {
             return member.get();
-		}
+        }
 
-		const auto found = GetMember(member.get(), name);
-		if (found) {
+        const auto found = GetMember(member.get(), name);
+        if (found) {
             return found;
-		}
-	}
+        }
+    }
 
-	return nullptr;
+    return nullptr;
 }
 
 void AdfInstanceInfo::ReadMembers()

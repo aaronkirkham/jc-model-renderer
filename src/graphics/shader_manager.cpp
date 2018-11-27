@@ -10,7 +10,7 @@
 
 void ShaderManager::Init()
 {
-	const auto status_text_id = UI::Get()->PushStatusText("Loading \"Shaders_F.shader_bundle\"...");
+    const auto status_text_id = UI::Get()->PushStatusText("Loading \"Shaders_F.shader_bundle\"...");
 
     std::thread([&, status_text_id] {
         std::filesystem::path filename = Settings::Get()->GetValue<std::string>("jc3_directory");
@@ -18,10 +18,12 @@ void ShaderManager::Init()
 
         m_ShaderBundle = FileLoader::Get()->ReadAdf(filename);
 
-		// exit now if the shader bundle wasn't loaded
-		if (!m_ShaderBundle) {
-            Window::Get()->ShowMessageBox("Failed to load shader bundle.\n\nPlease make sure your Just Cause 3 directory is valid.", MB_ICONERROR | MB_OK);
-		}
+        // exit now if the shader bundle wasn't loaded
+        if (!m_ShaderBundle) {
+            Window::Get()->ShowMessageBox(
+                "Failed to load shader bundle.\n\nPlease make sure your Just Cause 3 directory is valid.",
+                MB_ICONERROR | MB_OK);
+        }
 
         UI::Get()->PopStatusText(status_text_id);
     }).detach();
@@ -92,10 +94,10 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
     }
 
     assert(m_ShaderBundle);
-    const auto& vertex_shaders = m_ShaderBundle->GetMember("FragmentShaders");
+    const auto& fragment_shaders = m_ShaderBundle->GetMember("FragmentShaders");
 
     // look for the correct member
-    for (const auto& member : vertex_shaders->m_Members) {
+    for (const auto& member : fragment_shaders->m_Members) {
         if (member->m_Members[0]->m_StringData == name) {
             const auto& shader_data = member->m_Members[1]->m_Members[0]->m_Data;
 
