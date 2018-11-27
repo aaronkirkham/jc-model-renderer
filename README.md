@@ -10,7 +10,7 @@ An application to preview Just Cause 3's Render Block Model files without the ne
 Download a version from [releases](https://github.com/aaronkirkham/jc3-rbm-renderer/releases) __or__ build it yourself:
  - Clone this repository
  - Run `git submodule update --init`
- - Run `configure.bat`
+ - Run `configure.ps1` with PowerShell
  - Build `out/jc3-rbm-renderer.sln` in Visual Studio
  
 #### License
