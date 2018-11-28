@@ -13,3 +13,17 @@ SoundLayerFadeOutTime
 SoundLayerEnergy
 RetriggerTime
 UpdateParamsFirstFrameOnly
+apply_on_create
+boost_cooldown_default
+boost_cooldown_upgrade
+boost_duration_default
+boost_duration_upgrade
+boost_power_default
+boost_power_upgrade
+vocals
+ragdoll_mass
+model_0
+MaxBodyArmor
+magazine_tag
+holstered_scale
+fire_effect_mode

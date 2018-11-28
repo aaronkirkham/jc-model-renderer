@@ -185,7 +185,7 @@ void RuntimeContainer::DrawUI(uint8_t depth)
                     auto value = std::any_cast<float>(prop->GetValue());
                     if (ImGui::InputFloat(prop->GetName().c_str(), &value)) {
                         prop->SetValue(value);
-                    }
+					}
                     break;
                 }
 

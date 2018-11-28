@@ -4,6 +4,8 @@
 #include <shellapi.h>
 
 #include "graphics/renderer.h"
+#include "settings.h"
+#include "version.h"
 #include "window.h"
 
 #include "jc3/formats/avalanche_archive.h"
@@ -12,6 +14,8 @@
 
 #include <examples/imgui_impl_win32.h>
 #include <imgui.h>
+
+#include <httplib.h>
 
 #ifdef DEBUG
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -66,7 +70,7 @@ bool Window::Initialise(const HINSTANCE& instance)
         SetConsoleTitle("Debug Console");
     }
 
-    spdlog::set_level(spdlog::level::trace);
+    //spdlog::set_level(spdlog::level::trace);
     spdlog::set_pattern("[%H:%M:%S] [%^%l%$] %v");
 
     m_Log = spdlog::stdout_color_mt("console");
@@ -259,4 +263,58 @@ void Window::ShowFolderSelection(const std::string&                             
     } else if (fn_cancelled) {
         fn_cancelled();
     }
+}
+
+void Window::SelectJustCauseDirectory()
+{
+    // ask the user to select their jc3 directory, we can't find it!
+    ShowFolderSelection(
+        "Please select your Just Cause 3 install folder.",
+        [&](const std::filesystem::path& selected) {
+            Settings::Get()->SetValue("jc3_directory", selected.string());
+            LOG_INFO("Selected directory: \"{}\"", selected.string());
+        },
+        [] {
+            const auto& jc3_directory = Settings::Get()->GetValue<std::string>("jc3_directory");
+            if (jc3_directory.empty()) {
+                Window::Get()->ShowMessageBox(
+                    "Unable to find Just Cause 3 root directory.\n\nSome features will be disabled.");
+            }
+        });
+}
+
+void Window::CheckForUpdates(bool show_no_update_messagebox)
+{
+    static int32_t current_version[3] = {VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
+
+    std::thread([show_no_update_messagebox] {
+        try {
+            httplib::Client client("kirkh.am");
+            const auto      res = client.get("/jc3-rbm-renderer/latest.json");
+            if (res && res->status == 200) {
+                const auto& data        = nlohmann::json::parse(res->body);
+                const auto& version_str = data["version"].get<std::string>();
+
+                int32_t latest_version[3] = {0};
+                std::sscanf(version_str.c_str(), "%d.%d.%d", &latest_version[0], &latest_version[1],
+                            &latest_version[2]);
+
+                if (std::lexicographical_compare(current_version, current_version + 3, latest_version,
+                                                 latest_version + 3)) {
+                    std::string msg = "A new version (" + version_str + ") is available for download.\n\n";
+                    msg.append("Do you want to go to the release page on GitHub?");
+
+                    if (Window::Get()->ShowMessageBox(msg, MB_ICONQUESTION | MB_YESNO) == IDYES) {
+                        ShellExecuteA(nullptr, "open",
+                                      "https://github.com/aaronkirkham/jc3-rbm-renderer/releases/latest", nullptr,
+                                      nullptr, SW_SHOWNORMAL);
+                    }
+                } else if (show_no_update_messagebox) {
+                    Window::Get()->ShowMessageBox("You have the latest version!", MB_ICONINFORMATION);
+                }
+            }
+        } catch (...) {
+            LOG_ERROR("Failed to check for updates");
+        }
+    }).detach();
 }

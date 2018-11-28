@@ -303,7 +303,7 @@ void FileLoader::RunFileBatches() noexcept
             const auto            tab_file      = jc3_directory / directory / (archive + ".tab");
             const auto            arc_file      = jc3_directory / directory / (archive + ".arc");
 
-			// ensure the tab file exists
+            // ensure the tab file exists
             if (!std::filesystem::exists(tab_file)) {
                 LOG_ERROR("Can't find TAB file (\"{}\")", tab_file.string());
                 continue;
@@ -1161,19 +1161,19 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
         switch (type) {
             // integer
             case RTPC_TYPE_INTEGER: {
-                current_property->SetValue(static_cast<int32_t>(prop.m_Data));
+                current_property->SetValue(*(int32_t*)&prop.m_DataOffset);
                 break;
             }
 
             // float
             case RTPC_TYPE_FLOAT: {
-                current_property->SetValue(static_cast<float>(prop.m_Data));
+                current_property->SetValue(*(float*)&prop.m_DataOffset);
                 break;
             }
 
             // string
             case RTPC_TYPE_STRING: {
-                stream.seekg(prop.m_Data);
+                stream.seekg(prop.m_DataOffset);
 
                 std::string buffer;
                 std::getline(stream, buffer, '\0');
@@ -1187,7 +1187,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
             case RTPC_TYPE_VEC3:
             case RTPC_TYPE_VEC4:
             case RTPC_TYPE_MAT4X4: {
-                stream.seekg(prop.m_Data);
+                stream.seekg(prop.m_DataOffset);
 
                 if (type == RTPC_TYPE_VEC2) {
                     glm::vec2 result;
@@ -1214,7 +1214,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
             case RTPC_TYPE_LIST_INTEGERS:
             case RTPC_TYPE_LIST_FLOATS:
             case RTPC_TYPE_LIST_BYTES: {
-                stream.seekg(prop.m_Data);
+                stream.seekg(prop.m_DataOffset);
 
                 int32_t count;
                 stream.read((char*)&count, sizeof(count));
@@ -1244,7 +1244,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
 
             // objectid
             case RTPC_TYPE_OBJECT_ID: {
-                stream.seekg(prop.m_Data);
+                stream.seekg(prop.m_DataOffset);
 
                 uint32_t key, value;
                 stream.read((char*)&key, sizeof(key));
@@ -1256,7 +1256,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
 
             // events
             case RTPC_TYPE_EVENTS: {
-                stream.seekg(prop.m_Data);
+                stream.seekg(prop.m_DataOffset);
 
                 int32_t count;
                 stream.read((char*)&count, sizeof(count));
@@ -1271,6 +1271,8 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
 
                     result.emplace_back(std::make_pair(key, value));
                 }
+
+                current_property->SetValue(result);
                 break;
             }
         }
@@ -1341,9 +1343,9 @@ FileLoader::GetStreamArchiveFromFile(const std::filesystem::path& file, StreamAr
 bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash,
                                      FileBuffer* output) noexcept
 {
-	std::filesystem::path jc3_directory = Settings::Get()->GetValue<std::string>("jc3_directory");
-	const auto            tab_file      = jc3_directory / directory / (archive + ".tab");
-	const auto            arc_file      = jc3_directory / directory / (archive + ".arc");
+    std::filesystem::path jc3_directory = Settings::Get()->GetValue<std::string>("jc3_directory");
+    const auto            tab_file      = jc3_directory / directory / (archive + ".tab");
+    const auto            arc_file      = jc3_directory / directory / (archive + ".arc");
 
     // ensure the tab file exists
     if (!std::filesystem::exists(tab_file)) {
@@ -1351,7 +1353,7 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
         return false;
     }
 
-	// ensure the arc file exists
+    // ensure the arc file exists
     if (!std::filesystem::exists(arc_file)) {
         LOG_ERROR("Can't find ARC file (\"{}\")", arc_file.string());
         return false;

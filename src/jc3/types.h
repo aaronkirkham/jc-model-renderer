@@ -478,7 +478,7 @@ namespace RuntimeContainer
 
     struct Property {
         uint32_t m_NameHash;
-        uint32_t m_Data;
+        uint32_t m_DataOffset;
         uint8_t  m_Type;
     };
 

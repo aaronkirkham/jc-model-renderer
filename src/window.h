@@ -98,6 +98,9 @@ class Window : public Singleton<Window>
     void    ShowFolderSelection(const std::string& title, std::function<void(const std::filesystem::path&)> fn_selected,
                                 std::function<void()> fn_cancelled = {});
 
+	void SelectJustCauseDirectory();
+	void CheckForUpdates(bool show_no_update_messagebox = false);
+
     const HWND& GetHwnd() const
     {
         return m_Hwnd;

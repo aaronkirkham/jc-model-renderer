@@ -23,12 +23,15 @@
 
 #include "../import_export/import_export_manager.h"
 
+#include "../jc3/hashlittle.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 
 extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;
-static bool g_ShowAboutWindow = false;
+static bool g_ShowAboutWindow    = false;
+static bool g_ShowNameHashWindow = false;
 
 #ifdef DEBUG
 static bool g_CheckForUpdatesEnabled = false;
@@ -78,7 +81,7 @@ void UI::Render(RenderContext_t* context)
         // file
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem(ICON_FA_FOLDER "  Select JC3 path")) {
-                // SelectJustCause3Directory();
+                Window::Get()->SelectJustCauseDirectory();
             }
 
             if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit")) {
@@ -171,6 +174,15 @@ void UI::Render(RenderContext_t* context)
             ImGui::EndMenu();
         }
 
+        // tools
+        if (ImGui::BeginMenu("Tools")) {
+            if (ImGui::MenuItem("Name Hash Generator")) {
+                g_ShowNameHashWindow = !g_ShowNameHashWindow;
+            }
+
+            ImGui::EndMenu();
+        }
+
         // help
         if (ImGui::BeginMenu("Help")) {
             if (ImGui::MenuItem(ICON_FA_INFO_CIRCLE "  About")) {
@@ -178,7 +190,7 @@ void UI::Render(RenderContext_t* context)
             }
 
             if (ImGui::MenuItem(ICON_FA_SYNC "  Check for updates", nullptr, false, g_CheckForUpdatesEnabled)) {
-                // CheckForUpdates(true);
+                Window::Get()->CheckForUpdates(true);
             }
 
             if (ImGui::MenuItem(ICON_FA_EXTERNAL_LINK_ALT "  View on GitHub")) {
@@ -240,6 +252,23 @@ void UI::Render(RenderContext_t* context)
         ImGui::EndChild();
 
         ImGui::EndPopup();
+    }
+
+	// name hash generator
+    if (g_ShowNameHashWindow) {
+        ImGui::SetNextWindowSize({370, 85}, ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("Name Hash Generator", &g_ShowNameHashWindow, ImGuiWindowFlags_NoCollapse)) {
+            static std::string _string = "";
+            static uint32_t    _hash   = 0;
+
+            if (ImGui::InputText("Text to Hash", &_string)) {
+                _hash = _string.length() > 0 ? hashlittle(_string.c_str()) : 0;
+            }
+
+            ImGui::InputInt("Result", (int32_t*)&_hash, 0, 0,
+                            ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_ReadOnly);
+        }
+        ImGui::End();
     }
 
     // gbuffer view
@@ -386,7 +415,7 @@ void UI::RenderFileTreeView()
 
     ImGui::Begin("Tree View", nullptr,
                  (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse
-                  | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking));
+                  | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoDocking));
     {
         m_SidebarWidth = ImGui::GetWindowSize().x;
 
@@ -688,7 +717,7 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
 
         // dragdrop payload
         if (const auto payload = UI::Get()->GetDropPayload(DROPPAYLOAD_UNKNOWN)) {
-            LOG_TRACE("DropPayload \"{}\"", title);
+            LOG_INFO("DropPayload \"{}\"", title);
             std::filesystem::path payload_data(payload->data);
             texture->LoadFromFile(payload->data);
 

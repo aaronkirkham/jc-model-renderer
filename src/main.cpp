@@ -22,58 +22,8 @@
 #include "import_export/import_export_manager.h"
 #include "import_export/wavefront_obj.h"
 
-#include <httplib.h>
-
 extern bool g_DrawBoundingBoxes = true;
 extern bool g_ShowModelLabels   = true;
-
-void CheckForUpdates(bool show_no_update_messagebox)
-{
-    static int32_t current_version[3] = {VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
-
-    std::thread([show_no_update_messagebox] {
-        try {
-            httplib::Client client("kirkh.am");
-            const auto      res = client.get("/jc3-rbm-renderer/latest.json");
-            if (res && res->status == 200) {
-                const auto& data        = nlohmann::json::parse(res->body);
-                const auto& version_str = data["version"].get<std::string>();
-
-                int32_t latest_version[3] = {0};
-                std::sscanf(version_str.c_str(), "%d.%d.%d", &latest_version[0], &latest_version[1],
-                            &latest_version[2]);
-
-                if (std::lexicographical_compare(current_version, current_version + 3, latest_version,
-                                                 latest_version + 3)) {
-                    std::string msg = "A new version (" + version_str + ") is available for download.\n\n";
-                    msg.append("Do you want to go to the release page on GitHub?");
-
-                    if (Window::Get()->ShowMessageBox(msg, MB_ICONQUESTION | MB_YESNO) == IDYES) {
-                        ShellExecuteA(nullptr, "open",
-                                      "https://github.com/aaronkirkham/jc3-rbm-renderer/releases/latest", nullptr,
-                                      nullptr, SW_SHOWNORMAL);
-                    }
-                } else if (show_no_update_messagebox) {
-                    Window::Get()->ShowMessageBox("You have the latest version!", MB_ICONINFORMATION);
-                }
-            }
-        } catch (...) {
-            LOG_ERROR("Failed to check for updates");
-        }
-    }).detach();
-}
-
-void SelectJustCause3Directory()
-{
-    // ask the user to select their jc3 directory, we can't find it!
-    Window::Get()->ShowFolderSelection(
-        "Please select your Just Cause 3 install folder.",
-        [&](const std::filesystem::path& selected) { Settings::Get()->SetValue("jc3_directory", selected.string()); },
-        [] {
-            Window::Get()->ShowMessageBox(
-                "Unable to find Just Cause 3 root directory.\n\nSome features will be disabled.");
-        });
-}
 
 #ifndef DEBUG
 LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS* exception_pointers);
@@ -127,12 +77,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
         // do we need to select the install directory manually?
         if (jc3_directory.empty() || !std::filesystem::exists(jc3_directory)) {
-            SelectJustCause3Directory();
+            Window::Get()->SelectJustCauseDirectory();
         }
 
 #ifndef DEBUG
         // check for any updates
-        CheckForUpdates(false);
+        Window::Get()->CheckForUpdates();
 #endif
 
 #ifdef DEBUG
