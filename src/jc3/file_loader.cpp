@@ -223,7 +223,7 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileCallbac
     }
 #ifdef DEBUG
     else if (archive && (entry.m_Offset == 0 || entry.m_Offset == -1)) {
-        LOG_INFO("\"{}\" exists in archive but ahs been patched. Will read the patch version instead.",
+        LOG_INFO("\"{}\" exists in archive but has been patched. Will read the patch version instead.",
                  filename.filename().string());
     }
 #endif
@@ -461,14 +461,38 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(FileBuffer* sarc
     result->m_Header   = header;
     result->m_UsingTOC = (toc_buffer != nullptr);
 
-    // read the toc header for the filelist
-    if (toc_buffer) {
-        LOG_INFO("Using TOC buffer for archive filelist");
+    std::map<std::string, StreamArchiveEntry_t> file_list;
+#ifdef DEBUG
+    uint32_t _num_toc_added_files   = 0;
+    uint32_t _num_toc_patched_files = 0;
+#endif
 
+    const auto start_pos = stream.tellg();
+    while (true) {
+        uint32_t length;
+        stream.read((char*)&length, sizeof(length));
+
+        auto filename = std::unique_ptr<char[]>(new char[length + 1]);
+        stream.read(filename.get(), length);
+        filename[length] = '\0';
+
+        // read the archive entry data
+        StreamArchiveEntry_t entry;
+        entry.m_Filename = filename.get();
+        stream.read((char*)&entry.m_Offset, sizeof(entry.m_Offset));
+        stream.read((char*)&entry.m_Size, sizeof(entry.m_Size));
+
+        file_list[entry.m_Filename] = std::move(entry);
+
+        if (header.m_Size - (stream.tellg() - start_pos) <= 15) {
+            break;
+        }
+    }
+
+    // do we have a TOC buffer?
+    if (toc_buffer) {
         std::istringstream toc_stream(std::string{(char*)toc_buffer->data(), toc_buffer->size()});
         while (static_cast<size_t>(toc_stream.tellg()) < toc_buffer->size()) {
-            StreamArchiveEntry_t entry;
-
             uint32_t length;
             toc_stream.read((char*)&length, sizeof(length));
 
@@ -476,40 +500,41 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(FileBuffer* sarc
             toc_stream.read(filename.get(), length);
             filename[length] = '\0';
 
+            // read the archive entry data
+            StreamArchiveEntry_t entry;
             entry.m_Filename = filename.get();
-
             toc_stream.read((char*)&entry.m_Offset, sizeof(entry.m_Offset));
             toc_stream.read((char*)&entry.m_Size, sizeof(entry.m_Size));
 
-            result->m_Files.emplace_back(entry);
-        }
-    }
-    // if we didn't pass a TOC buffer, stream the file list from the SARC header
-    else {
-        auto start_pos = stream.tellg();
-        while (true) {
-            StreamArchiveEntry_t entry;
+            auto it = file_list.find(entry.m_Filename);
+            if (it == file_list.end()) {
+                file_list[entry.m_Filename] = std::move(entry);
 
-            uint32_t length;
-            stream.read((char*)&length, sizeof(length));
+#ifdef DEBUG
+                _num_toc_added_files++;
+#endif
+            } else {
+                // update file offset & size
+                (*it).second.m_Offset = entry.m_Offset;
+                (*it).second.m_Size   = entry.m_Size;
 
-            auto filename = std::unique_ptr<char[]>(new char[length + 1]);
-            stream.read(filename.get(), length);
-            filename[length] = '\0';
-
-            entry.m_Filename = filename.get();
-
-            stream.read((char*)&entry.m_Offset, sizeof(entry.m_Offset));
-            stream.read((char*)&entry.m_Size, sizeof(entry.m_Size));
-
-            result->m_Files.emplace_back(entry);
-
-            auto current_pos = stream.tellg();
-            if (header.m_Size - (current_pos - start_pos) <= 15) {
-                break;
+#ifdef DEBUG
+                _num_toc_patched_files++;
+#endif
             }
         }
     }
+
+    // add the final filelist to the sarc filelist
+    for (const auto& file : file_list) {
+        result->m_Files.emplace_back(std::move(file.second));
+    }
+
+#ifdef DEBUG
+    if (_num_toc_added_files > 0 || _num_toc_patched_files > 0) {
+        LOG_INFO("Added {}, patched {} files from TOC buffer", _num_toc_added_files, _num_toc_patched_files);
+    }
+#endif
 
     return result;
 }

@@ -2,9 +2,9 @@
 
 #include <cstdint>
 #include <d3d11.h>
+#include <filesystem>
 #include <glm/glm.hpp>
 #include <vector>
-#include <filesystem>
 
 using floats_t    = std::vector<float>;
 using uint16s_t   = std::vector<uint16_t>;
@@ -55,8 +55,10 @@ using ConstantBuffer_t = IBuffer_t;
 struct VertexShader_t {
     virtual ~VertexShader_t()
     {
-        m_Shader->Release();
-        m_Shader = nullptr;
+        if (m_Shader) {
+            m_Shader->Release();
+            m_Shader = nullptr;
+        }
     }
 
     ID3D11VertexShader* m_Shader = nullptr;
@@ -67,8 +69,10 @@ struct VertexShader_t {
 struct PixelShader_t {
     virtual ~PixelShader_t()
     {
-        m_Shader->Release();
-        m_Shader = nullptr;
+        if (m_Shader) {
+            m_Shader->Release();
+            m_Shader = nullptr;
+        }
     }
 
     ID3D11PixelShader* m_Shader = nullptr;
