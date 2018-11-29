@@ -514,18 +514,21 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(FileBuffer* sarc
                 _num_toc_added_files++;
 #endif
             } else {
+#ifdef DEBUG
+                if ((*it).second.m_Offset != entry.m_Offset || (*it).second.m_Size != entry.m_Size) {
+                    _num_toc_patched_files++;
+                }
+#endif
+
                 // update file offset & size
                 (*it).second.m_Offset = entry.m_Offset;
                 (*it).second.m_Size   = entry.m_Size;
-
-#ifdef DEBUG
-                _num_toc_patched_files++;
-#endif
             }
         }
     }
 
     // add the final filelist to the sarc filelist
+    result->m_Files.reserve(file_list.size());
     for (const auto& file : file_list) {
         result->m_Files.emplace_back(std::move(file.second));
     }
