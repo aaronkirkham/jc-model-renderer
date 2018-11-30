@@ -254,10 +254,11 @@ void UI::Render(RenderContext_t* context)
         ImGui::EndPopup();
     }
 
-	// name hash generator
+    // name hash generator
     if (g_ShowNameHashWindow) {
         ImGui::SetNextWindowSize({370, 85}, ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("Name Hash Generator", &g_ShowNameHashWindow, ImGuiWindowFlags_NoCollapse)) {
+        if (ImGui::Begin("Name Hash Generator", &g_ShowNameHashWindow,
+                         (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse))) {
             static std::string _string = "";
             static uint32_t    _hash   = 0;
 
@@ -352,8 +353,7 @@ void UI::Render(RenderContext_t* context)
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::SetNextWindowSize({window_size.x, window_size.y});
     ImGui::Begin("Status", nullptr,
-                 (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoScrollbar
-                  | ImGuiWindowFlags_NoSavedSettings));
+                 (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoScrollbar));
     {
         const auto size = ImGui::GetWindowSize();
         ImGui::SetWindowPos({((window_size.x - m_SidebarWidth) - size.x - 10), (window_size.y - size.y - 10)});
@@ -380,11 +380,8 @@ void UI::Render(RenderContext_t* context)
 
         bool open = true;
         ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
-        if (ImGui::Begin(
-                title.c_str(), &open,
-                (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking))) {
+        if (ImGui::Begin(title.c_str(), &open, (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking))) {
             (*it).second->DrawUI();
-
             ImGui::End();
         }
 

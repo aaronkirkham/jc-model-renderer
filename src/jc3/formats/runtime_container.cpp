@@ -168,9 +168,24 @@ void RuntimeContainer::ReadFileCallback(const std::filesystem::path& filename, c
     assert(rtpc);
 }
 
-void RuntimeContainer::DrawUI(uint8_t depth)
+void RuntimeContainer::DrawUI(int32_t index, uint8_t depth)
 {
-    if (ImGui::TreeNode(m_Name.c_str())) {
+    // skip "root"
+    if (m_NameHash == 0xaa7d522a) {
+        // draw children
+        if (m_Containers.size() > 0) {
+            auto _depth = ++depth;
+            for (int i = 0; i < m_Containers.size(); ++i) {
+                m_Containers[i]->DrawUI(i, _depth);
+            }
+        }
+
+        return;
+    }
+
+    std::string title = m_Name + "##" + std::to_string(index);
+
+    if (ImGui::TreeNode(title.c_str())) {
         for (const auto& prop : GetSortedProperties()) {
             switch (prop->GetType()) {
                 case RTPC_TYPE_INTEGER: {
@@ -185,7 +200,7 @@ void RuntimeContainer::DrawUI(uint8_t depth)
                     auto value = std::any_cast<float>(prop->GetValue());
                     if (ImGui::InputFloat(prop->GetName().c_str(), &value)) {
                         prop->SetValue(value);
-					}
+                    }
                     break;
                 }
 
@@ -278,9 +293,9 @@ void RuntimeContainer::DrawUI(uint8_t depth)
 
         // draw children
         if (m_Containers.size() > 0) {
-            auto d = ++depth;
-            for (const auto& child : m_Containers) {
-                child->DrawUI(d);
+            auto _depth = ++depth;
+            for (int i = 0; i < m_Containers.size(); ++i) {
+                m_Containers[i]->DrawUI(i, _depth);
             }
         }
 

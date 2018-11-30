@@ -409,13 +409,13 @@ void Renderer::CreateGBuffer(const glm::vec2& size)
 
     // create normals render target
     {
-        auto tex    = CreateTexture2D(size, DXGI_FORMAT_R8G8B8A8_UNORM,
+        auto tex    = CreateTexture2D(size, DXGI_FORMAT_R10G10B10A2_UNORM,
                                    (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE), "Normals texture");
         auto result = m_Device->CreateRenderTargetView(tex, nullptr, &m_GBuffer[1]);
         assert(SUCCEEDED(result));
 
         D3D11_SHADER_RESOURCE_VIEW_DESC desc;
-        desc.Format        = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.Format        = DXGI_FORMAT_R10G10B10A2_UNORM;
         desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         desc.Texture2D     = {0, static_cast<UINT>(-1)};
         result             = m_Device->CreateShaderResourceView(tex, &desc, &m_GBufferSRV[1]);

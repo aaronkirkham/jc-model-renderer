@@ -132,7 +132,7 @@ class RuntimeContainer : public Factory<RuntimeContainer>
     };
 
     static void ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);
-    void        DrawUI(uint8_t depth = 0);
+    void        DrawUI(int32_t index = 0, uint8_t depth = 0);
     static void ContextMenuUI(const std::filesystem::path& filename);
 
     void SetFileName(const std::filesystem::path& filename)
