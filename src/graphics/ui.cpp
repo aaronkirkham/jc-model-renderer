@@ -254,6 +254,43 @@ void UI::Render(RenderContext_t* context)
         ImGui::EndPopup();
     }
 
+    // exporter settings
+    {
+        if (m_ExportSettings.ShowExportSettings) {
+            ImGui::OpenPopup("Exporter Settings");
+        }
+
+        if (ImGui::BeginPopupModal("Exporter Settings", &m_ExportSettings.ShowExportSettings)) {
+            ImGui::SetWindowSize({400, 400}, ImGuiCond_FirstUseEver);
+
+            if (m_ExportSettings.Exporter->DrawSettingsUI()) {
+                std::string status_text    = "Exporting \"" + m_ExportSettings.Filename.generic_string() + "\"...";
+                const auto  status_text_id = PushStatusText(status_text);
+
+                Window::Get()->ShowFolderSelection(
+                    "Select a location to export the file to.",
+                    [&, status_text_id](const std::filesystem::path& path) {
+                        m_ExportSettings.Exporter->Export(
+                            m_ExportSettings.Filename, path, [&, path, status_text_id](bool success) {
+                                m_ExportSettings.ShowExportSettings = false;
+                                UI::Get()->PopStatusText(status_text_id);
+                                if (!success) {
+                                    LOG_ERROR("Failed to export \"{}\"", _exporting_file.filename().string());
+                                    Window::Get()->ShowMessageBox(
+                                        "Failed to export \"" + m_ExportSettings.Filename.filename().string() + "\".");
+                                }
+                            });
+                    },
+                    [&, status_text_id] {
+                        m_ExportSettings.ShowExportSettings = false;
+                        UI::Get()->PopStatusText(status_text_id);
+                    });
+            }
+
+            ImGui::EndPopup();
+        }
+    }
+
     // name hash generator
     if (g_ShowNameHashWindow) {
         ImGui::SetNextWindowSize({370, 85}, ImGuiCond_FirstUseEver);
@@ -455,7 +492,7 @@ void UI::RenderFileTreeView()
 #endif
 
                     // context menu
-                    RenderContextMenu(archive->GetFilePath(), 0, CTX_ARCHIVE);
+                    RenderContextMenu(archive->GetFilePath(), 0, ContextMenuFlags_Archive);
 
                     if (open && archive->GetDirectoryList()) {
                         // draw the directory list
@@ -655,7 +692,15 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
             if (ImGui::BeginMenu(ICON_FA_MINUS_CIRCLE "  Export", (exporters.size() > 0))) {
                 for (const auto& exporter : exporters) {
                     if (ImGui::MenuItem(exporter->GetName(), exporter->GetExportExtension())) {
-                        UI::Get()->Events().ExportFileRequest(filename, exporter);
+                        // UI::Get()->Events().ExportFileRequest(filename, exporter);
+
+                        if (exporter->HasSettingsUI()) {
+                            m_ExportSettings.Exporter           = exporter;
+                            m_ExportSettings.Filename           = filename;
+                            m_ExportSettings.ShowExportSettings = true;
+                        } else {
+                            LOG_INFO("no settings ui. continue..");
+                        }
                     }
                 }
 
@@ -686,6 +731,9 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
 
 void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title, std::shared_ptr<Texture> texture)
 {
+    // TODO: Render an empty box if the texture isn't loaded. In some cases the slot doesn't
+    //			have a texture loaded, but supports it. Drag & Drop should work!!
+
     if (!texture) {
         return;
     }
@@ -710,7 +758,7 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
         }
 
         // context menu
-        RenderContextMenu(filename_with_path, ImGui::GetColumnIndex(), ContextMenuFlags::CTX_TEXTURE);
+        RenderContextMenu(filename_with_path, ImGui::GetColumnIndex(), ContextMenuFlags_Texture);
 
         // dragdrop payload
         if (const auto payload = UI::Get()->GetDropPayload(DROPPAYLOAD_UNKNOWN)) {

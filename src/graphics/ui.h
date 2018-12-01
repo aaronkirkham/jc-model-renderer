@@ -23,9 +23,10 @@ struct UIEvents {
 };
 
 enum ContextMenuFlags {
-    CTX_FILE    = (1 << 0),
-    CTX_ARCHIVE = (1 << 1),
-    CTX_TEXTURE = (1 << 2),
+    ContextMenuFlags_None    = 0,
+    ContextMenuFlags_File    = 1 << 0,
+    ContextMenuFlags_Archive = 1 << 1,
+    ContextMenuFlags_Texture = 1 << 2,
 };
 
 enum TreeViewTab {
@@ -58,9 +59,14 @@ class UI : public Singleton<UI>
     TreeViewTab                                m_TabToSwitch          = TAB_FILE_EXPLORER;
     uint8_t                                    m_CurrentActiveGBuffer = 0;
     std::array<bool, 2>                        m_SceneMouseState      = {false};
+    bool                                       m_IsDragDrop           = false;
+    std::string                                m_DragDropPayload;
 
-    bool        m_IsDragDrop = false;
-    std::string m_DragDropPayload;
+    struct {
+        bool                  ShowExportSettings = false;
+        IImportExporter*      Exporter           = nullptr;
+        std::filesystem::path Filename           = "";
+    } m_ExportSettings;
 
     ImDrawList* m_SceneDrawList = nullptr;
     float       m_SceneWidth    = 0.0f;

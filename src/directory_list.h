@@ -4,6 +4,7 @@
 #include <json.hpp>
 
 #include "jc3/formats/stream_archive.h"
+
 #include "graphics/imgui/fonts/fontawesome5_icons.h"
 #include "graphics/ui.h"
 
@@ -133,7 +134,8 @@ class DirectoryList
 
                 // render context menu
                 UI::Get()->RenderContextMenu(filename_with_path, 0,
-                                             current_archive ? CTX_FILE | CTX_ARCHIVE : CTX_FILE);
+                                             current_archive ? ContextMenuFlags_File | ContextMenuFlags_Archive
+                                                             : ContextMenuFlags_File);
             }
         }
     }

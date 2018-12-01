@@ -40,7 +40,7 @@ TextureManager::TextureManager()
                 ImGui::Image((*it)->GetSRV(), ImVec2((float)width, (float)height));
 
                 // render context menus so we can save/export from this window
-                UI::Get()->RenderContextMenu((*it)->GetFileName(), 0, CTX_TEXTURE);
+                UI::Get()->RenderContextMenu((*it)->GetFileName(), 0, ContextMenuFlags_Texture);
             }
             ImGui::End();
 
@@ -86,7 +86,8 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path&
             if (!success) {
                 LOG_ERROR("Failed to read texture \"{}\"", filename.string());
             } else if (!HasTexture(filename)) {
-                LOG_WARN("Read texture, but it no longer exists in TextureManager cache. (probably deleted before loading finished)");
+                LOG_WARN("Read texture, but it no longer exists in TextureManager cache. (probably deleted before "
+                         "loading finished)");
             }
 #endif
 

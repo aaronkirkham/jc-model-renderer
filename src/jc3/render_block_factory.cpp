@@ -4,10 +4,13 @@
 #include "renderblocks/renderblockcarpaintmm.h"
 #include "renderblocks/renderblockcharacter.h"
 #include "renderblocks/renderblockcharacterskin.h"
+#include "renderblocks/renderblockgeneral.h"
 #include "renderblocks/renderblockgeneraljc3.h"
 #include "renderblocks/renderblockgeneralmkiii.h"
 #include "renderblocks/renderblocklandmark.h"
+#include "renderblocks/renderblockprop.h"
 #include "renderblocks/renderblockwindow.h"
+
 #include "hashlittle.h"
 
 IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type)
@@ -23,12 +26,16 @@ IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type)
             return new RenderBlockCharacter;
         case RB_CHARACTERSKIN:
             return new RenderBlockCharacterSkin;
+        case RB_GENERAL:
+            return new RenderBlockGeneral;
         case RB_GENERALJC3:
             return new RenderBlockGeneralJC3;
         case RB_GENERALMKIII:
             return new RenderBlockGeneralMkIII;
         case RB_LANDMARK:
             return new RenderBlockLandmark;
+        case RB_PROP:
+            return new RenderBlockProp;
         case RB_WINDOW:
             return new RenderBlockWindow;
     }

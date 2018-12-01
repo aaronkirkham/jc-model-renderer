@@ -138,9 +138,9 @@ const glm::vec2& Texture::GetSize() const
     return m_Size;
 }
 
-const FileBuffer& Texture::GetBuffer() const
+const FileBuffer* Texture::GetBuffer() const
 {
-    return m_Buffer;
+    return &m_Buffer;
 }
 
 ID3D11Resource* Texture::GetResource() const

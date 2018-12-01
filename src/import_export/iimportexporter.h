@@ -22,6 +22,16 @@ class IImportExporter
     virtual std::vector<const char*> GetImportExtension() = 0;
     virtual const char*              GetExportExtension() = 0;
 
+    virtual bool HasSettingsUI()
+    {
+        return false;
+    }
+
+    virtual bool DrawSettingsUI()
+    {
+        return true;
+    }
+
     // NOTE: callback can be nullptr! remember to check this correctly in overrides of this function!
     virtual void Import(const std::filesystem::path& filename, ImportFinishedCallback callback = {}) = 0;
     virtual void Export(const std::filesystem::path& filename, const std::filesystem::path& to,

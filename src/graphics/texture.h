@@ -32,7 +32,7 @@ class Texture
     bool              IsLoaded() const;
     const uint32_t    GetHash() const;
     const glm::vec2&  GetSize() const;
-    const FileBuffer& GetBuffer() const;
+    const FileBuffer* GetBuffer() const;
 
     ID3D11Resource*           GetResource() const;
     ID3D11ShaderResourceView* GetSRV() const;

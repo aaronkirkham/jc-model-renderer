@@ -203,7 +203,7 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileCallbac
         const auto& texture = TextureManager::Get()->GetTexture(filename, TextureManager::NO_CREATE);
         if (texture && texture->IsLoaded()) {
             UI::Get()->PopStatusText(status_text_id);
-            return callback(true, texture->GetBuffer());
+            return callback(true, *texture->GetBuffer());
         }
 
         // try load the texture
