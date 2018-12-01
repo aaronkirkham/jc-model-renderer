@@ -93,8 +93,8 @@ class IRenderBlock
     virtual void Read(std::istream& file)  = 0;
     virtual void Write(std::ostream& file) = 0;
 
-    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) = 0;
-    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData()                 = 0;
+    virtual void                              SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) = 0;
+    virtual std::tuple<vertices_t, uint16s_t> GetData()                                                      = 0;
 
     virtual void Setup(RenderContext_t* context)
     {

@@ -178,27 +178,26 @@ class RenderBlockWindow : public IRenderBlock
         //
     }
 
-    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData() override final
+    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
         using namespace JustCause3::Vertex;
 
-        floats_t  vertices;
-        uint16s_t indices = m_IndexBuffer->CastData<uint16_t>();
-        floats_t  uvs;
+        vertices_t vertices;
+        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
 
         const auto& vb = m_VertexBuffer->CastData<UnpackedVertexPosition2UV>();
+        vertices.reserve(vb.size());
 
         for (const auto& vertex : vb) {
-            vertices.emplace_back(vertex.x);
-            vertices.emplace_back(vertex.y);
-            vertices.emplace_back(vertex.z);
-            uvs.emplace_back(vertex.u0);
-            uvs.emplace_back(vertex.v0);
+            vertex_t v;
+            v.pos = {vertex.x, vertex.y, vertex.z};
+            v.uv  = {vertex.u0, vertex.v0};
+            vertices.emplace_back(std::move(v));
 
             // TODO: u1,v1
         }
 
-        return {vertices, indices, uvs};
+        return {vertices, indices};
     }
 
     virtual void Setup(RenderContext_t* context) override final

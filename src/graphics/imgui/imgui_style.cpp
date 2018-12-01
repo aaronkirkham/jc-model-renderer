@@ -18,7 +18,7 @@ void SetupImGuiStyle()
     style.ItemSpacing.y     = 6.0f;
     style.WindowBorderSize  = 0.0f;
 
-    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.IniFilename            = nullptr;
     io.ConfigDockingWithShift = false;
 
@@ -64,6 +64,7 @@ void SetupImGuiStyle()
     style.Colors[ImGuiCol_Tab]                  = ImVec4(0.21f, 0.21f, 0.21f, 1.00f);
     style.Colors[ImGuiCol_TabActive]            = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
     style.Colors[ImGuiCol_TabHovered]           = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
+    style.Colors[ImGuiCol_Separator]            = ImVec4(0.50f, 0.50f, 0.50f, 0.50f);
 
     // add default font
     // io.Fonts->AddFontDefault();

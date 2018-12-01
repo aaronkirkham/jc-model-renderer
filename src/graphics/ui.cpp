@@ -260,9 +260,9 @@ void UI::Render(RenderContext_t* context)
             ImGui::OpenPopup("Exporter Settings");
         }
 
-        if (ImGui::BeginPopupModal("Exporter Settings", &m_ExportSettings.ShowExportSettings)) {
-            ImGui::SetWindowSize({400, 400}, ImGuiCond_FirstUseEver);
-
+        if (ImGui::BeginPopupModal("Exporter Settings", &m_ExportSettings.ShowExportSettings,
+                                   (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse
+                                    | ImGuiWindowFlags_AlwaysAutoResize))) {
             if (m_ExportSettings.Exporter->DrawSettingsUI()) {
                 std::string status_text    = "Exporting \"" + m_ExportSettings.Filename.generic_string() + "\"...";
                 const auto  status_text_id = PushStatusText(status_text);
@@ -275,7 +275,7 @@ void UI::Render(RenderContext_t* context)
                                 m_ExportSettings.ShowExportSettings = false;
                                 UI::Get()->PopStatusText(status_text_id);
                                 if (!success) {
-                                    LOG_ERROR("Failed to export \"{}\"", _exporting_file.filename().string());
+                                    LOG_ERROR("Failed to export \"{}\"", m_ExportSettings.Filename.filename().string());
                                     Window::Get()->ShowMessageBox(
                                         "Failed to export \"" + m_ExportSettings.Filename.filename().string() + "\".");
                                 }

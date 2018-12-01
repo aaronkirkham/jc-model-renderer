@@ -556,42 +556,41 @@ class RenderBlockGeneralMkIII : public IRenderBlock
     }
 #endif
 
-    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData() override final
+    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
         using namespace JustCause3::Vertex;
 
-        floats_t  vertices;
-        uint16s_t indices = m_IndexBuffer->CastData<uint16_t>();
-        floats_t  uvs;
+        vertices_t vertices;
+        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
 
         if (m_Block.attributes.flags & IS_SKINNED) {
             const auto& vb = m_VertexBuffer->CastData<UnpackedVertexPositionXYZW>();
+            vertices.reserve(vb.size());
 
             for (const auto& vertex : vb) {
-                vertices.emplace_back(vertex.x * m_Block.attributes.packed.scale);
-                vertices.emplace_back(vertex.y * m_Block.attributes.packed.scale);
-                vertices.emplace_back(vertex.z * m_Block.attributes.packed.scale);
+                vertex_t v;
+                v.pos = {vertex.x, vertex.y, vertex.z};
+                vertices.emplace_back(std::move(v));
             }
         } else {
             const auto& vb = m_VertexBuffer->CastData<PackedVertexPosition>();
+            vertices.reserve(vb.size());
 
             for (const auto& vertex : vb) {
-                vertices.emplace_back(unpack(vertex.x) * m_Block.attributes.packed.scale);
-                vertices.emplace_back(unpack(vertex.y) * m_Block.attributes.packed.scale);
-                vertices.emplace_back(unpack(vertex.z) * m_Block.attributes.packed.scale);
+                vertex_t v;
+                v.pos = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                vertices.emplace_back(std::move(v));
             }
         }
 
         const auto& vbdata = m_VertexBufferData->CastData<GeneralShortPacked>();
-
-        for (const auto& data : vbdata) {
-            uvs.emplace_back(unpack(data.u0) * m_Block.attributes.packed.uv0Extent.x);
-            uvs.emplace_back(unpack(data.v0) * m_Block.attributes.packed.uv0Extent.y);
-
+        for (auto i = 0; i < vbdata.size(); ++i) {
+            vertices[i].uv = {unpack(vbdata[i].u0) * m_Block.attributes.packed.uv0Extent.x,
+                              unpack(vbdata[i].v0) * m_Block.attributes.packed.uv0Extent.y};
             // TODO: u1,v1
         }
 
-        return {vertices, indices, uvs};
+        return {vertices, indices};
     }
 
     virtual void Setup(RenderContext_t* context) override final

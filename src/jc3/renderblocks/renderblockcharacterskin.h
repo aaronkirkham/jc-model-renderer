@@ -311,14 +311,13 @@ class RenderBlockCharacterSkin : public IRenderBlock
         //
     }
 
-    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData() override final
+    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
         using namespace JustCause3::Vertex;
         using namespace JustCause3::Vertex::RenderBlockCharacter;
 
-        floats_t  vertices;
-        uint16s_t indices = m_IndexBuffer->CastData<uint16_t>();
-        floats_t  uvs;
+        vertices_t vertices;
+        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
 
         switch (m_Stride) {
             // 4bones1uv, 4bones2uvs, 4bones3uvs
@@ -327,12 +326,12 @@ class RenderBlockCharacterSkin : public IRenderBlock
             case 2: {
                 // TODO: once multiple UVs are supported, change this!
                 const auto& vb = m_VertexBuffer->CastData<Packed4Bones1UV>();
+                vertices.reserve(vb.size());
                 for (const auto& vertex : vb) {
-                    vertices.emplace_back(unpack(vertex.x));
-                    vertices.emplace_back(unpack(vertex.y));
-                    vertices.emplace_back(unpack(vertex.z));
-                    uvs.emplace_back(unpack(vertex.u0));
-                    uvs.emplace_back(unpack(vertex.v0));
+                    vertex_t v;
+                    v.pos = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)} * m_Block.attributes.scale;
+                    vertices.emplace_back(std::move(v));
                 }
 
                 break;
@@ -344,19 +343,19 @@ class RenderBlockCharacterSkin : public IRenderBlock
             case 5: {
                 // TODO: once multiple UVs are supported, change this!
                 const auto& vb = m_VertexBuffer->CastData<Packed8Bones1UV>();
+                vertices.reserve(vb.size());
                 for (const auto& vertex : vb) {
-                    vertices.emplace_back(unpack(vertex.x));
-                    vertices.emplace_back(unpack(vertex.y));
-                    vertices.emplace_back(unpack(vertex.z));
-                    uvs.emplace_back(unpack(vertex.u0));
-                    uvs.emplace_back(unpack(vertex.v0));
+                    vertex_t v;
+                    v.pos = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)} * m_Block.attributes.scale;
+                    vertices.emplace_back(std::move(v));
                 }
 
                 break;
             }
         }
 
-        return {vertices, indices, uvs};
+        return {vertices, indices};
     }
 
     virtual void Setup(RenderContext_t* context) override final

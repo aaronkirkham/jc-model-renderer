@@ -71,8 +71,15 @@ class Wavefront_Obj : public IImportExporter
 
     bool DrawSettingsUI() override final
     {
+        const auto& _text_colour = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+
         ImGui::CheckboxFlags("Merge Render Blocks", &m_ExporterFlags, WavefrontExporterFlags_MergeBlocks);
+        ImGui::TextColored(_text_colour, "Merge models with multiple Render Blocks into a single file.");
+
+        ImGui::Separator();
+
         ImGui::CheckboxFlags("Export Textures", &m_ExporterFlags, WavefrontExporterFlags_ExportTextures);
+        ImGui::TextColored(_text_colour, "Export model textures as DDS");
 
         return ImGui::Button("Export");
     }
@@ -213,6 +220,7 @@ class Wavefront_Obj : public IImportExporter
                     // write the block material
                     mtl_stream << "newmtl " << diffuse_texture_filename.string() << std::endl;
                     mtl_stream << "Kd 1.0 1.0 1.0" << std::endl;
+                    mtl_stream << "Ks 0.0 0.0 0.0" << std::endl;
                     mtl_stream << "map_Kd " << diffuse_texture_filename.string() << ".dds" << std::endl << std::endl;
 
                     // export the texture
@@ -271,39 +279,29 @@ class Wavefront_Obj : public IImportExporter
                 }
             }
 
-            const auto& [vertices, indices, uvs] = block->GetData();
-
-            // vertices
-            for (auto i = 0; i < vertices.size(); i += 3) {
-                out_stream << "v " << vertices[i] << " " << vertices[i + 1] << " " << vertices[i + 2] << std::endl;
+            auto [vertices, indices] = block->GetData();
+            for (auto& vertex : vertices) {
+                out_stream << "v " << vertex.pos.x << " " << vertex.pos.y << " " << vertex.pos.z << std::endl;
+                out_stream << "vt " << vertex.uv.x << " " << vertex.uv.y << std::endl;
             }
 
-            // uvs
-            for (auto i = 0; i < uvs.size(); i += 2) {
-                out_stream << "vt " << uvs[i] << " " << uvs[i + 1] << std::endl;
-            }
-
-            // faces
             for (auto i = 0; i < indices.size(); i += 3) {
-                auto f1 = indices[i] + 1;
-                auto f2 = indices[i + 1] + 1;
-                auto f3 = indices[i + 2] + 1;
+                int32_t vertex_indices[3] = {indices[i] + 1, indices[i + 1] + 1, indices[i + 2] + 1};
 
-				if (m_ExporterFlags & WavefrontExporterFlags_MergeBlocks) {
-                    f1 += _num_vertices;
-                    f2 += _num_vertices;
-                    f3 += _num_vertices;
-				}
+                // if we are merging blocks, add the total vertices/uvs the the current index
+                if (m_ExporterFlags & WavefrontExporterFlags_MergeBlocks) {
+                    vertex_indices[0] += _num_vertices;
+                    vertex_indices[1] += _num_vertices;
+                    vertex_indices[2] += _num_vertices;
+                }
 
                 // f v[/t/n]
-                out_stream << "f " << f1 << "/" << f1;
-                out_stream << " " << f2 << "/" << f2;
-                out_stream << " " << f3 << "/" << f3 << std::endl;
+                out_stream << "f " << vertex_indices[0] << "/" << vertex_indices[0];
+                out_stream << " " << vertex_indices[1] << "/" << vertex_indices[1];
+                out_stream << " " << vertex_indices[2] << "/" << vertex_indices[2] << std::endl;
             }
 
-			//
-            _num_vertices += vertices.size() / 3;
-
+            _num_vertices += vertices.size();
             _seen[block->GetTypeHash()]++;
         }
 

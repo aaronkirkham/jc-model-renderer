@@ -11,6 +11,13 @@ using uint16s_t   = std::vector<uint16_t>;
 using materials_t = std::vector<std::filesystem::path>;
 using FileBuffer  = std::vector<uint8_t>;
 
+struct vertex_t {
+    glm::vec3 pos;
+    glm::vec2 uv;
+};
+
+using vertices_t = std::vector<vertex_t>;
+
 class Renderer;
 struct RenderContext_t {
     float                m_DeltaTime         = 0.0f;

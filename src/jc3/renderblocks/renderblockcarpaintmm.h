@@ -321,70 +321,74 @@ class RenderBlockCarPaintMM : public IRenderBlock
         //
     }
 
-    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData() override final
+    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
         using namespace JustCause3::Vertex;
 
-        floats_t  vertices;
-        uint16s_t indices = m_IndexBuffer->CastData<uint16_t>();
-        floats_t  uvs;
+        vertices_t vertices;
+        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
 
         if (m_Block.attributes.flags & IS_SKINNED) {
             const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexWithNormal1>();
             const auto& vbdata = m_VertexBufferData[0]->CastData<UnpackedNormals>();
 
+            assert(vb.size() == vbdata.size());
+            vertices.reserve(vb.size());
+
             for (const auto& vertex : vb) {
-                vertices.emplace_back(vertex.x);
-                vertices.emplace_back(vertex.y);
-                vertices.emplace_back(vertex.z);
+                vertex_t v;
+                v.pos = {vertex.x, vertex.y, vertex.z};
+                vertices.emplace_back(std::move(v));
             }
 
-            for (const auto& data : vbdata) {
-                uvs.emplace_back(data.u0);
-                uvs.emplace_back(data.v0);
-
+            for (auto i = 0; i < vbdata.size(); ++i) {
+                vertices[i].uv = {vbdata[i].u0, vbdata[i].v0};
                 // TODO: u1,v1
             }
         } else if (m_Block.attributes.flags & IS_DEFORM) {
             const auto& vb     = m_VertexBuffer->CastData<VertexDeformPos>();
             const auto& vbdata = m_VertexBufferData[0]->CastData<VertexDeformNormal2>();
 
+            assert(vb.size() == vbdata.size());
+            vertices.reserve(vb.size());
+
             for (const auto& vertex : vb) {
-                vertices.emplace_back(vertex.x);
-                vertices.emplace_back(vertex.y);
-                vertices.emplace_back(vertex.z);
+                vertex_t v;
+                v.pos = {vertex.x, vertex.y, vertex.z};
+                vertices.emplace_back(std::move(v));
             }
 
-            for (const auto& data : vbdata) {
-                uvs.emplace_back(data.u0);
-                uvs.emplace_back(data.v0);
-
+            for (auto i = 0; i < vbdata.size(); ++i) {
+                vertices[i].uv = {vbdata[i].u0, vbdata[i].v0};
                 // TODO: u1,v1
             }
         } else {
             const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexPosition>();
             const auto& vbdata = m_VertexBufferData[0]->CastData<UnpackedNormals>();
 
+            assert(vb.size() == vbdata.size());
+            vertices.reserve(vb.size());
+
             for (const auto& vertex : vb) {
-                vertices.emplace_back(vertex.x);
-                vertices.emplace_back(vertex.y);
-                vertices.emplace_back(vertex.z);
+                vertex_t v;
+                v.pos = {vertex.x, vertex.y, vertex.z};
+                vertices.emplace_back(std::move(v));
             }
 
-            for (const auto& data : vbdata) {
-                uvs.emplace_back(data.u0);
-                uvs.emplace_back(data.v0);
-
+            for (auto i = 0; i < vbdata.size(); ++i) {
+                vertices[i].uv = {vbdata[i].u0, vbdata[i].v0};
                 // TODO: u1,v1
             }
         }
 
+#if 0
         if (m_Block.attributes.flags & (SUPPORT_LAYERED | SUPPORT_OVERLAY)) {
             const auto& uvs = m_VertexBufferData[1]->CastData<UnpackedUV>();
             // TODO: u,v
         }
+#endif
 
-        return {vertices, indices, uvs};
+        return {vertices, indices};
     }
 
     virtual void Setup(RenderContext_t* context) override final
@@ -401,7 +405,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
             // set vertex shader constants
             m_cbRBIInfo.ModelWorldMatrix = world;
         }
-        
+
         // set the textures
         for (int i = 0; i < 10; ++i) {
             IRenderBlock::BindTexture(i, m_SamplerState);
@@ -551,7 +555,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
             if (m_Block.attributes.flags & SUPPORT_LAYERED) {
                 IRenderBlock::DrawTexture("LayeredAlbedoMap", 10);
             }
-            
+
             if (m_Block.attributes.flags & SUPPORT_OVERLAY) {
                 IRenderBlock::DrawTexture("OverlayAlbedoMap", 11);
             }

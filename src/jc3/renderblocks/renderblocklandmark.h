@@ -170,7 +170,7 @@ class RenderBlockLandmark : public IRenderBlock
         //
     }
 
-    virtual std::tuple<floats_t, uint16s_t, floats_t> GetData() override final
+    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
         return {};
     }
