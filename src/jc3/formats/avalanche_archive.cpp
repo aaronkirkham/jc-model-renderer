@@ -16,6 +16,13 @@
 std::recursive_mutex                                  Factory<AvalancheArchive>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<AvalancheArchive>> Factory<AvalancheArchive>::Instances;
 
+AvalancheArchive::AvalancheArchive(const std::filesystem::path& filename)
+    : m_File(filename)
+{
+    m_StreamArchive = std::make_unique<StreamArchive_t>();
+    m_FileList = std::make_unique<DirectoryList>();
+}
+
 AvalancheArchive::AvalancheArchive(const std::filesystem::path& filename, const FileBuffer& buffer, bool external)
     : m_File(filename)
 {

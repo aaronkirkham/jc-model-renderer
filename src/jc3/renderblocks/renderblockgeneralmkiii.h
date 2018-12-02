@@ -342,159 +342,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-#if 0
-    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) override final
-    {
-        using namespace JustCause3::Vertex;
-
-        // clang-format off
-
-        memset(&m_Block.attributes, 0, sizeof(m_Block.attributes));
-        memset(&m_cbMaterialConsts2, 0, sizeof(m_cbMaterialConsts2));
-
-        m_Block.attributes.packed.scale = 1.f;
-        m_Block.attributes.packed.uv0Extent = { 1.f, 1.f };
-        m_Block.attributes.emissiveStartFadeDistSq = 2000.f;
-
-        // test
-        m_MaterialParams[0] = 1.0f;
-        m_MaterialParams[1] = 1.0f;
-        m_MaterialParams[2] = 1.0f;
-        m_MaterialParams[3] = 1.0f;
-  
-        // vertices
-        std::vector<glm::vec3> _vertices;
-        {
-            static const char* _vertices_strings[] = {
-                "v 0.500000 -0.500000 0.500000",
-                "v 0.500000 -0.500000 -0.500000",
-                "v 0.500000 0.500000 0.500000",
-                "v 0.500000 0.500000 -0.500000",
-                "v -0.500000 0.500000 0.500000",
-                "v -0.500000 0.500000 -0.500000",
-                "v -0.500000 -0.500000 0.500000",
-                "v -0.500000 -0.500000 -0.500000",
-            };
-
-            for (int i = 0; i < ARRAYSIZE(_vertices_strings); ++i) {
-                float x, y, z;
-                sscanf(_vertices_strings[i], "v %f %f %f", &x, &y, &z);
-
-                _vertices.emplace_back(glm::vec3{ x, y, z });
-            }
-        }
-
-        // indices
-        std::vector<uint16_t> vertex_indices;
-        std::vector<uint16_t> uv_indices;
-        {
-            static const char* faces[] = {
-                "f 1/1/1 2/2/1 3/3/1",
-                "f 3/3/1 2/2/1 4/4/1",
-
-                "f 3/1/2 4/2/2 5/3/2",
-                "f 5/3/2 4/2/2 6/4/2",
-
-                "f 5/4/3 6/3/3 7/2/3",
-                "f 7/2/3 6/3/3 8/1/3",
-
-                "f 7/1/4 8/2/4 1/3/4",
-                "f 1/3/4 8/2/4 2/4/4",
-
-                "f 2/1/5 8/2/5 4/3/5",
-                "f 4/3/5 8/2/5 6/4/5",
-
-                "f 7/1/6 1/2/6 5/3/6",
-                "f 5/3/6 1/2/6 3/4/6",
-            };
-
-            // 36
-
-            for (int i = 0; i < ARRAYSIZE(faces); ++i) {
-                int v_index[3], uv_index[3], n_index[3];
-
-                sscanf(faces[i], "f %d/%d/%d %d/%d/%d %d/%d/%d",
-                    &v_index[0], &uv_index[0], &n_index[0],
-                    &v_index[1], &uv_index[1], &n_index[1],
-                    &v_index[2], &uv_index[2], &n_index[2]);
-
-                // vertex indices
-                vertex_indices.emplace_back(v_index[0] - 1);
-                vertex_indices.emplace_back(v_index[1] - 1);
-                vertex_indices.emplace_back(v_index[2] - 1);
-
-                // uv indices
-                uv_indices.emplace_back(uv_index[0] - 1);
-                uv_indices.emplace_back(uv_index[1] - 1);
-                uv_indices.emplace_back(uv_index[2] - 1);
-            }
-        }
-
-        // uvs
-        std::vector<glm::vec2> _uvs;
-        {
-            static const char* _uv_strings[] = {
-                "vt 0.000000 0.000000",
-                "vt 1.000000 0.000000",
-                "vt 0.000000 1.000000",
-                "vt 1.000000 1.000000",
-            };
-
-            for (int i = 0; i < ARRAYSIZE(_uv_strings); ++i) {
-                float x, y;
-                sscanf(_uv_strings[i], "vt %f %f", &x, &y);
-
-                _uvs.emplace_back(glm::vec2{ x, y });
-            }
-        }
-
-        // init
-        {
-            std::vector<PackedVertexPosition> packed_vertices;
-            std::vector<GeneralShortPacked> packed_data;
-            std::vector<uint16_t> _indices;
-            
-            for (int i = 0; i < vertex_indices.size(); ++i) {
-                auto vi = vertex_indices[i];
-                auto ui = uv_indices[i];
-
-                _indices.emplace_back(packed_vertices.size());
-
-                PackedVertexPosition pvp{};
-                pvp.x = pack<int16_t>(_vertices[vi].x);
-                pvp.y = pack<int16_t>(_vertices[vi].y);
-                pvp.z = pack<int16_t>(_vertices[vi].z);
-                packed_vertices.emplace_back(std::move(pvp));
-
-                GeneralShortPacked gsp{};
-                gsp.u0 = pack<int16_t>(_uvs[ui].x);
-                gsp.v0 = pack<int16_t>(_uvs[ui].y);
-                packed_data.emplace_back(std::move(gsp));
-            }
-
-            m_VertexBuffer = Renderer::Get()->CreateBuffer(packed_vertices.data(), packed_vertices.size(), sizeof(PackedVertexPosition), VERTEX_BUFFER);
-            m_VertexBufferData = Renderer::Get()->CreateBuffer(packed_data.data(), packed_data.size(), sizeof(GeneralShortPacked), VERTEX_BUFFER);
-            m_IndexBuffer = Renderer::Get()->CreateBuffer(_indices.data(), _indices.size(), sizeof(uint16_t), INDEX_BUFFER);
-        }
-
-        // textures
-        {
-            m_Materials.emplace_back("models/jc_characters/main_characters/rico/textures/nanos.dds");
-
-            // load the material
-            auto& texture = TextureManager::Get()->GetTexture("models/jc_characters/main_characters/rico/textures/nanos.dds");
-            if (texture) {
-                texture->LoadFromFile("C:/users/aaron/Desktop/nanos cube/nanos.dds");
-                m_Textures.emplace_back(texture);
-            }
-        }
-
-        // clang-format on
-    }
-#endif
-
-#if 1
-    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
     {
         using namespace JustCause3::Vertex;
 
@@ -515,37 +363,35 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         m_MaterialParams[2] = 1.0f;
         m_MaterialParams[3] = 1.0f;
 
+        // textures
+        // TODO: move the std::vector from IRenderBlock. Each block has a different max amount
+        // of textures it can hold which NEED to written correctly when rebuilding the RBM
+        m_Textures.resize(20);
+
         std::vector<PackedVertexPosition> packed_vertices;
         std::vector<GeneralShortPacked>   packed_data;
 
-        for (int i = 0; i < vertices->size(); i += 3) {
+        for (const auto& vertex : *vertices) {
+            // vertices data
             PackedVertexPosition pos{};
-            pos.x = pack<int16_t>(vertices->at(i));
-            pos.y = pack<int16_t>(vertices->at(i + 1));
-            pos.z = pack<int16_t>(vertices->at(i + 2));
+            pos.x = pack<int16_t>(vertex.pos.x);
+            pos.y = pack<int16_t>(vertex.pos.y);
+            pos.z = pack<int16_t>(vertex.pos.z);
             packed_vertices.emplace_back(std::move(pos));
+
+            // uv data
+            GeneralShortPacked gsp{};
+            gsp.u0 = pack<int16_t>(vertex.uv.x);
+            gsp.v0 = pack<int16_t>(vertex.uv.y);
+            packed_data.emplace_back(std::move(gsp));
         }
 
-        /*for (int i = 0; i < uvs->size(); i+=2) {
-            GeneralShortPacked gsp{};
-            gsp.u0 = pack<int16_t>(uvs->at(i));
-            gsp.v0 = pack<int16_t>(uvs->at(i + 1));
-            packed_data.emplace_back(std::move(gsp));
-        }*/
-
-        // textures
-        {
-#if 0
-            m_Materials.emplace_back("models/jc_characters/main_characters/rico/textures/nanos.dds");
-
-            // load the material
-            auto& texture =
-                TextureManager::Get()->GetTexture("models/jc_characters/main_characters/rico/textures/nanos.dds");
-            if (texture) {
-                texture->LoadFromFile("C:/users/aaron/Desktop/nanos cube/nanos.dds");
-                m_Textures.emplace_back(texture);
-            }
-#endif
+        // load texture
+        auto& texture =
+            TextureManager::Get()->GetTexture("models/jc_characters/main_characters/rico/textures/nanos.dds");
+        if (texture) {
+            texture->LoadFromFile("C:/users/aaron/Desktop/nanos cube/nanos.dds");
+            m_Textures[0] = std::move(texture);
         }
 
         m_VertexBuffer     = Renderer::Get()->CreateBuffer(packed_vertices.data(), packed_vertices.size(),
@@ -554,7 +400,6 @@ class RenderBlockGeneralMkIII : public IRenderBlock
                                                            sizeof(GeneralShortPacked), VERTEX_BUFFER);
         m_IndexBuffer = Renderer::Get()->CreateBuffer(indices->data(), indices->size(), sizeof(uint16_t), INDEX_BUFFER);
     }
-#endif
 
     virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
@@ -585,8 +430,8 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
         const auto& vbdata = m_VertexBufferData->CastData<GeneralShortPacked>();
         for (auto i = 0; i < vbdata.size(); ++i) {
-            vertices[i].uv = {unpack(vbdata[i].u0) * m_Block.attributes.packed.uv0Extent.x,
-                              unpack(vbdata[i].v0) * m_Block.attributes.packed.uv0Extent.y};
+            vertices[i].uv =
+                glm::vec2{unpack(vbdata[i].u0), unpack(vbdata[i].v0)} * m_Block.attributes.packed.uv0Extent;
             // TODO: u1,v1
         }
 

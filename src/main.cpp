@@ -211,15 +211,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     const auto& importers = ImportExportManager::Get()->GetImporters(".rbm");
                     importers[0]->Import(
                         "C:/users/aaron/desktop/nanos cube/nanos.obj", [&](bool success, std::any data) {
-                            const auto rbm          = RenderBlockModel::make("nanos.obj");
+                            const auto rbm          = RenderBlockModel::make("nanos.rbm");
                             const auto render_block = RenderBlockFactory::CreateRenderBlock("GeneralMkIII");
 
                             rbm->GetRenderBlocks().emplace_back(render_block);
 
-                            auto& [vertices, uvs, normals, indices] =
-                                std::any_cast<std::tuple<floats_t, floats_t, floats_t, uint16s_t>>(data);
+                            auto& [vertices, indices] = std::any_cast<std::tuple<vertices_t, uint16s_t>>(data);
 
-                            render_block->SetData(&vertices, &indices, &uvs);
+                            __debugbreak();
+
+                            render_block->SetData(&vertices, &indices);
                             render_block->Create();
 
                             Renderer::Get()->AddToRenderList(render_block);

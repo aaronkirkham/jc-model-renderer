@@ -196,7 +196,7 @@ class RenderBlockGeneralJC3 : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
     {
         //
     }
@@ -215,8 +215,7 @@ class RenderBlockGeneralJC3 : public IRenderBlock
             for (const auto& vertex : vb) {
                 vertex_t v;
                 v.pos = {vertex.x, vertex.y, vertex.z};
-                v.uv  = {unpack(vertex.u0) * m_Block.attributes.packed.uv0Extent.x,
-                        unpack(vertex.v0) * m_Block.attributes.packed.uv0Extent.y};
+                v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)} * m_Block.attributes.packed.uv0Extent;
                 vertices.emplace_back(std::move(v));
 
                 // TODO: u1,v1
@@ -232,8 +231,7 @@ class RenderBlockGeneralJC3 : public IRenderBlock
 
                 vertex_t v;
                 v.pos = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
-                v.uv  = {unpack(data.u0) * m_Block.attributes.packed.uv0Extent.x,
-                        unpack(data.v0) * m_Block.attributes.packed.uv0Extent.y};
+                v.uv  = glm::vec2{unpack(data.u0), unpack(data.v0)} * m_Block.attributes.packed.uv0Extent;
                 vertices.emplace_back(std::move(v));
 
                 // TODO: u1,v1

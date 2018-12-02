@@ -16,6 +16,7 @@ class AvalancheArchive : public Factory<AvalancheArchive>
     bool                             m_HasUnsavedChanged = false;
 
   public:
+    AvalancheArchive(const std::filesystem::path& filename);
     AvalancheArchive(const std::filesystem::path& filename, const FileBuffer& buffer, bool external = false);
     virtual ~AvalancheArchive() = default;
 

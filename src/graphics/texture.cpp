@@ -73,8 +73,6 @@ bool Texture::LoadFromBuffer(FileBuffer* buffer)
 
 bool Texture::LoadFromFile(const std::filesystem::path& filename)
 {
-    m_Filename = filename;
-
     std::ifstream stream(filename.c_str(), std::ios::binary);
     if (stream.fail()) {
         LOG_ERROR("Failed to create texture from file \"{}\"", filename.filename().string());

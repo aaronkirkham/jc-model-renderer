@@ -19,6 +19,7 @@
 #include "../jc3/formats/avalanche_archive.h"
 #include "../jc3/formats/render_block_model.h"
 #include "../jc3/formats/runtime_container.h"
+#include "../jc3/render_block_factory.h"
 #include "../jc3/renderblocks/irenderblock.h"
 
 #include "../import_export/import_export_manager.h"
@@ -38,6 +39,8 @@ static bool g_CheckForUpdatesEnabled = false;
 #else
 static bool g_CheckForUpdatesEnabled = true;
 #endif
+
+#define ENABLE_ASSET_CREATOR
 
 UI::UI()
 {
@@ -80,6 +83,22 @@ void UI::Render(RenderContext_t* context)
 
         // file
         if (ImGui::BeginMenu("File")) {
+#ifdef ENABLE_ASSET_CREATOR
+            if (ImGui::BeginMenu(ICON_FA_PLUS_SQUARE "  New")) {
+                if (ImGui::MenuItem("Avalanche Archive", ".ee")) {
+                    AvalancheArchive::make("new.ee");
+                }
+
+                if (ImGui::MenuItem("Render Block Model", ".rbm")) {
+                    RenderBlockModel::make("new.rbm");
+                }
+
+                ImGui::EndMenu();
+            }
+
+            ImGui::Separator();
+#endif
+
             if (ImGui::MenuItem(ICON_FA_FOLDER "  Select JC3 path")) {
                 Window::Get()->SelectJustCauseDirectory();
             }
@@ -90,20 +109,6 @@ void UI::Render(RenderContext_t* context)
 
             ImGui::EndMenu();
         }
-
-#if 0
-        if (ImGui::BeginMenu("Create"))
-        {
-            if (ImGui::MenuItem("Render Block Model")) {
-            }
-
-            if (ImGui::MenuItem("Avalanche Archive")) {
-                AvalancheArchive::make("test.ee", false);
-            }
-
-            ImGui::EndMenu();
-        }
-#endif
 
         // renderer
         if (ImGui::BeginMenu("Renderer")) {
@@ -541,8 +546,36 @@ void UI::RenderFileTreeView()
                     RenderContextMenu(filename_with_path);
 
                     if (open) {
+                        auto& render_blocks = (*it).second->GetRenderBlocks();
+
+#ifdef ENABLE_ASSET_CREATOR
+                        if (render_blocks.size() == 0) {
+                            static auto red = ImVec4{1, 0, 0, 1};
+                            ImGui::TextColored(red, "This model doesn't have any Render Blocks!");
+
+                            if (ImGuiCustom::BeginButtonDropDown("Add New Render Block")) {
+                                // TODO: some way to get this from the RenderBlockFactory
+                                static std::array<const char*, 11> available_blocks = {
+                                    "BuildingJC3",   "CarLight", "CarPaintMM", "Character",
+                                    "CharacterSkin", "General",  "GeneralJC3", "GeneralMkIII",
+                                    "Landmark",      "Prop",     "Window"};
+
+                                // show available render blocks
+                                for (const auto& block_name : available_blocks) {
+                                    if (ImGui::MenuItem(block_name)) {
+                                        const auto render_block = RenderBlockFactory::CreateRenderBlock(block_name);
+                                        assert(render_block);
+                                        render_blocks.emplace_back(render_block);
+                                    }
+                                }
+
+                                ImGuiCustom::EndButtonDropDown();
+                            }
+                        }
+#endif
+
                         uint32_t index = 0;
-                        for (auto& render_block : (*it).second->GetRenderBlocks()) {
+                        for (const auto& render_block : render_blocks) {
                             // unique id
                             std::string label(render_block->GetTypeName());
                             label.append("##" + filename + "-" + std::to_string(index));
@@ -561,33 +594,13 @@ void UI::RenderFileTreeView()
                                 ImGui::EndPopup();
                             }
 
-#if 0
-                            // block context menu
-                            {
-                                if (!block_visible)
-                                    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1);
-
-                                if (ImGui::BeginPopupContextItem()) {
-                                    if (ImGui::Selectable(block_visible ? ICON_FA_STOP "  Hide Render Block"
-                                                                        : ICON_FA_PLAY "  Show Render Block")) {
-                                        render_block->SetVisible(!block_visible);
-                                    }
-
-                                    ImGui::EndPopup();
-                                }
-
-                                if (!block_visible)
-                                    ImGui::PopStyleVar();
-                            }
-#endif
-
                             // render the current render block info
                             if (tree_open) {
                                 // show import button if the block doesn't have a vertex buffer
                                 if (!render_block->GetVertexBuffer()) {
-#ifdef ENABLE_OBJ_IMPORT
+#ifdef ENABLE_ASSET_CREATOR
                                     static auto red = ImVec4{1, 0, 0, 1};
-                                    ImGui::TextColored(red, "This model doesn't have any mesh!");
+                                    ImGui::TextColored(red, "This Render Block doesn't have any mesh!");
 
                                     if (ImGuiCustom::BeginButtonDropDown("Import Mesh From")) {
                                         const auto& importers = ImportExportManager::Get()->GetImporters(".rbm");
@@ -595,10 +608,10 @@ void UI::RenderFileTreeView()
                                             if (ImGui::MenuItem(importer->GetName(), importer->GetExportExtension())) {
                                                 UI::Events().ImportFileRequest(
                                                     importer, [&](bool success, std::any data) {
-                                                        auto& [vertices, uvs, normals, indices] = std::any_cast<
-                                                            std::tuple<floats_t, floats_t, floats_t, uint16s_t>>(data);
+                                                        auto& [vertices, indices] =
+                                                            std::any_cast<std::tuple<vertices_t, uint16s_t>>(data);
 
-                                                        render_block->SetData(&vertices, &indices, &uvs);
+                                                        render_block->SetData(&vertices, &indices);
                                                         render_block->Create();
 
                                                         Renderer::Get()->AddToRenderList(render_block);
@@ -616,11 +629,6 @@ void UI::RenderFileTreeView()
 
                                 ImGui::TreePop();
                             }
-
-#if 0
-                            if (!block_visible)
-                                ImGui::PopStyleVar();
-#endif
 
                             ++index;
                         }

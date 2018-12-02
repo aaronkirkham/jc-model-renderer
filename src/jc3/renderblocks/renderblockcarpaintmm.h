@@ -316,7 +316,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
     {
         //
     }

@@ -119,7 +119,7 @@ class RenderBlockBuildingJC3 : public IRenderBlock
         //
     }
 
-    virtual void SetData(floats_t* vertices, uint16s_t* indices, floats_t* uvs) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
     {
         //
     }
