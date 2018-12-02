@@ -87,10 +87,26 @@ class Wavefront_Obj : public IImportExporter
         std::vector<glm::vec2> _temp_uvs;
         std::vector<glm::vec3> _temp_normals;
 
-        while (!stream.eof()) {
-            std::string line;
-            std::getline(stream, line);
+        static auto split = [](std::string str, char delim) {
+            std::vector<std::string> result;
+            size_t                   prev_pos = 0;
+            size_t                   pos      = 0;
 
+            while ((pos = str.find(delim, pos)) != std::string::npos) {
+                auto part = str.substr(prev_pos, (pos - prev_pos));
+                prev_pos  = ++pos;
+
+                result.emplace_back(part);
+            }
+
+            result.emplace_back(str.substr(prev_pos, (pos - prev_pos)));
+            return result;
+        };
+
+        static auto safe_stoi = [](std::string str) { return str.length() > 0 ? std::stoi(str) : -1; };
+
+        std::string line;
+        while (std::getline(stream, line)) {
             if (line[0] == '#') {
                 continue;
             }
@@ -123,16 +139,35 @@ class Wavefront_Obj : public IImportExporter
             }
             // face
             else if (type == "f") {
-                int32_t vertex_idx[3], uv_idx[3], normal_idx[3];
-                auto    r =
-                    sscanf(line.c_str(), "f %d/%d/%d %d/%d/%d %d/%d/%d", &vertex_idx[0], &uv_idx[0], &normal_idx[0],
-                           &vertex_idx[1], &uv_idx[1], &normal_idx[1], &vertex_idx[2], &uv_idx[2], &normal_idx[2]);
-                assert(r == 9);
+                auto face = line.substr(2, line.length());
 
-                for (auto i = 0; i < 3; ++i) {
+                auto parts = split(face, ' ');
+                for (const auto& part : parts) {
+                    auto part_indices = split(part, '/');
+
+                    int32_t pos_idx = -1, uv_idx = -1, nrm_idx = -1;
+
+                    // pos
+                    const auto num_part_indices = part_indices.size();
+                    if (num_part_indices > 0) {
+                        pos_idx = safe_stoi(part_indices[0]);
+
+                        // pos, uv
+                        if (num_part_indices > 1) {
+                            uv_idx = safe_stoi(part_indices[1]);
+
+                            // pos, uv, normal
+                            if (num_part_indices > 2) {
+                                nrm_idx = safe_stoi(part_indices[2]);
+                            }
+                        }
+                    }
+
+                    assert(pos_idx > 0);
+
                     vertex_t _vert;
-                    _vert.pos = _temp_vertices[vertex_idx[i] - 1];
-                    _vert.uv  = _temp_uvs[uv_idx[i] - 1];
+                    _vert.pos = _temp_vertices[pos_idx - 1];
+                    _vert.uv  = (uv_idx != -1) ? _temp_uvs[uv_idx - 1] : glm::vec2{};
 
                     // insert unique values into the vertices and regenerate the index buffer
                     const auto it = std::find(vertices.begin(), vertices.end(), _vert);

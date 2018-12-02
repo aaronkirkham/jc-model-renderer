@@ -218,8 +218,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
                             auto& [vertices, indices] = std::any_cast<std::tuple<vertices_t, uint16s_t>>(data);
 
-                            __debugbreak();
-
                             render_block->SetData(&vertices, &indices);
                             render_block->Create();
 
