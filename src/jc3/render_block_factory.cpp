@@ -225,3 +225,12 @@ const char* RenderBlockFactory::GetRenderBlockName(const uint32_t type)
 
     return "Unknown";
 }
+
+// TODO: something better..
+const std::vector<const char*>& RenderBlockFactory::GetValidRenderBlocks()
+{
+    static std::vector<const char*> valid_blocks = {"BuildingJC3",   "CarLight", "CarPaintMM", "Character",
+                                                    "CharacterSkin", "General",  "GeneralJC3", "GeneralMkIII",
+                                                    "Landmark",      "Prop",     "Window"};
+    return valid_blocks;
+}

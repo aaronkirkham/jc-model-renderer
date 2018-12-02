@@ -190,11 +190,10 @@ class RenderBlockWindow : public IRenderBlock
 
         for (const auto& vertex : vb) {
             vertex_t v;
-            v.pos = {vertex.x, vertex.y, vertex.z};
-            v.uv  = {vertex.u0, vertex.v0};
+            v.pos    = {vertex.x, vertex.y, vertex.z};
+            v.uv     = {vertex.u0, vertex.v0};
+            v.normal = unpack_normal(vertex.n);
             vertices.emplace_back(std::move(v));
-
-            // TODO: u1,v1
         }
 
         return {vertices, indices};

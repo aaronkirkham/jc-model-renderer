@@ -14,10 +14,11 @@ using FileBuffer  = std::vector<uint8_t>;
 struct vertex_t {
     glm::vec3 pos;
     glm::vec2 uv;
+    glm::vec3 normal;
 
     inline friend bool operator==(vertex_t const& lhs, vertex_t const& rhs)
     {
-        return lhs.pos == rhs.pos && lhs.uv == rhs.uv;
+        return lhs.pos == rhs.pos && lhs.uv == rhs.uv && lhs.normal == rhs.normal;
     }
 };
 

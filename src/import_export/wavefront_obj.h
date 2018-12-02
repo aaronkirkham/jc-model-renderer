@@ -166,8 +166,9 @@ class Wavefront_Obj : public IImportExporter
                     assert(pos_idx > 0);
 
                     vertex_t _vert;
-                    _vert.pos = _temp_vertices[pos_idx - 1];
-                    _vert.uv  = (uv_idx != -1) ? _temp_uvs[uv_idx - 1] : glm::vec2{};
+                    _vert.pos    = _temp_vertices[pos_idx - 1];
+                    _vert.uv     = (uv_idx != -1) ? _temp_uvs[uv_idx - 1] : glm::vec2{};
+                    _vert.normal = (nrm_idx != -1) ? _temp_normals[nrm_idx - 1] : glm::vec3{};
 
                     // insert unique values into the vertices and regenerate the index buffer
                     const auto it = std::find(vertices.begin(), vertices.end(), _vert);
@@ -275,10 +276,14 @@ class Wavefront_Obj : public IImportExporter
                 }
             }
 
+            // TODO: optimize this a little, we should parse the vertices before writing and remove duplicate
+            // pos/uv/normal and rebuild the index buffer. This will reduce our output .OBJ file size
+
             auto [vertices, indices] = block->GetData();
             for (auto& vertex : vertices) {
                 out_stream << "v " << vertex.pos.x << " " << vertex.pos.y << " " << vertex.pos.z << std::endl;
                 out_stream << "vt " << vertex.uv.x << " " << vertex.uv.y << std::endl;
+                out_stream << "vn " << vertex.normal.x << " " << vertex.normal.y << " " << vertex.normal.z << std::endl;
             }
 
             for (auto i = 0; i < indices.size(); i += 3) {
@@ -292,9 +297,10 @@ class Wavefront_Obj : public IImportExporter
                 }
 
                 // f v[/t/n]
-                out_stream << "f " << vertex_indices[0] << "/" << vertex_indices[0];
-                out_stream << " " << vertex_indices[1] << "/" << vertex_indices[1];
-                out_stream << " " << vertex_indices[2] << "/" << vertex_indices[2] << std::endl;
+                out_stream << "f " << vertex_indices[0] << "/" << vertex_indices[0] << "/" << vertex_indices[0];
+                out_stream << " " << vertex_indices[1] << "/" << vertex_indices[1] << "/" << vertex_indices[1];
+                out_stream << " " << vertex_indices[2] << "/" << vertex_indices[2] << "/" << vertex_indices[2]
+                           << std::endl;
             }
 
             _num_vertices += vertices.size();

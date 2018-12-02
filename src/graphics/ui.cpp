@@ -553,15 +553,9 @@ void UI::RenderFileTreeView()
                             static auto red = ImVec4{1, 0, 0, 1};
                             ImGui::TextColored(red, "This model doesn't have any Render Blocks!");
 
-                            if (ImGuiCustom::BeginButtonDropDown("Add New Render Block")) {
-                                // TODO: some way to get this from the RenderBlockFactory
-                                static std::array<const char*, 11> available_blocks = {
-                                    "BuildingJC3",   "CarLight", "CarPaintMM", "Character",
-                                    "CharacterSkin", "General",  "GeneralJC3", "GeneralMkIII",
-                                    "Landmark",      "Prop",     "Window"};
-
+                            if (ImGuiCustom::BeginButtonDropDown("Add Render Block")) {
                                 // show available render blocks
-                                for (const auto& block_name : available_blocks) {
+                                for (const auto& block_name : RenderBlockFactory::GetValidRenderBlocks()) {
                                     if (ImGui::MenuItem(block_name)) {
                                         const auto render_block = RenderBlockFactory::CreateRenderBlock(block_name);
                                         assert(render_block);
@@ -676,7 +670,7 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
     ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1);
 
     if (ImGui::BeginPopupContextItem("Context Menu")) {
-        // general save file
+        // save file
         if (ImGui::Selectable(ICON_FA_SAVE "  Save file")) {
             Window::Get()->ShowFolderSelection("Select a folder to save the file to.",
                                                [&](const std::filesystem::path& selected) {
@@ -685,14 +679,16 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
         }
 
 #if 0
-        // general save to dropzon
-        if (ImGui::Selectable(ICON_FA_FLOPPY_O "  Save to dropzone")) {
+        // save file to dropzon
+        if (ImGui::Selectable(ICON_FA_FLOPPY_O "  Save file to dropzone")) {
             LOG_INFO("save file request (dropzone)");
 			const auto& jc3_directory = Settings::Get()->GetValue<std::filesystem::path>("jc3_directory");
             const auto dropzone = jc3_directory / "dropzone";
             UI::Get()->Events().SaveFileRequest(filename, dropzone);
         }
 #endif
+
+		ImGui::Separator();
 
         // exporters
         const auto& exporters = ImportExportManager::Get()->GetExporters(filename.extension().string());
@@ -716,6 +712,7 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
             }
         }
 
+		ImGui::Separator();
 #if 0
         // archive specific stuff
         if (flags & CTX_FILE && flags & CTX_ARCHIVE) {

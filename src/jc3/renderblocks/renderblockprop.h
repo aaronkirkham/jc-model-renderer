@@ -184,11 +184,10 @@ class RenderBlockProp : public IRenderBlock
 
             for (const auto& vertex : vb) {
                 vertex_t v;
-                v.pos = {vertex.x, vertex.y, vertex.z};
-                v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)} * m_Block.attributes.packed.uv0Extent;
+                v.pos    = {vertex.x, vertex.y, vertex.z};
+                v.uv     = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)} * m_Block.attributes.packed.uv0Extent;
+                v.normal = unpack_normal(vertex.n);
                 vertices.emplace_back(std::move(v));
-
-                // TODO: u1,v1
             }
         } else {
             const auto& vb     = m_VertexBuffer->CastData<PackedVertexPosition>();
@@ -200,11 +199,10 @@ class RenderBlockProp : public IRenderBlock
                 auto& data   = vbdata[i];
 
                 vertex_t v;
-                v.pos = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
-                v.uv  = glm::vec2{unpack(data.u0), unpack(data.v0)} * m_Block.attributes.packed.uv0Extent;
+                v.pos    = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                v.uv     = glm::vec2{unpack(data.u0), unpack(data.v0)} * m_Block.attributes.packed.uv0Extent;
+                v.normal = unpack_normal(data.n);
                 vertices.emplace_back(std::move(v));
-
-                // TODO: u1,v1
             }
         }
 

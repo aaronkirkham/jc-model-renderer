@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 class IRenderBlock;
 class RenderBlockFactory
@@ -10,9 +11,10 @@ class RenderBlockFactory
     RenderBlockFactory()          = default;
     virtual ~RenderBlockFactory() = default;
 
-    static IRenderBlock* CreateRenderBlock(const uint32_t type);
-    static IRenderBlock* CreateRenderBlock(const std::string& name);
-    static const char*   GetRenderBlockName(const uint32_t type);
+    static IRenderBlock*                   CreateRenderBlock(const uint32_t type);
+    static IRenderBlock*                   CreateRenderBlock(const std::string& name);
+    static const char*                     GetRenderBlockName(const uint32_t type);
+    static const std::vector<const char*>& GetValidRenderBlocks();
 
     // render block type hashes
     static constexpr auto RB_2DTEX1                    = 0x45DBC85F;

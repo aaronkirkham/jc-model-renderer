@@ -241,17 +241,20 @@ bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, c
 
 void RenderBlockModel::ContextMenuUI(const std::filesystem::path& filename)
 {
-#if 0
-    if (ImGui::Selectable("New Render Block (GeneralMkIII)")) {
-        auto rbm = get(filename.string());
-        assert(rbm);
+	const auto rbm = get(filename.string());
 
-        auto rb = RenderBlockFactory::CreateRenderBlock("GeneralMkIII");
-        assert(rb);
+    if (ImGui::BeginMenu("Add Render Block")) {
+        // show available render blocks
+        for (const auto& block_name : RenderBlockFactory::GetValidRenderBlocks()) {
+			if (ImGui::MenuItem(block_name)) {
+                const auto render_block = RenderBlockFactory::CreateRenderBlock(block_name);
+                assert(render_block);
+                rbm->GetRenderBlocks().emplace_back(render_block);
+			}
+        }
 
-        rbm->GetRenderBlocks().emplace_back(rb);
+        ImGui::EndMenu();
     }
-#endif
 }
 
 void RenderBlockModel::Load(const std::filesystem::path& filename)

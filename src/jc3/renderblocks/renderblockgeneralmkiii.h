@@ -383,6 +383,10 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             GeneralShortPacked gsp{};
             gsp.u0 = pack<int16_t>(vertex.uv.x);
             gsp.v0 = pack<int16_t>(vertex.uv.y);
+            gsp.n  = pack_normal(vertex.normal);
+
+            // TODO: generate tangent
+
             packed_data.emplace_back(std::move(gsp));
         }
 
@@ -432,7 +436,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         for (auto i = 0; i < vbdata.size(); ++i) {
             vertices[i].uv =
                 glm::vec2{unpack(vbdata[i].u0), unpack(vbdata[i].v0)} * m_Block.attributes.packed.uv0Extent;
-            // TODO: u1,v1
+            vertices[i].normal = unpack_normal(vbdata[i].n);
         }
 
         return {vertices, indices};

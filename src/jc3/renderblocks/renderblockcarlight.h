@@ -244,8 +244,8 @@ class RenderBlockCarLight : public IRenderBlock
             }
 
             for (auto i = 0; i < vbdata.size(); ++i) {
-                vertices[i].uv = {vbdata[i].u0, vbdata[i].v0};
-                // TODO: u1,v1
+                vertices[i].uv     = {vbdata[i].u0, vbdata[i].v0};
+                vertices[i].normal = unpack_normal(vbdata[i].n);
             }
         } else if (m_Block.attributes.flags & IS_DEFORM) {
             const auto& vb     = m_VertexBuffer->CastData<VertexDeformPos>();
@@ -261,8 +261,8 @@ class RenderBlockCarLight : public IRenderBlock
             }
 
             for (auto i = 0; i < vbdata.size(); ++i) {
-                vertices[i].uv = {vbdata[i].u0, vbdata[i].v0};
-                // TODO: u1,v1
+                vertices[i].uv     = {vbdata[i].u0, vbdata[i].v0};
+                vertices[i].normal = unpack_normal(vbdata[i].n);
             }
         } else {
             const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexPosition>();
@@ -278,8 +278,8 @@ class RenderBlockCarLight : public IRenderBlock
             }
 
             for (auto i = 0; i < vbdata.size(); ++i) {
-                vertices[i].uv = {vbdata[i].u0, vbdata[i].v0};
-                // TODO: u1,v1
+                vertices[i].uv     = {vbdata[i].u0, vbdata[i].v0};
+                vertices[i].normal = unpack_normal(vbdata[i].n);
             }
         }
 

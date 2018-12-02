@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstdint>
-#include <glm/glm.hpp>
 #include <dxgiformat.h>
+#include <glm/glm.hpp>
 
 #pragma pack(push, 1)
 namespace JustCause3
@@ -232,50 +232,51 @@ namespace Vertex
         static_assert(sizeof(Packed8Bones3UVs) == 0x28, "Packed8Bones3UVs alignment is wrong!");
     }; // namespace RenderBlockCharacter
 
-    template <typename T> static T pack(float value)
+    template <typename T> static inline T pack(float value)
     {
 #undef max
         return static_cast<T>(value / 1.0f * std::numeric_limits<T>::max());
     }
 
-    template <typename T> static float unpack(T value)
+    template <typename T> static inline float unpack(T value)
     {
 #undef max
         return (value * 1.0f / std::numeric_limits<T>::max());
     }
 
-    static float pack_vector()
+    static inline float pack_normal(const glm::vec3& normal)
+    {
+        float x = (((normal.x + 1.0f) * 127.0f) * 0.00390625f);
+        float y = ((normal.y + 1.0f) * 127.0f);
+        float z = (((normal.z + 1.0f) * 127.0f) * 256.0f);
+        return x + y + z;
+    }
+
+    static inline glm::vec3 unpack_normal(const float normal)
+    {
+        float x = normal;
+        float y = (normal / 256.0f);
+        float z = (normal / 65536.0f);
+
+        x -= glm::floor(x);
+        y -= glm::floor(y);
+        z -= glm::floor(z);
+
+        x = (x * 2.0f) - 1.0f;
+        y = (y * 2.0f) - 1.0f;
+        z = (z * 2.0f) - 1.0f;
+
+        return {x, y, z};
+    }
+
+    static inline float pack_colour(const glm::vec4& colour)
     {
         return 0.0f;
     }
 
-    static glm::vec3 unpack_vector(float packed, bool colour = false)
+    static inline glm::vec4 unpack_colour(const float colour)
     {
-        float x = 0.0f;
-        float y = 0.0f;
-        float z = 0.0f;
-
-        if (colour) {
-            x = packed;
-            y = packed / 64;
-            z = packed / 4096;
-        } else {
-            x = packed;
-            y = packed / 256.0f;
-            z = packed / 65536.0f;
-        }
-
-        x -= std::floorf(x);
-        y -= std::floorf(y);
-        z -= std::floorf(z);
-
-        if (!colour) {
-            x = x * 2 - 1;
-            y = y * 2 - 1;
-            z = z * 2 - 1;
-        }
-
-        return {x, y, z};
+        return {};
     }
 }; // namespace Vertex
 
