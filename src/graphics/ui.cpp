@@ -15,16 +15,16 @@
 #include "../version.h"
 #include "../window.h"
 
-#include "../jc3/file_loader.h"
-#include "../jc3/formats/avalanche_archive.h"
-#include "../jc3/formats/render_block_model.h"
-#include "../jc3/formats/runtime_container.h"
-#include "../jc3/render_block_factory.h"
-#include "../jc3/renderblocks/irenderblock.h"
+#include "../game/file_loader.h"
+#include "../game/formats/avalanche_archive.h"
+#include "../game/formats/render_block_model.h"
+#include "../game/formats/runtime_container.h"
+#include "../game/render_block_factory.h"
+#include "../game/renderblocks/irenderblock.h"
 
 #include "../import_export/import_export_manager.h"
 
-#include "../jc3/hashlittle.h"
+#include "../game/hashlittle.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -688,7 +688,7 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
         }
 #endif
 
-		ImGui::Separator();
+        ImGui::Separator();
 
         // exporters
         const auto& exporters = ImportExportManager::Get()->GetExporters(filename.extension().string());
@@ -712,7 +712,7 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
             }
         }
 
-		ImGui::Separator();
+        ImGui::Separator();
 #if 0
         // archive specific stuff
         if (flags & CTX_FILE && flags & CTX_ARCHIVE) {

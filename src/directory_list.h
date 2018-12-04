@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <json.hpp>
 
-#include "jc3/formats/stream_archive.h"
+#include "game/formats/stream_archive.h"
 
 #include "graphics/imgui/fonts/fontawesome5_icons.h"
 #include "graphics/ui.h"

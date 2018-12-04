@@ -4,7 +4,7 @@
 
 #include "../window.h"
 
-#include "../jc3/file_loader.h"
+#include "../game/file_loader.h"
 
 namespace import_export
 {

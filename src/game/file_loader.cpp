@@ -9,10 +9,10 @@
 #include "../graphics/texture_manager.h"
 #include "../graphics/ui.h"
 
-#include "../jc3/formats/avalanche_archive.h"
-#include "../jc3/formats/render_block_model.h"
-#include "../jc3/formats/runtime_container.h"
-#include "../jc3/render_block_factory.h"
+#include "../game/formats/avalanche_archive.h"
+#include "../game/formats/render_block_model.h"
+#include "../game/formats/runtime_container.h"
+#include "../game/render_block_factory.h"
 
 #include "../import_export/import_export_manager.h"
 

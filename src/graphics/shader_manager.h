@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-#include "../jc3/formats/avalanche_data_format.h"
+#include "../game/formats/avalanche_data_format.h"
 #include "../singleton.h"
 
 struct VertexShader_t;

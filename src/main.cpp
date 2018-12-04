@@ -10,12 +10,12 @@
 #include "graphics/renderer.h"
 #include "graphics/texture_manager.h"
 
-#include "jc3/file_loader.h"
-#include "jc3/formats/avalanche_archive.h"
-#include "jc3/formats/render_block_model.h"
-#include "jc3/formats/runtime_container.h"
-#include "jc3/render_block_factory.h"
-#include "jc3/renderblocks/irenderblock.h"
+#include "game/file_loader.h"
+#include "game/formats/avalanche_archive.h"
+#include "game/formats/render_block_model.h"
+#include "game/formats/runtime_container.h"
+#include "game/render_block_factory.h"
+#include "game/renderblocks/irenderblock.h"
 
 #include "import_export/avalanche_archive.h"
 #include "import_export/ddsc.h"

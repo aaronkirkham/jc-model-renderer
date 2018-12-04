@@ -6,7 +6,7 @@
 
 #include "../window.h"
 
-#include "../jc3/hashlittle.h"
+#include "../game/hashlittle.h"
 
 Texture::Texture(const std::filesystem::path& filename)
     : m_Filename(filename)

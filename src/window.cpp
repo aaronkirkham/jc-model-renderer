@@ -8,9 +8,9 @@
 #include "version.h"
 #include "window.h"
 
-#include "jc3/formats/avalanche_archive.h"
-#include "jc3/formats/render_block_model.h"
-#include "jc3/formats/runtime_container.h"
+#include "game/formats/avalanche_archive.h"
+#include "game/formats/render_block_model.h"
+#include "game/formats/runtime_container.h"
 
 #include <examples/imgui_impl_win32.h>
 #include <imgui.h>

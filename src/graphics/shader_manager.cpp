@@ -1,7 +1,7 @@
 #include <fstream>
 
 #include "../fnv1.h"
-#include "../jc3/file_loader.h"
+#include "../game/file_loader.h"
 #include "../settings.h"
 #include "../window.h"
 #include "renderer.h"

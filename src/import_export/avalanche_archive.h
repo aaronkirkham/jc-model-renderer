@@ -4,8 +4,8 @@
 
 #include "../window.h"
 
-#include "../jc3/file_loader.h"
-#include "../jc3/formats/avalanche_archive.h"
+#include "../game/file_loader.h"
+#include "../game/formats/avalanche_archive.h"
 
 namespace import_export
 {

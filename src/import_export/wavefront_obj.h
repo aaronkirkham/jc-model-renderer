@@ -5,9 +5,9 @@
 #include "../version.h"
 #include "../window.h"
 
-#include "../jc3/file_loader.h"
-#include "../jc3/formats/render_block_model.h"
-#include "../jc3/renderblocks/irenderblock.h"
+#include "../game/file_loader.h"
+#include "../game/formats/render_block_model.h"
+#include "../game/renderblocks/irenderblock.h"
 
 namespace import_export
 {

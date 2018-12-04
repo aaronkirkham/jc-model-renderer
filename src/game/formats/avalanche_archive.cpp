@@ -5,14 +5,6 @@
 #include "../../window.h"
 #include "../file_loader.h"
 
-#if 0
-#include <Window.h>
-#include <graphics/UI.h>
-#include <jc3/FileLoader.h>
-#include <jc3/formats/RenderBlockModel.h>
-#include <jc3/formats/avalanche_archive.h>
-#endif
-
 std::recursive_mutex                                  Factory<AvalancheArchive>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<AvalancheArchive>> Factory<AvalancheArchive>::Instances;
 

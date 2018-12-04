@@ -241,16 +241,16 @@ bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, c
 
 void RenderBlockModel::ContextMenuUI(const std::filesystem::path& filename)
 {
-	const auto rbm = get(filename.string());
+    const auto rbm = get(filename.string());
 
     if (ImGui::BeginMenu("Add Render Block")) {
         // show available render blocks
         for (const auto& block_name : RenderBlockFactory::GetValidRenderBlocks()) {
-			if (ImGui::MenuItem(block_name)) {
+            if (ImGui::MenuItem(block_name)) {
                 const auto render_block = RenderBlockFactory::CreateRenderBlock(block_name);
                 assert(render_block);
                 rbm->GetRenderBlocks().emplace_back(render_block);
-			}
+            }
         }
 
         ImGui::EndMenu();

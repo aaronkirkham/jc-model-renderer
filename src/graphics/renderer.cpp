@@ -1,5 +1,5 @@
 #include "renderer.h"
-#include "../jc3/renderblocks/irenderblock.h"
+#include "../game/renderblocks/irenderblock.h"
 #include "../window.h"
 #include "camera.h"
 #include "shader_manager.h"

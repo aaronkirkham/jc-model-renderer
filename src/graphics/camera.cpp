@@ -1,4 +1,4 @@
-#include "../jc3/formats/render_block_model.h"
+#include "../game/formats/render_block_model.h"
 #include "../window.h"
 #include "camera.h"
 #include "types.h"

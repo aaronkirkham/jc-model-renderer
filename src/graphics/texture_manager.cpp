@@ -1,6 +1,6 @@
 #include "texture_manager.h"
 #include "../fnv1.h"
-#include "../jc3/file_loader.h"
+#include "../game/file_loader.h"
 #include "dds_texture_loader.h"
 #include "imgui/fonts/fontawesome5_icons.h"
 #include "renderer.h"
