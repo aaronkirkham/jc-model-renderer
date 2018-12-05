@@ -17,7 +17,7 @@ class NameHashLookup
         std::thread([&] {
             try {
                 const auto handle = GetModuleHandle(nullptr);
-                const auto rc     = FindResource(handle, MAKEINTRESOURCE(256), RT_RCDATA);
+                const auto rc     = FindResource(handle, MAKEINTRESOURCE(512), RT_RCDATA);
                 if (rc == nullptr) {
                     throw std::runtime_error("FindResource failed");
                 }

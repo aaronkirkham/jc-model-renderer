@@ -5,23 +5,23 @@
 #pragma pack(push, 1)
 struct BuildingJC3Attributes {
     char                                 pad[0x68];
-    JustCause3::Vertex::SPackedAttribute packed;
+    jc::Vertex::SPackedAttribute packed;
     char                                 pad2[0x1C];
 };
 
-namespace JustCause3::RenderBlocks
+namespace jc::RenderBlocks
 {
 struct BuildingJC3 {
     uint8_t               version;
     BuildingJC3Attributes attributes;
 };
-}; // namespace JustCause3::RenderBlocks
+}; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
 class RenderBlockBuildingJC3 : public IRenderBlock
 {
   private:
-    JustCause3::RenderBlocks::BuildingJC3 m_Block;
+    jc::RenderBlocks::BuildingJC3 m_Block;
     VertexBuffer_t*                       m_VertexBufferData = nullptr;
 
   public:
@@ -73,7 +73,7 @@ class RenderBlockBuildingJC3 : public IRenderBlock
 
     virtual void Read(std::istream& stream) override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         // read the block header
         stream.read((char*)&m_Block, sizeof(m_Block));

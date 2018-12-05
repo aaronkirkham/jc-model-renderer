@@ -10,10 +10,11 @@
 
 void ShaderManager::Init()
 {
+#if 0
     const auto status_text_id = UI::Get()->PushStatusText("Loading \"Shaders_F.shader_bundle\"...");
 
     std::thread([&, status_text_id] {
-        std::filesystem::path filename = Settings::Get()->GetValue<std::string>("jc3_directory");
+        auto& filename = Window::Get()->GetJustCauseDirectory();
         filename /= "Shaders_F.shader_bundle";
 
         m_ShaderBundle = FileLoader::Get()->ReadAdf(filename);
@@ -21,12 +22,13 @@ void ShaderManager::Init()
         // exit now if the shader bundle wasn't loaded
         if (!m_ShaderBundle) {
             Window::Get()->ShowMessageBox(
-                "Failed to load shader bundle.\n\nPlease make sure your Just Cause 3 directory is valid.",
+                "Failed to load shader bundle.\n\nPlease make sure your Just Cause directory is valid.",
                 MB_ICONERROR | MB_OK);
         }
 
         UI::Get()->PopStatusText(status_text_id);
     }).detach();
+#endif
 }
 
 void ShaderManager::Shutdown()

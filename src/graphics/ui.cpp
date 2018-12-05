@@ -199,7 +199,7 @@ void UI::Render(RenderContext_t* context)
             }
 
             if (ImGui::MenuItem(ICON_FA_EXTERNAL_LINK_ALT "  View on GitHub")) {
-                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc3-rbm-renderer", nullptr, nullptr,
+                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc-rbm-renderer", nullptr, nullptr,
                               SW_SHOWNORMAL);
             }
 
@@ -230,9 +230,9 @@ void UI::Render(RenderContext_t* context)
 
         static int32_t current_version[3] = {VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
-        ImGui::Text("Just Cause 3 Render Block Model Renderer");
+        ImGui::Text("Just Cause Render Block Model Renderer");
         ImGui::Text("Version %d.%d.%d", current_version[0], current_version[1], current_version[2]);
-        ImGui::Text("https://github.com/aaronkirkham/jc3-rbm-renderer");
+        ImGui::Text("https://github.com/aaronkirkham/jc-rbm-renderer");
 
         ImGui::Separator();
 
@@ -682,8 +682,8 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
         // save file to dropzon
         if (ImGui::Selectable(ICON_FA_FLOPPY_O "  Save file to dropzone")) {
             LOG_INFO("save file request (dropzone)");
-			const auto& jc3_directory = Settings::Get()->GetValue<std::filesystem::path>("jc3_directory");
-            const auto dropzone = jc3_directory / "dropzone";
+			const auto& jc_directory = Window::Get()->GetJustCauseDirectory();
+            const auto dropzone = jc_directory / "dropzone";
             UI::Get()->Events().SaveFileRequest(filename, dropzone);
         }
 #endif

@@ -21,6 +21,8 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #endif
 
+extern bool g_IsJC4Mode;
+
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
 {
@@ -70,7 +72,7 @@ bool Window::Initialise(const HINSTANCE& instance)
         SetConsoleTitle("Debug Console");
     }
 
-    //spdlog::set_level(spdlog::level::trace);
+    // spdlog::set_level(spdlog::level::trace);
     spdlog::set_pattern("[%H:%M:%S] [%^%l%$] %v");
 
     m_Log = spdlog::stdout_color_mt("console");
@@ -267,20 +269,29 @@ void Window::ShowFolderSelection(const std::string&                             
 
 void Window::SelectJustCauseDirectory()
 {
-    // ask the user to select their jc3 directory, we can't find it!
+    std::string title = g_IsJC4Mode ? "Please select your Just Cause 4 install folder"
+                                    : "Please select your Just Cause 3 install folder";
+
+    // ask the user to select their jc directory, we can't find it!
     ShowFolderSelection(
-        "Please select your Just Cause 3 install folder.",
+        title,
         [&](const std::filesystem::path& selected) {
-            Settings::Get()->SetValue("jc3_directory", selected.string());
+            Settings::Get()->SetValue(g_IsJC4Mode ? "jc4_directory" : "jc3_directory", selected.string());
             LOG_INFO("Selected directory: \"{}\"", selected.string());
         },
         [] {
-            const auto& jc3_directory = Settings::Get()->GetValue<std::string>("jc3_directory");
-            if (jc3_directory.empty()) {
+            const auto& jc_directory =
+                Settings::Get()->GetValue<std::string>(g_IsJC4Mode ? "jc4_directory" : "jc3_directory");
+            if (jc_directory.empty()) {
                 Window::Get()->ShowMessageBox(
-                    "Unable to find Just Cause 3 root directory.\n\nSome features will be disabled.");
+                    "Unable to find Just Cause root directory.\n\nSome features will be disabled.");
             }
         });
+}
+
+std::filesystem::path Window::GetJustCauseDirectory()
+{
+    return Settings::Get()->GetValue<std::string>(g_IsJC4Mode ? "jc4_directory" : "jc3_directory");
 }
 
 void Window::CheckForUpdates(bool show_no_update_messagebox)
@@ -306,7 +317,7 @@ void Window::CheckForUpdates(bool show_no_update_messagebox)
 
                     if (Window::Get()->ShowMessageBox(msg, MB_ICONQUESTION | MB_YESNO) == IDYES) {
                         ShellExecuteA(nullptr, "open",
-                                      "https://github.com/aaronkirkham/jc3-rbm-renderer/releases/latest", nullptr,
+                                      "https://github.com/aaronkirkham/jc-rbm-renderer/releases/latest", nullptr,
                                       nullptr, SW_SHOWNORMAL);
                     }
                 } else if (show_no_update_messagebox) {

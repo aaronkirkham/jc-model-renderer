@@ -48,7 +48,7 @@ bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
     bool parse_success = true;
 
     // read the model header
-    JustCause3::RBMHeader header;
+    jc::RBMHeader header;
     stream.read((char*)&header, sizeof(header));
 
     // ensure the header magic is correct
@@ -211,7 +211,7 @@ bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, c
         const auto& render_blocks = rbm->GetRenderBlocks();
 
         // generate the rbm header
-        JustCause3::RBMHeader header;
+        jc::RBMHeader header;
         header.m_BoundingBoxMin = rbm->GetBoundingBox()->GetMin();
         header.m_BoundingBoxMax = rbm->GetBoundingBox()->GetMax();
         header.m_NumberOfBlocks = render_blocks.size();

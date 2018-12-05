@@ -22,6 +22,7 @@
 #include "import_export/import_export_manager.h"
 #include "import_export/wavefront_obj.h"
 
+extern bool g_IsJC4Mode         = true;
 extern bool g_DrawBoundingBoxes = true;
 extern bool g_ShowModelLabels   = true;
 
@@ -55,6 +56,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
     // TODO: Validate the jc3 directory, make sure we can see some common stuff like JustCause3.exe / archives_win64
     // folder.
 
+#if 0
     // try find the jc3 directory from the steam installation folder
     std::filesystem::path jc3_directory = Settings::Get()->GetValue<std::string>("jc3_directory");
     if (jc3_directory.empty() || !std::filesystem::exists(jc3_directory)) {
@@ -71,12 +73,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
             }
         }
     }
+#endif
 
+    const auto& jc_directory = Window::Get()->GetJustCauseDirectory();
     if (Window::Get()->Initialise(hInstance)) {
-        LOG_INFO("Just cause 3 directory: \"{}\"", jc3_directory.string());
+#ifdef DEBUG
+        if (g_IsJC4Mode) {
+            LOG_INFO("RUNNING IN JUST CAUSE 4 MODE");
+        }
+#endif
+
+        LOG_INFO("Just Cause directory: \"{}\"", jc_directory.string());
 
         // do we need to select the install directory manually?
-        if (jc3_directory.empty() || !std::filesystem::exists(jc3_directory)) {
+        if (jc_directory.empty() || !std::filesystem::exists(jc_directory)) {
             Window::Get()->SelectJustCauseDirectory();
         }
 

@@ -12,7 +12,9 @@ AvalancheArchive::AvalancheArchive(const std::filesystem::path& filename)
     : m_File(filename)
 {
     m_StreamArchive = std::make_unique<StreamArchive_t>();
-    m_FileList = std::make_unique<DirectoryList>();
+    m_FileList      = std::make_unique<DirectoryList>();
+
+    UI::Get()->SwitchToTab(TAB_ARCHIVES);
 }
 
 AvalancheArchive::AvalancheArchive(const std::filesystem::path& filename, const FileBuffer& buffer, bool external)
@@ -29,7 +31,7 @@ AvalancheArchive::AvalancheArchive(const std::filesystem::path& filename, const 
                                              m_FileList->Parse(m_StreamArchive.get());
                                          });
 
-    // UI::Get()->SwitchToTab(TAB_ARCHIVES);
+    UI::Get()->SwitchToTab(TAB_ARCHIVES);
 }
 
 void AvalancheArchive::AddFile(const std::filesystem::path& filename, const FileBuffer& data)

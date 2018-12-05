@@ -14,13 +14,13 @@ struct GeneralJC3Attributes {
     float                                backLight;
     float                                _unknown2;
     float                                startFadeOutDistanceEmissiveSq;
-    JustCause3::Vertex::SPackedAttribute packed;
+    jc::Vertex::SPackedAttribute packed;
     uint32_t                             flags;
 };
 
 static_assert(sizeof(GeneralJC3Attributes) == 0x58, "GeneralJC3Attributes alignment is wrong!");
 
-namespace JustCause3::RenderBlocks
+namespace jc::RenderBlocks
 {
 static constexpr uint8_t GENERALJC3_VERSION = 6;
 
@@ -28,7 +28,7 @@ struct GeneralJC3 {
     uint8_t              version;
     GeneralJC3Attributes attributes;
 };
-}; // namespace JustCause3::RenderBlocks
+}; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
 class RenderBlockGeneralJC3 : public IRenderBlock
@@ -75,7 +75,7 @@ class RenderBlockGeneralJC3 : public IRenderBlock
         glm::vec4 colour;
     } m_cbFragmentInstanceConsts;
 
-    JustCause3::RenderBlocks::GeneralJC3 m_Block;
+    jc::RenderBlocks::GeneralJC3 m_Block;
     VertexBuffer_t*                      m_VertexBufferData        = nullptr;
     std::array<ConstantBuffer_t*, 2>     m_VertexShaderConstants   = {nullptr};
     std::array<ConstantBuffer_t*, 2>     m_FragmentShaderConstants = {nullptr};
@@ -152,12 +152,12 @@ class RenderBlockGeneralJC3 : public IRenderBlock
 
     virtual void Read(std::istream& stream) override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
-        if (m_Block.version != JustCause3::RenderBlocks::GENERALJC3_VERSION) {
+        if (m_Block.version != jc::RenderBlocks::GENERALJC3_VERSION) {
             __debugbreak();
         }
 
@@ -203,7 +203,7 @@ class RenderBlockGeneralJC3 : public IRenderBlock
 
     virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         vertices_t vertices;
         uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();

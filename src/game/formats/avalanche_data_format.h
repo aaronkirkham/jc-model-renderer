@@ -16,7 +16,7 @@ class AdfInstanceMemberInfo
 {
   public:
     std::string                                         m_Name = "";
-    JustCause3::AvalancheDataFormat::TypeDefinitionType m_Type;
+    jc::AvalancheDataFormat::TypeDefinitionType m_Type;
     uint32_t                                            m_TypeHash = 0;
     AdfTypeDefinition*                                  m_TypeDef  = nullptr;
     FileBuffer                                          m_Data;
@@ -44,7 +44,7 @@ class AdfInstanceInfo
     void MemberSetup_Array(AdfInstanceMemberInfo* info);
     void MemberSetup_StringHash(AdfInstanceMemberInfo* info);
 
-    void MemberSetupStructMember(AdfInstanceMemberInfo* info, JustCause3::AvalancheDataFormat::TypeMemberHash type_hash,
+    void MemberSetupStructMember(AdfInstanceMemberInfo* info, jc::AvalancheDataFormat::TypeMemberHash type_hash,
                                  const std::string& name, int64_t offset);
 
   public:
@@ -84,8 +84,8 @@ class AdfTypeDefinition
   public:
     AvalancheDataFormat*                                            m_Parent = nullptr;
     std::string                                                     m_Name   = "";
-    JustCause3::AvalancheDataFormat::TypeDefinition                 m_Definition;
-    std::vector<JustCause3::AvalancheDataFormat::MemeberDefinition> m_Members;
+    jc::AvalancheDataFormat::TypeDefinition                 m_Definition;
+    std::vector<jc::AvalancheDataFormat::MemeberDefinition> m_Members;
 
     AdfTypeDefinition()          = default;
     virtual ~AdfTypeDefinition() = default;

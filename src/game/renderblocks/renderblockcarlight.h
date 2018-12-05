@@ -16,7 +16,7 @@ struct CarLightAttributes {
 
 static_assert(sizeof(CarLightAttributes) == 0x3C, "CarLightAttributes alignment is wrong!");
 
-namespace JustCause3::RenderBlocks
+namespace jc::RenderBlocks
 {
 static constexpr uint8_t CARLIGHT_VERSION = 1;
 
@@ -24,7 +24,7 @@ struct CarLight {
     uint8_t            version;
     CarLightAttributes attributes;
 };
-}; // namespace JustCause3::RenderBlocks
+}; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
 class RenderBlockCarLight : public IRenderBlock
@@ -65,9 +65,9 @@ class RenderBlockCarLight : public IRenderBlock
         glm::vec4 Colour = glm::vec4(1);
     } m_cbMaterialConsts;
 
-    JustCause3::RenderBlocks::CarLight  m_Block;
-    JustCause3::CDeformTable            m_DeformTable;
-    std::vector<JustCause3::CSkinBatch> m_SkinBatches;
+    jc::RenderBlocks::CarLight  m_Block;
+    jc::CDeformTable            m_DeformTable;
+    std::vector<jc::CSkinBatch> m_SkinBatches;
     VertexBuffer_t*                     m_VertexBufferData        = nullptr;
     std::array<ConstantBuffer_t*, 3>    m_VertexShaderConstants   = {nullptr};
     ConstantBuffer_t*                   m_FragmentShaderConstants = nullptr;
@@ -158,12 +158,12 @@ class RenderBlockCarLight : public IRenderBlock
 
     virtual void Read(std::istream& stream) override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
-        if (m_Block.version != JustCause3::RenderBlocks::CARLIGHT_VERSION) {
+        if (m_Block.version != jc::RenderBlocks::CARLIGHT_VERSION) {
             __debugbreak();
         }
 
@@ -225,7 +225,7 @@ class RenderBlockCarLight : public IRenderBlock
 
     virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         vertices_t vertices;
         uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();

@@ -13,14 +13,14 @@
 #endif
 
 #ifdef DEBUG
-static constexpr auto g_WindowName = "JC3 Render Block Model Renderer (DEBUG)";
+static constexpr auto g_WindowName = "JC Render Block Model Renderer (DEBUG)";
 #else
-static constexpr auto g_WindowName = "JC3 Render Block Model Renderer";
+static constexpr auto g_WindowName = "JC Render Block Model Renderer";
 #endif
 
 #ifdef DEBUG
 #define LOG_TRACE(...) Window::Get()->GetLog()->trace("[{}] {}", __FUNCTION__, fmt::format(__VA_ARGS__))
-#define LOG_INFO(...) Window::Get()->GetLog()->info("[{}] {}", __FUNCTION__, fmt::format(__VA_ARGS__));
+#define LOG_INFO(...) Window::Get()->GetLog()->info("[{}] {}", __FUNCTION__, fmt::format(__VA_ARGS__))
 #define LOG_WARN(...) Window::Get()->GetLog()->warn("[{}] {}", __FUNCTION__, fmt::format(__VA_ARGS__))
 #define LOG_ERROR(...) Window::Get()->GetLog()->error("[{}] {}", __FUNCTION__, fmt::format(__VA_ARGS__))
 #else
@@ -98,8 +98,9 @@ class Window : public Singleton<Window>
     void    ShowFolderSelection(const std::string& title, std::function<void(const std::filesystem::path&)> fn_selected,
                                 std::function<void()> fn_cancelled = {});
 
-	void SelectJustCauseDirectory();
-	void CheckForUpdates(bool show_no_update_messagebox = false);
+    void                  SelectJustCauseDirectory();
+    std::filesystem::path GetJustCauseDirectory();
+    void                  CheckForUpdates(bool show_no_update_messagebox = false);
 
     const HWND& GetHwnd() const
     {

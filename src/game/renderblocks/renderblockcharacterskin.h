@@ -11,7 +11,7 @@ struct CharacterSkinAttributes {
 
 static_assert(sizeof(CharacterSkinAttributes) == 0x38, "CharacterSkinAttributes alignment is wrong!");
 
-namespace JustCause3::RenderBlocks
+namespace jc::RenderBlocks
 {
 static constexpr uint8_t CHARACTERSKIN_VERSION = 6;
 
@@ -19,7 +19,7 @@ struct CharacterSkin {
     uint8_t                 version;
     CharacterSkinAttributes attributes;
 };
-}; // namespace JustCause3::RenderBlocks
+}; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
 class RenderBlockCharacterSkin : public IRenderBlock
@@ -50,8 +50,8 @@ class RenderBlockCharacterSkin : public IRenderBlock
         glm::vec4 _unknown[3];
     } m_cbMaterialConsts;
 
-    JustCause3::RenderBlocks::CharacterSkin m_Block;
-    std::vector<JustCause3::CSkinBatch>     m_SkinBatches;
+    jc::RenderBlocks::CharacterSkin m_Block;
+    std::vector<jc::CSkinBatch>     m_SkinBatches;
     ConstantBuffer_t*                       m_VertexShaderConstants   = nullptr;
     std::array<ConstantBuffer_t*, 2>        m_FragmentShaderConstants = {nullptr};
     int32_t                                 m_Stride                  = 0;
@@ -261,13 +261,13 @@ class RenderBlockCharacterSkin : public IRenderBlock
 
     virtual void Read(std::istream& stream) override final
     {
-        // using namespace JustCause3::Vertex;
-        using namespace JustCause3::Vertex::RenderBlockCharacter;
+        // using namespace jc::Vertex;
+        using namespace jc::Vertex::RenderBlockCharacter;
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
-        if (m_Block.version != JustCause3::RenderBlocks::CHARACTERSKIN_VERSION) {
+        if (m_Block.version != jc::RenderBlocks::CHARACTERSKIN_VERSION) {
             __debugbreak();
         }
 
@@ -313,8 +313,8 @@ class RenderBlockCharacterSkin : public IRenderBlock
 
     virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
-        using namespace JustCause3::Vertex;
-        using namespace JustCause3::Vertex::RenderBlockCharacter;
+        using namespace jc::Vertex;
+        using namespace jc::Vertex::RenderBlockCharacter;
 
         vertices_t vertices;
         uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();

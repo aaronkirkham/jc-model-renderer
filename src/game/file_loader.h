@@ -15,15 +15,49 @@ using FileSaveCallback =
 using ReadArchiveCallback    = std::function<void(std::unique_ptr<StreamArchive_t>)>;
 using DictionaryLookupResult = std::tuple<std::string, std::string, uint32_t>;
 
+using OodleLZ_Decompress_t = long (*)(const void* source, const long sourceLen, const void* dest, const long destLen,
+                                      uint32_t flags, int a6, int a7, void* a8, long a9, void* a10, long a11, long a12,
+                                      long a13, int a14);
+
 enum ReadFileFlags : uint8_t {
-    SKIP_TEXTURE_LOADER = 1,
+    ReadFileFlags_None              = 0,
+    ReadFileFlags_SkipTextureLoader = (1 << 0),
+};
+
+struct TabFileEntry {
+    uint8_t  m_Version;
+    uint32_t m_Offset;
+    uint32_t m_CompressedSize;
+    uint32_t m_UncompressedSize;
+    uint8_t  m_CompressionType;
+
+    TabFileEntry() {}
+
+    TabFileEntry(const jc4::ArchiveTable::VfsTabEntry& entry)
+    {
+        m_Version          = 2;
+        m_Offset           = entry.m_Offset;
+        m_CompressedSize   = entry.m_CompressedSize;
+        m_UncompressedSize = entry.m_UncompressedSize;
+        m_CompressionType  = entry.m_CompressionType;
+    }
+
+    TabFileEntry(const jc3::ArchiveTable::VfsTabEntry& entry)
+    {
+        m_Version          = 1;
+        m_Offset           = entry.m_Offset;
+        m_CompressedSize   = entry.m_Size;
+        m_UncompressedSize = entry.m_Size;
+        m_CompressionType  = 0;
+    }
 };
 
 class RuntimeContainer;
 class FileLoader : public Singleton<FileLoader>
 {
   private:
-    std::unique_ptr<DirectoryList> m_FileList = nullptr;
+    std::unique_ptr<DirectoryList> m_FileList         = nullptr;
+    OodleLZ_Decompress_t           OodleLZ_Decompress = nullptr;
 
     // file list dictionary
     std::unordered_map<uint32_t, std::pair<std::filesystem::path, std::vector<std::string>>> m_Dictionary;
@@ -37,7 +71,11 @@ class FileLoader : public Singleton<FileLoader>
     std::unordered_map<std::string, std::vector<ReadFileCallback>>                               m_PathBatches;
     std::recursive_mutex                                                                         m_BatchesMutex;
 
-    std::unique_ptr<StreamArchive_t> ParseStreamArchive(FileBuffer* sarc_buffer, FileBuffer* toc_buffer = nullptr);
+    // archive table cache
+    std::unordered_map<uint32_t, TabFileEntry> m_ArchiveEntries;
+
+    std::unique_ptr<StreamArchive_t> ParseStreamArchive(const FileBuffer* sarc_buffer,
+                                                        FileBuffer*       toc_buffer = nullptr);
 
   public:
     inline static bool UseBatches = false;
@@ -52,15 +90,14 @@ class FileLoader : public Singleton<FileLoader>
     void ReadFileFromDisk(const std::filesystem::path& filename) noexcept;
 
     // archives
-    bool ReadArchiveTable(const std::filesystem::path& filename, JustCause3::ArchiveTable::VfsArchive* output) noexcept;
     bool ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash,
                              FileBuffer* output) noexcept;
 
     // stream archive
     void ReadStreamArchive(const std::filesystem::path& filename, const FileBuffer& buffer, bool external_source,
                            ReadArchiveCallback callback) noexcept;
-    void CompressArchive(std::ostream& stream, JustCause3::AvalancheArchive::Header* header,
-                         std::vector<JustCause3::AvalancheArchive::Chunk>* chunks) noexcept;
+    void CompressArchive(std::ostream& stream, jc::AvalancheArchive::Header* header,
+                         std::vector<jc::AvalancheArchive::Chunk>* chunks) noexcept;
     void CompressArchive(std::ostream& stream, StreamArchive_t* archive) noexcept;
     bool DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept;
 
@@ -94,4 +131,7 @@ class FileLoader : public Singleton<FileLoader>
     // file callbacks
     void RegisterReadCallback(const std::vector<std::string>& extensions, FileTypeCallback fn);
     void RegisterSaveCallback(const std::vector<std::string>& extensions, FileSaveCallback fn);
+
+    //
+    void PreloadArchiveTable();
 };

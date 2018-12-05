@@ -15,7 +15,7 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
 {
     std::istringstream stream(std::string{(char*)data.data(), data.size()});
 
-    JustCause3::AvalancheDataFormat::Header header;
+    jc::AvalancheDataFormat::Header header;
     stream.read((char*)&header, sizeof(header));
 
     // ensure the header magic is correct "ADF"
@@ -47,7 +47,7 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
     // read type definitions
     stream.seekg(header.m_TypeOffset);
     for (uint32_t i = 0; i < header.m_TypeCount; ++i) {
-        JustCause3::AvalancheDataFormat::TypeDefinition definition;
+        jc::AvalancheDataFormat::TypeDefinition definition;
         stream.read((char*)&definition, sizeof(definition));
 
         auto typeDef          = std::make_unique<AdfTypeDefinition>();
@@ -56,10 +56,10 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
         typeDef->m_Definition = definition;
 
         LOG_TRACE("Definition: \"{}\", type: {}", typeDef->m_Name,
-                 JustCause3::AvalancheDataFormat::TypeDefintionStr(definition.m_Type));
+                  jc::AvalancheDataFormat::TypeDefintionStr(definition.m_Type));
 
         switch (definition.m_Type) {
-            case JustCause3::AvalancheDataFormat::TypeDefinitionType::Structure: {
+            case jc::AvalancheDataFormat::TypeDefinitionType::Structure: {
                 uint32_t count;
                 stream.read((char*)&count, sizeof(count));
 
@@ -68,7 +68,7 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
                 // read members
                 typeDef->m_Members.resize(count);
                 stream.read((char*)&typeDef->m_Members.front(),
-                            sizeof(JustCause3::AvalancheDataFormat::MemeberDefinition) * count);
+                            sizeof(jc::AvalancheDataFormat::MemeberDefinition) * count);
 
                 for (const auto& m : typeDef->m_Members) {
                     LOG_TRACE("Read member \"{}\", TypeHash: {}", m_Names[m.m_NameIndex], (uint32_t)m.m_TypeHash);
@@ -77,10 +77,10 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
                 break;
             }
 
-            case JustCause3::AvalancheDataFormat::TypeDefinitionType::Array:
-            case JustCause3::AvalancheDataFormat::TypeDefinitionType::InlineArray:
-            case JustCause3::AvalancheDataFormat::TypeDefinitionType::Pointer:
-            case JustCause3::AvalancheDataFormat::TypeDefinitionType::StringHash: {
+            case jc::AvalancheDataFormat::TypeDefinitionType::Array:
+            case jc::AvalancheDataFormat::TypeDefinitionType::InlineArray:
+            case jc::AvalancheDataFormat::TypeDefinitionType::Pointer:
+            case jc::AvalancheDataFormat::TypeDefinitionType::StringHash: {
                 uint32_t count;
                 stream.read((char*)&count, sizeof(count));
                 LOG_TRACE("Type Definition is Array/InlineArray/Pointer/StringHash (count={})", count);
@@ -94,7 +94,7 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
     // read instances
     stream.seekg(header.m_InstanceOffset);
     for (uint32_t i = 0; i < header.m_InstanceCount; ++i) {
-        JustCause3::AvalancheDataFormat::InstanceInfo instance;
+        jc::AvalancheDataFormat::InstanceInfo instance;
         stream.read((char*)&instance, sizeof(instance));
 
         auto instanceInfo        = std::make_unique<AdfInstanceInfo>();
@@ -109,7 +109,7 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
         // instanceInfo->m_DataOffset = instance.m_Offset;
 
         LOG_TRACE("Instance Name=\"{}\", Size={}, Type={}", m_Names[instance.m_NameIndex], instance.m_Size,
-                 JustCause3::AvalancheDataFormat::TypeDefintionStr(instanceInfo->m_Type->m_Definition.m_Type));
+                  jc::AvalancheDataFormat::TypeDefintionStr(instanceInfo->m_Type->m_Definition.m_Type));
 
         instanceInfo->ReadMembers();
         m_InstanceInfos.emplace_back(std::move(instanceInfo));
@@ -176,18 +176,18 @@ void AdfInstanceInfo::ReadMembers()
         LOG_TRACE("ReadMemebrs at {}", info->m_Name);
 
         switch (info->m_TypeDef->m_Definition.m_Type) {
-            case JustCause3::AvalancheDataFormat::TypeDefinitionType::Structure: {
+            case jc::AvalancheDataFormat::TypeDefinitionType::Structure: {
                 MemberSetup_Structure(info);
                 break;
             }
 
-            case JustCause3::AvalancheDataFormat::TypeDefinitionType::Array:
-            case JustCause3::AvalancheDataFormat::TypeDefinitionType::InlineArray: {
+            case jc::AvalancheDataFormat::TypeDefinitionType::Array:
+            case jc::AvalancheDataFormat::TypeDefinitionType::InlineArray: {
                 MemberSetup_Array(info);
                 break;
             }
 
-            case JustCause3::AvalancheDataFormat::TypeDefinitionType::StringHash: {
+            case jc::AvalancheDataFormat::TypeDefinitionType::StringHash: {
                 MemberSetup_StringHash(info);
                 break;
             }
@@ -212,28 +212,28 @@ void AdfInstanceInfo::MemberSetup_Structure(AdfInstanceMemberInfo* info)
     }
 }
 
-void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*                          info,
-                                              JustCause3::AvalancheDataFormat::TypeMemberHash type_hash,
+void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*                  info,
+                                              jc::AvalancheDataFormat::TypeMemberHash type_hash,
                                               const std::string& name, int64_t offset)
 {
     info->m_Adf->m_DataOffset = offset;
 
     switch (type_hash) {
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Int8:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::UInt8:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Int16:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::UInt16:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Int32:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::UInt32:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Int64:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::UInt64:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Float:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Double: {
+        case jc::AvalancheDataFormat::TypeMemberHash::Int8:
+        case jc::AvalancheDataFormat::TypeMemberHash::UInt8:
+        case jc::AvalancheDataFormat::TypeMemberHash::Int16:
+        case jc::AvalancheDataFormat::TypeMemberHash::UInt16:
+        case jc::AvalancheDataFormat::TypeMemberHash::Int32:
+        case jc::AvalancheDataFormat::TypeMemberHash::UInt32:
+        case jc::AvalancheDataFormat::TypeMemberHash::Int64:
+        case jc::AvalancheDataFormat::TypeMemberHash::UInt64:
+        case jc::AvalancheDataFormat::TypeMemberHash::Float:
+        case jc::AvalancheDataFormat::TypeMemberHash::Double: {
             LOG_TRACE("{} is a primivite", name);
             break;
         }
 
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::String: {
+        case jc::AvalancheDataFormat::TypeMemberHash::String: {
             LOG_TRACE("{} is a string (at {})", name, offset);
 
             auto dest_offset = info->m_Adf->ReadData<int64_t>();
@@ -250,9 +250,9 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
             const auto& definition = info->m_TypeDef->m_Parent->GetTypeDefinition(static_cast<uint32_t>(type_hash));
 
             switch (definition->m_Definition.m_Type) {
-                case JustCause3::AvalancheDataFormat::TypeDefinitionType::InlineArray:
-                case JustCause3::AvalancheDataFormat::TypeDefinitionType::Structure:
-                case JustCause3::AvalancheDataFormat::TypeDefinitionType::StringHash: {
+                case jc::AvalancheDataFormat::TypeDefinitionType::InlineArray:
+                case jc::AvalancheDataFormat::TypeDefinitionType::Structure:
+                case jc::AvalancheDataFormat::TypeDefinitionType::StringHash: {
                     LOG_TRACE("{} is a structure", name);
 
                     auto new_info = std::make_unique<AdfInstanceMemberInfo>(
@@ -261,7 +261,7 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
                     break;
                 }
 
-                case JustCause3::AvalancheDataFormat::TypeDefinitionType::Array: {
+                case jc::AvalancheDataFormat::TypeDefinitionType::Array: {
                     LOG_TRACE("{} is an array", name);
 
                     auto dest_offset   = info->m_Adf->ReadData<int64_t>();
@@ -282,7 +282,7 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
                     break;
                 }
 
-                case JustCause3::AvalancheDataFormat::TypeDefinitionType::Pointer: {
+                case jc::AvalancheDataFormat::TypeDefinitionType::Pointer: {
                     LOG_TRACE("{} is a pointer", name);
                     break;
                 }
@@ -303,34 +303,34 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
     int32_t element_size = 0;
     bool    is_primitive = true;
 
-    switch ((JustCause3::AvalancheDataFormat::TypeMemberHash)info->m_TypeDef->m_Definition.m_ElementTypeHash) {
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Int8:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::UInt8: {
+    switch ((jc::AvalancheDataFormat::TypeMemberHash)info->m_TypeDef->m_Definition.m_ElementTypeHash) {
+        case jc::AvalancheDataFormat::TypeMemberHash::Int8:
+        case jc::AvalancheDataFormat::TypeMemberHash::UInt8: {
             element_size = 1;
             break;
         }
 
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Int16:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::UInt16: {
+        case jc::AvalancheDataFormat::TypeMemberHash::Int16:
+        case jc::AvalancheDataFormat::TypeMemberHash::UInt16: {
             element_size = 2;
             break;
         }
 
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Int32:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::UInt32:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Float: {
+        case jc::AvalancheDataFormat::TypeMemberHash::Int32:
+        case jc::AvalancheDataFormat::TypeMemberHash::UInt32:
+        case jc::AvalancheDataFormat::TypeMemberHash::Float: {
             element_size = 4;
             break;
         }
 
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Int64:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::UInt64:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Double: {
+        case jc::AvalancheDataFormat::TypeMemberHash::Int64:
+        case jc::AvalancheDataFormat::TypeMemberHash::UInt64:
+        case jc::AvalancheDataFormat::TypeMemberHash::Double: {
             element_size = 8;
             break;
         }
 
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::String: {
+        case jc::AvalancheDataFormat::TypeMemberHash::String: {
             is_primitive = false;
             element_size = 8;
             break;
@@ -354,8 +354,7 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
 
         for (uint32_t i = 0; i < info->m_ExpectedElementCount; ++i) {
             const auto element_type_hash = info->m_TypeDef->m_Definition.m_ElementTypeHash;
-            MemberSetupStructMember(info,
-                                    static_cast<JustCause3::AvalancheDataFormat::TypeMemberHash>(element_type_hash), "",
+            MemberSetupStructMember(info, static_cast<jc::AvalancheDataFormat::TypeMemberHash>(element_type_hash), "",
                                     (info->m_Offset + element_size * i));
         }
     }
@@ -387,15 +386,15 @@ AdfInstanceMemberInfo::AdfInstanceMemberInfo(const std::string& name, uint32_t t
                                              AdfInstanceInfo* adf)
 {
     m_Name     = name;
-    m_Type     = JustCause3::AvalancheDataFormat::TypeDefinitionType::Primitive;
+    m_Type     = jc::AvalancheDataFormat::TypeDefinitionType::Primitive;
     m_TypeHash = type_hash;
     m_Offset   = offset;
     m_Adf      = adf;
 
     //
-    switch (static_cast<JustCause3::AvalancheDataFormat::TypeMemberHash>(type_hash)) {
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Int8:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::UInt8: {
+    switch (static_cast<jc::AvalancheDataFormat::TypeMemberHash>(type_hash)) {
+        case jc::AvalancheDataFormat::TypeMemberHash::Int8:
+        case jc::AvalancheDataFormat::TypeMemberHash::UInt8: {
             LOG_TRACE("read byte..");
 
             adf->m_DataOffset = offset;
@@ -403,7 +402,7 @@ AdfInstanceMemberInfo::AdfInstanceMemberInfo(const std::string& name, uint32_t t
             break;
         }
 
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::String: {
+        case jc::AvalancheDataFormat::TypeMemberHash::String: {
             adf->m_DataOffset = offset;
             m_StringData      = adf->ReadString();
 
@@ -417,14 +416,14 @@ AdfInstanceMemberInfo::AdfInstanceMemberInfo(const std::string& name, uint32_t t
                                              AdfInstanceInfo* adf, uint32_t element_count)
 {
     m_Name     = name;
-    m_Type     = JustCause3::AvalancheDataFormat::TypeDefinitionType::Primitive;
+    m_Type     = jc::AvalancheDataFormat::TypeDefinitionType::Primitive;
     m_TypeHash = type_hash;
     m_Offset   = offset;
     m_Adf      = adf;
 
-    switch (static_cast<JustCause3::AvalancheDataFormat::TypeMemberHash>(type_hash)) {
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::Int8:
-        case JustCause3::AvalancheDataFormat::TypeMemberHash::UInt8: {
+    switch (static_cast<jc::AvalancheDataFormat::TypeMemberHash>(type_hash)) {
+        case jc::AvalancheDataFormat::TypeMemberHash::Int8:
+        case jc::AvalancheDataFormat::TypeMemberHash::UInt8: {
             LOG_TRACE("read {} bytes..", element_count);
 
             m_Data.resize(element_count);
