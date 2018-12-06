@@ -335,15 +335,12 @@ class RenderBlockCarPaintMM : public IRenderBlock
             assert(vb.size() == vbdata.size());
             vertices.reserve(vb.size());
 
-            for (const auto& vertex : vb) {
+            for (auto i = 0; i < vb.size(); ++i) {
                 vertex_t v;
-                v.pos = {vertex.x, vertex.y, vertex.z};
+                v.pos    = {vb[i].x, vb[i].y, vb[i].z};
+                v.uv     = {vbdata[i].u0, vbdata[i].v0};
+                v.normal = unpack_normal(vbdata[i].n);
                 vertices.emplace_back(std::move(v));
-            }
-
-            for (auto i = 0; i < vbdata.size(); ++i) {
-                vertices[i].uv     = {vbdata[i].u0, vbdata[i].v0};
-                vertices[i].normal = unpack_normal(vbdata[i].n);
             }
         } else if (m_Block.attributes.flags & IS_DEFORM) {
             const auto& vb     = m_VertexBuffer->CastData<VertexDeformPos>();
@@ -352,15 +349,12 @@ class RenderBlockCarPaintMM : public IRenderBlock
             assert(vb.size() == vbdata.size());
             vertices.reserve(vb.size());
 
-            for (const auto& vertex : vb) {
+            for (auto i = 0; i < vb.size(); ++i) {
                 vertex_t v;
-                v.pos = {vertex.x, vertex.y, vertex.z};
+                v.pos    = {vb[i].x, vb[i].y, vb[i].z};
+                v.uv     = {vbdata[i].u0, vbdata[i].v0};
+                v.normal = unpack_normal(vbdata[i].n);
                 vertices.emplace_back(std::move(v));
-            }
-
-            for (auto i = 0; i < vbdata.size(); ++i) {
-                vertices[i].uv     = {vbdata[i].u0, vbdata[i].v0};
-                vertices[i].normal = unpack_normal(vbdata[i].n);
             }
         } else {
             const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexPosition>();
@@ -369,15 +363,12 @@ class RenderBlockCarPaintMM : public IRenderBlock
             assert(vb.size() == vbdata.size());
             vertices.reserve(vb.size());
 
-            for (const auto& vertex : vb) {
+            for (auto i = 0; i < vb.size(); ++i) {
                 vertex_t v;
-                v.pos = {vertex.x, vertex.y, vertex.z};
+                v.pos    = {vb[i].x, vb[i].y, vb[i].z};
+                v.uv     = {vbdata[i].u0, vbdata[i].v0};
+                v.normal = unpack_normal(vbdata[i].n);
                 vertices.emplace_back(std::move(v));
-            }
-
-            for (auto i = 0; i < vbdata.size(); ++i) {
-                vertices[i].uv     = {vbdata[i].u0, vbdata[i].v0};
-                vertices[i].normal = unpack_normal(vbdata[i].n);
             }
         }
 

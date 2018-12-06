@@ -688,11 +688,11 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
         }
 #endif
 
-        ImGui::Separator();
-
         // exporters
         const auto& exporters = ImportExportManager::Get()->GetExporters(filename.extension().string());
         if (exporters.size() > 0) {
+            ImGui::Separator();
+
             if (ImGui::BeginMenu(ICON_FA_MINUS_CIRCLE "  Export", (exporters.size() > 0))) {
                 for (const auto& exporter : exporters) {
                     if (ImGui::MenuItem(exporter->GetName(), exporter->GetExportExtension())) {
@@ -712,7 +712,6 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
             }
         }
 
-        ImGui::Separator();
 #if 0
         // archive specific stuff
         if (flags & CTX_FILE && flags & CTX_ARCHIVE) {
@@ -724,6 +723,7 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
         // custom context menus
         auto it = m_ContextMenuCallbacks.find(filename.extension().string());
         if (it != m_ContextMenuCallbacks.end()) {
+            ImGui::Separator();
             (*it).second(filename);
         }
 
