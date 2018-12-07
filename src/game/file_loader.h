@@ -15,10 +15,6 @@ using FileSaveCallback =
 using ReadArchiveCallback    = std::function<void(std::unique_ptr<StreamArchive_t>)>;
 using DictionaryLookupResult = std::tuple<std::string, std::string, uint32_t>;
 
-using OodleLZ_Decompress_t = long (*)(const void* source, const long sourceLen, const void* dest, const long destLen,
-                                      uint32_t flags, int a6, int a7, void* a8, long a9, void* a10, long a11, long a12,
-                                      long a13, int a14);
-
 enum ReadFileFlags : uint8_t {
     ReadFileFlags_None              = 0,
     ReadFileFlags_SkipTextureLoader = (1 << 0),
@@ -57,7 +53,6 @@ class FileLoader : public Singleton<FileLoader>
 {
   private:
     std::unique_ptr<DirectoryList> m_FileList         = nullptr;
-    OodleLZ_Decompress_t           OodleLZ_Decompress = nullptr;
 
     // file list dictionary
     std::unordered_map<uint32_t, std::pair<std::filesystem::path, std::vector<std::string>>> m_Dictionary;

@@ -9,10 +9,12 @@
 #include "../graphics/texture_manager.h"
 #include "../graphics/ui.h"
 
-#include "../game/formats/avalanche_archive.h"
-#include "../game/formats/render_block_model.h"
-#include "../game/formats/runtime_container.h"
-#include "../game/render_block_factory.h"
+#include "formats/avalanche_archive.h"
+#include "formats/render_block_model.h"
+#include "formats/runtime_container.h"
+#include "render_block_factory.h"
+
+#include "jc4/oodle.h"
 
 #include "../import_export/import_export_manager.h"
 
@@ -55,7 +57,8 @@ FileLoader::FileLoader()
             return;
         }
 
-        OodleLZ_Decompress = (OodleLZ_Decompress_t)GetProcAddress(hInstance, "OodleLZ_Decompress");
+        oo2::OodleLZ_Compress_original   = (oo2::OodleLZ_Compress_t)GetProcAddress(hInstance, "OodleLZ_Compress");
+        oo2::OodleLZ_Decompress_original = (oo2::OodleLZ_Decompress_t)GetProcAddress(hInstance, "OodleLZ_Decompress");
     }
 
     std::thread([this, status_text_id] {
@@ -1454,13 +1457,17 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
         // uncompress the data
         FileBuffer uncompressed_buffer;
         uncompressed_buffer.resize(entry.m_UncompressedSize);
-        const auto r = OodleLZ_Decompress((void*)result.data(), result.size(), uncompressed_buffer.data(),
-                                          entry.m_UncompressedSize, 1, 0, 0, nullptr, 0, nullptr, 0, 0, 0, 3);
+        const auto size = oo2::OodleLZ_Decompress(&result, &uncompressed_buffer);
 
-        LOG_INFO("r={}", r);
-        assert(r == entry.m_UncompressedSize);
+        LOG_INFO("OodleLZ_Decompress={}", size);
 
-        __debugbreak();
+        if (size != entry.m_UncompressedSize) {
+            __debugbreak();
+            return false;
+        }
+
+        *output = std::move(uncompressed_buffer);
+        return true;
     }
 
     *output = std::move(result);
@@ -1532,7 +1539,7 @@ void FileLoader::PreloadArchiveTable()
             return false;
         }
 
-		// NOTE: TabFileHeader m_Version didn't change
+        // NOTE: TabFileHeader m_Version didn't change
 
         if (g_IsJC4Mode) {
             const auto length = stream.tellg();
@@ -1589,7 +1596,7 @@ void FileLoader::PreloadArchiveTable()
         return true;
     };
 
-	// read all the tab files
+    // read all the tab files
     for (const auto& iter : std::filesystem::recursive_directory_iterator(Window::Get()->GetJustCauseDirectory())) {
         if (std::filesystem::is_regular_file(iter) && iter.path().extension() == ".tab") {
             ReadArchiveTable(iter.path());
