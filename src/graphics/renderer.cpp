@@ -371,13 +371,10 @@ void Renderer::CreateRenderTarget(const glm::vec2& size)
 
     // create the viewport
     {
-        D3D11_VIEWPORT viewport;
+        D3D11_VIEWPORT viewport{};
         viewport.Width    = size.x;
         viewport.Height   = size.y;
-        viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
-        viewport.TopLeftX = 0;
-        viewport.TopLeftY = 0;
 
         m_DeviceContext->RSSetViewports(1, &viewport);
     }

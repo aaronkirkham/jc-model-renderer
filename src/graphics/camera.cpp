@@ -1,6 +1,6 @@
+#include "camera.h"
 #include "../game/formats/render_block_model.h"
 #include "../window.h"
-#include "camera.h"
 #include "types.h"
 
 #include <imgui.h>
@@ -59,6 +59,8 @@ void Camera::Update(RenderContext_t* context)
     m_ViewProjection = (m_Projection * m_View);
 
     // update the render context
+    context->m_ViewMatrix           = m_View;
+    context->m_ProjectionMatrix     = m_Projection;
     context->m_viewProjectionMatrix = m_ViewProjection;
 }
 
@@ -92,6 +94,8 @@ void Camera::FocusOn(RenderBlockModel* model)
     // side of the bounding box we are facing.
 
     assert(model);
+
+#undef max
 
     // calculate how far we need to translate to get the model in view
     const auto& dimensions = model->GetBoundingBox()->GetSize();

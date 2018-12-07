@@ -30,14 +30,15 @@ enum ContextMenuFlags {
 };
 
 enum TreeViewTab {
-    TAB_FILE_EXPLORER,
-    TAB_ARCHIVES,
-    TAB_MODELS,
-    TAB_TOTAL,
+    TreeViewTab_FileExplorer = 0,
+    TreeViewTab_Archives,
+    TreeViewTab_Models,
+    TreeViewTab_Total,
 };
 
 enum DragDropPayloadType {
-    DROPPAYLOAD_UNKNOWN,
+    DragDropPayload_Unknown = 1,
+    DragDropPayload_Texture,
 };
 
 struct DragDropPayload {
@@ -56,7 +57,7 @@ class UI : public Singleton<UI>
     std::recursive_mutex                       m_StatusTextsMutex;
     std::map<uint64_t, std::string>            m_StatusTexts;
     std::map<std::string, ContextMenuCallback> m_ContextMenuCallbacks;
-    TreeViewTab                                m_TabToSwitch          = TAB_FILE_EXPLORER;
+    TreeViewTab                                m_TabToSwitch          = TreeViewTab_FileExplorer;
     uint8_t                                    m_CurrentActiveGBuffer = 0;
     std::array<bool, 2>                        m_SceneMouseState      = {false};
     bool                                       m_IsDragDrop           = false;
@@ -92,7 +93,8 @@ class UI : public Singleton<UI>
     uint64_t PushStatusText(const std::string& str);
     void     PopStatusText(uint64_t id);
 
-    DragDropPayload* GetDropPayload(DragDropPayloadType payload_type);
+    DragDropPayload* GetDropPayload();
+    DragDropPayload* GetDropPayload(DragDropPayloadType type);
 
     void SwitchToTab(const TreeViewTab tab)
     {
