@@ -138,13 +138,6 @@ class RenderBlockLandmark : public IRenderBlock
         m_VertexBuffer     = ReadVertexBuffer<PackedVertexPosition>(stream);
         m_VertexBufferData = ReadVertexBuffer<PackedTexWithSomething>(stream);
 
-        /*auto& vb = m_VertexBufferData->CastData<PackedTexWithSomething>();
-        for (const auto& v : vb) {
-            auto x = unpack(v.u0);
-            auto y = unpack(v.v0);
-            auto unknown = unpack_vector(v.unknown, true);
-        }*/
-
         // read the index buffer
         m_IndexBuffer = ReadIndexBuffer(stream);
     }

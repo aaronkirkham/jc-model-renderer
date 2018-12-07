@@ -218,6 +218,8 @@ class Wavefront_Obj : public IImportExporter
                     mtl_stream << "newmtl " << diffuse_texture_filename.string() << std::endl;
                     mtl_stream << "Kd 1.0 1.0 1.0" << std::endl;
                     mtl_stream << "Ks 0.0 0.0 0.0" << std::endl;
+                    mtl_stream << "d " << (block->IsOpaque() ? "1.0" : "0.0") << std::endl;
+                    mtl_stream << "Tr " << (block->IsOpaque() ? "0.0" : "1.0") << std::endl;
                     mtl_stream << "map_Kd " << diffuse_texture_filename.string() << ".dds" << std::endl << std::endl;
 
                     // export the texture

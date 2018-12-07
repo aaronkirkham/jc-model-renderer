@@ -42,6 +42,8 @@ struct RenderContext_t {
     D3D11_BLEND          m_BlendDestAlpha    = D3D11_BLEND_ZERO;
     D3D11_BLEND_OP       m_BlendColourEq     = D3D11_BLEND_OP_ADD;
     D3D11_BLEND_OP       m_BlendAlphaEq      = D3D11_BLEND_OP_ADD;
+    glm::mat4            m_ViewMatrix;
+    glm::mat4            m_ProjectionMatrix;
     glm::mat4            m_viewProjectionMatrix;
 };
 

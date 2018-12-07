@@ -46,7 +46,7 @@ UI::UI()
 {
     Window::Get()->Events().DragEnter.connect([&](const std::filesystem::path& filename) {
         m_IsDragDrop                = true;
-        m_DragDropPayload           = filename.generic_string();
+        m_DragDropPayload           = filename.string();
         ImGui::GetIO().MouseDown[0] = true;
     });
 
@@ -68,11 +68,24 @@ void UI::Render(RenderContext_t* context)
 
     // handle external drag drop payloads
     if (m_IsDragDrop && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern)) {
-        DragDropPayload payload;
-        payload.type = DROPPAYLOAD_UNKNOWN;
-        payload.data = m_DragDropPayload.c_str();
+        // only set the payload if we have no data already set
+        const auto _drag_drop_payload = ImGui::GetDragDropPayload();
+        if (_drag_drop_payload->Data == nullptr) {
+            const auto&         extension = std::filesystem::path(m_DragDropPayload).extension();
+            DragDropPayloadType type      = DragDropPayload_Unknown;
 
-        ImGui::SetDragDropPayload("_123_", (void*)&payload, sizeof(payload), ImGuiCond_Once);
+            // textures
+            if (extension == ".dds" || extension == ".ddsc" || extension == ".hmddsc") {
+                type = DragDropPayload_Texture;
+            }
+
+            DragDropPayload payload;
+            payload.type = type;
+            payload.data = m_DragDropPayload.c_str();
+
+            ImGui::SetDragDropPayload((const char*)&payload.type, (void*)&payload, sizeof(payload), ImGuiCond_Once);
+        }
+
         ImGui::Text(m_DragDropPayload.c_str());
         ImGui::EndDragDropSource();
     }
@@ -337,7 +350,7 @@ void UI::Render(RenderContext_t* context)
             ImGui::Image(Renderer::Get()->GetGBufferSRV(m_CurrentActiveGBuffer), ImGui::GetWindowSize());
 
             // drag drop target
-            if (const auto payload = UI::Get()->GetDropPayload(DROPPAYLOAD_UNKNOWN)) {
+            if (const auto payload = UI::Get()->GetDropPayload()) {
                 FileLoader::Get()->ReadFileFromDisk(payload->data);
             }
 
@@ -461,7 +474,7 @@ void UI::RenderFileTreeView()
         ImGui::BeginTabBar("Tree View Tabs");
         {
             // file explorer tab
-            if (ImGuiCustom::TabItemScroll("File Explorer", m_TabToSwitch == TAB_FILE_EXPLORER)) {
+            if (ImGuiCustom::TabItemScroll("File Explorer", m_TabToSwitch == TreeViewTab_FileExplorer)) {
                 const auto directory_list = FileLoader::Get()->GetDirectoryList();
                 if (directory_list) {
                     directory_list->Draw(directory_list->GetTree());
@@ -469,13 +482,13 @@ void UI::RenderFileTreeView()
 
                 ImGuiCustom::EndTabItemScroll();
 
-                if (m_TabToSwitch == TAB_FILE_EXPLORER) {
-                    m_TabToSwitch = TAB_TOTAL;
+                if (m_TabToSwitch == TreeViewTab_FileExplorer) {
+                    m_TabToSwitch = TreeViewTab_Total;
                 }
             }
 
             // archives
-            if (ImGuiCustom::TabItemScroll("Archives", m_TabToSwitch == TAB_ARCHIVES, nullptr,
+            if (ImGuiCustom::TabItemScroll("Archives", m_TabToSwitch == TreeViewTab_Archives, nullptr,
                                            AvalancheArchive::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
                 for (auto it = AvalancheArchive::Instances.begin(); it != AvalancheArchive::Instances.end();) {
                     const auto& archive  = (*it).second;
@@ -516,7 +529,7 @@ void UI::RenderFileTreeView()
                         ShaderManager::Get()->Empty();
 
                         if (AvalancheArchive::Instances.size() == 0) {
-                            m_TabToSwitch = TAB_FILE_EXPLORER;
+                            m_TabToSwitch = TreeViewTab_FileExplorer;
                         }
 
                         continue;
@@ -526,13 +539,13 @@ void UI::RenderFileTreeView()
                 }
 
                 ImGuiCustom::EndTabItemScroll();
-                if (m_TabToSwitch == TAB_ARCHIVES) {
-                    m_TabToSwitch = TAB_TOTAL;
+                if (m_TabToSwitch == TreeViewTab_Archives) {
+                    m_TabToSwitch = TreeViewTab_Total;
                 }
             }
 
             // render blocks
-            if (ImGuiCustom::TabItemScroll("Models", m_TabToSwitch == TAB_MODELS, nullptr,
+            if (ImGuiCustom::TabItemScroll("Models", m_TabToSwitch == TreeViewTab_Models, nullptr,
                                            RenderBlockModel::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
                 for (auto it = RenderBlockModel::Instances.begin(); it != RenderBlockModel::Instances.end();) {
                     const auto& filename_with_path = (*it).second->GetPath();
@@ -640,8 +653,8 @@ void UI::RenderFileTreeView()
                 }
 
                 ImGuiCustom::EndTabItemScroll();
-                if (m_TabToSwitch == TAB_MODELS) {
-                    m_TabToSwitch = TAB_TOTAL;
+                if (m_TabToSwitch == TreeViewTab_Models) {
+                    m_TabToSwitch = TreeViewTab_Total;
                 }
             }
         }
@@ -688,11 +701,11 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
         }
 #endif
 
-        ImGui::Separator();
-
         // exporters
         const auto& exporters = ImportExportManager::Get()->GetExporters(filename.extension().string());
         if (exporters.size() > 0) {
+            ImGui::Separator();
+
             if (ImGui::BeginMenu(ICON_FA_MINUS_CIRCLE "  Export", (exporters.size() > 0))) {
                 for (const auto& exporter : exporters) {
                     if (ImGui::MenuItem(exporter->GetName(), exporter->GetExportExtension())) {
@@ -710,7 +723,6 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
             }
         }
 
-        ImGui::Separator();
 #if 0
         // archive specific stuff
         if (flags & CTX_FILE && flags & CTX_ARCHIVE) {
@@ -722,6 +734,7 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
         // custom context menus
         auto it = m_ContextMenuCallbacks.find(filename.extension().string());
         if (it != m_ContextMenuCallbacks.end()) {
+            ImGui::Separator();
             (*it).second(filename);
         }
 
@@ -764,8 +777,8 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
         RenderContextMenu(filename_with_path, ImGui::GetColumnIndex(), ContextMenuFlags_Texture);
 
         // dragdrop payload
-        if (const auto payload = UI::Get()->GetDropPayload(DROPPAYLOAD_UNKNOWN)) {
-            LOG_INFO("DropPayload \"{}\"", title);
+        if (const auto payload = UI::Get()->GetDropPayload(DragDropPayload_Texture)) {
+            LOG_INFO("DropPayload Texture: \"{}\"", title);
             std::filesystem::path payload_data(payload->data);
             texture->LoadFromFile(payload->data);
 
@@ -807,11 +820,28 @@ void UI::PopStatusText(uint64_t id)
     m_StatusTexts.erase(id);
 }
 
-DragDropPayload* UI::GetDropPayload(DragDropPayloadType payload_type)
+DragDropPayload* UI::GetDropPayload()
 {
     DragDropPayload* result = nullptr;
     if (ImGui::BeginDragDropTarget()) {
-        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_123_")) {
+        const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+        if (payload && payload->Data != nullptr && payload->DataFrameCount != -1) {
+            if (const ImGuiPayload* accepted_payload = ImGui::AcceptDragDropPayload(payload->DataType)) {
+                result = reinterpret_cast<DragDropPayload*>(accepted_payload->Data);
+            }
+        }
+
+        ImGui::EndDragDropTarget();
+    }
+
+    return result;
+}
+
+DragDropPayload* UI::GetDropPayload(DragDropPayloadType type)
+{
+    DragDropPayload* result = nullptr;
+    if (ImGui::BeginDragDropTarget()) {
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload((const char*)&type)) {
             result = reinterpret_cast<DragDropPayload*>(payload->Data);
         }
 

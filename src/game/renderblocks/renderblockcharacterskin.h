@@ -4,9 +4,11 @@
 
 #pragma pack(push, 1)
 struct CharacterSkinAttributes {
-    uint32_t flags;
-    float    scale;
-    char     pad[0x30];
+    uint32_t  flags;
+    float     scale;
+    glm::vec2 _unknown;
+    glm::vec2 _unknown2;
+    char      pad[0x20];
 };
 
 static_assert(sizeof(CharacterSkinAttributes) == 0x38, "CharacterSkinAttributes alignment is wrong!");
@@ -328,9 +330,9 @@ class RenderBlockCharacterSkin : public IRenderBlock
                 const auto& vb = m_VertexBuffer->CastData<Packed4Bones1UV>();
                 vertices.reserve(vb.size());
                 for (const auto& vertex : vb) {
-                    vertex_t v;
-                    v.pos = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
-                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)} * m_Block.attributes.scale;
+                    vertex_t v{};
+                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
                     vertices.emplace_back(std::move(v));
                 }
 
@@ -345,9 +347,9 @@ class RenderBlockCharacterSkin : public IRenderBlock
                 const auto& vb = m_VertexBuffer->CastData<Packed8Bones1UV>();
                 vertices.reserve(vb.size());
                 for (const auto& vertex : vb) {
-                    vertex_t v;
-                    v.pos = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
-                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)} * m_Block.attributes.scale;
+                    vertex_t v{};
+                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
                     vertices.emplace_back(std::move(v));
                 }
 

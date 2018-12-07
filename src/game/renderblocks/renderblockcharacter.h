@@ -4,18 +4,20 @@
 
 #pragma pack(push, 1)
 struct CharacterAttributes {
-    uint32_t flags;
-    float    scale;
-    char     pad[0x14];
-    float    specularGloss;
-    float    transmission;
-    float    specularFresnel;
-    float    diffuseRoughness;
-    float    diffuseWrap;
-    float    _unknown;
-    float    dirtFactor;
-    float    emissive;
-    char     pad2[0x30];
+    uint32_t  flags;
+    float     scale;
+    glm::vec2 _unknown;
+    glm::vec2 _unknown2;
+    float     _unknown3;
+    float     specularGloss;
+    float     transmission;
+    float     specularFresnel;
+    float     diffuseRoughness;
+    float     diffuseWrap;
+    float     _unknown4;
+    float     dirtFactor;
+    float     emissive;
+    char      pad2[0x30];
 };
 
 static_assert(sizeof(CharacterAttributes) == 0x6C, "CharacterAttributes alignment is wrong!");
@@ -349,9 +351,9 @@ class RenderBlockCharacter : public IRenderBlock
                 const auto& vb = m_VertexBuffer->CastData<Packed4Bones1UV>();
                 vertices.reserve(vb.size());
                 for (const auto& vertex : vb) {
-                    vertex_t v;
-                    v.pos = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
-                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)} * m_Block.attributes.scale;
+                    vertex_t v{};
+                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
                     vertices.emplace_back(std::move(v));
                 }
 
@@ -366,9 +368,9 @@ class RenderBlockCharacter : public IRenderBlock
                 const auto& vb = m_VertexBuffer->CastData<Packed8Bones1UV>();
                 vertices.reserve(vb.size());
                 for (const auto& vertex : vb) {
-                    vertex_t v;
-                    v.pos = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
-                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)} * m_Block.attributes.scale;
+                    vertex_t v{};
+                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
                     vertices.emplace_back(std::move(v));
                 }
 
