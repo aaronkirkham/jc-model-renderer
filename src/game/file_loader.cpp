@@ -64,7 +64,7 @@ FileLoader::FileLoader()
     std::thread([this, status_text_id] {
         try {
             const auto handle = GetModuleHandle(nullptr);
-            const auto rc     = FindResource(handle, MAKEINTRESOURCE(256), RT_RCDATA); // jc3 tmp
+            const auto rc     = FindResource(handle, MAKEINTRESOURCE(256), RT_RCDATA);
             if (rc == nullptr) {
                 throw std::runtime_error("FindResource failed");
             }
@@ -105,9 +105,6 @@ FileLoader::FileLoader()
 
         UI::Get()->PopStatusText(status_text_id);
     }).detach();
-
-    // preload the archive tables
-    PreloadArchiveTable();
 
     // init the namehash lookup table
     NameHashLookup::Init();
@@ -333,7 +330,14 @@ void FileLoader::RunFileBatches() noexcept
 
             // get the path names
             auto&      jc_directory = Window::Get()->GetJustCauseDirectory();
+            const auto tab_file     = jc_directory / directory / (archive + ".tab");
             const auto arc_file     = jc_directory / directory / (archive + ".arc");
+
+            // ensure the tab file exists
+            if (!std::filesystem::exists(tab_file)) {
+                LOG_ERROR("Can't find TAB file (\"{}\")", tab_file.string());
+                continue;
+            }
 
             // ensure the arc file exists
             if (!std::filesystem::exists(arc_file)) {
@@ -341,49 +345,52 @@ void FileLoader::RunFileBatches() noexcept
                 continue;
             }
 
-            // open the arc file
-            std::ifstream stream(arc_file, std::ios::binary);
-            if (stream.fail()) {
-                LOG_ERROR("Invalid ARC file stream!");
-                continue;
-            }
+            std::vector<TabFileEntry> entries;
+            if (ReadArchiveTable(tab_file, &entries)) {
+                // open the arc file
+                std::ifstream stream(arc_file, std::ios::binary);
+                if (stream.fail()) {
+                    LOG_ERROR("Invalid ARC file stream!");
+                    continue;
+                }
 
 #ifdef DEBUG
-            g_ArchiveLoadCount++;
-            LOG_INFO("Total archive load count: {}", g_ArchiveLoadCount);
+                g_ArchiveLoadCount++;
+                LOG_INFO("Total archive load count: {}", g_ArchiveLoadCount);
 #endif
 
-            // iterate over all the files
-            for (const auto& file : batch.second) {
-                const bool has_found_file = m_ArchiveEntries.find(file.first) != m_ArchiveEntries.end();
-                if (has_found_file) {
-                    const auto& entry = m_ArchiveEntries[file.first];
+                // iterate over all the files
+                for (const auto& file : batch.second) {
+                    const auto it = std::find_if(entries.begin(), entries.end(), [&](const TabFileEntry& entry) {
+                        return entry.m_NameHash == file.first;
+                    });
 
-                    //
-                    stream.seekg(entry.m_Offset);
+                    if (it != entries.end()) {
+                        const auto& entry = (*it);
 
-                    // read the file buffer
-                    FileBuffer buffer;
-                    buffer.resize(entry.m_CompressedSize);
-                    stream.read((char*)buffer.data(), entry.m_CompressedSize);
+                        //
+                        stream.seekg(entry.m_Offset);
 
-                    // trigger the callbacks
-                    for (const auto& callback : file.second) {
-                        callback(true, std::move(buffer));
+                        // read the file buffer
+                        FileBuffer buffer;
+                        buffer.resize(entry.m_CompressedSize);
+                        stream.read((char*)buffer.data(), entry.m_CompressedSize);
+
+                        // trigger the callbacks
+                        for (const auto& callback : file.second) {
+                            callback(true, std::move(buffer));
+                        }
+                    } else {
+                        LOG_ERROR("Didn't find {}", file.first);
+
+                        for (const auto& callback : file.second) {
+                            callback(false, {});
+                        }
                     }
                 }
 
-                // have we not found the file?
-                if (!has_found_file) {
-                    LOG_ERROR("Didn't find {}", file.first);
-
-                    for (const auto& callback : file.second) {
-                        callback(false, {});
-                    }
-                }
+                stream.close();
             }
-
-            stream.close();
         }
 
         // clear the batches
@@ -464,6 +471,8 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(const FileBuffer
 
         assert(stream.tellg() == data_offset);
 
+        std::filesystem::path jc_directory = Window::Get()->GetJustCauseDirectory();
+
         while (stream.tellg() < header.m_Size) {
             uint32_t a, b, uncompressedSize, namehash, e;
             stream.read((char*)&a, sizeof(a));
@@ -473,10 +482,18 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(const FileBuffer
             stream.read((char*)&namehash, sizeof(namehash));
             stream.read((char*)&e, sizeof(e));
 
-            if (m_ArchiveEntries.find(namehash) != m_ArchiveEntries.end()) {
-                const auto& entry = m_ArchiveEntries[namehash];
-                LOG_INFO("{} ({:x}) ({}, {})", filenames[namehash], namehash, entry.m_Offset, entry.m_CompressedSize);
+            const auto& [directory_name, archive_name, _hash] = LocateFileInDictionary(namehash);
+            if (directory_name.empty()) {
+                LOG_ERROR("Can't find {:x} in dictionary.", namehash);
+                continue;
+            }
 
+            const auto tab_file = jc_directory / directory_name / (archive_name + ".tab");
+            LOG_INFO("Looking in table: {}", tab_file.string());
+
+            TabFileEntry entry;
+            if (ReadArchiveTableEntry(tab_file, namehash, &entry)) {
+                LOG_INFO("{} ({:x}) ({}, {})", filenames[namehash], namehash, entry.m_Offset, entry.m_CompressedSize);
                 result->m_Files.emplace_back(
                     StreamArchiveEntry_t{filenames[namehash], entry.m_Offset, entry.m_CompressedSize});
             }
@@ -1404,11 +1421,107 @@ FileLoader::GetStreamArchiveFromFile(const std::filesystem::path& file, StreamAr
     return {nullptr, StreamArchiveEntry_t{}};
 }
 
+bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::vector<TabFileEntry>* output) noexcept
+{
+    std::ifstream stream(filename, std::ios::ate | std::ios::binary);
+    if (stream.fail()) {
+        LOG_ERROR("Failed to open file stream!");
+        return false;
+    }
+
+    // NOTE: TabFileHeader m_Version didn't change
+
+    if (g_IsJC4Mode) {
+        const auto length = stream.tellg();
+        stream.seekg(std::ios::beg);
+
+        jc4::ArchiveTable::TabFileHeader header;
+        stream.read((char*)&header, sizeof(header));
+
+        if (header.m_Magic != 0x424154) {
+            LOG_ERROR("Invalid header magic");
+            return false;
+        }
+
+        // read unknown stuff
+        uint32_t _unknown_count = 0;
+        stream.read((char*)&_unknown_count, sizeof(_unknown_count));
+        for (uint32_t i = 0; i < _unknown_count; ++i) {
+            uint64_t kv;
+            stream.read((char*)&kv, sizeof(kv));
+        }
+
+        while (static_cast<int32_t>(stream.tellg()) + 20 <= length) {
+            jc4::ArchiveTable::VfsTabEntry entry;
+            stream.read((char*)&entry, sizeof(entry));
+
+            output->emplace_back(std::move(entry));
+        }
+    } else {
+        stream.seekg(std::ios::beg);
+
+        jc3::ArchiveTable::TabFileHeader header;
+        stream.read((char*)&header, sizeof(header));
+
+        if (header.m_Magic != 0x424154) {
+            LOG_ERROR("Invalid header magic");
+            return false;
+        }
+
+        while (!stream.eof()) {
+            jc3::ArchiveTable::VfsTabEntry entry;
+            stream.read((char*)&entry, sizeof(entry));
+
+            // prevent the entry being added 2 times when we get to the null character at the end
+            // failbit will be set because the stream can only read 1 more byte
+            if (stream.fail()) {
+                break;
+            }
+
+            output->emplace_back(std::move(entry));
+        }
+    }
+
+    stream.close();
+    return true;
+}
+
+bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, const std::filesystem::path& filename,
+                                       TabFileEntry* output) noexcept
+{
+    auto namehash = hashlittle(filename.generic_string().c_str());
+    return ReadArchiveTableEntry(table, namehash, output);
+}
+
+bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, uint32_t name_hash,
+                                       TabFileEntry* output) noexcept
+{
+    std::vector<TabFileEntry> entries;
+    if (ReadArchiveTable(table, &entries)) {
+        auto it = std::find_if(entries.begin(), entries.end(),
+                               [&](const TabFileEntry& entry) { return entry.m_NameHash == name_hash; });
+
+        if (it != entries.end()) {
+            *output = (*it);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash,
                                      FileBuffer* output) noexcept
 {
-    const auto& jc_directory = Window::Get()->GetJustCauseDirectory();
-    const auto  arc_file     = jc_directory / directory / (archive + ".arc");
+    std::filesystem::path jc_directory = Window::Get()->GetJustCauseDirectory();
+    const auto            tab_file     = jc_directory / directory / (archive + ".tab");
+    const auto            arc_file     = jc_directory / directory / (archive + ".arc");
+
+    // ensure the tab file exists
+    if (!std::filesystem::exists(tab_file)) {
+        LOG_ERROR("Can't find TAB file (\"{}\")", tab_file.string());
+        return false;
+    }
 
     // ensure the arc file exists
     if (!std::filesystem::exists(arc_file)) {
@@ -1416,71 +1529,70 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
         return false;
     }
 
-    static auto ReadArchiveFile = [&, arc_file](const uint32_t offset, const uint32_t size) {
-        FileBuffer data;
+    TabFileEntry entry;
+    if (ReadArchiveTableEntry(tab_file, namehash, &entry)) {
+        LOG_INFO("NameHash={}, Offset={}, CompressedSize={}, UncompressedSize={}, CompressionType={}", namehash,
+                 entry.m_Offset, entry.m_CompressedSize, entry.m_UncompressedSize, entry.m_CompressionType);
 
+        // read the arc file
         std::ifstream stream(arc_file, std::ios::ate | std::ios::binary);
         if (stream.fail()) {
             LOG_ERROR("Failed to open file stream!");
-            return data;
+            return false;
         }
 
         g_ArchiveLoadCount++;
         LOG_INFO("Current archive load count: {}", g_ArchiveLoadCount);
 
-        stream.seekg(offset);
+        FileBuffer data;
+        data.resize(entry.m_CompressedSize);
 
-        data.resize(size);
-        stream.read((char*)data.data(), size);
+        // read the file from the archive
+        stream.seekg(entry.m_Offset);
+        stream.read((char*)data.data(), data.size());
         stream.close();
 
-        return data;
-    };
+        // file is compressed
+        if (entry.m_CompressedSize != entry.m_UncompressedSize
+            && entry.m_CompressionType != jc4::ArchiveTable::CompressionType_None) {
+            LOG_WARN("File is compressed with {}.",
+                     (static_cast<jc4::ArchiveTable::CompressionType>(entry.m_CompressionType)
+                              == jc4::ArchiveTable::CompressionType_Zlib
+                          ? "zlib"
+                          : "oodle"));
 
-    assert(m_ArchiveEntries.find(namehash) != m_ArchiveEntries.end());
+            // uncompress the data
+            FileBuffer uncompressed_buffer;
+            uncompressed_buffer.resize(entry.m_UncompressedSize);
+            const auto size = oo2::OodleLZ_Decompress(&data, &uncompressed_buffer);
 
-    const auto& entry = m_ArchiveEntries[namehash];
-    LOG_INFO("NameHash={}, Offset={}, CompressedSize={}, UncompressedSize={}, CompressionType={}", namehash,
-             entry.m_Offset, entry.m_CompressedSize, entry.m_UncompressedSize, entry.m_CompressionType);
+            LOG_INFO("OodleLZ_Decompress={} ({}, {}, {})", size, entry.unknown, entry.unknown2, entry.unknown3);
 
-    // read the file from the archive
-    auto result = ReadArchiveFile(entry.m_Offset, entry.m_CompressedSize);
+            if (size != entry.m_UncompressedSize) {
+                LOG_ERROR("Failed to decompress the file.");
+                return false;
+            }
 
-    // file is compressed
-    if (g_IsJC4Mode && entry.m_CompressionType != jc4::ArchiveTable::CompressionType_None) {
-        LOG_WARN("File is compressed with {}.",
-                 (static_cast<jc4::ArchiveTable::CompressionType>(entry.m_CompressionType)
-                          == jc4::ArchiveTable::CompressionType_Zlib
-                      ? "zlib"
-                      : "oodle"));
-
-        // uncompress the data
-        FileBuffer uncompressed_buffer;
-        uncompressed_buffer.resize(entry.m_UncompressedSize);
-        const auto size = oo2::OodleLZ_Decompress(&result, &uncompressed_buffer);
-
-        LOG_INFO("OodleLZ_Decompress={}", size);
-
-        if (size != entry.m_UncompressedSize) {
-            __debugbreak();
-            return false;
+            *output = std::move(uncompressed_buffer);
+            return true;
         }
 
-        *output = std::move(uncompressed_buffer);
-        return true;
+        *output = std::move(data);
+        return output->size() > 0;
     }
 
-    *output = std::move(result);
-    return output->size() > 0;
+    return false;
 }
 
 DictionaryLookupResult FileLoader::LocateFileInDictionary(const std::filesystem::path& filename) noexcept
 {
-    const auto& _filename = filename.generic_string();
-    auto        _namehash = hashlittle(_filename.c_str());
+    auto name_hash = hashlittle(filename.generic_string().c_str());
+    return LocateFileInDictionary(name_hash);
+}
 
-    // try find the file namehash
-    auto it = m_Dictionary.find(_namehash);
+DictionaryLookupResult FileLoader::LocateFileInDictionary(uint32_t name_hash) noexcept
+{
+    auto it = m_Dictionary.find(name_hash);
     if (it == m_Dictionary.end()) {
         return {};
     }
@@ -1528,80 +1640,4 @@ void FileLoader::RegisterSaveCallback(const std::vector<std::string>& extensions
     for (const auto& extension : extensions) {
         m_SaveFileCallbacks[extension].emplace_back(fn);
     }
-}
-
-void FileLoader::PreloadArchiveTable()
-{
-    static auto ReadArchiveTable = [&](const std::filesystem::path& filename) {
-        std::ifstream stream(filename, std::ios::ate | std::ios::binary);
-        if (stream.fail()) {
-            LOG_ERROR("Failed to open file stream!");
-            return false;
-        }
-
-        // NOTE: TabFileHeader m_Version didn't change
-
-        if (g_IsJC4Mode) {
-            const auto length = stream.tellg();
-            stream.seekg(std::ios::beg);
-
-            jc4::ArchiveTable::TabFileHeader header;
-            stream.read((char*)&header, sizeof(header));
-
-            if (header.m_Magic != 0x424154) {
-                LOG_ERROR("Invalid header magic");
-                return false;
-            }
-
-            // read unknown stuff
-            uint32_t _unknown_count = 0;
-            stream.read((char*)&_unknown_count, sizeof(_unknown_count));
-            for (uint32_t i = 0; i < _unknown_count; ++i) {
-                uint64_t kv;
-                stream.read((char*)&kv, sizeof(kv));
-            }
-
-            while (static_cast<int32_t>(stream.tellg()) + 20 <= length) {
-                jc4::ArchiveTable::VfsTabEntry entry;
-                stream.read((char*)&entry, sizeof(entry));
-
-                m_ArchiveEntries[entry.m_NameHash] = std::move(entry);
-            }
-        } else {
-            stream.seekg(std::ios::beg);
-
-            jc3::ArchiveTable::TabFileHeader header;
-            stream.read((char*)&header, sizeof(header));
-
-            if (header.m_Magic != 0x424154) {
-                LOG_ERROR("Invalid header magic");
-                return false;
-            }
-
-            while (!stream.eof()) {
-                jc3::ArchiveTable::VfsTabEntry entry;
-                stream.read((char*)&entry, sizeof(entry));
-
-                // prevent the entry being added 2 times when we get to the null character at the end
-                // failbit will be set because the stream can only read 1 more byte
-                if (stream.fail()) {
-                    break;
-                }
-
-                m_ArchiveEntries[entry.m_NameHash] = std::move(entry);
-            }
-        }
-
-        stream.close();
-        return true;
-    };
-
-    // read all the tab files
-    for (const auto& iter : std::filesystem::recursive_directory_iterator(Window::Get()->GetJustCauseDirectory())) {
-        if (std::filesystem::is_regular_file(iter) && iter.path().extension() == ".tab") {
-            ReadArchiveTable(iter.path());
-        }
-    }
-
-    LOG_INFO("Preloaded {} archive entries", m_ArchiveEntries.size());
 }

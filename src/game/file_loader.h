@@ -22,25 +22,34 @@ enum ReadFileFlags : uint8_t {
 
 struct TabFileEntry {
     uint8_t  m_Version;
+    uint32_t m_NameHash;
     uint32_t m_Offset;
     uint32_t m_CompressedSize;
     uint32_t m_UncompressedSize;
     uint8_t  m_CompressionType;
+
+    uint8_t unknown, unknown2, unknown3;
 
     TabFileEntry() {}
 
     TabFileEntry(const jc4::ArchiveTable::VfsTabEntry& entry)
     {
         m_Version          = 2;
+        m_NameHash         = entry.m_NameHash;
         m_Offset           = entry.m_Offset;
         m_CompressedSize   = entry.m_CompressedSize;
         m_UncompressedSize = entry.m_UncompressedSize;
         m_CompressionType  = entry.m_CompressionType;
+
+        unknown  = entry._unknown;
+        unknown2 = entry._unknown2;
+        unknown3 = entry._unknown3;
     }
 
     TabFileEntry(const jc3::ArchiveTable::VfsTabEntry& entry)
     {
         m_Version          = 1;
+        m_NameHash         = entry.m_NameHash;
         m_Offset           = entry.m_Offset;
         m_CompressedSize   = entry.m_Size;
         m_UncompressedSize = entry.m_Size;
@@ -52,7 +61,7 @@ class RuntimeContainer;
 class FileLoader : public Singleton<FileLoader>
 {
   private:
-    std::unique_ptr<DirectoryList> m_FileList         = nullptr;
+    std::unique_ptr<DirectoryList> m_FileList = nullptr;
 
     // file list dictionary
     std::unordered_map<uint32_t, std::pair<std::filesystem::path, std::vector<std::string>>> m_Dictionary;
@@ -65,9 +74,6 @@ class FileLoader : public Singleton<FileLoader>
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::vector<ReadFileCallback>>> m_Batches;
     std::unordered_map<std::string, std::vector<ReadFileCallback>>                               m_PathBatches;
     std::recursive_mutex                                                                         m_BatchesMutex;
-
-    // archive table cache
-    std::unordered_map<uint32_t, TabFileEntry> m_ArchiveEntries;
 
     std::unique_ptr<StreamArchive_t> ParseStreamArchive(const FileBuffer* sarc_buffer,
                                                         FileBuffer*       toc_buffer = nullptr);
@@ -85,6 +91,10 @@ class FileLoader : public Singleton<FileLoader>
     void ReadFileFromDisk(const std::filesystem::path& filename) noexcept;
 
     // archives
+    bool ReadArchiveTable(const std::filesystem::path& filename, std::vector<TabFileEntry>* output) noexcept;
+    bool ReadArchiveTableEntry(const std::filesystem::path& table, const std::filesystem::path& filename,
+                               TabFileEntry* output) noexcept;
+    bool ReadArchiveTableEntry(const std::filesystem::path& table, uint32_t name_hash, TabFileEntry* output) noexcept;
     bool ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash,
                              FileBuffer* output) noexcept;
 
@@ -116,6 +126,7 @@ class FileLoader : public Singleton<FileLoader>
     std::tuple<StreamArchive_t*, StreamArchiveEntry_t>
                            GetStreamArchiveFromFile(const std::filesystem::path& file, StreamArchive_t* archive = nullptr) noexcept;
     DictionaryLookupResult LocateFileInDictionary(const std::filesystem::path& filename) noexcept;
+    DictionaryLookupResult LocateFileInDictionary(uint32_t name_hash) noexcept;
     DictionaryLookupResult LocateFileInDictionaryByPartOfName(const std::filesystem::path& filename) noexcept;
 
     DirectoryList* GetDirectoryList()
@@ -126,7 +137,4 @@ class FileLoader : public Singleton<FileLoader>
     // file callbacks
     void RegisterReadCallback(const std::vector<std::string>& extensions, FileTypeCallback fn);
     void RegisterSaveCallback(const std::vector<std::string>& extensions, FileSaveCallback fn);
-
-    //
-    void PreloadArchiveTable();
 };
