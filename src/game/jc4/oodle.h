@@ -65,8 +65,8 @@ static int64_t OodleLZ_Compress(const FileBuffer* buffer, FileBuffer* output)
     output->resize(bound);
 
     const auto size = OodleLZ_Compress(buffer->data(), buffer->size(), output->data());
-	output->resize(size);
-	return size;
+    output->resize(size);
+    return size;
 }
 
 static int64_t OodleLZ_Decompress(const void* buffer, int64_t buffer_size, const void* output, int64_t output_size)
