@@ -22,10 +22,19 @@ if args.game == "jc4":
   ASSETS = os.path.dirname(os.path.realpath(sys.argv[0])) + "/assets/jc4"
 
   FILELIST_DIRECTORIES = [
-    "archives_win64/boot", "archives_win64/boot_patch", "archives_win64/cp_deathstalker",
-    "archives_win64/main", "archives_win64/main_patch"]
-  FILELIST_SORT_HIERARCHY = ["archives_win64/main_patch", "archives_win64/main", "archives_win64/boot_patch",
-    "archives_win64/boot", "archives_win64/cp_deathstalker"]
+    "archives_win64/boot", "archives_win64/boot/hires", "archives_win64/boot_patch",
+    "archives_win64/cp_deathstalker", "archives_win64/main", "archives_win64/main/ara",
+    "archives_win64/main/bra", "archives_win64/main/eng", "archives_win64/main/fre",
+    "archives_win64/main/ger", "archives_win64/main/hires", "archives_win64/main/ita",
+    "archives_win64/main/mex", "archives_win64/main/rus", "archives_win64/main/spa",
+    "archives_win64/main_patch", "archives_win64/main_patch/ara", "archives_win64/main_patch/bra",
+    "archives_win64/main_patch/eng", "archives_win64/main_patch/ger", "archives_win64/main_patch/hires",
+    "archives_win64/main_patch/ita", "archives_win64/main_patch/rus"
+  ]
+  FILELIST_SORT_HIERARCHY = [
+    "archives_win64/main_patch", "archives_win64/main", "archives_win64/boot_patch",
+    "archives_win64/boot", "archives_win64/cp_deathstalker"
+  ]
 # jc3 directories
 else:
   ASSETS = os.path.dirname(os.path.realpath(sys.argv[0])) + "/assets"
@@ -37,7 +46,9 @@ else:
     "dlc_win64/v1401_preorder", "dlc_win64/w142_preorder", "dlc_win64/w163_preorder", "dlc_win64/w901_scorpiongun",
     "dlc_win64/w901_scorpiongun/arc"
   ]
-  FILELIST_SORT_HIERARCHY = ["dlc_win64", "patch_win64", "archives_win64"]
+  FILELIST_SORT_HIERARCHY = [
+    "dlc_win64", "patch_win64", "archives_win64"
+  ]
 
 # iterate over the filelist directories
 for directory in FILELIST_DIRECTORIES:
