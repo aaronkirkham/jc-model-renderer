@@ -51,7 +51,7 @@ FileLoader::FileLoader()
 
         auto hInstance = LoadLibrary(oo2core_7_win64.string().c_str());
         if (!hInstance) {
-            LOG_ERROR("Can't find oo2core_7_win64.dll! (ErrorCode={})", GetLastError());
+            LOG_ERROR("Failed to load oo2core_7_win64.dll! (ErrorCode={})", GetLastError());
             std::string error = "Failed to load oo2core_7_win64.dll\n\nErrorCode=" + std::to_string(GetLastError());
             Window::Get()->ShowMessageBox(error, MB_ICONERROR | MB_OK);
             return;
@@ -76,15 +76,18 @@ FileLoader::FileLoader()
 
             // parse the file list json
             auto  str        = static_cast<const char*>(LockResource(data));
-            auto& dictionary = nlohmann::json::parse(str);
+            auto& dictionary = nlohmann::json::parse(str, (str + SizeofResource(handle, rc)));
             m_FileList->Parse(&dictionary);
 
             // parse the dictionary
+            // std::vector<std::filesystem::path> _temp_names;
             for (auto& it = dictionary.begin(); it != dictionary.end(); ++it) {
                 const auto& key  = it.key();
                 const auto& data = it.value();
 
                 const auto namehash = static_cast<uint32_t>(std::stoul(data["hash"].get<std::string>(), nullptr, 16));
+
+                //_temp_names.emplace_back(key);
 
                 std::vector<std::string> paths;
                 for (const auto& path : data["path"]) {
@@ -93,6 +96,35 @@ FileLoader::FileLoader()
 
                 m_Dictionary[namehash] = std::make_pair(key, std::move(paths));
             }
+
+#if 0
+            // TEMP - DUMP SARC FILELIST
+            {
+                std::filesystem::path jc_dir = Window::Get()->GetJustCauseDirectory();
+                std::ofstream         file("C:/Users/aaron/Desktop/sarc_filelist.txt");
+
+                LOG_INFO("Paths: {}", _temp_names.size());
+                for (const auto& name : _temp_names) {
+                    if (name.extension() == ".ee") {
+                        const auto& [directory_name, archive_name, namehash] = LocateFileInDictionary(name);
+
+                        FileBuffer buffer;
+                        if (ReadFileFromArchive(directory_name, archive_name, namehash, &buffer)) {
+                            auto sarc = ParseStreamArchive(&buffer, nullptr);
+                            if (sarc) {
+                                for (const auto& entry : sarc->m_Files) {
+                                    file << entry.m_Filename << std::endl;
+                                }
+                            } else {
+                                LOG_ERROR("Failed to parse SARC");
+                            }
+                        }
+                    }
+                }
+
+                file.close();
+            }
+#endif
         } catch (const std::exception& e) {
             LOG_ERROR("Failed to load file list dictionary. ({})", e.what());
 
@@ -227,7 +259,8 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileCallbac
     }
 
     // are we trying to load textures?
-    if (filename.extension() == ".dds" || filename.extension() == ".ddsc" || filename.extension() == ".hmddsc") {
+    if (filename.extension() == ".dds" || filename.extension() == ".ddsc" || filename.extension() == ".hmddsc"
+        || filename.extension() == ".atx1") {
         const auto& texture = TextureManager::Get()->GetTexture(filename, TextureManager::NO_CREATE);
         if (texture && texture->IsLoaded()) {
             UI::Get()->PopStatusText(status_text_id);
@@ -242,21 +275,19 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileCallbac
     }
 
     // check any loaded archives for the file
-    if (!g_IsJC4Mode) {
-        const auto& [archive, entry] = GetStreamArchiveFromFile(filename);
-        if (archive && entry.m_Offset != 0 && entry.m_Offset != -1) {
-            auto buffer = archive->GetEntryBuffer(entry);
+    const auto& [archive, entry] = GetStreamArchiveFromFile(filename);
+    if (archive && entry.m_Offset != 0 && entry.m_Offset != -1) {
+        auto buffer = archive->GetEntryBuffer(entry);
 
-            UI::Get()->PopStatusText(status_text_id);
-            return callback(true, std::move(buffer));
-        }
-#ifdef DEBUG
-        else if (archive && (entry.m_Offset == 0 || entry.m_Offset == -1)) {
-            LOG_INFO("\"{}\" exists in archive but has been patched. Will read the patch version instead.",
-                     filename.filename().string());
-        }
-#endif
+        UI::Get()->PopStatusText(status_text_id);
+        return callback(true, std::move(buffer));
     }
+#ifdef DEBUG
+    else if (archive && (entry.m_Offset == 0 || entry.m_Offset == -1)) {
+        LOG_INFO("\"{}\" exists in archive but has been patched. Will read the patch version instead.",
+                 filename.filename().string());
+    }
+#endif
 
     // should we use file batching?
     if (UseBatches) {
@@ -457,13 +488,9 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(const FileBuffer
 
         uint32_t data_offset = static_cast<uint32_t>(stream.tellg()) + strings_length;
 
-        LOG_INFO("strings_length={}, data_offset={}", strings_length, data_offset);
-
         while (static_cast<uint32_t>(stream.tellg()) < data_offset) {
             std::string filename;
             std::getline(stream, filename, '\0');
-
-            LOG_INFO(filename);
 
             const auto hash = hashlittle(filename.c_str());
             filenames[hash] = std::move(filename);
@@ -474,29 +501,14 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(const FileBuffer
         std::filesystem::path jc_directory = Window::Get()->GetJustCauseDirectory();
 
         while (stream.tellg() < header.m_Size) {
-            uint32_t a, b, uncompressedSize, namehash, e;
+            uint32_t a, fileOffset, uncompressedSize, namehash, e;
             stream.read((char*)&a, sizeof(a));
-            stream.read((char*)&b, sizeof(b));
-
+            stream.read((char*)&fileOffset, sizeof(fileOffset));
             stream.read((char*)&uncompressedSize, sizeof(uncompressedSize));
             stream.read((char*)&namehash, sizeof(namehash));
             stream.read((char*)&e, sizeof(e));
 
-            const auto& [directory_name, archive_name, _hash] = LocateFileInDictionary(namehash);
-            if (directory_name.empty()) {
-                LOG_ERROR("Can't find {:x} in dictionary.", namehash);
-                continue;
-            }
-
-            const auto tab_file = jc_directory / directory_name / (archive_name + ".tab");
-            LOG_INFO("Looking in table: {}", tab_file.string());
-
-            TabFileEntry entry;
-            if (ReadArchiveTableEntry(tab_file, namehash, &entry)) {
-                LOG_INFO("{} ({:x}) ({}, {})", filenames[namehash], namehash, entry.m_Offset, entry.m_CompressedSize);
-                result->m_Files.emplace_back(
-                    StreamArchiveEntry_t{filenames[namehash], entry.m_Offset, entry.m_CompressedSize});
-            }
+            result->m_Files.emplace_back(StreamArchiveEntry_t{filenames[namehash], fileOffset, uncompressedSize});
         }
 
         return result;
@@ -620,12 +632,6 @@ void FileLoader::ReadStreamArchive(const std::filesystem::path& filename, const 
 
         return archive;
     };
-
-#ifdef DEBUG
-    std::ofstream o("C:/Users/aaron/Desktop/sarc.bin", std::ios::binary);
-    o.write((char*)data.data(), data.size());
-    o.close();
-#endif
 
     // if we are not loading from an external source, look for the toc
     if (!external_source) {
@@ -895,7 +901,7 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
             }
 
             // HMDDSC buffer
-            if (filename.extension() == ".hmddsc") {
+            if (filename.extension() == ".hmddsc" || filename.extension() == ".atx1") {
                 FileBuffer d;
                 ParseHMDDSCTexture(&data, &d);
                 return callback(true, std::move(d));
@@ -958,7 +964,7 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
             // if we need to load the source file, request it
             if (load_source) {
                 auto source_filename = filename;
-                source_filename.replace_extension(".hmddsc");
+                source_filename.replace_extension(g_IsJC4Mode ? ".atx1" : ".hmddsc");
 
                 auto offset = texture.m_Streams[stream_index].m_Offset;
                 auto size   = texture.m_Streams[stream_index].m_Size;
@@ -1561,12 +1567,14 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
                           ? "zlib"
                           : "oodle"));
 
+            assert(entry.m_CompressionType == jc4::ArchiveTable::CompressionType_Oodle);
+
             // uncompress the data
             FileBuffer uncompressed_buffer;
             uncompressed_buffer.resize(entry.m_UncompressedSize);
             const auto size = oo2::OodleLZ_Decompress(&data, &uncompressed_buffer);
 
-            LOG_INFO("OodleLZ_Decompress={} ({}, {}, {})", size, entry.unknown, entry.unknown2, entry.unknown3);
+            LOG_INFO("OodleLZ_Decompress={}", size);
 
             if (size != entry.m_UncompressedSize) {
                 LOG_ERROR("Failed to decompress the file.");

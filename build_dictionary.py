@@ -24,8 +24,8 @@ if args.game == "jc4":
   FILELIST_DIRECTORIES = [
     "archives_win64/boot", "archives_win64/boot_patch", "archives_win64/cp_deathstalker",
     "archives_win64/main", "archives_win64/main_patch"]
-  FILELIST_SORT_HIERARCHY = ["archives_win64/main_patch", "archives_win64/main", "archives_win64/boot",
-    "archives_win64/boot_patch", "archives_win64/cp_deathstalker"]
+  FILELIST_SORT_HIERARCHY = ["archives_win64/main_patch", "archives_win64/main", "archives_win64/boot_patch",
+    "archives_win64/boot", "archives_win64/cp_deathstalker"]
 # jc3 directories
 else:
   ASSETS = os.path.dirname(os.path.realpath(sys.argv[0])) + "/assets"

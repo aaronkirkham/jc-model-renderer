@@ -28,8 +28,6 @@ struct TabFileEntry {
     uint32_t m_UncompressedSize;
     uint8_t  m_CompressionType;
 
-    uint8_t unknown, unknown2, unknown3;
-
     TabFileEntry() {}
 
     TabFileEntry(const jc4::ArchiveTable::VfsTabEntry& entry)
@@ -40,10 +38,6 @@ struct TabFileEntry {
         m_CompressedSize   = entry.m_CompressedSize;
         m_UncompressedSize = entry.m_UncompressedSize;
         m_CompressionType  = entry.m_CompressionType;
-
-        unknown  = entry._unknown;
-        unknown2 = entry._unknown2;
-        unknown3 = entry._unknown3;
     }
 
     TabFileEntry(const jc3::ArchiveTable::VfsTabEntry& entry)

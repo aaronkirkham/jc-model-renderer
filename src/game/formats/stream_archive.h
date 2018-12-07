@@ -131,6 +131,7 @@ struct StreamArchive_t {
     std::vector<uint8_t> GetEntryBuffer(const StreamArchiveEntry_t& entry)
     {
         assert(entry.m_Offset != 0 && entry.m_Offset != -1);
+        assert((entry.m_Offset + entry.m_Size) <= m_SARCBytes.size());
 
         auto start = m_SARCBytes.begin() + entry.m_Offset;
         auto end   = start + entry.m_Size;

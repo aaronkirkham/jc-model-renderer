@@ -1,4 +1,4 @@
-; 1249/2386 (52%)
+; 1250/2386 (52%)
 editor/entities/characters/civilians/17_upperclass/civ_upperclass_male_01.ee
 editor/entities/characters/civilians/17_upperclass/civ_upperclass_male_01.epe
 editor/entities/characters/civilians/18_farmers/civ_farmer_female_01.ee
@@ -311,6 +311,7 @@ editor/entities/environments/locale_civilian/civ_paintedanimals_props/civ_painte
 editor/entities/environments/locale_civilian/civ_paintedanimals_props/civ_paintedanimals_props_a_llama_pinata_confetti.epe
 editor/entities/environments/locale_civilian/civ_paintedanimals_props/civ_paintedanimals_props_a_llama_pinata_explosion.ee
 editor/entities/environments/locale_civilian/civ_paintedanimals_props/civ_paintedanimals_props_a_llama_pinata_explosion.epe
+editor/entities/environments/locale_construction_a/const_buildings/textures/const_building_01_mask.atx1
 editor/entities/environments/locale_military_b/mil_b_crates/mil_b_crate_wood_pallet.ee
 editor/entities/inventory/headware/hat000_baseball/hat000_baseball.ee
 editor/entities/props/auto_inflate_balloon_large.ee

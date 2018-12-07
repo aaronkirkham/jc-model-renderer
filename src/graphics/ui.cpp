@@ -696,14 +696,12 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
             if (ImGui::BeginMenu(ICON_FA_MINUS_CIRCLE "  Export", (exporters.size() > 0))) {
                 for (const auto& exporter : exporters) {
                     if (ImGui::MenuItem(exporter->GetName(), exporter->GetExportExtension())) {
-                        // UI::Get()->Events().ExportFileRequest(filename, exporter);
-
                         if (exporter->HasSettingsUI()) {
                             m_ExportSettings.Exporter           = exporter;
                             m_ExportSettings.Filename           = filename;
                             m_ExportSettings.ShowExportSettings = true;
                         } else {
-                            LOG_INFO("no settings ui. continue..");
+                            UI::Get()->Events().ExportFileRequest(filename, exporter);
                         }
                     }
                 }
