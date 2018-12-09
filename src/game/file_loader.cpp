@@ -33,110 +33,8 @@ std::unordered_map<uint32_t, std::string> NameHashLookup::LookupTable;
 
 FileLoader::FileLoader()
 {
-    m_FileList                = std::make_unique<DirectoryList>();
-    const auto status_text_id = UI::Get()->PushStatusText("Loading dictionary...");
-
-    // load oo2core_7_win64.dll
-    if (g_IsJC4Mode) {
-        std::filesystem::path oo2core_7_win64 = Window::Get()->GetJustCauseDirectory();
-        oo2core_7_win64 /= "oo2core_7_win64.dll";
-
-        if (!std::filesystem::exists(oo2core_7_win64)) {
-            LOG_ERROR("Can't find oo2core_7_win64.dll! ({})", oo2core_7_win64.string());
-            Window::Get()->ShowMessageBox(
-                "Can't find oo2core_7_win64.dll.\n\nPlease make sure your Just Cause 4 directory is valid.",
-                MB_ICONERROR | MB_OK);
-            return;
-        }
-
-        auto hInstance = LoadLibrary(oo2core_7_win64.string().c_str());
-        if (!hInstance) {
-            LOG_ERROR("Failed to load oo2core_7_win64.dll! (ErrorCode={})", GetLastError());
-            std::string error = "Failed to load oo2core_7_win64.dll\n\nErrorCode=" + std::to_string(GetLastError());
-            Window::Get()->ShowMessageBox(error, MB_ICONERROR | MB_OK);
-            return;
-        }
-
-        oo2::OodleLZ_Compress_original   = (oo2::OodleLZ_Compress_t)GetProcAddress(hInstance, "OodleLZ_Compress");
-        oo2::OodleLZ_Decompress_original = (oo2::OodleLZ_Decompress_t)GetProcAddress(hInstance, "OodleLZ_Decompress");
-    }
-
-    std::thread([this, status_text_id] {
-        try {
-            const auto handle = GetModuleHandle(nullptr);
-            const auto rc     = FindResource(handle, MAKEINTRESOURCE(256), RT_RCDATA);
-            if (rc == nullptr) {
-                throw std::runtime_error("FindResource failed");
-            }
-
-            const auto data = LoadResource(handle, rc);
-            if (data == nullptr) {
-                throw std::runtime_error("LoadResource failed");
-            }
-
-            // parse the file list json
-            auto  str        = static_cast<const char*>(LockResource(data));
-            auto& dictionary = nlohmann::json::parse(str, (str + SizeofResource(handle, rc)));
-            m_FileList->Parse(&dictionary);
-
-            // parse the dictionary
-            // std::vector<std::filesystem::path> _temp_names;
-            for (auto& it = dictionary.begin(); it != dictionary.end(); ++it) {
-                const auto& key  = it.key();
-                const auto& data = it.value();
-
-                const auto namehash = static_cast<uint32_t>(std::stoul(data["hash"].get<std::string>(), nullptr, 16));
-
-                //_temp_names.emplace_back(key);
-
-                std::vector<std::string> paths;
-                for (const auto& path : data["path"]) {
-                    paths.emplace_back(path.get<std::string>());
-                }
-
-                m_Dictionary[namehash] = std::make_pair(key, std::move(paths));
-            }
-
-#if 0
-            // TEMP - DUMP SARC FILELIST
-            {
-                std::filesystem::path jc_dir = Window::Get()->GetJustCauseDirectory();
-                std::ofstream         file("C:/Users/aaron/Desktop/sarc_filelist.txt");
-
-                LOG_INFO("Paths: {}", _temp_names.size());
-                for (const auto& name : _temp_names) {
-                    if (name.extension() == ".ee") {
-                        const auto& [directory_name, archive_name, namehash] = LocateFileInDictionary(name);
-
-                        FileBuffer buffer;
-                        if (ReadFileFromArchive(directory_name, archive_name, namehash, &buffer)) {
-                            auto sarc = ParseStreamArchive(&buffer, nullptr);
-                            if (sarc) {
-                                for (const auto& entry : sarc->m_Files) {
-                                    file << entry.m_Filename << std::endl;
-                                }
-                            } else {
-                                LOG_ERROR("Failed to parse SARC");
-                            }
-                        }
-                    }
-                }
-
-                file.close();
-            }
-#endif
-        } catch (const std::exception& e) {
-            LOG_ERROR("Failed to load file list dictionary. ({})", e.what());
-
-            std::string error = "Failed to load file list dictionary. (";
-            error += e.what();
-            error += ")\n\n";
-            error += "Some features will be disabled.";
-            Window::Get()->ShowMessageBox(error);
-        }
-
-        UI::Get()->PopStatusText(status_text_id);
-    }).detach();
+    // init
+    Init();
 
     // init the namehash lookup table
     NameHashLookup::Init();
@@ -247,6 +145,106 @@ FileLoader::FileLoader()
                 }
             });
     });
+}
+
+FileLoader::~FileLoader()
+{
+    Shutdown();
+}
+
+void FileLoader::Init()
+{
+    Shutdown();
+
+    // load oo2core_7_win64.dll
+    if (g_IsJC4Mode) {
+        std::filesystem::path filename = Window::Get()->GetJustCauseDirectory();
+        filename /= "oo2core_7_win64.dll";
+
+        if (!std::filesystem::exists(filename)) {
+            LOG_ERROR("Can't find oo2core_7_win64.dll! ({})", filename.string());
+            Window::Get()->ShowMessageBox(
+                "Can't find oo2core_7_win64.dll.\n\nPlease make sure your Just Cause 4 directory is valid.",
+                MB_ICONERROR | MB_OK);
+            return;
+        }
+
+        oo2core_7_win64 = LoadLibrary(filename.string().c_str());
+        if (!oo2core_7_win64) {
+            LOG_ERROR("Failed to load oo2core_7_win64.dll! (ErrorCode={})", GetLastError());
+            std::string error = "Failed to load oo2core_7_win64.dll\n\nErrorCode=" + std::to_string(GetLastError());
+            Window::Get()->ShowMessageBox(error, MB_ICONERROR | MB_OK);
+            return;
+        }
+
+        oo2::OodleLZ_Compress_original = (oo2::OodleLZ_Compress_t)GetProcAddress(oo2core_7_win64, "OodleLZ_Compress");
+        oo2::OodleLZ_Decompress_original =
+            (oo2::OodleLZ_Decompress_t)GetProcAddress(oo2core_7_win64, "OodleLZ_Decompress");
+    }
+
+    // init the filelist
+    m_FileList = std::make_unique<DirectoryList>();
+
+    const auto status_text_id = UI::Get()->PushStatusText("Loading dictionary...");
+    std::thread([this, status_text_id] {
+        try {
+            const auto handle = GetModuleHandle(nullptr);
+            const auto rc     = FindResource(handle, MAKEINTRESOURCE(g_IsJC4Mode ? 256 : 128), RT_RCDATA);
+            if (rc == nullptr) {
+                throw std::runtime_error("FindResource failed");
+            }
+
+            const auto data = LoadResource(handle, rc);
+            if (data == nullptr) {
+                throw std::runtime_error("LoadResource failed");
+            }
+
+            // parse the file list json
+            auto  str        = static_cast<const char*>(LockResource(data));
+            auto& dictionary = nlohmann::json::parse(str, (str + SizeofResource(handle, rc)));
+            m_FileList->Parse(&dictionary);
+
+            // parse the dictionary
+            for (auto& it = dictionary.begin(); it != dictionary.end(); ++it) {
+                const auto& key  = it.key();
+                const auto& data = it.value();
+
+                const auto namehash = static_cast<uint32_t>(std::stoul(data["hash"].get<std::string>(), nullptr, 16));
+
+                std::vector<std::string> paths;
+                for (const auto& path : data["path"]) {
+                    paths.emplace_back(path.get<std::string>());
+                }
+
+                m_Dictionary[namehash] = std::make_pair(key, std::move(paths));
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("Failed to load file list dictionary. ({})", e.what());
+
+            std::string error = "Failed to load file list dictionary. (";
+            error += e.what();
+            error += ")\n\n";
+            error += "Some features will be disabled.";
+            Window::Get()->ShowMessageBox(error);
+        }
+
+        UI::Get()->PopStatusText(status_text_id);
+    }).detach();
+}
+
+void FileLoader::Shutdown()
+{
+    // release oo2core_7_win64.dll
+    if (oo2core_7_win64) {
+        FreeLibrary(oo2core_7_win64);
+
+        oo2core_7_win64                  = nullptr;
+        oo2::OodleLZ_Compress_original   = nullptr;
+        oo2::OodleLZ_Decompress_original = nullptr;
+    }
+
+    //
+    m_FileList = nullptr;
 }
 
 void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileCallback callback, uint8_t flags) noexcept
@@ -1437,7 +1435,7 @@ std::shared_ptr<AvalancheDataFormat> FileLoader::ReadAdf(const std::filesystem::
         return nullptr;
     }
 
-    return adf;
+    return std::move(adf);
 }
 
 std::tuple<StreamArchive_t*, StreamArchiveEntry_t>

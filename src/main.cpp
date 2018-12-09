@@ -22,7 +22,7 @@
 #include "import_export/import_export_manager.h"
 #include "import_export/wavefront_obj.h"
 
-extern bool g_IsJC4Mode         = true;
+extern bool g_IsJC4Mode         = false;
 extern bool g_DrawBoundingBoxes = true;
 extern bool g_ShowModelLabels   = true;
 
@@ -50,6 +50,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         return false;
     };
 
+    g_IsJC4Mode         = Settings::Get()->GetValue<bool>("jc4_mode", false);
     g_DrawBoundingBoxes = Settings::Get()->GetValue<bool>("draw_bounding_boxes", false);
     g_ShowModelLabels   = Settings::Get()->GetValue<bool>("show_model_labels", false);
 

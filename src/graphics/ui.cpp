@@ -29,6 +29,7 @@
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 
+extern bool g_IsJC4Mode;
 extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;
 static bool g_ShowSettingsWindow = false;
@@ -113,6 +114,21 @@ void UI::Render(RenderContext_t* context)
 
             ImGui::Separator();
 #endif
+
+            // temp game selection.
+            if (ImGui::BeginMenu("Select game")) {
+                // TODO: only enabled if we are not loading anything
+
+                if (ImGui::MenuItem("Just Cause 3", nullptr, g_IsJC4Mode == false)) {
+                    Window::Get()->SwitchMode(true);
+                }
+
+                if (ImGui::MenuItem("Just Cause 4", nullptr, g_IsJC4Mode == true)) {
+                    Window::Get()->SwitchMode(false);
+                }
+
+                ImGui::EndMenu();
+            }
 
             if (ImGui::MenuItem(ICON_FA_COG "  Settings")) {
                 g_ShowSettingsWindow = !g_ShowSettingsWindow;

@@ -56,7 +56,8 @@ class RuntimeContainer;
 class FileLoader : public Singleton<FileLoader>
 {
   private:
-    std::unique_ptr<DirectoryList> m_FileList = nullptr;
+    std::unique_ptr<DirectoryList> m_FileList      = nullptr;
+    HMODULE                        oo2core_7_win64 = nullptr;
 
     // file list dictionary
     std::unordered_map<uint32_t, std::pair<std::filesystem::path, std::vector<std::string>>> m_Dictionary;
@@ -77,7 +78,10 @@ class FileLoader : public Singleton<FileLoader>
     inline static bool UseBatches = false;
 
     FileLoader();
-    virtual ~FileLoader() = default;
+    virtual ~FileLoader();
+
+    void Init();
+    void Shutdown();
 
     void ReadFile(const std::filesystem::path& filename, ReadFileCallback callback, uint8_t flags = 0) noexcept;
     void ReadFileBatched(const std::filesystem::path& filename, ReadFileCallback callback) noexcept;

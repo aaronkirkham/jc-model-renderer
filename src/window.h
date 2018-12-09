@@ -98,6 +98,7 @@ class Window : public Singleton<Window>
     void    ShowFolderSelection(const std::string& title, std::function<void(const std::filesystem::path&)> fn_selected,
                                 std::function<void()> fn_cancelled = {});
 
+    void                  SwitchMode(bool jc3_mode);
     void                  SelectJustCauseDirectory();
     std::filesystem::path GetJustCauseDirectory();
     void                  CheckForUpdates(bool show_no_update_messagebox = false);
