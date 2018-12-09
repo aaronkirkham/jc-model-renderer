@@ -72,7 +72,7 @@ bool Window::Initialise(const HINSTANCE& instance)
         SetConsoleTitle("Debug Console");
     }
 
-    // spdlog::set_level(spdlog::level::trace);
+    spdlog::set_level(spdlog::level::trace);
     spdlog::set_pattern("[%H:%M:%S] [%^%l%$] %v");
 
     m_Log = spdlog::stdout_color_mt("console");
@@ -301,7 +301,7 @@ void Window::CheckForUpdates(bool show_no_update_messagebox)
     std::thread([show_no_update_messagebox] {
         try {
             httplib::Client client("kirkh.am");
-            const auto      res = client.get("/jc3-rbm-renderer/latest.json");
+            const auto      res = client.get("/jc-model-renderer/latest.json");
             if (res && res->status == 200) {
                 const auto& data        = nlohmann::json::parse(res->body);
                 const auto& version_str = data["version"].get<std::string>();
@@ -317,7 +317,7 @@ void Window::CheckForUpdates(bool show_no_update_messagebox)
 
                     if (Window::Get()->ShowMessageBox(msg, MB_ICONQUESTION | MB_YESNO) == IDYES) {
                         ShellExecuteA(nullptr, "open",
-                                      "https://github.com/aaronkirkham/jc-rbm-renderer/releases/latest", nullptr,
+                                      "https://github.com/aaronkirkham/jc-model-renderer/releases/latest", nullptr,
                                       nullptr, SW_SHOWNORMAL);
                     }
                 } else if (show_no_update_messagebox) {

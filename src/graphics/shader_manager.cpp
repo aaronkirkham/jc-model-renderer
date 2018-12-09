@@ -8,15 +8,17 @@
 #include "shader_manager.h"
 #include "types.h"
 
+extern bool g_IsJC4Mode;
+
 void ShaderManager::Init()
 {
-#if 0
-    const auto status_text_id = UI::Get()->PushStatusText("Loading \"Shaders_F.shader_bundle\"...");
+    auto& filename = Window::Get()->GetJustCauseDirectory();
+    filename /= g_IsJC4Mode ? "ShadersDX11_F.shader_bundle" : "Shaders_F.shader_bundle";
 
-    std::thread([&, status_text_id] {
-        auto& filename = Window::Get()->GetJustCauseDirectory();
-        filename /= "Shaders_F.shader_bundle";
+    std::string status_text    = "Loading \"" + filename.filename().string() + "\"...";
+    const auto  status_text_id = UI::Get()->PushStatusText(status_text);
 
+    std::thread([&, filename = std::move(filename), status_text_id] {
         m_ShaderBundle = FileLoader::Get()->ReadAdf(filename);
 
         // exit now if the shader bundle wasn't loaded
@@ -28,7 +30,6 @@ void ShaderManager::Init()
 
         UI::Get()->PopStatusText(status_text_id);
     }).detach();
-#endif
 }
 
 void ShaderManager::Shutdown()

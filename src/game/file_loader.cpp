@@ -260,7 +260,7 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileCallbac
 
     // are we trying to load textures?
     if (filename.extension() == ".dds" || filename.extension() == ".ddsc" || filename.extension() == ".hmddsc"
-        || filename.extension() == ".atx1") {
+        || filename.extension() == ".atx1" || filename.extension() == ".atx2") {
         const auto& texture = TextureManager::Get()->GetTexture(filename, TextureManager::NO_CREATE);
         if (texture && texture->IsLoaded()) {
             UI::Get()->PopStatusText(status_text_id);
@@ -376,8 +376,9 @@ void FileLoader::RunFileBatches() noexcept
                 continue;
             }
 
-            std::vector<TabFileEntry> entries;
-            if (ReadArchiveTable(tab_file, &entries)) {
+            std::vector<TabFileEntry>                            entries;
+            std::vector<jc::ArchiveTable::VfsTabCompressedBlock> blocks;
+            if (ReadArchiveTable(tab_file, &entries, &blocks)) {
                 // open the arc file
                 std::ifstream stream(arc_file, std::ios::binary);
                 if (stream.fail()) {
@@ -868,10 +869,12 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
         filename,
         [this, filename, callback](bool success, FileBuffer data) {
             if (!success) {
-                // look for hmddsc
+                // ddsc failed. look for the source file instead
                 if (filename.extension() == ".ddsc") {
-                    auto hmddsc_filename = filename;
-                    hmddsc_filename.replace_extension(".hmddsc");
+                    auto source_filename = filename;
+                    source_filename.replace_extension(g_IsJC4Mode ? ".atx1" : ".hmddsc"); // TODO: ATX2
+
+                    // we should look for .atx2 first, if that doesn't exist, look for .atx1
 
                     auto cb = [&, callback](bool success, FileBuffer data) {
                         if (success) {
@@ -884,9 +887,9 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
                     };
 
                     if (FileLoader::UseBatches) {
-                        FileLoader::Get()->ReadFileBatched(hmddsc_filename, cb);
+                        FileLoader::Get()->ReadFileBatched(source_filename, cb);
                     } else {
-                        FileLoader::Get()->ReadFile(hmddsc_filename, cb, ReadFileFlags_SkipTextureLoader);
+                        FileLoader::Get()->ReadFile(source_filename, cb, ReadFileFlags_SkipTextureLoader);
                     }
 
                     return;
@@ -900,8 +903,9 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
                 return callback(true, std::move(data));
             }
 
-            // HMDDSC buffer
-            if (filename.extension() == ".hmddsc" || filename.extension() == ".atx1") {
+            // source file buffer
+            if (filename.extension() == ".hmddsc" || filename.extension() == ".atx1"
+                || filename.extension() == ".atx2") {
                 FileBuffer d;
                 ParseHMDDSCTexture(&data, &d);
                 return callback(true, std::move(d));
@@ -921,8 +925,32 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
 
             DEBUG_TEXTURE_FLAGS(&texture);
 
+            // figure out which source file to load
+            uint8_t source = 0;
+            if (g_IsJC4Mode) {
+                auto atx2 = filename;
+                atx2.replace_extension(".atx2");
+
+                bool has_atx2 = FileLoader::Get()->HasFileInDictionary(hashlittle(atx2.string().c_str()));
+                if (!has_atx2) {
+                    auto atx1 = filename;
+                    atx1.replace_extension(".atx1");
+
+                    bool has_atx1 = FileLoader::Get()->HasFileInDictionary(hashlittle(atx1.string().c_str()));
+                    source        = static_cast<uint8_t>(has_atx1);
+                } else {
+                    source = 2;
+                }
+            } else {
+                auto hmddsc = filename;
+                hmddsc.replace_extension(".hmddsc");
+                if (FileLoader::Get()->HasFileInDictionary(hashlittle(hmddsc.string().c_str()))) {
+                    source = 1;
+                }
+            }
+
             // find the best stream to use
-            auto& [stream_index, load_source] = jc::AvalancheTexture::FindBest(&texture);
+            const auto stream_index = jc::AvalancheTexture::FindBest(&texture, source);
 
             // find the rank
             const auto rank = jc::AvalancheTexture::GetHighestRank(&texture, stream_index);
@@ -962,9 +990,17 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
             }
 
             // if we need to load the source file, request it
-            if (load_source) {
+            if (source > 0) {
                 auto source_filename = filename;
-                source_filename.replace_extension(g_IsJC4Mode ? ".atx1" : ".hmddsc");
+
+                if (g_IsJC4Mode) {
+                    std::string source_extension = ".atx" + std::to_string(source);
+                    source_filename.replace_extension(source_extension);
+                } else {
+                    source_filename.replace_extension(".hmddsc");
+                }
+
+                LOG_INFO("Loading source: \"{}\".", source_filename.string());
 
                 auto offset = texture.m_Streams[stream_index].m_Offset;
                 auto size   = texture.m_Streams[stream_index].m_Size;
@@ -975,6 +1011,7 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
                         std::memcpy(&out.front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER)
                                         + (dxt10header ? sizeof(DDS_HEADER_DXT10) : 0),
                                     data.data() + offset, size);
+
                         return callback(true, std::move(out));
                     }
 
@@ -1019,7 +1056,7 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
     DEBUG_TEXTURE_FLAGS(&texture);
 
     // find the best stream to use
-    auto& [stream_index, load_source] = jc::AvalancheTexture::FindBest(&texture, true);
+    const auto stream_index = jc::AvalancheTexture::FindBest(&texture, 0);
 
     // find the rank
     const auto rank = jc::AvalancheTexture::GetHighestRank(&texture, stream_index);
@@ -1059,7 +1096,7 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
 
     // read the texture data
     stream.seekg(texture.m_Streams[stream_index].m_Offset);
-    stream.read((char*)outData->front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER)
+    stream.read((char*)&outData->front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER)
                     + (dxt10header ? sizeof(DDS_HEADER_DXT10) : 0),
                 texture.m_Streams[stream_index].m_Size);
 
@@ -1373,7 +1410,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
     return root_container;
 }
 
-std::unique_ptr<AvalancheDataFormat> FileLoader::ReadAdf(const std::filesystem::path& filename) noexcept
+std::shared_ptr<AvalancheDataFormat> FileLoader::ReadAdf(const std::filesystem::path& filename) noexcept
 {
     if (!std::filesystem::exists(filename)) {
         LOG_ERROR("Input file doesn't exist!");
@@ -1391,14 +1428,16 @@ std::unique_ptr<AvalancheDataFormat> FileLoader::ReadAdf(const std::filesystem::
     FileBuffer data;
     data.resize(size);
     stream.read((char*)data.data(), size);
+    stream.close();
 
     // parse the adf file
-    auto adf = std::make_unique<AvalancheDataFormat>(filename);
-    if (adf->Parse(data)) {
-        return adf;
+    auto adf = AvalancheDataFormat::make(filename);
+    if (!adf->Parse(data)) {
+        LOG_ERROR("Failed to parse ADF!");
+        return nullptr;
     }
 
-    return nullptr;
+    return adf;
 }
 
 std::tuple<StreamArchive_t*, StreamArchiveEntry_t>
@@ -1427,7 +1466,8 @@ FileLoader::GetStreamArchiveFromFile(const std::filesystem::path& file, StreamAr
     return {nullptr, StreamArchiveEntry_t{}};
 }
 
-bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::vector<TabFileEntry>* output) noexcept
+bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::vector<TabFileEntry>* output,
+                                  std::vector<jc::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept
 {
     std::ifstream stream(filename, std::ios::ate | std::ios::binary);
     if (stream.fail()) {
@@ -1449,13 +1489,11 @@ bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::ve
             return false;
         }
 
-        // read unknown stuff
-        uint32_t _unknown_count = 0;
-        stream.read((char*)&_unknown_count, sizeof(_unknown_count));
-        for (uint32_t i = 0; i < _unknown_count; ++i) {
-            uint64_t kv;
-            stream.read((char*)&kv, sizeof(kv));
-        }
+        // read compressed blocked
+        uint32_t _count = 0;
+        stream.read((char*)&_count, sizeof(_count));
+        output_blocks->resize(_count);
+        stream.read((char*)output_blocks->data(), (sizeof(jc::ArchiveTable::VfsTabCompressedBlock) * _count));
 
         while (static_cast<int32_t>(stream.tellg()) + 20 <= length) {
             jc4::ArchiveTable::VfsTabEntry entry;
@@ -1493,17 +1531,18 @@ bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::ve
 }
 
 bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, const std::filesystem::path& filename,
-                                       TabFileEntry* output) noexcept
+                                       TabFileEntry*                                         output,
+                                       std::vector<jc::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept
 {
     auto namehash = hashlittle(filename.generic_string().c_str());
-    return ReadArchiveTableEntry(table, namehash, output);
+    return ReadArchiveTableEntry(table, namehash, output, output_blocks);
 }
 
-bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, uint32_t name_hash,
-                                       TabFileEntry* output) noexcept
+bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, uint32_t name_hash, TabFileEntry* output,
+                                       std::vector<jc::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept
 {
     std::vector<TabFileEntry> entries;
-    if (ReadArchiveTable(table, &entries)) {
+    if (ReadArchiveTable(table, &entries, output_blocks)) {
         auto it = std::find_if(entries.begin(), entries.end(),
                                [&](const TabFileEntry& entry) { return entry.m_NameHash == name_hash; });
 
@@ -1535,10 +1574,13 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
         return false;
     }
 
-    TabFileEntry entry;
-    if (ReadArchiveTableEntry(tab_file, namehash, &entry)) {
-        LOG_INFO("NameHash={}, Offset={}, CompressedSize={}, UncompressedSize={}, CompressionType={}", namehash,
-                 entry.m_Offset, entry.m_CompressedSize, entry.m_UncompressedSize, entry.m_CompressionType);
+    TabFileEntry                                         entry;
+    std::vector<jc::ArchiveTable::VfsTabCompressedBlock> blocks;
+    if (ReadArchiveTableEntry(tab_file, namehash, &entry, &blocks)) {
+        LOG_INFO("NameHash={}, Offset={}, CompressedSize={}, UncompressedSize={}, CompressionType={}, "
+                 "CompressedBlockIndex={}",
+                 namehash, entry.m_Offset, entry.m_CompressedSize, entry.m_UncompressedSize, entry.m_CompressionType,
+                 entry.m_CompressedBlockIndex);
 
         // read the arc file
         std::ifstream stream(arc_file, std::ios::ate | std::ios::binary);
@@ -1550,13 +1592,8 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
         g_ArchiveLoadCount++;
         LOG_INFO("Current archive load count: {}", g_ArchiveLoadCount);
 
-        FileBuffer data;
-        data.resize(entry.m_CompressedSize);
-
-        // read the file from the archive
+        //
         stream.seekg(entry.m_Offset);
-        stream.read((char*)data.data(), data.size());
-        stream.close();
 
         // file is compressed
         if (entry.m_CompressedSize != entry.m_UncompressedSize
@@ -1569,27 +1606,82 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
 
             assert(entry.m_CompressionType == jc4::ArchiveTable::CompressionType_Oodle);
 
-            // uncompress the data
-            FileBuffer uncompressed_buffer;
-            uncompressed_buffer.resize(entry.m_UncompressedSize);
-            const auto size = oo2::OodleLZ_Decompress(&data, &uncompressed_buffer);
+            // doesn't have compression blocks
+            if (entry.m_CompressedBlockIndex == 0) {
+                FileBuffer data;
+                data.resize(entry.m_CompressedSize);
 
-            LOG_INFO("OodleLZ_Decompress={}", size);
+                // read the file from the archive
+                stream.read((char*)data.data(), data.size());
 
-            if (size != entry.m_UncompressedSize) {
-                LOG_ERROR("Failed to decompress the file.");
-                return false;
+                // uncompress the data
+                FileBuffer uncompressed_buffer;
+                uncompressed_buffer.resize(entry.m_UncompressedSize);
+                const auto size = oo2::OodleLZ_Decompress(&data, &uncompressed_buffer);
+
+                LOG_INFO("OodleLZ_Decompress={}", size);
+
+                if (size != entry.m_UncompressedSize) {
+                    LOG_ERROR("Failed to decompress the file.");
+                    return false;
+                }
+
+                *output = std::move(uncompressed_buffer);
+                return true;
+            } else {
+                FileBuffer data;
+                data.resize(entry.m_UncompressedSize);
+
+                auto     block_index        = entry.m_CompressedBlockIndex;
+                auto     total_compressed   = entry.m_CompressedSize;
+                uint32_t total_uncompressed = 0;
+                while (total_compressed > 0) {
+                    const auto& block = blocks[block_index];
+
+                    // read the compressed block
+                    FileBuffer compressedBlock;
+                    compressedBlock.resize(block.m_CompressedSize);
+                    stream.read((char*)compressedBlock.data(), block.m_CompressedSize);
+
+                    const auto size =
+                        oo2::OodleLZ_Decompress(compressedBlock.data(), block.m_CompressedSize,
+                                                data.data() + total_uncompressed, block.m_UncompressedSize);
+                    if (size != block.m_UncompressedSize) {
+                        LOG_ERROR("Failed to decompress the block.");
+                        return false;
+                    }
+
+                    //
+                    total_compressed -= block.m_CompressedSize;
+                    total_uncompressed += block.m_UncompressedSize;
+                    block_index++;
+                }
+
+                LOG_INFO("OodleLZ_Decompress={}", total_uncompressed);
+
+                *output = std::move(data);
+                return output->size() > 0;
             }
+        } else {
+            assert(entry.m_CompressedSize != 0);
 
-            *output = std::move(uncompressed_buffer);
-            return true;
+            FileBuffer data;
+            data.resize(entry.m_CompressedSize);
+
+            // read the file from the archive
+            stream.read((char*)data.data(), data.size());
+
+            *output = std::move(data);
+            return output->size() > 0;
         }
-
-        *output = std::move(data);
-        return output->size() > 0;
     }
 
     return false;
+}
+
+bool FileLoader::HasFileInDictionary(uint32_t name_hash) noexcept
+{
+    return m_Dictionary.find(name_hash) != m_Dictionary.end();
 }
 
 DictionaryLookupResult FileLoader::LocateFileInDictionary(const std::filesystem::path& filename) noexcept

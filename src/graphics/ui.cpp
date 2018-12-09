@@ -31,6 +31,7 @@
 
 extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;
+static bool g_ShowSettingsWindow = false;
 static bool g_ShowAboutWindow    = false;
 static bool g_ShowNameHashWindow = false;
 
@@ -75,7 +76,8 @@ void UI::Render(RenderContext_t* context)
             DragDropPayloadType type      = DragDropPayload_Unknown;
 
             // textures
-            if (extension == ".dds" || extension == ".ddsc" || extension == ".hmddsc") {
+            if (extension == ".dds" || extension == ".ddsc" || extension == ".hmddsc" || extension == ".atx1"
+                || extension == ".atx2") {
                 type = DragDropPayload_Texture;
             }
 
@@ -112,8 +114,8 @@ void UI::Render(RenderContext_t* context)
             ImGui::Separator();
 #endif
 
-            if (ImGui::MenuItem(ICON_FA_FOLDER "  Select JC3 path")) {
-                Window::Get()->SelectJustCauseDirectory();
+            if (ImGui::MenuItem(ICON_FA_COG "  Settings")) {
+                g_ShowSettingsWindow = !g_ShowSettingsWindow;
             }
 
             if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit")) {
@@ -212,7 +214,7 @@ void UI::Render(RenderContext_t* context)
             }
 
             if (ImGui::MenuItem(ICON_FA_EXTERNAL_LINK_ALT "  View on GitHub")) {
-                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc-rbm-renderer", nullptr, nullptr,
+                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc-model-renderer", nullptr, nullptr,
                               SW_SHOWNORMAL);
             }
 
@@ -232,47 +234,117 @@ void UI::Render(RenderContext_t* context)
         ImGui::EndMainMenuBar();
     }
 
-    // open the about popup
-    if (g_ShowAboutWindow) {
-        ImGui::OpenPopup("About");
+    // settings modal
+    {
+        // open settings popup
+        if (g_ShowSettingsWindow) {
+            ImGui::OpenPopup("Settings");
+        }
+
+        // settings
+        ImGui::SetNextWindowSize({448, 133});
+        if (ImGui::BeginPopupModal("Settings", &g_ShowSettingsWindow,
+                                   (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))) {
+            static std::string _jc3_path = Settings::Get()->GetValue<std::string>("jc3_directory");
+            static std::string _jc4_path = Settings::Get()->GetValue<std::string>("jc4_directory");
+
+            static auto SelectJCDirectory = [](bool is_jc3) {
+                std::string title = is_jc3 ? "Please select your Just Cause 3 install folder"
+                                           : "Please select your Just Cause 4 install folder";
+
+                Window::Get()->ShowFolderSelection(title, [&, is_jc3](const std::filesystem::path& selected) {
+                    if (is_jc3) {
+                        _jc3_path = selected.string();
+                        Settings::Get()->SetValue("jc3_directory", _jc3_path);
+                    } else {
+                        _jc4_path = selected.string();
+                        Settings::Get()->SetValue("jc4_directory", _jc4_path);
+                    }
+                });
+            };
+
+            ImGui::Text("Just Cause 3 Path");
+            ImGui::PushItemWidth(405);
+            ImGui::InputText("##jc3_path", &_jc3_path, ImGuiInputTextFlags_ReadOnly);
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
+            if (ImGui::Button("...##select_jc3_path")) {
+                SelectJCDirectory(true);
+            }
+
+            ImGui::Separator();
+
+            ImGui::Text("Just Cause 4 Path");
+            ImGui::PushItemWidth(405);
+            ImGui::InputText("##jc4_path", &_jc4_path, ImGuiInputTextFlags_ReadOnly);
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
+            if (ImGui::Button("...##select_jc4_path")) {
+                SelectJCDirectory(false);
+            }
+
+            ImGui::EndPopup();
+        }
     }
 
-    // About
-    if (ImGui::BeginPopupModal("About", &g_ShowAboutWindow, (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))) {
-        ImGui::SetWindowSize({400, 400});
+    // about modal
+    {
+        // open the about popup
+        if (g_ShowAboutWindow) {
+            ImGui::OpenPopup("About");
+        }
 
-        static int32_t current_version[3] = {VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
+        // About
+        if (ImGui::BeginPopupModal("About", &g_ShowAboutWindow,
+                                   (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))) {
+            ImGui::SetWindowSize({400, 400});
 
-        ImGui::Text("Just Cause Render Block Model Renderer");
-        ImGui::Text("Version %d.%d.%d", current_version[0], current_version[1], current_version[2]);
-        ImGui::Text("https://github.com/aaronkirkham/jc-rbm-renderer");
+            static int32_t current_version[3] = {VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
-        ImGui::Separator();
+            ImGui::Text("Just Cause Model Renderer");
+            ImGui::Text("Version %d.%d.%d", current_version[0], current_version[1], current_version[2]);
+            ImGui::Text("https://github.com/aaronkirkham/jc-model-renderer");
 
-        ImGui::BeginChild("Scrolling", {}, true);
+            ImGui::Separator();
 
-        ImGui::TextWrapped(
-            "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and "
-            "associated documentation files (the \"Software\"), to deal in the Software without restriction, including "
-            "without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell "
-            "copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the "
-            "following conditions:\n\n"
+            ImGui::BeginChild("Scrolling", {}, true);
 
-            "The above copyright notice and this permission notice shall be included in all copies or substantial "
-            "portions of the Software.\n\n"
+            ImGui::TextWrapped(
+                "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and "
+                "associated documentation files (the \"Software\"), to deal in the Software without restriction, "
+                "including "
+                "without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, "
+                "and/or "
+                "sell "
+                "copies of the Software, and to permit persons to whom the Software is furnished to do so, subject "
+                "to "
+                "the "
+                "following conditions:\n\n"
 
-            "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT "
-            "LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO "
-            "EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER "
-            "IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR "
-            "THE USE OR OTHER DEALINGS IN THE SOFTWARE.");
+                "The above copyright notice and this permission notice shall be included in all copies or "
+                "substantial "
+                "portions of the Software.\n\n"
 
-        ImGui::EndChild();
+                "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING "
+                "BUT "
+                "NOT "
+                "LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND "
+                "NONINFRINGEMENT.IN "
+                "NO "
+                "EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, "
+                "WHETHER "
+                "IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE "
+                "SOFTWARE "
+                "OR "
+                "THE USE OR OTHER DEALINGS IN THE SOFTWARE.");
 
-        ImGui::EndPopup();
+            ImGui::EndChild();
+
+            ImGui::EndPopup();
+        }
     }
 
-    // exporter settings
+    // exporter settings modal
     {
         if (m_ExportSettings.ShowExportSettings) {
             ImGui::OpenPopup("Exporter Settings");

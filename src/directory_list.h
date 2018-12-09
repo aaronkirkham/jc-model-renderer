@@ -47,7 +47,7 @@ class DirectoryList
 
         if (ext == ".ee" || ext == ".bl" || ext == ".nl" || ext == ".fl")
             return ICON_FA_FILE_ARCHIVE;
-        else if (ext == ".dds" || ext == ".ddsc" || ext == ".hmddsc" || ext == ".atx1")
+        else if (ext == ".dds" || ext == ".ddsc" || ext == ".hmddsc" || ext == ".atx1" || ext == ".atx2")
             return ICON_FA_FILE_IMAGE;
         else if (ext == ".bank")
             return ICON_FA_FILE_AUDIO;

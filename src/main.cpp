@@ -245,7 +245,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterReadCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({".epe", ".blo"}, RuntimeContainer::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback(
-            {".dds", ".ddsc", ".hmddsc", ".atx1"},
+            {".dds", ".ddsc", ".hmddsc", ".atx1", ".atx2"},
             [&](const std::filesystem::path& filename, FileBuffer data, bool external) {
                 // parse the compressed texture if the file was loaded from an external source
                 if (external) {
@@ -257,7 +257,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                                 (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
                             return true;
                         }
-                    } else if (filename.extension() == ".hmddsc" || filename.extension() == ".atx1") {
+                    } else if (filename.extension() == ".hmddsc" || filename.extension() == ".atx1"
+                               || filename.extension() == ".atx2") {
                         FileBuffer out;
                         FileLoader::Get()->ParseHMDDSCTexture(&data, &out);
                         TextureManager::Get()->GetTexture(
@@ -275,9 +276,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterSaveCallback({".rbm"}, RenderBlockModel::SaveFileCallback);
         FileLoader::Get()->RegisterSaveCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::SaveFileCallback);
 
+#ifdef DEBUG
+        FileLoader::Get()->RegisterReadCallback({".modelc", ".meshc", ".hrmeshc"},
+                                                AvalancheDataFormat::FileReadCallback);
+#endif
+
         // register file type context menu callbacks
         UI::Get()->RegisterContextMenuCallback({".rbm"}, RenderBlockModel::ContextMenuUI);
-        UI::Get()->RegisterContextMenuCallback({".epe"}, RuntimeContainer::ContextMenuUI);
+        // UI::Get()->RegisterContextMenuCallback({".epe"}, RuntimeContainer::ContextMenuUI);
 
         // register importers and exporters
         ImportExportManager::Get()->Register(new import_export::Wavefront_Obj);

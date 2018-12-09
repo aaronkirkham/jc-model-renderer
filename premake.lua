@@ -1,4 +1,4 @@
-workspace "jc3-rbm-renderer"
+workspace "jc-model-renderer"
   configurations { "Debug", "Release" }
   location "out"
   systemversion "latest"
@@ -19,7 +19,7 @@ workspace "jc3-rbm-renderer"
     optimize "On"
 
 -- Application
-project "jc3-rbm-renderer"
+project "jc-model-renderer"
   kind "WindowedApp"
   defines "CPPHTTPLIB_ZLIB_SUPPORT"
   dependson { "imgui", "zlib" }

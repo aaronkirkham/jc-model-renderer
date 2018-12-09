@@ -13,9 +13,9 @@
 #endif
 
 #ifdef DEBUG
-static constexpr auto g_WindowName = "JC Render Block Model Renderer (DEBUG)";
+static constexpr auto g_WindowName = "Just Cause Model Renderer (DEBUG)";
 #else
-static constexpr auto g_WindowName = "JC Render Block Model Renderer";
+static constexpr auto g_WindowName = "Just Cause Model Renderer";
 #endif
 
 #ifdef DEBUG
