@@ -14,10 +14,10 @@ struct LandmarkAttributes {
     float                                backLight;
     float                                _unknown2;
     float                                startFadeOutDistanceEmissiveSq;
-    JustCause3::Vertex::SPackedAttribute packed;
+    jc::Vertex::SPackedAttribute packed;
     uint32_t                             flags;
 };
-namespace JustCause3::RenderBlocks
+namespace jc::RenderBlocks
 {
 static constexpr uint8_t LANDMARK_VERSION = 7;
 
@@ -25,7 +25,7 @@ struct Landmark {
     uint8_t            version;
     LandmarkAttributes attributes;
 };
-}; // namespace JustCause3::RenderBlocks
+}; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
 class RenderBlockLandmark : public IRenderBlock
@@ -58,7 +58,7 @@ class RenderBlockLandmark : public IRenderBlock
         glm::vec4 DebugColor;
     } m_cbFragmentInstanceConsts;
 
-    JustCause3::RenderBlocks::Landmark m_Block;
+    jc::RenderBlocks::Landmark m_Block;
     VertexBuffer_t*                    m_VertexBufferData        = nullptr;
     std::array<ConstantBuffer_t*, 2>   m_VertexShaderConstants   = {nullptr};
     std::array<ConstantBuffer_t*, 2>   m_FragmentShaderConstants = {nullptr};
@@ -122,12 +122,12 @@ class RenderBlockLandmark : public IRenderBlock
 
     virtual void Read(std::istream& stream) override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
-        if (m_Block.version != JustCause3::RenderBlocks::LANDMARK_VERSION) {
+        if (m_Block.version != jc::RenderBlocks::LANDMARK_VERSION) {
             __debugbreak();
         }
 

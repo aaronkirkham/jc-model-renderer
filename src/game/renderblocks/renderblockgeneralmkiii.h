@@ -9,7 +9,7 @@ struct GeneralMkIIIAttributes {
     float                                emissiveTODScale;
     float                                emissiveStartFadeDistSq;
     char                                 _pad2[0x10];
-    JustCause3::Vertex::SPackedAttribute packed;
+    jc::Vertex::SPackedAttribute packed;
     char                                 _pad3[0x4];
     uint32_t                             flags;
     char                                 _pad4[0x1C];
@@ -17,7 +17,7 @@ struct GeneralMkIIIAttributes {
 
 static_assert(sizeof(GeneralMkIIIAttributes) == 0x68, "GeneralMkIIIAttributes alignment is wrong!");
 
-namespace JustCause3::RenderBlocks
+namespace jc::RenderBlocks
 {
 static constexpr uint8_t GENERALMKIII_VERSION = 5;
 
@@ -25,7 +25,7 @@ struct GeneralMkIII {
     uint8_t                version;
     GeneralMkIIIAttributes attributes;
 };
-}; // namespace JustCause3::RenderBlocks
+}; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
 class RenderBlockGeneralMkIII : public IRenderBlock
@@ -152,8 +152,8 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         float DamageClearCoat;           // [unused]
     } m_cbMaterialConsts2;
 
-    JustCause3::RenderBlocks::GeneralMkIII m_Block;
-    std::vector<JustCause3::CSkinBatch>    m_SkinBatches;
+    jc::RenderBlocks::GeneralMkIII m_Block;
+    std::vector<jc::CSkinBatch>    m_SkinBatches;
     VertexBuffer_t*                        m_VertexBufferData        = nullptr;
     std::string                            m_ShaderName              = "generalmkiii";
     std::array<ConstantBuffer_t*, 3>       m_VertexShaderConstants   = {nullptr};
@@ -279,12 +279,12 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
     virtual void Read(std::istream& stream) override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
-        if (m_Block.version != JustCause3::RenderBlocks::GENERALMKIII_VERSION) {
+        if (m_Block.version != jc::RenderBlocks::GENERALMKIII_VERSION) {
             __debugbreak();
         }
 
@@ -344,12 +344,12 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
     virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         memset(&m_Block.attributes, 0, sizeof(m_Block.attributes));
         memset(&m_cbMaterialConsts2, 0, sizeof(m_cbMaterialConsts2));
 
-        m_Block.version                            = JustCause3::RenderBlocks::GENERALMKIII_VERSION;
+        m_Block.version                            = jc::RenderBlocks::GENERALMKIII_VERSION;
         m_Block.attributes.packed.scale            = 1.f;
         m_Block.attributes.packed.uv0Extent        = {1.f, 1.f};
         m_Block.attributes.emissiveStartFadeDistSq = 2000.f;
@@ -407,7 +407,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
     virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         vertices_t vertices;
         uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();

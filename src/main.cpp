@@ -22,6 +22,7 @@
 #include "import_export/import_export_manager.h"
 #include "import_export/wavefront_obj.h"
 
+extern bool g_IsJC4Mode         = false;
 extern bool g_DrawBoundingBoxes = true;
 extern bool g_ShowModelLabels   = true;
 
@@ -49,12 +50,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         return false;
     };
 
+    g_IsJC4Mode         = Settings::Get()->GetValue<bool>("jc4_mode", false);
     g_DrawBoundingBoxes = Settings::Get()->GetValue<bool>("draw_bounding_boxes", false);
     g_ShowModelLabels   = Settings::Get()->GetValue<bool>("show_model_labels", false);
 
     // TODO: Validate the jc3 directory, make sure we can see some common stuff like JustCause3.exe / archives_win64
     // folder.
 
+#if 0
     // try find the jc3 directory from the steam installation folder
     std::filesystem::path jc3_directory = Settings::Get()->GetValue<std::string>("jc3_directory");
     if (jc3_directory.empty() || !std::filesystem::exists(jc3_directory)) {
@@ -71,12 +74,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
             }
         }
     }
+#endif
 
+    const auto& jc_directory = Window::Get()->GetJustCauseDirectory();
     if (Window::Get()->Initialise(hInstance)) {
-        LOG_INFO("Just cause 3 directory: \"{}\"", jc3_directory.string());
+#ifdef DEBUG
+        if (g_IsJC4Mode) {
+            LOG_INFO("RUNNING IN JUST CAUSE 4 MODE");
+        }
+#endif
+
+        LOG_INFO("Just Cause directory: \"{}\"", jc_directory.string());
 
         // do we need to select the install directory manually?
-        if (jc3_directory.empty() || !std::filesystem::exists(jc3_directory)) {
+        if (jc_directory.empty() || !std::filesystem::exists(jc_directory)) {
             Window::Get()->SelectJustCauseDirectory();
         }
 
@@ -234,38 +245,46 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterReadCallback({".rbm"}, RenderBlockModel::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({".epe", ".blo"}, RuntimeContainer::ReadFileCallback);
-        FileLoader::Get()->RegisterReadCallback({".dds", ".ddsc", ".hmddsc"}, [&](const std::filesystem::path& filename,
-                                                                                  FileBuffer data, bool external) {
-            // parse the compressed texture if the file was loaded from an external source
-            if (external) {
-                if (filename.extension() == ".ddsc") {
-                    FileBuffer out;
-                    if (FileLoader::Get()->ParseCompressedTexture(&data, &out)) {
+        FileLoader::Get()->RegisterReadCallback(
+            {".dds", ".ddsc", ".hmddsc", ".atx1", ".atx2"},
+            [&](const std::filesystem::path& filename, FileBuffer data, bool external) {
+                // parse the compressed texture if the file was loaded from an external source
+                if (external) {
+                    if (filename.extension() == ".ddsc") {
+                        FileBuffer out;
+                        if (FileLoader::Get()->ParseCompressedTexture(&data, &out)) {
+                            TextureManager::Get()->GetTexture(
+                                filename, &out,
+                                (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
+                            return true;
+                        }
+                    } else if (filename.extension() == ".hmddsc" || filename.extension() == ".atx1"
+                               || filename.extension() == ".atx2") {
+                        FileBuffer out;
+                        FileLoader::Get()->ParseHMDDSCTexture(&data, &out);
                         TextureManager::Get()->GetTexture(
                             filename, &out, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
                         return true;
                     }
-                } else if (filename.extension() == ".hmddsc") {
-                    FileBuffer out;
-                    FileLoader::Get()->ParseHMDDSCTexture(&data, &out);
-                    TextureManager::Get()->GetTexture(
-                        filename, &out, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
-                    return true;
                 }
-            }
 
-            TextureManager::Get()->GetTexture(
-                filename, &data, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
-            return true;
-        });
+                TextureManager::Get()->GetTexture(
+                    filename, &data, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
+                return true;
+            });
 
         // register save file type callbacks
         FileLoader::Get()->RegisterSaveCallback({".rbm"}, RenderBlockModel::SaveFileCallback);
         FileLoader::Get()->RegisterSaveCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::SaveFileCallback);
 
+#ifdef DEBUG
+        FileLoader::Get()->RegisterReadCallback({".modelc", ".meshc", ".hrmeshc"},
+                                                AvalancheDataFormat::FileReadCallback);
+#endif
+
         // register file type context menu callbacks
         UI::Get()->RegisterContextMenuCallback({".rbm"}, RenderBlockModel::ContextMenuUI);
-        UI::Get()->RegisterContextMenuCallback({".epe"}, RuntimeContainer::ContextMenuUI);
+        // UI::Get()->RegisterContextMenuCallback({".epe"}, RuntimeContainer::ContextMenuUI);
 
         // register importers and exporters
         ImportExportManager::Get()->Register(new import_export::Wavefront_Obj);

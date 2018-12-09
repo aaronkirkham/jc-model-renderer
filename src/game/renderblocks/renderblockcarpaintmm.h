@@ -10,7 +10,7 @@ struct CarPaintMMAttributes {
 
 static_assert(sizeof(CarPaintMMAttributes) == 0x8, "CarPaintMMAttributes alignment is wrong!");
 
-namespace JustCause3::RenderBlocks
+namespace jc::RenderBlocks
 {
 static constexpr uint8_t CARPAINTMM_VERSION = 14;
 
@@ -18,7 +18,7 @@ struct CarPaintMM {
     uint8_t              version;
     CarPaintMMAttributes attributes;
 };
-}; // namespace JustCause3::RenderBlocks
+}; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
 class RenderBlockCarPaintMM : public IRenderBlock
@@ -101,9 +101,9 @@ class RenderBlockCarPaintMM : public IRenderBlock
         char      _pad[16];
     } m_cbDynamicObjectParams;
 
-    JustCause3::RenderBlocks::CarPaintMM m_Block;
-    JustCause3::CDeformTable             m_DeformTable;
-    std::vector<JustCause3::CSkinBatch>  m_SkinBatches;
+    jc::RenderBlocks::CarPaintMM m_Block;
+    jc::CDeformTable             m_DeformTable;
+    std::vector<jc::CSkinBatch>  m_SkinBatches;
     std::string                          m_ShaderName              = "carpaintmm";
     std::array<VertexBuffer_t*, 2>       m_VertexBufferData        = {nullptr};
     std::array<ConstantBuffer_t*, 3>     m_VertexShaderConstants   = {nullptr};
@@ -232,12 +232,12 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
     virtual void Read(std::istream& stream) override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
-        if (m_Block.version != JustCause3::RenderBlocks::CARPAINTMM_VERSION) {
+        if (m_Block.version != jc::RenderBlocks::CARPAINTMM_VERSION) {
             __debugbreak();
         }
 
@@ -323,7 +323,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
 
     virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         vertices_t vertices;
         uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();

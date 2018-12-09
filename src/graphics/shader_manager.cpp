@@ -8,20 +8,23 @@
 #include "shader_manager.h"
 #include "types.h"
 
+extern bool g_IsJC4Mode;
+
 void ShaderManager::Init()
 {
-    const auto status_text_id = UI::Get()->PushStatusText("Loading \"Shaders_F.shader_bundle\"...");
+    auto& filename = Window::Get()->GetJustCauseDirectory();
+    filename /= g_IsJC4Mode ? "ShadersDX11_F.shader_bundle" : "Shaders_F.shader_bundle";
 
-    std::thread([&, status_text_id] {
-        std::filesystem::path filename = Settings::Get()->GetValue<std::string>("jc3_directory");
-        filename /= "Shaders_F.shader_bundle";
+    std::string status_text    = "Loading \"" + filename.filename().string() + "\"...";
+    const auto  status_text_id = UI::Get()->PushStatusText(status_text);
 
+    std::thread([&, filename = std::move(filename), status_text_id] {
         m_ShaderBundle = FileLoader::Get()->ReadAdf(filename);
 
         // exit now if the shader bundle wasn't loaded
         if (!m_ShaderBundle) {
             Window::Get()->ShowMessageBox(
-                "Failed to load shader bundle.\n\nPlease make sure your Just Cause 3 directory is valid.",
+                "Failed to load shader bundle.\n\nPlease make sure your Just Cause directory is valid.",
                 MB_ICONERROR | MB_OK);
         }
 

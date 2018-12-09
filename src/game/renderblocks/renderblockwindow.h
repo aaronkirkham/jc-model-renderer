@@ -23,7 +23,7 @@ struct WindowAttributes {
 
 static_assert(sizeof(WindowAttributes) == 0x28, "WindowAttributes alignment is wrong!");
 
-namespace JustCause3::RenderBlocks
+namespace jc::RenderBlocks
 {
 static constexpr uint8_t WINDOW_VERSION = 1;
 
@@ -31,7 +31,7 @@ struct Window {
     uint8_t          version;
     WindowAttributes attributes;
 };
-}; // namespace JustCause3::RenderBlocks
+}; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
 class RenderBlockWindow : public IRenderBlock
@@ -60,7 +60,7 @@ class RenderBlockWindow : public IRenderBlock
         float     Alpha            = 1.0f;
     } m_cbMaterialConsts;
 
-    JustCause3::RenderBlocks::Window m_Block;
+    jc::RenderBlocks::Window m_Block;
     ConstantBuffer_t*                m_VertexShaderConstants   = nullptr;
     ConstantBuffer_t*                m_FragmentShaderConstants = nullptr;
 
@@ -139,12 +139,12 @@ class RenderBlockWindow : public IRenderBlock
 
     virtual void Read(std::istream& stream) override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
-        if (m_Block.version != JustCause3::RenderBlocks::WINDOW_VERSION) {
+        if (m_Block.version != jc::RenderBlocks::WINDOW_VERSION) {
             __debugbreak();
         }
 
@@ -180,7 +180,7 @@ class RenderBlockWindow : public IRenderBlock
 
     virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         vertices_t vertices;
         uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();

@@ -5,6 +5,7 @@
 #include <queue>
 #include <unordered_map>
 
+#include "../../factory.h"
 #include "../../graphics/types.h"
 #include "../types.h"
 
@@ -16,7 +17,7 @@ class AdfInstanceMemberInfo
 {
   public:
     std::string                                         m_Name = "";
-    JustCause3::AvalancheDataFormat::TypeDefinitionType m_Type;
+    jc::AvalancheDataFormat::TypeDefinitionType         m_Type;
     uint32_t                                            m_TypeHash = 0;
     AdfTypeDefinition*                                  m_TypeDef  = nullptr;
     FileBuffer                                          m_Data;
@@ -25,6 +26,7 @@ class AdfInstanceMemberInfo
 
     uint32_t         m_ExpectedElementCount = 0;
     int64_t          m_Offset               = 0;
+    int64_t          m_FileOffset           = 0;
     AdfInstanceInfo* m_Adf                  = nullptr;
 
     AdfInstanceMemberInfo(const std::string& name, AdfTypeDefinition* type, int64_t offset, AdfInstanceInfo* adf,
@@ -44,15 +46,17 @@ class AdfInstanceInfo
     void MemberSetup_Array(AdfInstanceMemberInfo* info);
     void MemberSetup_StringHash(AdfInstanceMemberInfo* info);
 
-    void MemberSetupStructMember(AdfInstanceMemberInfo* info, JustCause3::AvalancheDataFormat::TypeMemberHash type_hash,
+    void MemberSetupStructMember(AdfInstanceMemberInfo* info, jc::AvalancheDataFormat::TypeMemberHash type_hash,
                                  const std::string& name, int64_t offset);
 
   public:
     std::string                                         m_Name     = "";
     AdfTypeDefinition*                                  m_Type     = nullptr;
+    uint32_t                                            m_Offset   = 0;
     uint32_t                                            m_TypeHash = 0;
     std::vector<std::unique_ptr<AdfInstanceMemberInfo>> m_Members;
     std::unordered_map<int64_t, AdfInstanceMemberInfo*> m_MemberOffsets;
+    AvalancheDataFormat*                                m_Parent = nullptr;
 
     FileBuffer m_Data;
     uint64_t   m_DataOffset = 0;
@@ -82,22 +86,25 @@ class AdfInstanceInfo
 class AdfTypeDefinition
 {
   public:
-    AvalancheDataFormat*                                            m_Parent = nullptr;
-    std::string                                                     m_Name   = "";
-    JustCause3::AvalancheDataFormat::TypeDefinition                 m_Definition;
-    std::vector<JustCause3::AvalancheDataFormat::MemeberDefinition> m_Members;
+    AvalancheDataFormat*                                    m_Parent = nullptr;
+    std::string                                             m_Name   = "";
+    jc::AvalancheDataFormat::TypeDefinition                 m_Definition;
+    std::vector<jc::AvalancheDataFormat::MemeberDefinition> m_Members;
 
     AdfTypeDefinition()          = default;
     virtual ~AdfTypeDefinition() = default;
 };
 
-class AvalancheDataFormat
+class AvalancheDataFormat : public Factory<AvalancheDataFormat>
 {
+    friend class AdfInstanceInfo;
+
   private:
     std::filesystem::path m_File;
 
     // ADF data
     std::vector<std::string>                        m_Names;
+    std::vector<std::pair<uint32_t, std::string>>   m_StringHashes;
     std::vector<std::unique_ptr<AdfTypeDefinition>> m_TypeDefinitions;
     std::vector<std::unique_ptr<AdfInstanceInfo>>   m_InstanceInfos;
 
@@ -106,16 +113,16 @@ class AvalancheDataFormat
     AvalancheDataFormat(const std::filesystem::path& filename, const FileBuffer& buffer);
     virtual ~AvalancheDataFormat() = default;
 
+    virtual std::string GetFactoryKey() const
+    {
+        return m_File.string();
+    }
+
     bool Parse(const FileBuffer& data);
 
-    static void FileReadCallback(const std::filesystem::path& filename, const FileBuffer& data);
+    static void FileReadCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);
 
     AdfTypeDefinition* GetTypeDefinition(uint32_t type_hash);
-
-    const std::string& GetName(int32_t index)
-    {
-        return m_Names[index];
-    }
 
     AdfInstanceMemberInfo* GetMember(const std::string& name);
     AdfInstanceMemberInfo* GetMember(AdfInstanceMemberInfo* info, const std::string& name);

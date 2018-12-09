@@ -3,7 +3,10 @@
 #include <commdlg.h>
 #include <shellapi.h>
 
+#include "game/file_loader.h"
 #include "graphics/renderer.h"
+#include "graphics/shader_manager.h"
+#include "graphics/texture_manager.h"
 #include "settings.h"
 #include "version.h"
 #include "window.h"
@@ -20,6 +23,8 @@
 #ifdef DEBUG
 #include <spdlog/sinks/stdout_color_sinks.h>
 #endif
+
+extern bool g_IsJC4Mode;
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Window::WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
@@ -70,7 +75,7 @@ bool Window::Initialise(const HINSTANCE& instance)
         SetConsoleTitle("Debug Console");
     }
 
-    //spdlog::set_level(spdlog::level::trace);
+    spdlog::set_level(spdlog::level::trace);
     spdlog::set_pattern("[%H:%M:%S] [%^%l%$] %v");
 
     m_Log = spdlog::stdout_color_mt("console");
@@ -117,7 +122,7 @@ void Window::Shutdown()
     m_Running = false;
 
     // clear factories
-    // TODO: move me!
+    AvalancheDataFormat::Instances.clear();
     RuntimeContainer::Instances.clear();
     RenderBlockModel::Instances.clear();
     AvalancheArchive::Instances.clear();
@@ -265,22 +270,66 @@ void Window::ShowFolderSelection(const std::string&                             
     }
 }
 
+void Window::SwitchMode(bool jc3_mode)
+{
+    // TODO: check if we are idle.
+    // nothing should be loading at this point.
+
+    g_IsJC4Mode = !jc3_mode;
+
+    // select the directory for the current game
+    const auto& jc_directory = GetJustCauseDirectory();
+    if (jc_directory.empty()) {
+        SelectJustCauseDirectory();
+    }
+
+    // reset
+    AvalancheDataFormat::Instances.clear();
+    RuntimeContainer::Instances.clear();
+    RenderBlockModel::Instances.clear();
+    AvalancheArchive::Instances.clear();
+
+    // reload managers
+    TextureManager::Get()->Empty();
+    ShaderManager::Get()->Init();
+    FileLoader::Get()->Init();
+
+    Settings::Get()->SetValue<bool>("jc4_mode", g_IsJC4Mode);
+}
+
 void Window::SelectJustCauseDirectory()
 {
-    // ask the user to select their jc3 directory, we can't find it!
-    ShowFolderSelection(
-        "Please select your Just Cause 3 install folder.",
-        [&](const std::filesystem::path& selected) {
-            Settings::Get()->SetValue("jc3_directory", selected.string());
-            LOG_INFO("Selected directory: \"{}\"", selected.string());
-        },
-        [] {
-            const auto& jc3_directory = Settings::Get()->GetValue<std::string>("jc3_directory");
-            if (jc3_directory.empty()) {
-                Window::Get()->ShowMessageBox(
-                    "Unable to find Just Cause 3 root directory.\n\nSome features will be disabled.");
-            }
-        });
+    std::string title = g_IsJC4Mode ? "Please select your Just Cause 4 install folder"
+                                    : "Please select your Just Cause 3 install folder";
+
+    static auto OnSelected = [&](const std::filesystem::path& selected) {
+        LOG_INFO("Selected directory: \"{}\"", selected.string());
+
+        std::filesystem::path exe_path = selected;
+        exe_path /= (g_IsJC4Mode ? "JustCause4.exe" : "JustCause3.exe");
+
+        if (!std::filesystem::exists(exe_path)) {
+            ShowMessageBox("Invalid Just Cause directory specified.\n\nMake sure you select the root directory.");
+            return SelectJustCauseDirectory();
+        }
+
+        Settings::Get()->SetValue(g_IsJC4Mode ? "jc4_directory" : "jc3_directory", selected.string());
+    };
+
+    static auto OnCancelled = [&]() {
+        const auto& jc_directory =
+            Settings::Get()->GetValue<std::string>(g_IsJC4Mode ? "jc4_directory" : "jc3_directory");
+        if (jc_directory.empty()) {
+            ShowMessageBox("Unable to find Just Cause root directory.\n\nSome features will be disabled.");
+        }
+    };
+
+    ShowFolderSelection(title, OnSelected, OnCancelled);
+}
+
+std::filesystem::path Window::GetJustCauseDirectory()
+{
+    return Settings::Get()->GetValue<std::string>(g_IsJC4Mode ? "jc4_directory" : "jc3_directory");
 }
 
 void Window::CheckForUpdates(bool show_no_update_messagebox)
@@ -290,7 +339,7 @@ void Window::CheckForUpdates(bool show_no_update_messagebox)
     std::thread([show_no_update_messagebox] {
         try {
             httplib::Client client("kirkh.am");
-            const auto      res = client.get("/jc3-rbm-renderer/latest.json");
+            const auto      res = client.get("/jc-model-renderer/latest.json");
             if (res && res->status == 200) {
                 const auto& data        = nlohmann::json::parse(res->body);
                 const auto& version_str = data["version"].get<std::string>();
@@ -306,7 +355,7 @@ void Window::CheckForUpdates(bool show_no_update_messagebox)
 
                     if (Window::Get()->ShowMessageBox(msg, MB_ICONQUESTION | MB_YESNO) == IDYES) {
                         ShellExecuteA(nullptr, "open",
-                                      "https://github.com/aaronkirkham/jc3-rbm-renderer/releases/latest", nullptr,
+                                      "https://github.com/aaronkirkham/jc-model-renderer/releases/latest", nullptr,
                                       nullptr, SW_SHOWNORMAL);
                     }
                 } else if (show_no_update_messagebox) {

@@ -4,8 +4,11 @@
 #include <dxgiformat.h>
 #include <glm/glm.hpp>
 
+#include "jc3/types.h"
+#include "jc4/types.h"
+
 #pragma pack(push, 1)
-namespace JustCause3
+namespace jc
 {
 namespace Vertex
 {
@@ -280,6 +283,16 @@ namespace Vertex
     }
 }; // namespace Vertex
 
+namespace ArchiveTable
+{
+    struct VfsTabCompressedBlock {
+        uint32_t m_CompressedSize;
+        uint32_t m_UncompressedSize;
+    };
+
+    static_assert(sizeof(VfsTabCompressedBlock) == 0x8, "JC4 VfsTabCompressedBlock alignment is wrong!");
+}; // namespace ArchiveTable
+
 namespace AvalancheTexture
 {
     enum Flags : uint32_t {
@@ -295,7 +308,7 @@ namespace AvalancheTexture
         uint32_t m_Size;
         uint16_t m_Alignment;
         bool     m_IsTile;
-        bool     m_IsSource;
+        uint8_t  m_Source;
     };
 
     struct Header {
@@ -329,68 +342,27 @@ namespace AvalancheTexture
         return rank;
     }
 
-    static std::tuple<uint8_t, bool> FindBest(Header* texture, bool ignore_external = false)
+    static uint8_t FindBest(Header* texture, uint8_t source)
     {
-        uint8_t biggest      = 0;
+        uint8_t biggest_seen = 0;
         uint8_t stream_index = 0;
-        bool    load_source  = false;
 
         for (uint8_t i = 0; i < 8; ++i) {
             const auto& stream = texture->m_Streams[i];
-
-            // skip this stream if we have no data
-            if (stream.m_Size == 0)
+            if (stream.m_Size == 0) {
                 continue;
+            }
 
-            // find the biggest stream index
-            if ((!ignore_external && stream.m_IsSource) || (!stream.m_IsSource && stream.m_Size > biggest)) {
-                biggest      = stream.m_Size;
+            // find the best stream to use
+            if ((stream.m_Source == source) || (stream.m_Source == 0 && stream.m_Size > biggest_seen)) {
+                biggest_seen = stream.m_Size;
                 stream_index = i;
-                load_source  = stream.m_IsSource;
             }
         }
 
-        return {stream_index, load_source};
+        return stream_index;
     }
 }; // namespace AvalancheTexture
-
-namespace ArchiveTable
-{
-    struct VfsTabEntry {
-        uint32_t m_NameHash;
-        uint32_t m_Offset;
-        uint32_t m_Size;
-    };
-
-    static_assert(sizeof(VfsTabEntry) == 0xC, "VfsTabEntry alignment is wrong!");
-
-    struct VfsCompressedTabEntry {
-        uint32_t m_Hash;
-        uint32_t m_Offset;
-        uint32_t m_Size;
-        uint32_t m_DecompressedSize;
-    };
-
-    static_assert(sizeof(VfsCompressedTabEntry) == 0x10, "VfsCompressedTabEntry alignment is wrong!");
-
-    struct VfsArchive {
-        uint64_t                 m_Magic;
-        int64_t                  m_Size;
-        int64_t                  m_Offset;
-        uint32_t                 m_Index;
-        uint16_t                 m_Version;
-        std::vector<VfsTabEntry> m_Entries;
-    };
-
-    struct TabFileHeader {
-        uint32_t m_Magic     = 0x424154; // "TAB"
-        uint16_t m_Version   = 2;
-        uint16_t m_Endian    = 1;
-        int32_t  m_Alignment = 0;
-    };
-
-    static_assert(sizeof(TabFileHeader) == 0xC, "TabFileHeader alignment is wrong!");
-}; // namespace ArchiveTable
 
 namespace StreamArchive
 {
@@ -532,7 +504,7 @@ namespace AvalancheDataFormat
         String = 0x8955583E,
     };
 
-    static const char* TypeDefintionStr(TypeDefinitionType type)
+    static const char* TypeDefinitionStr(TypeDefinitionType type)
     {
         switch (type) {
             case TypeDefinitionType::Primitive:
@@ -609,5 +581,5 @@ template <typename T> inline static uint32_t DISTANCE_TO_BOUNDARY(T& value, uint
 
     return 0;
 }
-}; // namespace JustCause3
+}; // namespace jc
 #pragma pack(pop)

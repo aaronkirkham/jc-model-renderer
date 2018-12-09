@@ -6,13 +6,13 @@
 struct GeneralAttributes {
     float                                depthBias;
     float                                specularGloss;
-    JustCause3::Vertex::SPackedAttribute packed;
+    jc::Vertex::SPackedAttribute packed;
     uint32_t                             flags;
     glm::vec3                            boundingBoxMin;
     glm::vec3                            boundingBoxMax;
 };
 
-namespace JustCause3::RenderBlocks
+namespace jc::RenderBlocks
 {
 static constexpr uint8_t GENERAL_VERSION = 6;
 
@@ -20,7 +20,7 @@ struct General {
     uint8_t           version;
     GeneralAttributes attributes;
 };
-}; // namespace JustCause3::RenderBlocks
+}; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
 class RenderBlockGeneral : public IRenderBlock
@@ -57,7 +57,7 @@ class RenderBlockGeneral : public IRenderBlock
         float _unknown11 = 0.0f;
     } m_cbFragmentMaterialConsts;
 
-    JustCause3::RenderBlocks::General m_Block;
+    jc::RenderBlocks::General m_Block;
     VertexBuffer_t*                   m_VertexBufferData       = nullptr;
     std::array<ConstantBuffer_t*, 2>  m_VertexShaderConstants  = {nullptr};
     ConstantBuffer_t*                 m_FragmentShaderConstant = nullptr;
@@ -131,12 +131,12 @@ class RenderBlockGeneral : public IRenderBlock
 
     virtual void Read(std::istream& stream) override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
-        if (m_Block.version != JustCause3::RenderBlocks::GENERAL_VERSION) {
+        if (m_Block.version != jc::RenderBlocks::GENERAL_VERSION) {
             __debugbreak();
         }
 
@@ -182,7 +182,7 @@ class RenderBlockGeneral : public IRenderBlock
 
     virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
-        using namespace JustCause3::Vertex;
+        using namespace jc::Vertex;
 
         vertices_t vertices;
         uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();

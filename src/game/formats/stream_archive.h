@@ -13,11 +13,11 @@ struct StreamArchiveEntry_t {
 };
 
 struct StreamArchive_t {
-    std::filesystem::path                 m_Filename = "";
-    JustCause3::StreamArchive::SARCHeader m_Header;
-    std::vector<uint8_t>                  m_SARCBytes;
-    std::vector<StreamArchiveEntry_t>     m_Files;
-    bool                                  m_UsingTOC = false;
+    std::filesystem::path             m_Filename = "";
+    jc::StreamArchive::SARCHeader     m_Header;
+    std::vector<uint8_t>              m_SARCBytes;
+    std::vector<StreamArchiveEntry_t> m_Files;
+    bool                              m_UsingTOC = false;
 
     StreamArchive_t()
     {
@@ -31,12 +31,6 @@ struct StreamArchive_t {
 
         m_SARCBytes.resize(sizeof(m_Header));
         std::memcpy(m_SARCBytes.data(), &m_Header, sizeof(m_Header));
-
-#if 0
-        std::ofstream out("C:/users/aaron/desktop/test.bin", std::ios::binary);
-        out.write((char *)m_SARCBytes.data(), m_SARCBytes.size());
-        out.close();
-#endif
     }
 
     void AddFile(const std::string& filename, const std::vector<uint8_t>& buffer)
@@ -64,7 +58,7 @@ struct StreamArchive_t {
         assert(entry);
 
         std::vector<uint8_t> temp_buffer;
-        uint64_t             pos = sizeof(JustCause3::StreamArchive::SARCHeader);
+        uint64_t             pos = sizeof(jc::StreamArchive::SARCHeader);
 
         // calculate the header and data size
         uint32_t header_size = 0;
@@ -75,11 +69,11 @@ struct StreamArchive_t {
             header_size += _raw_entry_size;
 
             auto size = _entry.m_Offset != 0 ? _entry.m_Size : 0;
-            data_size += JustCause3::ALIGN_TO_BOUNDARY(size);
+            data_size += jc::ALIGN_TO_BOUNDARY(size);
         }
 
         // update the header
-        m_Header.m_Size = JustCause3::ALIGN_TO_BOUNDARY(header_size, 16);
+        m_Header.m_Size = jc::ALIGN_TO_BOUNDARY(header_size, 16);
 
         temp_buffer.resize(pos + m_Header.m_Size + data_size);
 
@@ -87,7 +81,7 @@ struct StreamArchive_t {
         std::memcpy(temp_buffer.data(), &m_Header, sizeof(m_Header));
 
         // update all entries
-        uint32_t current_data_offset = sizeof(JustCause3::StreamArchive::SARCHeader) + m_Header.m_Size;
+        uint32_t current_data_offset = sizeof(jc::StreamArchive::SARCHeader) + m_Header.m_Size;
         for (auto& _entry : m_Files) {
             const bool _is_the_file = _entry.m_Filename == filename;
             const auto data_offset  = _entry.m_Offset != 0 ? current_data_offset : 0;
@@ -115,34 +109,29 @@ struct StreamArchive_t {
             }
 
             auto next_offset    = current_data_offset + (data_offset != 0 ? _entry.m_Size : 0);
-            current_data_offset = JustCause3::ALIGN_TO_BOUNDARY(next_offset);
+            current_data_offset = jc::ALIGN_TO_BOUNDARY(next_offset);
         }
 
         m_SARCBytes = std::move(temp_buffer);
-
-#if 0
-        std::ofstream out("C:/users/aaron/desktop/packing-test.bin", std::ios::binary);
-        out.write((char *)m_SARCBytes.data(), m_SARCBytes.size());
-        out.close();
-#endif
     }
 
     bool RemoveFile(const std::string& filename)
     {
+        __debugbreak();
         return false;
     }
 
     bool HasFile(const std::string& filename)
     {
-        auto it = std::find_if(m_Files.begin(), m_Files.end(),
-                               [&](const StreamArchiveEntry_t& entry) { return entry.m_Filename == filename; });
-
-        return it != m_Files.end();
+        return std::find_if(m_Files.begin(), m_Files.end(),
+                            [&](const StreamArchiveEntry_t& entry) { return entry.m_Filename == filename; })
+               != m_Files.end();
     }
 
     std::vector<uint8_t> GetEntryBuffer(const StreamArchiveEntry_t& entry)
     {
         assert(entry.m_Offset != 0 && entry.m_Offset != -1);
+        assert((entry.m_Offset + entry.m_Size) <= m_SARCBytes.size());
 
         auto start = m_SARCBytes.begin() + entry.m_Offset;
         auto end   = start + entry.m_Size;
@@ -169,7 +158,7 @@ struct StreamArchive_t {
     uint32_t calc_string_length(const std::string& value, uint32_t* alignment = nullptr)
     {
         auto length = value.length();
-        auto align  = JustCause3::DISTANCE_TO_BOUNDARY(length, 4);
+        auto align  = jc::DISTANCE_TO_BOUNDARY(length, 4);
 
         if (alignment) {
             *alignment = align;

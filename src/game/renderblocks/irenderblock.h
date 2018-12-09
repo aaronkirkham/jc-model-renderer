@@ -225,14 +225,14 @@ class IRenderBlock
         stream.write((char*)&m_MaterialParams, sizeof(m_MaterialParams));
     }
 
-    void ReadSkinBatch(std::istream& stream, std::vector<JustCause3::CSkinBatch>* skin_batches)
+    void ReadSkinBatch(std::istream& stream, std::vector<jc::CSkinBatch>* skin_batches)
     {
         uint32_t count;
         stream.read((char*)&count, sizeof(count));
         skin_batches->reserve(count);
 
         for (uint32_t i = 0; i < count; ++i) {
-            JustCause3::CSkinBatch batch;
+            jc::CSkinBatch batch;
 
             stream.read((char*)&batch.m_Size, sizeof(batch.m_Size));
             stream.read((char*)&batch.m_Offset, sizeof(batch.m_Offset));
@@ -248,7 +248,7 @@ class IRenderBlock
         }
     }
 
-    void WriteSkinBatch(std::ostream& stream, std::vector<JustCause3::CSkinBatch>* skin_batches)
+    void WriteSkinBatch(std::ostream& stream, std::vector<jc::CSkinBatch>* skin_batches)
     {
         uint32_t count = skin_batches->size();
         stream.write((char*)&count, sizeof(count));
@@ -264,7 +264,7 @@ class IRenderBlock
         }
     }
 
-    void ReadDeformTable(std::istream& stream, JustCause3::CDeformTable* deform_table)
+    void ReadDeformTable(std::istream& stream, jc::CDeformTable* deform_table)
     {
         uint32_t deformTable[256];
         stream.read((char*)&deformTable, sizeof(deformTable));
@@ -279,7 +279,7 @@ class IRenderBlock
         }
     }
 
-    void WriteDeformTable(std::ostream& stream, JustCause3::CDeformTable* deform_table)
+    void WriteDeformTable(std::ostream& stream, jc::CDeformTable* deform_table)
     {
         for (uint32_t i = 0; i < 256; ++i) {
             uint32_t data = deform_table->table[i];
@@ -287,7 +287,7 @@ class IRenderBlock
         }
     }
 
-    void DrawSkinBatches(RenderContext_t* context, const std::vector<JustCause3::CSkinBatch>& skin_batches)
+    void DrawSkinBatches(RenderContext_t* context, const std::vector<jc::CSkinBatch>& skin_batches)
     {
         if (!m_Visible)
             return;
