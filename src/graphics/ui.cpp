@@ -660,6 +660,7 @@ void UI::RenderFileTreeView()
                                     if (ImGui::MenuItem(block_name)) {
                                         const auto render_block = RenderBlockFactory::CreateRenderBlock(block_name);
                                         assert(render_block);
+                                        render_block->SetParent((*it).second.get());
                                         render_blocks.emplace_back(render_block);
                                     }
                                 }
@@ -871,12 +872,14 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
             texture->LoadFromFile(payload->data);
 
             // generate the new file path
-            const auto parent   = render_block->GetParent();
-            auto       filename = parent->GetPath().parent_path();
-            filename /= "textures" / payload_data.filename();
+            const auto parent = render_block->GetParent();
+            if (parent) {
+                auto filename = parent->GetPath().parent_path();
+                filename /= "textures" / payload_data.filename();
 
-            // update the texture name
-            texture->SetFileName(filename);
+                // update the texture name
+                texture->SetFileName(filename);
+            }
 
             // TODO: do we want this??
 #if 0

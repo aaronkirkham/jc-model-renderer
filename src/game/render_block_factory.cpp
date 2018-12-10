@@ -229,8 +229,13 @@ const char* RenderBlockFactory::GetRenderBlockName(const uint32_t type)
 // TODO: something better..
 const std::vector<const char*>& RenderBlockFactory::GetValidRenderBlocks()
 {
-    static std::vector<const char*> valid_blocks = {"BuildingJC3",   "CarLight", "CarPaintMM", "Character",
-                                                    "CharacterSkin", "General",  "GeneralJC3", "GeneralMkIII",
-                                                    "Landmark",      "Prop",     "Window"};
+    static std::vector<const char*> valid_blocks = {
+#ifdef DEBUG
+        "BuildingJC3", "CarLight",     "CarPaintMM", "Character", "CharacterSkin", "General",
+        "GeneralJC3",  "GeneralMkIII", "Landmark",   "Prop",      "Window"
+#else
+        "GeneralMkIII"
+#endif
+    };
     return valid_blocks;
 }

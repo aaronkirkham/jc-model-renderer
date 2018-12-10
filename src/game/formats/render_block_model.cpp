@@ -63,7 +63,9 @@ bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
 
     // ensure we can read the file version (TODO: when JC4 is released, check this)
     if (header.m_VersionMajor != 1 && header.m_VersionMinor != 16) {
+#ifdef DEBUG
         __debugbreak();
+#endif
         return false;
     }
 

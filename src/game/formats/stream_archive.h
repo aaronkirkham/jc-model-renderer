@@ -118,7 +118,9 @@ struct StreamArchive_t {
 
     bool RemoveFile(const std::string& filename)
     {
+#ifdef DEBUG
         __debugbreak();
+#endif
         return false;
     }
 

@@ -4,15 +4,15 @@
 
 #pragma pack(push, 1)
 struct GeneralMkIIIAttributes {
-    float                                depthBias;
-    char                                 _pad[0x8];
-    float                                emissiveTODScale;
-    float                                emissiveStartFadeDistSq;
-    char                                 _pad2[0x10];
+    float                        depthBias;
+    char                         _pad[0x8];
+    float                        emissiveTODScale;
+    float                        emissiveStartFadeDistSq;
+    char                         _pad2[0x10];
     jc::Vertex::SPackedAttribute packed;
-    char                                 _pad3[0x4];
-    uint32_t                             flags;
-    char                                 _pad4[0x1C];
+    char                         _pad3[0x4];
+    uint32_t                     flags;
+    char                         _pad4[0x1C];
 };
 
 static_assert(sizeof(GeneralMkIIIAttributes) == 0x68, "GeneralMkIIIAttributes alignment is wrong!");
@@ -152,12 +152,12 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         float DamageClearCoat;           // [unused]
     } m_cbMaterialConsts2;
 
-    jc::RenderBlocks::GeneralMkIII m_Block;
-    std::vector<jc::CSkinBatch>    m_SkinBatches;
-    VertexBuffer_t*                        m_VertexBufferData        = nullptr;
-    std::string                            m_ShaderName              = "generalmkiii";
-    std::array<ConstantBuffer_t*, 3>       m_VertexShaderConstants   = {nullptr};
-    std::array<ConstantBuffer_t*, 2>       m_FragmentShaderConstants = {nullptr};
+    jc::RenderBlocks::GeneralMkIII   m_Block;
+    std::vector<jc::CSkinBatch>      m_SkinBatches;
+    VertexBuffer_t*                  m_VertexBufferData        = nullptr;
+    std::string                      m_ShaderName              = "generalmkiii";
+    std::array<ConstantBuffer_t*, 3> m_VertexShaderConstants   = {nullptr};
+    std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = {nullptr};
 
   public:
     RenderBlockGeneralMkIII() = default;
@@ -390,6 +390,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             packed_data.emplace_back(std::move(gsp));
         }
 
+#if 0
         // load texture
         auto& texture =
             TextureManager::Get()->GetTexture("models/jc_characters/main_characters/rico/textures/nanos.dds");
@@ -397,6 +398,13 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             texture->LoadFromFile("C:/users/aaron/Desktop/nanos cube/nanos.dds");
             m_Textures[0] = std::move(texture);
         }
+#endif
+
+		// TEMP TEXTURE HOLDERS
+		m_Textures[0] = std::make_shared<Texture>("");
+        m_Textures[1] = std::make_shared<Texture>("");
+        m_Textures[2] = std::make_shared<Texture>("");
+        m_Textures[3] = std::make_shared<Texture>("");
 
         m_VertexBuffer     = Renderer::Get()->CreateBuffer(packed_vertices.data(), packed_vertices.size(),
                                                        sizeof(PackedVertexPosition), VERTEX_BUFFER);

@@ -95,12 +95,17 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
                 stream.read((char*)&count, sizeof(count));
                 stream.read((char*)&unknown, sizeof(unknown));
                 LOG_INFO("{}", stream.tellg());
+#ifdef DEBUG
                 __debugbreak();
+#endif
                 break;
             }
 
             default: {
+#ifdef DEBUG
                 __debugbreak();
+#endif
+                break;
             }
         }
 
@@ -156,7 +161,10 @@ void AvalancheDataFormat::FileReadCallback(const std::filesystem::path& filename
     auto adf = AvalancheDataFormat::make(filename);
     assert(adf);
     adf->Parse(data);
+
+#ifdef DEBUG
     __debugbreak();
+#endif
 }
 
 AdfTypeDefinition* AvalancheDataFormat::GetTypeDefinition(uint32_t type_hash)
@@ -318,9 +326,11 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
 
                     LOG_TRACE(" - DestOffset={}, ElementCount={}", dest_offset, element_count);
 
+#ifdef DEBUG
                     if (dest_offset == 0 && element_count == 0) {
                         __debugbreak();
                     }
+#endif
 
                     if (m_MemberOffsets.find(dest_offset) == m_MemberOffsets.end()) {
                         auto new_info =
@@ -342,7 +352,9 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
                 }
 
                 default: {
+#ifdef DEBUG
                     __debugbreak();
+#endif
                     break;
                 }
             }
