@@ -10,6 +10,7 @@ struct StreamArchiveEntry_t {
     std::string m_Filename;
     uint32_t    m_Offset;
     uint32_t    m_Size;
+    bool        m_Patched = false;
 };
 
 struct StreamArchive_t {

@@ -472,13 +472,11 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(const FileBuffer
         return nullptr;
     }
 
-    // version 2 = jc3
-    // version 3 = jc4
-
     auto result        = std::make_unique<StreamArchive_t>();
     result->m_Header   = header;
     result->m_UsingTOC = (toc_buffer != nullptr);
 
+    // jc4
     if (header.m_Version == 3) {
         uint32_t strings_length;
         stream.read((char*)&strings_length, sizeof(strings_length));
@@ -513,7 +511,6 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(const FileBuffer
         return result;
     }
 
-    std::map<std::string, StreamArchiveEntry_t> file_list;
 #ifdef DEBUG
     uint32_t _num_toc_added_files   = 0;
     uint32_t _num_toc_patched_files = 0;
@@ -534,7 +531,7 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(const FileBuffer
         stream.read((char*)&entry.m_Offset, sizeof(entry.m_Offset));
         stream.read((char*)&entry.m_Size, sizeof(entry.m_Size));
 
-        file_list[entry.m_Filename] = std::move(entry);
+        result->m_Files.emplace_back(std::move(entry));
 
         if (header.m_Size - (stream.tellg() - start_pos) <= 15) {
             break;
@@ -555,34 +552,33 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(const FileBuffer
             // read the archive entry data
             StreamArchiveEntry_t entry;
             entry.m_Filename = filename.get();
+            entry.m_Patched  = true;
             toc_stream.read((char*)&entry.m_Offset, sizeof(entry.m_Offset));
             toc_stream.read((char*)&entry.m_Size, sizeof(entry.m_Size));
 
-            auto it = file_list.find(entry.m_Filename);
-            if (it == file_list.end()) {
-                file_list[entry.m_Filename] = std::move(entry);
+            const auto it =
+                std::find_if(result->m_Files.begin(), result->m_Files.end(),
+                             [&](const StreamArchiveEntry_t& item) { return item.m_Filename == entry.m_Filename; });
+            if (it == result->m_Files.end()) {
+                LOG_INFO("need to add {} from toc", entry.m_Filename);
+
+                result->m_Files.emplace_back(std::move(entry));
 
 #ifdef DEBUG
                 _num_toc_added_files++;
 #endif
             } else {
 #ifdef DEBUG
-                if ((*it).second.m_Offset != entry.m_Offset || (*it).second.m_Size != entry.m_Size) {
+                if ((*it).m_Offset != entry.m_Offset || (*it).m_Size != entry.m_Size) {
                     _num_toc_patched_files++;
                 }
 #endif
 
                 // update file offset & size
-                (*it).second.m_Offset = entry.m_Offset;
-                (*it).second.m_Size   = entry.m_Size;
+                (*it).m_Offset = entry.m_Offset;
+                (*it).m_Size   = entry.m_Size;
             }
         }
-    }
-
-    // add the final filelist to the sarc filelist
-    result->m_Files.reserve(file_list.size());
-    for (const auto& file : file_list) {
-        result->m_Files.emplace_back(std::move(file.second));
     }
 
 #ifdef DEBUG

@@ -106,6 +106,8 @@ bool AvalancheArchive::SaveFileCallback(const std::filesystem::path& filename, c
         // TODO: we should read the archive filelist, grab a list of files which have offset 0 (in patches)
         // and check if we have edited any of those files. if so we need to include it in the repack of the SARC
 
+        // TODO: only write toc if it was loaded with toc
+
         std::thread([&, archive, filename, directory, status_text_id] {
             auto toc = filename;
             toc += ".toc";
