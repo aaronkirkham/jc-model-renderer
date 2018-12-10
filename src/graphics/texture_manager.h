@@ -16,9 +16,9 @@ class TextureManager : public Singleton<TextureManager>
 
   public:
     enum TextureCreateFlags {
-        NO_CREATE            = 0x1,
-        CREATE_IF_NOT_EXISTS = 0x2,
-        IS_UI_RENDERABLE     = 0x4,
+        TextureCreateFlags_NoCreate          = (1 << 0),
+        TextureCreateFlags_CreateIfNotExists = (1 << 1),
+        TextureCreateFlags_IsUIRenderable    = (1 << 2),
     };
 
     TextureManager();
@@ -26,9 +26,10 @@ class TextureManager : public Singleton<TextureManager>
 
     void Shutdown();
 
-    std::shared_ptr<Texture> GetTexture(const std::filesystem::path& filename, uint8_t flags = CREATE_IF_NOT_EXISTS);
+    std::shared_ptr<Texture> GetTexture(const std::filesystem::path& filename,
+                                        uint8_t                      flags = TextureCreateFlags_CreateIfNotExists);
     std::shared_ptr<Texture> GetTexture(const std::filesystem::path& filename, FileBuffer* buffer,
-                                        uint8_t flags = CREATE_IF_NOT_EXISTS);
+                                        uint8_t flags = TextureCreateFlags_CreateIfNotExists);
 
     bool HasTexture(const std::filesystem::path& filename);
 

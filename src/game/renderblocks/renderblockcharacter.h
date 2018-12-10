@@ -71,11 +71,11 @@ class RenderBlockCharacter : public IRenderBlock
         glm::vec4 unknown[10];
     } m_cbMaterialConsts;
 
-    jc::RenderBlocks::Character m_Block;
-    std::vector<jc::CSkinBatch> m_SkinBatches;
-    ConstantBuffer_t*                   m_VertexShaderConstants   = nullptr;
-    std::array<ConstantBuffer_t*, 2>    m_FragmentShaderConstants = {nullptr};
-    int32_t                             m_Stride                  = 0;
+    jc::RenderBlocks::Character      m_Block;
+    std::vector<jc::CSkinBatch>      m_SkinBatches;
+    ConstantBuffer_t*                m_VertexShaderConstants   = nullptr;
+    std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = {nullptr};
+    int32_t                          m_Stride                  = 0;
 
   public:
     RenderBlockCharacter() = default;
@@ -329,7 +329,7 @@ class RenderBlockCharacter : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
     {
         //
     }

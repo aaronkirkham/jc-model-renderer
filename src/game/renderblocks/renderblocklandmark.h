@@ -4,18 +4,18 @@
 
 #pragma pack(push, 1)
 struct LandmarkAttributes {
-    float                                depthBias;
-    float                                specularGloss;
-    float                                reflectivity;
-    float                                emmissive;
-    float                                diffuseWrap;
-    float                                specularFresnel;
-    glm::vec4                            diffuseModulator;
-    float                                backLight;
-    float                                _unknown2;
-    float                                startFadeOutDistanceEmissiveSq;
+    float                        depthBias;
+    float                        specularGloss;
+    float                        reflectivity;
+    float                        emmissive;
+    float                        diffuseWrap;
+    float                        specularFresnel;
+    glm::vec4                    diffuseModulator;
+    float                        backLight;
+    float                        _unknown2;
+    float                        startFadeOutDistanceEmissiveSq;
     jc::Vertex::SPackedAttribute packed;
-    uint32_t                             flags;
+    uint32_t                     flags;
 };
 namespace jc::RenderBlocks
 {
@@ -58,10 +58,10 @@ class RenderBlockLandmark : public IRenderBlock
         glm::vec4 DebugColor;
     } m_cbFragmentInstanceConsts;
 
-    jc::RenderBlocks::Landmark m_Block;
-    VertexBuffer_t*                    m_VertexBufferData        = nullptr;
-    std::array<ConstantBuffer_t*, 2>   m_VertexShaderConstants   = {nullptr};
-    std::array<ConstantBuffer_t*, 2>   m_FragmentShaderConstants = {nullptr};
+    jc::RenderBlocks::Landmark       m_Block;
+    VertexBuffer_t*                  m_VertexBufferData        = nullptr;
+    std::array<ConstantBuffer_t*, 2> m_VertexShaderConstants   = {nullptr};
+    std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = {nullptr};
 
   public:
     RenderBlockLandmark() = default;
@@ -158,7 +158,7 @@ class RenderBlockLandmark : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
     {
         //
     }

@@ -13,7 +13,7 @@ class Texture
     ID3D11ShaderResourceView* m_SRV      = nullptr;
     std::filesystem::path     m_Filename = "";
     uint32_t                  m_NameHash = 0;
-    glm::vec2                 m_Size     = glm::vec2(0);
+    D3D11_TEXTURE2D_DESC      m_Desc     = {};
     FileBuffer                m_Buffer;
 
   public:
@@ -31,9 +31,9 @@ class Texture
 
     bool              IsLoaded() const;
     const uint32_t    GetHash() const;
-    const glm::vec2&  GetSize() const;
     const FileBuffer* GetBuffer() const;
 
     ID3D11Resource*           GetResource() const;
     ID3D11ShaderResourceView* GetSRV() const;
+    D3D11_TEXTURE2D_DESC*     GetDesc();
 };

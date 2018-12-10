@@ -4,12 +4,12 @@
 
 #pragma pack(push, 1)
 struct GeneralAttributes {
-    float                                depthBias;
-    float                                specularGloss;
+    float                        depthBias;
+    float                        specularGloss;
     jc::Vertex::SPackedAttribute packed;
-    uint32_t                             flags;
-    glm::vec3                            boundingBoxMin;
-    glm::vec3                            boundingBoxMax;
+    uint32_t                     flags;
+    glm::vec3                    boundingBoxMin;
+    glm::vec3                    boundingBoxMax;
 };
 
 namespace jc::RenderBlocks
@@ -57,10 +57,10 @@ class RenderBlockGeneral : public IRenderBlock
         float _unknown11 = 0.0f;
     } m_cbFragmentMaterialConsts;
 
-    jc::RenderBlocks::General m_Block;
-    VertexBuffer_t*                   m_VertexBufferData       = nullptr;
-    std::array<ConstantBuffer_t*, 2>  m_VertexShaderConstants  = {nullptr};
-    ConstantBuffer_t*                 m_FragmentShaderConstant = nullptr;
+    jc::RenderBlocks::General        m_Block;
+    VertexBuffer_t*                  m_VertexBufferData       = nullptr;
+    std::array<ConstantBuffer_t*, 2> m_VertexShaderConstants  = {nullptr};
+    ConstantBuffer_t*                m_FragmentShaderConstant = nullptr;
 
   public:
     RenderBlockGeneral() = default;
@@ -175,7 +175,7 @@ class RenderBlockGeneral : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
     {
         //
     }

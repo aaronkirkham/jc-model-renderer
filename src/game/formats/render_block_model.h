@@ -29,7 +29,7 @@ class RenderBlockModel : public Factory<RenderBlockModel>
     }
 
     static void ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);
-    static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& directory);
+    static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path);
     static void ContextMenuUI(const std::filesystem::path& filename);
 
     static void Load(const std::filesystem::path& filename);

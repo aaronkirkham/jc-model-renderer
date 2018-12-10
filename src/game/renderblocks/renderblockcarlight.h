@@ -65,12 +65,12 @@ class RenderBlockCarLight : public IRenderBlock
         glm::vec4 Colour = glm::vec4(1);
     } m_cbMaterialConsts;
 
-    jc::RenderBlocks::CarLight  m_Block;
-    jc::CDeformTable            m_DeformTable;
-    std::vector<jc::CSkinBatch> m_SkinBatches;
-    VertexBuffer_t*                     m_VertexBufferData        = nullptr;
-    std::array<ConstantBuffer_t*, 3>    m_VertexShaderConstants   = {nullptr};
-    ConstantBuffer_t*                   m_FragmentShaderConstants = nullptr;
+    jc::RenderBlocks::CarLight       m_Block;
+    jc::CDeformTable                 m_DeformTable;
+    std::vector<jc::CSkinBatch>      m_SkinBatches;
+    VertexBuffer_t*                  m_VertexBufferData        = nullptr;
+    std::array<ConstantBuffer_t*, 3> m_VertexShaderConstants   = {nullptr};
+    ConstantBuffer_t*                m_FragmentShaderConstants = nullptr;
 
   public:
     RenderBlockCarLight() = default;
@@ -218,7 +218,7 @@ class RenderBlockCarLight : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
     {
         //
     }

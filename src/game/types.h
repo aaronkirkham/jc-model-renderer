@@ -312,9 +312,9 @@ namespace AvalancheTexture
     };
 
     struct Header {
-        uint32_t    m_Magic   = 0x58545641; // "AVTX"
-        uint8_t     m_Version = 1;
-        char        unknown[2];
+        uint32_t    m_Magic    = 0x58545641; // "AVTX"
+        uint8_t     m_Version  = 1;
+        char        unknown[2] = {};
         uint8_t     m_Dimension;
         DXGI_FORMAT m_Format;
         uint16_t    m_Width;
@@ -323,8 +323,8 @@ namespace AvalancheTexture
         uint16_t    m_Flags;
         uint8_t     m_Mips;
         uint8_t     m_MipsRedisent;
-        char        pad[10];
-        Stream      m_Streams[8];
+        char        pad[10]      = {};
+        Stream      m_Streams[8] = {};
     };
 
     static uint32_t GetHighestRank(Header* texture, uint32_t stream_index)

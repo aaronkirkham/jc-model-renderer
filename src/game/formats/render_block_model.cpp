@@ -203,12 +203,14 @@ void RenderBlockModel::ReadFileCallback(const std::filesystem::path& filename, c
     rbm->Parse(data);
 }
 
-bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& directory)
+bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path)
 {
     const auto rbm = RenderBlockModel::get(filename.string());
     if (rbm) {
-        const auto&   path = directory / filename.filename();
         std::ofstream stream(path, std::ios::binary);
+        if (stream.fail()) {
+            return false;
+        }
 
         const auto& render_blocks = rbm->GetRenderBlocks();
 
@@ -292,7 +294,7 @@ void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&    
             std::filesystem::path modelname = path;
             modelname /= filename;
 
-            RenderBlockModel::Load(modelname);
+            RenderBlockModel::Load(modelname.generic_string());
         }
 
         RenderBlockModel::LoadingFromRC = false;

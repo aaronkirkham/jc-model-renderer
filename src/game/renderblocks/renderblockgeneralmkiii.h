@@ -342,7 +342,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
     {
         using namespace jc::Vertex;
 
@@ -390,18 +390,19 @@ class RenderBlockGeneralMkIII : public IRenderBlock
             packed_data.emplace_back(std::move(gsp));
         }
 
-#if 0
         // load texture
-        auto& texture =
-            TextureManager::Get()->GetTexture("models/jc_characters/main_characters/rico/textures/nanos.dds");
-        if (texture) {
-            texture->LoadFromFile("C:/users/aaron/Desktop/nanos cube/nanos.dds");
-            m_Textures[0] = std::move(texture);
+        if (materials->size() > 0) {
+            const auto& filename = materials->at(0);
+            auto&       texture  = TextureManager::Get()->GetTexture(filename.filename());
+            if (texture) {
+                texture->LoadFromFile(filename);
+                m_Textures[0] = std::move(texture);
+            }
         }
-#endif
 
-		// TEMP TEXTURE HOLDERS
-		m_Textures[0] = std::make_shared<Texture>("");
+        // TEMP TEXTURE HOLDERS
+        // TODO: probably not this, but we want the slots to show up in the UI
+        // so we can drag & drop stuff. that only works if the texture pointer is valid
         m_Textures[1] = std::make_shared<Texture>("");
         m_Textures[2] = std::make_shared<Texture>("");
         m_Textures[3] = std::make_shared<Texture>("");

@@ -227,9 +227,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
                             rbm->GetRenderBlocks().emplace_back(render_block);
 
-                            auto& [vertices, indices] = std::any_cast<std::tuple<vertices_t, uint16s_t>>(data);
+                            auto& [vertices, indices, materials] =
+                                std::any_cast<std::tuple<vertices_t, uint16s_t, materials_t>>(data);
 
-                            render_block->SetData(&vertices, &indices);
+                            render_block->SetData(&vertices, &indices, &materials);
                             render_block->Create();
 
                             Renderer::Get()->AddToRenderList(render_block);
@@ -248,28 +249,27 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterReadCallback(
             {".dds", ".ddsc", ".hmddsc", ".atx1", ".atx2"},
             [&](const std::filesystem::path& filename, FileBuffer data, bool external) {
+                const uint8_t flags = (TextureManager::TextureCreateFlags_CreateIfNotExists
+                                       | TextureManager::TextureCreateFlags_IsUIRenderable);
+
                 // parse the compressed texture if the file was loaded from an external source
                 if (external) {
                     if (filename.extension() == ".ddsc") {
                         FileBuffer out;
-                        if (FileLoader::Get()->ParseCompressedTexture(&data, &out)) {
-                            TextureManager::Get()->GetTexture(
-                                filename, &out,
-                                (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
+                        if (FileLoader::Get()->ReadAVTX(&data, &out)) {
+                            TextureManager::Get()->GetTexture(filename, &out, flags);
                             return true;
                         }
                     } else if (filename.extension() == ".hmddsc" || filename.extension() == ".atx1"
                                || filename.extension() == ".atx2") {
                         FileBuffer out;
-                        FileLoader::Get()->ParseHMDDSCTexture(&data, &out);
-                        TextureManager::Get()->GetTexture(
-                            filename, &out, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
+                        FileLoader::Get()->ReadHMDDSC(&data, &out);
+                        TextureManager::Get()->GetTexture(filename, &out, flags);
                         return true;
                     }
                 }
 
-                TextureManager::Get()->GetTexture(
-                    filename, &data, (TextureManager::CREATE_IF_NOT_EXISTS | TextureManager::IS_UI_RENDERABLE));
+                TextureManager::Get()->GetTexture(filename, &data, flags);
                 return true;
             });
 
@@ -284,7 +284,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
         // register file type context menu callbacks
         UI::Get()->RegisterContextMenuCallback({".rbm"}, RenderBlockModel::ContextMenuUI);
-        // UI::Get()->RegisterContextMenuCallback({".epe"}, RuntimeContainer::ContextMenuUI);
+        UI::Get()->RegisterContextMenuCallback({".epe"}, RuntimeContainer::ContextMenuUI);
 
         // register importers and exporters
         ImportExportManager::Get()->Register(new import_export::Wavefront_Obj);

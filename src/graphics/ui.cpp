@@ -116,7 +116,7 @@ void UI::Render(RenderContext_t* context)
 #endif
 
             // temp game selection.
-            if (ImGui::BeginMenu("Select game")) {
+            if (ImGui::BeginMenu("Select Game")) {
                 // TODO: only enabled if we are not loading anything
 
                 if (ImGui::MenuItem("Just Cause 3", nullptr, g_IsJC4Mode == false)) {
@@ -702,16 +702,17 @@ void UI::RenderFileTreeView()
                                         const auto& importers = ImportExportManager::Get()->GetImporters(".rbm");
                                         for (const auto& importer : importers) {
                                             if (ImGui::MenuItem(importer->GetName(), importer->GetExportExtension())) {
-                                                UI::Events().ImportFileRequest(
-                                                    importer, [&](bool success, std::any data) {
-                                                        auto& [vertices, indices] =
-                                                            std::any_cast<std::tuple<vertices_t, uint16s_t>>(data);
+                                                UI::Events().ImportFileRequest(importer, [&](bool     success,
+                                                                                             std::any data) {
+                                                    auto& [vertices, indices, materials] =
+                                                        std::any_cast<std::tuple<vertices_t, uint16s_t, materials_t>>(
+                                                            data);
 
-                                                        render_block->SetData(&vertices, &indices);
-                                                        render_block->Create();
+                                                    render_block->SetData(&vertices, &indices, &materials);
+                                                    render_block->Create();
 
-                                                        Renderer::Get()->AddToRenderList(render_block);
-                                                    });
+                                                    Renderer::Get()->AddToRenderList(render_block);
+                                                });
                                             }
                                         }
 
@@ -773,22 +774,18 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
 
     if (ImGui::BeginPopupContextItem("Context Menu")) {
         // save file
-        if (ImGui::Selectable(ICON_FA_SAVE "  Save file")) {
+        if (ImGui::Selectable(ICON_FA_SAVE "  Save to...")) {
             Window::Get()->ShowFolderSelection("Select a folder to save the file to.",
                                                [&](const std::filesystem::path& selected) {
-                                                   UI::Get()->Events().SaveFileRequest(filename, selected);
+                                                   UI::Get()->Events().SaveFileRequest(filename, selected, false);
                                                });
         }
 
-#if 0
-        // save file to dropzon
-        if (ImGui::Selectable(ICON_FA_FLOPPY_O "  Save file to dropzone")) {
-            LOG_INFO("save file request (dropzone)");
-			const auto& jc_directory = Window::Get()->GetJustCauseDirectory();
-            const auto dropzone = jc_directory / "dropzone";
-            UI::Get()->Events().SaveFileRequest(filename, dropzone);
+        // save to dropzone
+        if (ImGui::Selectable(ICON_FA_SAVE "  Save to dropzone")) {
+            auto dropzone = Window::Get()->GetJustCauseDirectory() / "dropzone";
+            UI::Get()->Events().SaveFileRequest(filename, dropzone, true);
         }
-#endif
 
         // exporters
         const auto& exporters = ImportExportManager::Get()->GetExporters(filename.extension().string());

@@ -70,21 +70,26 @@ FileLoader::FileLoader()
 
     // save file
     UI::Get()->Events().SaveFileRequest.connect(
-        [&](const std::filesystem::path& file, const std::filesystem::path& directory) {
+        [&](const std::filesystem::path& file, const std::filesystem::path& directory, bool is_dropzone) {
             bool was_handled = false;
+
+            // keep the full path if we are saving to the dropzone
+            std::filesystem::path path = directory;
+            path /= (is_dropzone ? file : file.filename());
+
+            std::filesystem::create_directories(path.parent_path());
+
             // try use a handler
             if (m_SaveFileCallbacks.find(file.extension().string()) != m_SaveFileCallbacks.end()) {
                 for (const auto& fn : m_SaveFileCallbacks[file.extension().string()]) {
-                    was_handled = fn(file, directory);
+                    was_handled = fn(file, path);
                 }
             }
 
             // no handlers, fallback to just reading the raw data
             if (!was_handled) {
-                FileLoader::Get()->ReadFile(file, [&, file, directory](bool success, FileBuffer data) {
+                FileLoader::Get()->ReadFile(file, [&, file, path](bool success, FileBuffer data) {
                     if (success) {
-                        const auto& path = directory / file.filename();
-
                         // write the file data
                         std::ofstream stream(path, std::ios::binary);
                         if (!stream.fail()) {
@@ -259,7 +264,7 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileCallbac
     // are we trying to load textures?
     if (filename.extension() == ".dds" || filename.extension() == ".ddsc" || filename.extension() == ".hmddsc"
         || filename.extension() == ".atx1" || filename.extension() == ".atx2") {
-        const auto& texture = TextureManager::Get()->GetTexture(filename, TextureManager::NO_CREATE);
+        const auto& texture = TextureManager::Get()->GetTexture(filename, TextureManager::TextureCreateFlags_NoCreate);
         if (texture && texture->IsLoaded()) {
             UI::Get()->PopStatusText(status_text_id);
             return callback(true, *texture->GetBuffer());
@@ -331,6 +336,7 @@ void FileLoader::RunFileBatches() noexcept
             }
             // nothing found, callback
             else {
+                LOG_ERROR("Didn't find {}", path.first);
                 for (const auto& callback : path.second) {
                     callback(false, {});
                 }
@@ -816,13 +822,19 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
     return true;
 }
 
-void FileLoader::WriteTOC(const std::filesystem::path& filename, StreamArchive_t* archive) noexcept
+bool FileLoader::WriteTOC(const std::filesystem::path& filename, StreamArchive_t* archive) noexcept
 {
     assert(archive);
 
     std::ofstream stream(filename, std::ios::binary);
-    assert(!stream.fail());
-    for (auto& entry : archive->m_Files) {
+    if (stream.fail()) {
+#ifdef DEBUG
+        __debugbreak();
+#endif
+        return false;
+    }
+
+    for (const auto& entry : archive->m_Files) {
         auto length = static_cast<uint32_t>(entry.m_Filename.length());
 
         stream.write((char*)&length, sizeof(uint32_t));
@@ -832,6 +844,7 @@ void FileLoader::WriteTOC(const std::filesystem::path& filename, StreamArchive_t
     }
 
     stream.close();
+    return true;
 }
 
 static void DEBUG_TEXTURE_FLAGS(const jc::AvalancheTexture::Header* header)
@@ -873,7 +886,7 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
                     auto cb = [&, callback](bool success, FileBuffer data) {
                         if (success) {
                             FileBuffer d;
-                            ParseHMDDSCTexture(&data, &d);
+                            ReadHMDDSC(&data, &d);
                             return callback(success, std::move(d));
                         }
 
@@ -901,7 +914,7 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
             if (filename.extension() == ".hmddsc" || filename.extension() == ".atx1"
                 || filename.extension() == ".atx2") {
                 FileBuffer d;
-                ParseHMDDSCTexture(&data, &d);
+                ReadHMDDSC(&data, &d);
                 return callback(true, std::move(d));
             }
 
@@ -1033,7 +1046,7 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
         ReadFileFlags_SkipTextureLoader);
 }
 
-bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) noexcept
+bool FileLoader::ReadAVTX(FileBuffer* data, FileBuffer* outData) noexcept
 {
     std::istringstream stream(std::string{(char*)data->data(), data->size()});
 
@@ -1062,7 +1075,7 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
     header.width       = texture.m_Width >> rank;
     header.height      = texture.m_Height >> rank;
     header.depth       = texture.m_Depth;
-    header.mipMapCount = 1;
+    header.mipMapCount = texture.m_Mips;
     header.ddspf       = TextureManager::GetPixelFormat(texture.m_Format);
     header.caps        = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
 
@@ -1097,7 +1110,7 @@ bool FileLoader::ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) n
     return true;
 }
 
-void FileLoader::ParseHMDDSCTexture(FileBuffer* data, FileBuffer* outData) noexcept
+void FileLoader::ReadHMDDSC(FileBuffer* data, FileBuffer* outData) noexcept
 {
     assert(data && data->size() > 0);
 
@@ -1116,6 +1129,44 @@ void FileLoader::ParseHMDDSCTexture(FileBuffer* data, FileBuffer* outData) noexc
     std::memcpy(&outData->front(), (char*)&DDS_MAGIC, sizeof(DDS_MAGIC));
     std::memcpy(&outData->front() + sizeof(DDS_MAGIC), (char*)&header, sizeof(DDS_HEADER));
     std::memcpy(&outData->front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER), data->data(), data->size());
+}
+
+bool FileLoader::WriteAVTX(Texture* texture, FileBuffer* outData) noexcept
+{
+    if (!texture || !texture->IsLoaded()) {
+        return false;
+    }
+
+    jc::AvalancheTexture::Header header;
+
+    auto tex_buffer = texture->GetBuffer();
+    auto tex_desc   = texture->GetDesc();
+
+    // calculate the offset to skip
+    const auto dds_header_size = (sizeof(DDS_MAGIC) + sizeof(DDS_HEADER));
+
+    header.m_Dimension    = 2;
+    header.m_Format       = tex_desc->Format;
+    header.m_Width        = tex_desc->Width;
+    header.m_Height       = tex_desc->Height;
+    header.m_Depth        = 1;
+    header.m_Flags        = 0;
+    header.m_Mips         = tex_desc->MipLevels;
+    header.m_MipsRedisent = tex_desc->MipLevels;
+
+    // set the stream
+    header.m_Streams[0].m_Offset    = sizeof(header);
+    header.m_Streams[0].m_Size      = (tex_buffer->size() - dds_header_size);
+    header.m_Streams[0].m_Alignment = 16;
+    header.m_Streams[0].m_IsTile    = false;
+    header.m_Streams[0].m_Source    = 0;
+
+    outData->resize(sizeof(header) + header.m_Streams[0].m_Size);
+    std::memcpy(&outData->front(), (char*)&header, sizeof(header));
+    std::memcpy(&outData->front() + sizeof(header), (char*)tex_buffer->data() + dds_header_size,
+                header.m_Streams[0].m_Size);
+
+    return true;
 }
 
 void FileLoader::WriteRuntimeContainer(RuntimeContainer* runtime_container) noexcept

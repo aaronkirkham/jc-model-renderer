@@ -94,31 +94,34 @@ void AvalancheArchive::ReadFileCallback(const std::filesystem::path& filename, c
     AvalancheArchive::make(filename, data, external);
 }
 
-bool AvalancheArchive::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& directory)
+bool AvalancheArchive::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path)
 {
     auto archive = AvalancheArchive::get(filename.string());
     if (archive) {
         assert(archive->m_StreamArchive);
 
-        std::string status_text    = "Repacking \"" + filename.filename().string() + "\"...";
+        std::filesystem::create_directories(path.parent_path());
+
+        std::string status_text    = "Repacking \"" + path.filename().string() + "\"...";
         const auto  status_text_id = UI::Get()->PushStatusText(status_text);
 
         // TODO: we should read the archive filelist, grab a list of files which have offset 0 (in patches)
         // and check if we have edited any of those files. if so we need to include it in the repack of the SARC
 
-        // TODO: only write toc if it was loaded with toc
-
-        std::thread([&, archive, filename, directory, status_text_id] {
-            auto toc = filename;
-            toc += ".toc";
+        std::thread([&, archive, path, status_text_id] {
+            auto toc_path = path;
+            toc_path += ".toc";
 
             // write the .toc file
-            const auto& toc_path = directory / toc.filename();
-            FileLoader::Get()->WriteTOC(toc_path, archive->m_StreamArchive.get());
+            const auto toc_result = FileLoader::Get()->WriteTOC(toc_path, archive->m_StreamArchive.get());
+
+            // TODO: only write toc if it was loaded with it
+            if (archive->m_StreamArchive->m_UsingTOC && !toc_result) {
+                LOG_ERROR("Failed to write TOC!");
+            }
 
             // generate the .ee
-            const auto&   ee_path = directory / filename.filename();
-            std::ofstream stream(ee_path, std::ios::binary);
+            std::ofstream stream(path, std::ios::binary);
             FileLoader::Get()->CompressArchive(stream, archive->m_StreamArchive.get());
             stream.close();
 

@@ -30,7 +30,7 @@ class AvalancheArchive : public Factory<AvalancheArchive>
     bool HasFile(const std::filesystem::path& filename);
 
     static void ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);
-    static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& directory);
+    static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path);
 
     StreamArchive_t* GetStreamArchive()
     {

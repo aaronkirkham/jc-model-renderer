@@ -67,6 +67,35 @@ class Wavefront_Obj : public IImportExporter
         return ImGui::Button("Export");
     }
 
+    std::map<std::string, std::string> ImportMaterials(const std::filesystem::path& filename)
+    {
+        if (!std::filesystem::exists(filename)) {
+            return {};
+        }
+
+        std::ifstream stream(filename);
+        if (stream.fail()) {
+            return {};
+        }
+
+        std::map<std::string, std::string> materials;
+
+        std::string line;
+        std::string current_mtl;
+        while (std::getline(stream, line)) {
+            const auto& type = line.substr(0, line.find_first_of(' '));
+            if (type == "newmtl") {
+                current_mtl = line.substr(7, line.length());
+            } else if (type == "map_Kd") {
+                auto diffuse = filename;
+                diffuse.replace_filename(line.substr(7, line.length()));
+                materials[current_mtl] = diffuse.string();
+            }
+        }
+
+        return materials;
+    }
+
     void Import(const std::filesystem::path& filename, ImportFinishedCallback callback) override final
     {
         LOG_INFO("Importing \"{}\"", filename.string());
@@ -80,12 +109,14 @@ class Wavefront_Obj : public IImportExporter
             return callback(false, 0);
         }
 
-        vertices_t vertices;
-        uint16s_t  indices;
+        vertices_t  vertices;
+        uint16s_t   indices;
+        materials_t materials;
 
-        std::vector<glm::vec3> _temp_vertices;
-        std::vector<glm::vec2> _temp_uvs;
-        std::vector<glm::vec3> _temp_normals;
+        std::vector<glm::vec3>             _temp_vertices;
+        std::vector<glm::vec2>             _temp_uvs;
+        std::vector<glm::vec3>             _temp_normals;
+        std::map<std::string, std::string> _temp_materials;
 
         static auto split = [](std::string str, char delim) {
             std::vector<std::string> result;
@@ -113,8 +144,26 @@ class Wavefront_Obj : public IImportExporter
 
             const auto& type = line.substr(0, line.find_first_of(' '));
 
+            // material library
+            if (type == "mtllib") {
+                auto mtllib = filename;
+                mtllib.replace_filename(line.substr(7, line.length()));
+                _temp_materials = ImportMaterials(mtllib);
+            }
+            // material
+            else if (type == "usemtl") {
+                auto name = line.substr(7, line.length());
+                if (_temp_materials.find(name) == _temp_materials.end()) {
+#ifdef DEBUG
+                    __debugbreak();
+#endif
+                    continue;
+                }
+
+                materials.emplace_back(_temp_materials[name]);
+            }
             // vertex
-            if (type == "v") {
+            else if (type == "v") {
                 float x, y, z;
                 auto  r = sscanf(line.c_str(), "v %f %f %f", &x, &y, &z);
                 assert(r == 3);
@@ -127,7 +176,7 @@ class Wavefront_Obj : public IImportExporter
                 auto  r = sscanf(line.c_str(), "vt %f %f", &x, &y);
                 assert(r == 2);
 
-                _temp_uvs.emplace_back(glm::vec2{x, y});
+                _temp_uvs.emplace_back(glm::vec2{x, (1.0f - y)});
             }
             // normal
             else if (type == "vn") {
@@ -185,7 +234,7 @@ class Wavefront_Obj : public IImportExporter
             }
         }
 
-        callback(true, std::make_tuple(vertices, indices));
+        callback(true, std::make_tuple(vertices, indices, materials));
     }
 
     void WriteModelFile(const std::filesystem::path& filename, const std::filesystem::path& path,
@@ -284,7 +333,7 @@ class Wavefront_Obj : public IImportExporter
             auto [vertices, indices] = block->GetData();
             for (auto& vertex : vertices) {
                 out_stream << "v " << vertex.pos.x << " " << vertex.pos.y << " " << vertex.pos.z << std::endl;
-                out_stream << "vt " << vertex.uv.x << " " << vertex.uv.y << std::endl;
+                out_stream << "vt " << vertex.uv.x << " " << (1.0f - vertex.uv.y) << std::endl;
                 out_stream << "vn " << vertex.normal.x << " " << vertex.normal.y << " " << vertex.normal.z << std::endl;
             }
 

@@ -8,11 +8,10 @@
 #include "formats/stream_archive.h"
 #include "types.h"
 
-using ReadFileCallback = std::function<void(bool success, FileBuffer data)>;
-using FileTypeCallback = std::function<void(const std::filesystem::path& filename, FileBuffer data, bool external)>;
-using FileSaveCallback =
-    std::function<bool(const std::filesystem::path& filename, const std::filesystem::path& directory)>;
-using ReadArchiveCallback    = std::function<void(std::unique_ptr<StreamArchive_t>)>;
+using ReadFileCallback    = std::function<void(bool success, FileBuffer data)>;
+using FileTypeCallback    = std::function<void(const std::filesystem::path& filename, FileBuffer data, bool external)>;
+using FileSaveCallback    = std::function<bool(const std::filesystem::path& filename, const std::filesystem::path& path)>;
+using ReadArchiveCallback = std::function<void(std::unique_ptr<StreamArchive_t>)>;
 using DictionaryLookupResult = std::tuple<std::string, std::string, uint32_t>;
 
 enum ReadFileFlags : uint8_t {
@@ -111,12 +110,13 @@ class FileLoader : public Singleton<FileLoader>
     GetStreamArchiveFromFile(const std::filesystem::path& file, StreamArchive_t* archive = nullptr) noexcept;
 
     // toc
-    void WriteTOC(const std::filesystem::path& filename, StreamArchive_t* archive) noexcept;
+    bool WriteTOC(const std::filesystem::path& filename, StreamArchive_t* archive) noexcept;
 
     // textures
     void ReadTexture(const std::filesystem::path& filename, ReadFileCallback callback) noexcept;
-    bool ParseCompressedTexture(FileBuffer* data, FileBuffer* outData) noexcept;
-    void ParseHMDDSCTexture(FileBuffer* data, FileBuffer* outData) noexcept;
+    bool ReadAVTX(FileBuffer* data, FileBuffer* outData) noexcept;
+    void ReadHMDDSC(FileBuffer* data, FileBuffer* outData) noexcept;
+    bool WriteAVTX(Texture* texture, FileBuffer* outData) noexcept;
 
     // runtime containers
     void                              WriteRuntimeContainer(RuntimeContainer* runtime_container) noexcept;

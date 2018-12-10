@@ -75,7 +75,7 @@ bool Window::Initialise(const HINSTANCE& instance)
         SetConsoleTitle("Debug Console");
     }
 
-    spdlog::set_level(spdlog::level::trace);
+    //spdlog::set_level(spdlog::level::trace);
     spdlog::set_pattern("[%H:%M:%S] [%^%l%$] %v");
 
     m_Log = spdlog::stdout_color_mt("console");

@@ -4,9 +4,9 @@
 
 #pragma pack(push, 1)
 struct BuildingJC3Attributes {
-    char                                 pad[0x68];
+    char                         pad[0x68];
     jc::Vertex::SPackedAttribute packed;
-    char                                 pad2[0x1C];
+    char                         pad2[0x1C];
 };
 
 namespace jc::RenderBlocks
@@ -22,7 +22,7 @@ class RenderBlockBuildingJC3 : public IRenderBlock
 {
   private:
     jc::RenderBlocks::BuildingJC3 m_Block;
-    VertexBuffer_t*                       m_VertexBufferData = nullptr;
+    VertexBuffer_t*               m_VertexBufferData = nullptr;
 
   public:
     RenderBlockBuildingJC3() = default;
@@ -119,7 +119,7 @@ class RenderBlockBuildingJC3 : public IRenderBlock
         //
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
     {
         //
     }

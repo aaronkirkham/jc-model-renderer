@@ -4,18 +4,18 @@
 
 #pragma pack(push, 1)
 struct GeneralJC3Attributes {
-    float                                depthBias;
-    float                                specularGloss;
-    float                                reflectivity;
-    float                                emmissive;
-    float                                diffuseWrap;
-    float                                specularFresnel;
-    glm::vec4                            diffuseModulator;
-    float                                backLight;
-    float                                _unknown2;
-    float                                startFadeOutDistanceEmissiveSq;
+    float                        depthBias;
+    float                        specularGloss;
+    float                        reflectivity;
+    float                        emmissive;
+    float                        diffuseWrap;
+    float                        specularFresnel;
+    glm::vec4                    diffuseModulator;
+    float                        backLight;
+    float                        _unknown2;
+    float                        startFadeOutDistanceEmissiveSq;
     jc::Vertex::SPackedAttribute packed;
-    uint32_t                             flags;
+    uint32_t                     flags;
 };
 
 static_assert(sizeof(GeneralJC3Attributes) == 0x58, "GeneralJC3Attributes alignment is wrong!");
@@ -75,10 +75,10 @@ class RenderBlockGeneralJC3 : public IRenderBlock
         glm::vec4 colour;
     } m_cbFragmentInstanceConsts;
 
-    jc::RenderBlocks::GeneralJC3 m_Block;
-    VertexBuffer_t*                      m_VertexBufferData        = nullptr;
-    std::array<ConstantBuffer_t*, 2>     m_VertexShaderConstants   = {nullptr};
-    std::array<ConstantBuffer_t*, 2>     m_FragmentShaderConstants = {nullptr};
+    jc::RenderBlocks::GeneralJC3     m_Block;
+    VertexBuffer_t*                  m_VertexBufferData        = nullptr;
+    std::array<ConstantBuffer_t*, 2> m_VertexShaderConstants   = {nullptr};
+    std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = {nullptr};
 
   public:
     RenderBlockGeneralJC3() = default;
@@ -196,7 +196,7 @@ class RenderBlockGeneralJC3 : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
     {
         //
     }

@@ -78,7 +78,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path&
     }
 
     // do we want to create the texture?
-    if (flags & CREATE_IF_NOT_EXISTS) {
+    if (flags & TextureCreateFlags_CreateIfNotExists) {
         m_Textures[key] = std::make_shared<Texture>(filename);
         // load the texture
         FileLoader::Get()->ReadTexture(filename, [&, key, filename](bool success, FileBuffer data) {
@@ -115,7 +115,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path&
     // if we have already cached this texture, use that
     auto it = m_Textures.find(key);
     if (it != m_Textures.end()) {
-        if (flags & IS_UI_RENDERABLE) {
+        if (flags & TextureCreateFlags_IsUIRenderable) {
             m_PreviewTextures.emplace_back(it->second);
         }
 
@@ -123,13 +123,13 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path&
     }
 
     // do we want to create the texture?
-    if (flags & CREATE_IF_NOT_EXISTS) {
+    if (flags & TextureCreateFlags_CreateIfNotExists) {
         m_Textures[key] = std::make_shared<Texture>(filename);
         if (!m_Textures[key]->LoadFromBuffer(buffer)) {
             LOG_ERROR("Failed to load texture from buffer!");
         }
 
-        if (flags & IS_UI_RENDERABLE) {
+        if (flags & TextureCreateFlags_IsUIRenderable) {
             m_PreviewTextures.emplace_back(m_Textures[key]);
         }
 

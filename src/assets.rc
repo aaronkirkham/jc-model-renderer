@@ -10,7 +10,7 @@
 //
 // Files
 //
-128 RCDATA "../assets/dictionary.json"
+128 RCDATA "../assets/jc3/dictionary.json"
 256 RCDATA "../assets/jc4/dictionary.json"
 512 RCDATA "../assets/namehashlookup.json"
 

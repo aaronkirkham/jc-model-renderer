@@ -17,9 +17,10 @@ class AvalancheArchive;
 
 struct UIEvents {
     ksignals::Event<void(const std::filesystem::path& file, AvalancheArchive* archive)> FileTreeItemSelected;
-    ksignals::Event<void(const std::filesystem::path& file, const std::filesystem::path& directory)> SaveFileRequest;
-    ksignals::Event<void(IImportExporter* importer, ImportFinishedCallback callback)>                ImportFileRequest;
-    ksignals::Event<void(const std::filesystem::path& file, IImportExporter* exporter)>              ExportFileRequest;
+    ksignals::Event<void(const std::filesystem::path& file, const std::filesystem::path& directory, bool is_dropzone)>
+                                                                                        SaveFileRequest;
+    ksignals::Event<void(IImportExporter* importer, ImportFinishedCallback callback)>   ImportFileRequest;
+    ksignals::Event<void(const std::filesystem::path& file, IImportExporter* exporter)> ExportFileRequest;
 };
 
 enum ContextMenuFlags {

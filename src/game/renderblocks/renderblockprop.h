@@ -4,10 +4,10 @@
 
 #pragma pack(push, 1)
 struct PropAttributes {
-    float                                depthBias;
-    char                                 _pad[0xFC];
+    float                        depthBias;
+    char                         _pad[0xFC];
     jc::Vertex::SPackedAttribute packed;
-    uint32_t                             flags;
+    uint32_t                     flags;
 };
 
 namespace jc::RenderBlocks
@@ -44,7 +44,7 @@ class RenderBlockProp : public IRenderBlock
         glm::vec4 _pad[16];
     } m_cbFragmentMaterialConsts;
 
-    jc::RenderBlocks::Prop   m_Block;
+    jc::RenderBlocks::Prop           m_Block;
     VertexBuffer_t*                  m_VertexBufferData        = nullptr;
     std::array<ConstantBuffer_t*, 2> m_VertexShaderConstants   = {nullptr};
     ConstantBuffer_t*                m_FragmentShaderConstants = nullptr;
@@ -166,7 +166,7 @@ class RenderBlockProp : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
     {
         //
     }

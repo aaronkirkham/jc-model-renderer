@@ -61,8 +61,8 @@ class RenderBlockWindow : public IRenderBlock
     } m_cbMaterialConsts;
 
     jc::RenderBlocks::Window m_Block;
-    ConstantBuffer_t*                m_VertexShaderConstants   = nullptr;
-    ConstantBuffer_t*                m_FragmentShaderConstants = nullptr;
+    ConstantBuffer_t*        m_VertexShaderConstants   = nullptr;
+    ConstantBuffer_t*        m_FragmentShaderConstants = nullptr;
 
     SamplerState_t* _test = nullptr;
 
@@ -173,7 +173,7 @@ class RenderBlockWindow : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
     {
         //
     }

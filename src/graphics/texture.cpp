@@ -46,11 +46,8 @@ bool Texture::LoadFromBuffer(FileBuffer* buffer)
         result                = m_Texture->QueryInterface(&_tex);
         assert(SUCCEEDED(result));
 
-        D3D11_TEXTURE2D_DESC desc;
-        _tex->GetDesc(&desc);
+        _tex->GetDesc(&m_Desc);
         _tex->Release();
-
-        m_Size = {desc.Width, desc.Height};
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
         auto& fn = m_Filename.filename().string();
@@ -131,11 +128,6 @@ const uint32_t Texture::GetHash() const
     return m_NameHash;
 }
 
-const glm::vec2& Texture::GetSize() const
-{
-    return m_Size;
-}
-
 const FileBuffer* Texture::GetBuffer() const
 {
     return &m_Buffer;
@@ -149,4 +141,9 @@ ID3D11Resource* Texture::GetResource() const
 ID3D11ShaderResourceView* Texture::GetSRV() const
 {
     return m_SRV;
+}
+
+D3D11_TEXTURE2D_DESC* Texture::GetDesc()
+{
+    return &m_Desc;
 }
