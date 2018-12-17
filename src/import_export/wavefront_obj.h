@@ -39,7 +39,7 @@ class Wavefront_Obj : public IImportExporter
 
     std::vector<const char*> GetImportExtension() override final
     {
-        return {".rbm"};
+        return {".rbm", ".modelc", ".meshc", ".hrmeshc"};
     }
 
     const char* GetExportExtension() override final
@@ -380,7 +380,7 @@ class Wavefront_Obj : public IImportExporter
             FileLoader::Get()->ReadFile(filename, [&, filename, path, callback](bool success, FileBuffer data) {
                 if (success) {
                     auto model = std::make_unique<::RenderBlockModel>(filename);
-                    if (model->Parse(data, false)) {
+                    if (model->ParseRBM(data, false)) {
                         WriteModelFile(filename, path, model.get());
                     }
                 }

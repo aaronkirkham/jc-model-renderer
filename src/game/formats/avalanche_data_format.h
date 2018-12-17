@@ -18,22 +18,23 @@ class AdfInstanceMemberInfo
   public:
     std::string                                         m_Name = "";
     jc::AvalancheDataFormat::TypeDefinitionType         m_Type;
-    uint32_t                                            m_TypeHash = 0;
-    AdfTypeDefinition*                                  m_TypeDef  = nullptr;
+    AdfTypeDefinition*                                  m_TypeDef = nullptr;
+    jc::AvalancheDataFormat::TypeMemberHash             m_DataType;
     FileBuffer                                          m_Data;
     std::string                                         m_StringData;
     std::vector<std::unique_ptr<AdfInstanceMemberInfo>> m_Members;
+    uint32_t                                            m_ExpectedElementCount = 0;
+    int64_t                                             m_Offset               = 0;
+    int64_t                                             m_FileOffset           = 0;
+    AdfInstanceInfo*                                    m_Adf                  = nullptr;
 
-    uint32_t         m_ExpectedElementCount = 0;
-    int64_t          m_Offset               = 0;
-    int64_t          m_FileOffset           = 0;
-    AdfInstanceInfo* m_Adf                  = nullptr;
-
+    AdfInstanceMemberInfo() = default;
     AdfInstanceMemberInfo(const std::string& name, AdfTypeDefinition* type, int64_t offset, AdfInstanceInfo* adf,
-                          uint32_t expected_element_count = 0);
-    AdfInstanceMemberInfo(const std::string& name, uint32_t type_hash, int64_t offset, AdfInstanceInfo* adf);
-    AdfInstanceMemberInfo(const std::string& name, uint32_t type_hash, int64_t offset, AdfInstanceInfo* adf,
-                          uint32_t element_count);
+                          uint32_t expected_element_count);
+    AdfInstanceMemberInfo(const std::string& name, jc::AvalancheDataFormat::TypeMemberHash type, int64_t offset,
+                          AdfInstanceInfo* adf);
+    AdfInstanceMemberInfo(const std::string& name, AdfTypeDefinition* type, int64_t offset, AdfInstanceInfo* adf,
+                          jc::AvalancheDataFormat::Enum* enum_data);
     virtual ~AdfInstanceMemberInfo() = default;
 };
 
@@ -90,6 +91,7 @@ class AdfTypeDefinition
     std::string                                             m_Name   = "";
     jc::AvalancheDataFormat::TypeDefinition                 m_Definition;
     std::vector<jc::AvalancheDataFormat::MemeberDefinition> m_Members;
+    std::vector<jc::AvalancheDataFormat::Enum>              m_Enums;
 
     AdfTypeDefinition()          = default;
     virtual ~AdfTypeDefinition() = default;
@@ -98,6 +100,7 @@ class AdfTypeDefinition
 class AvalancheDataFormat : public Factory<AvalancheDataFormat>
 {
     friend class AdfInstanceInfo;
+    friend class AdfInstanceMemberInfo;
 
   private:
     std::filesystem::path m_File;

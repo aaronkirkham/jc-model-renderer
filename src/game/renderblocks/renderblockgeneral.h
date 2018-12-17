@@ -89,6 +89,26 @@ class RenderBlockGeneral : public IRenderBlock
         return ~m_Block.attributes.flags & TRANSPARENCY_ALPHABLENDING;
     }
 
+    void CreateBuffers(FileBuffer* vertex, FileBuffer* data, FileBuffer* index)
+    {
+        uint32_t stride_1 = sizeof(jc::Vertex::PackedVertexPosition);
+        uint32_t stride_2 = sizeof(jc::Vertex::GeneralShortPacked);
+
+        m_VertexBuffer =
+            Renderer::Get()->CreateBuffer(vertex->data(), vertex->size() / stride_1, stride_1, VERTEX_BUFFER);
+        m_VertexBufferData =
+            Renderer::Get()->CreateBuffer(data->data(), data->size() / stride_2, stride_2, VERTEX_BUFFER);
+        m_IndexBuffer = Renderer::Get()->CreateBuffer(index->data(), index->size() / sizeof(uint16_t), sizeof(uint16_t),
+                                                      INDEX_BUFFER);
+
+        m_Block                             = {};
+        m_Block.attributes.packed.format    = 1;
+        m_Block.attributes.packed.scale     = 1.0f;
+        m_Block.attributes.packed.uv0Extent = {1.0f, 1.0f};
+
+        // Create();
+    }
+
     virtual void Create() override final
     {
         // load shaders

@@ -134,6 +134,10 @@ class IRenderBlock
 
     inline void BindTexture(int32_t texture_index, int32_t slot, SamplerState_t* sampler = nullptr)
     {
+        if (texture_index >= m_Textures.size()) {
+            return;
+        }
+
         const auto& texture = m_Textures[texture_index];
         if (texture && texture->IsLoaded()) {
             texture->Use(slot, sampler);
@@ -302,6 +306,10 @@ class IRenderBlock
 
     inline void DrawTexture(const std::string& title, uint32_t texture_slot)
     {
+        if (texture_slot >= m_Textures.size()) {
+            return;
+        }
+
         UI::Get()->RenderBlockTexture(this, title, m_Textures[texture_slot]);
     }
 };

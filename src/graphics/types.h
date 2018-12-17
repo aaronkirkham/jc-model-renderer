@@ -63,6 +63,11 @@ struct IBuffer_t {
     }
 };
 
+template <typename T> static inline std::vector<T> CastBuffer(FileBuffer* buffer)
+{
+    return {reinterpret_cast<T*>(buffer->data()), reinterpret_cast<T*>(buffer->data() + buffer->size())};
+}
+
 using VertexBuffer_t   = IBuffer_t;
 using IndexBuffer_t    = IBuffer_t;
 using ConstantBuffer_t = IBuffer_t;

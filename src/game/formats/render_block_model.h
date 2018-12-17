@@ -13,6 +13,8 @@ class IRenderBlock;
 
 class RenderBlockModel : public Factory<RenderBlockModel>
 {
+    using ParseCallback_t = std::function<void(bool)>;
+
   private:
     std::filesystem::path             m_Filename = "";
     std::vector<IRenderBlock*>        m_RenderBlocks;
@@ -35,7 +37,9 @@ class RenderBlockModel : public Factory<RenderBlockModel>
     static void Load(const std::filesystem::path& filename);
     static void LoadFromRuntimeContainer(const std::filesystem::path& filename, std::shared_ptr<RuntimeContainer> rc);
 
-    bool                                   Parse(const FileBuffer& data, bool add_to_render_list = true);
+    bool ParseRBM(const FileBuffer& data, bool add_to_render_list = true);
+    void ParseAMF(const FileBuffer& data, ParseCallback_t callback, bool add_to_render_list = true);
+
     inline static bool                     LoadingFromRC = false;
     inline static std::vector<std::string> SuppressedWarnings;
 

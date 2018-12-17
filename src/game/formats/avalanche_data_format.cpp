@@ -90,14 +90,13 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
             }
 
             case jc::AvalancheDataFormat::TypeDefinitionType::Enumeration: {
-                LOG_INFO("{}", stream.tellg());
-                uint32_t count, unknown[5];
+                uint32_t count;
                 stream.read((char*)&count, sizeof(count));
-                stream.read((char*)&unknown, sizeof(unknown));
-                LOG_INFO("{}", stream.tellg());
-#ifdef DEBUG
-                __debugbreak();
-#endif
+
+                // read enums
+                typeDef->m_Enums.resize(count);
+                stream.read((char*)&typeDef->m_Enums.front(), sizeof(jc::AvalancheDataFormat::Enum) * count);
+
                 break;
             }
 
@@ -140,6 +139,8 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
         instanceInfo->m_TypeHash = instance.m_TypeHash;
         instanceInfo->m_Parent   = this;
 
+        const auto pos = stream.tellg();
+
         // read the instance data
         instanceInfo->m_Data.resize(instance.m_Size);
         stream.seekg(instance.m_Offset);
@@ -151,6 +152,9 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
 
         instanceInfo->ReadMembers();
         m_InstanceInfos.emplace_back(std::move(instanceInfo));
+
+        // get back to the correct file offset
+        stream.seekg(pos);
     }
 
     return true;
@@ -220,7 +224,7 @@ AdfInstanceMemberInfo* AvalancheDataFormat::GetMember(AdfInstanceMemberInfo* inf
 void AdfInstanceInfo::ReadMembers()
 {
     m_Queue = {};
-    m_Members.emplace_back(std::make_unique<AdfInstanceMemberInfo>(m_Name, m_Type, 0, this));
+    m_Members.emplace_back(std::make_unique<AdfInstanceMemberInfo>(m_Name, m_Type, 0, this, 0));
 
     while (m_Queue.size() > 0) {
         AdfInstanceMemberInfo* info = m_Queue.front();
@@ -291,8 +295,7 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
 
             LOG_TRACE("dest_offset={}", dest_offset);
 
-            auto new_info =
-                std::make_unique<AdfInstanceMemberInfo>(name, static_cast<uint32_t>(type_hash), dest_offset, this);
+            auto new_info = std::make_unique<AdfInstanceMemberInfo>(name, type_hash, dest_offset, this);
             info->m_Members.emplace_back(std::move(new_info));
             break;
         }
@@ -351,7 +354,20 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
                     break;
                 }
 
+                case jc::AvalancheDataFormat::TypeDefinitionType::Enumeration: {
+                    LOG_INFO("\"{}\" is an enumeration", name);
+
+                    auto  enum_index = info->m_Adf->ReadData<uint32_t>();
+                    auto& enum_data  = definition->m_Enums[enum_index];
+
+                    auto new_info = std::make_unique<AdfInstanceMemberInfo>(name, definition, offset, this, &enum_data);
+                    info->m_Members.emplace_back(std::move(new_info));
+
+                    break;
+                }
+
                 default: {
+                    LOG_TRACE("\"{}\" is {}", name, static_cast<int32_t>(definition->m_Definition.m_Type));
 #ifdef DEBUG
                     __debugbreak();
 #endif
@@ -369,7 +385,10 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
     int32_t element_size = 0;
     bool    is_primitive = true;
 
-    switch ((jc::AvalancheDataFormat::TypeMemberHash)info->m_TypeDef->m_Definition.m_ElementTypeHash) {
+    const auto& definition   = info->m_TypeDef->m_Definition;
+    const auto  element_type = static_cast<jc::AvalancheDataFormat::TypeMemberHash>(definition.m_ElementTypeHash);
+
+    switch ((jc::AvalancheDataFormat::TypeMemberHash)definition.m_ElementTypeHash) {
         case jc::AvalancheDataFormat::TypeMemberHash::Int8:
         case jc::AvalancheDataFormat::TypeMemberHash::UInt8: {
             element_size = 1;
@@ -404,24 +423,22 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
 
         default: {
             is_primitive = false;
-            element_size = info->m_TypeDef->m_Parent->GetTypeDefinition(info->m_TypeDef->m_Definition.m_ElementTypeHash)
-                               ->m_Definition.m_Size;
+            element_size =
+                info->m_TypeDef->m_Parent->GetTypeDefinition(definition.m_ElementTypeHash)->m_Definition.m_Size;
             break;
         }
     }
 
     if (is_primitive) {
-        LOG_TRACE("Need to setup primitive. (ElementCount: {})", info->m_ExpectedElementCount);
+        info->m_DataType = element_type;
 
-        info->m_Members.emplace_back(std::make_unique<AdfInstanceMemberInfo>(
-            "", info->m_TypeDef->m_Definition.m_ElementTypeHash, info->m_Offset, this, info->m_ExpectedElementCount));
+        info->m_Data.resize(info->m_ExpectedElementCount * element_size);
+        std::memcpy(info->m_Data.data(), &m_Data[info->m_Offset], info->m_Data.size());
     } else {
         LOG_TRACE("Need to setup non-primivite. (ElementCount: {})", info->m_ExpectedElementCount);
 
         for (uint32_t i = 0; i < info->m_ExpectedElementCount; ++i) {
-            const auto element_type_hash = info->m_TypeDef->m_Definition.m_ElementTypeHash;
-            MemberSetupStructMember(info, static_cast<jc::AvalancheDataFormat::TypeMemberHash>(element_type_hash), "",
-                                    (info->m_Offset + element_size * i));
+            MemberSetupStructMember(info, element_type, "", (info->m_Offset + element_size * i));
         }
     }
 }
@@ -452,23 +469,21 @@ AdfInstanceMemberInfo::AdfInstanceMemberInfo(const std::string& name, AdfTypeDef
     m_Adf                  = adf;
     m_ExpectedElementCount = expected_element_count;
 
-    // LOG_TRACE("m_Name=\"{}\", m_Offset={}", name, offset);
-
     adf->MemberSetup(this);
 }
 
-AdfInstanceMemberInfo::AdfInstanceMemberInfo(const std::string& name, uint32_t type_hash, int64_t offset,
-                                             AdfInstanceInfo* adf)
+AdfInstanceMemberInfo::AdfInstanceMemberInfo(const std::string& name, jc::AvalancheDataFormat::TypeMemberHash type,
+                                             int64_t offset, AdfInstanceInfo* adf)
 {
     m_Name       = name;
     m_Type       = jc::AvalancheDataFormat::TypeDefinitionType::Primitive;
-    m_TypeHash   = type_hash;
+    m_DataType   = type;
     m_Offset     = offset;
     m_FileOffset = offset + adf->m_Offset;
     m_Adf        = adf;
 
     //
-    switch (static_cast<jc::AvalancheDataFormat::TypeMemberHash>(type_hash)) {
+    switch (type) {
         case jc::AvalancheDataFormat::TypeMemberHash::Int8:
         case jc::AvalancheDataFormat::TypeMemberHash::UInt8: {
             LOG_TRACE("read byte..");
@@ -488,25 +503,28 @@ AdfInstanceMemberInfo::AdfInstanceMemberInfo(const std::string& name, uint32_t t
     }
 }
 
-AdfInstanceMemberInfo::AdfInstanceMemberInfo(const std::string& name, uint32_t type_hash, int64_t offset,
-                                             AdfInstanceInfo* adf, uint32_t element_count)
+AdfInstanceMemberInfo::AdfInstanceMemberInfo(const std::string& name, AdfTypeDefinition* type, int64_t offset,
+                                             AdfInstanceInfo* adf, jc::AvalancheDataFormat::Enum* enum_data)
 {
     m_Name       = name;
-    m_Type       = jc::AvalancheDataFormat::TypeDefinitionType::Primitive;
-    m_TypeHash   = type_hash;
+    m_Type       = type->m_Definition.m_Type;
+    m_TypeDef    = type;
     m_Offset     = offset;
     m_FileOffset = offset + adf->m_Offset;
     m_Adf        = adf;
 
-    switch (static_cast<jc::AvalancheDataFormat::TypeMemberHash>(type_hash)) {
-        case jc::AvalancheDataFormat::TypeMemberHash::Int8:
-        case jc::AvalancheDataFormat::TypeMemberHash::UInt8: {
-            LOG_TRACE("read {} bytes from {}..", element_count, m_Offset);
+    // init enum member data
+    {
+        auto member = std::make_unique<AdfInstanceMemberInfo>();
 
-            m_Data.resize(element_count);
-            std::memcpy(m_Data.data(), &adf->m_Data[m_Offset], element_count);
+        member->m_Name     = adf->m_Parent->m_Names[enum_data->m_NameIndex];
+        member->m_Type     = jc::AvalancheDataFormat::TypeDefinitionType::Primitive;
+        member->m_DataType = jc::AvalancheDataFormat::TypeMemberHash::Int32;
+        member->m_Adf      = adf;
 
-            break;
-        }
+        member->m_Data.resize(sizeof(enum_data->m_Value));
+        std::memcpy(member->m_Data.data(), &enum_data->m_Value, sizeof(enum_data->m_Value));
+
+        m_Members.emplace_back(std::move(member));
     }
 }

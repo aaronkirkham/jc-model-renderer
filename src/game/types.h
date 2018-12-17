@@ -558,10 +558,16 @@ namespace AvalancheDataFormat
         int64_t  m_NameIndex;
     };
 
+    struct Enum {
+        int64_t m_NameIndex;
+        int32_t m_Value;
+    };
+
     static_assert(sizeof(Header) == 0x48, "AvalancheDataFormat Header alignment is wrong!");
     static_assert(sizeof(TypeDefinition) == 0x24, "AvalancheDataFormat TypeDefinition alignment is wrong!");
     static_assert(sizeof(MemeberDefinition) == 0x20, "AvalancheDataFormat MemeberDefinition alignment is wrong!");
     static_assert(sizeof(InstanceInfo) == 0x18, "AvalancheDataFormat InstanceInfo alignment is wrong!");
+    static_assert(sizeof(Enum) == 0xC, "AvalancheDataFormat Enum alignment is wrong!");
 } // namespace AvalancheDataFormat
 
 template <typename T> inline static T ALIGN_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))

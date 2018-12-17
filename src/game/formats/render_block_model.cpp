@@ -41,7 +41,7 @@ RenderBlockModel::~RenderBlockModel()
     }
 }
 
-bool RenderBlockModel::Parse(const FileBuffer& data, bool add_to_render_list)
+bool RenderBlockModel::ParseRBM(const FileBuffer& data, bool add_to_render_list)
 {
     std::istringstream stream(std::string{(char*)data.data(), data.size()});
 
@@ -156,6 +156,66 @@ end:
     return parse_success;
 }
 
+#include "../renderblocks/renderblockgeneral.h"
+
+void RenderBlockModel::ParseAMF(const FileBuffer& data, ParseCallback_t callback, bool add_to_render_list)
+{
+    auto model_adf = AvalancheDataFormat::make(m_Filename);
+    if (!model_adf->Parse(data)) {
+        LOG_ERROR("Failed to parse modelc ADF!");
+        return callback(false);
+    }
+
+    auto        inst      = model_adf->GetMember("instance");
+    const auto& mesh_name = inst->m_Members[0]->m_StringData;
+
+    auto  materials       = model_adf->GetMember(inst, "Materials");
+    auto& render_block_id = model_adf->GetMember(materials, "RenderBlockId")->m_StringData;
+
+    const auto render_block = RenderBlockFactory::CreateRenderBlock(render_block_id);
+    if (render_block) {
+        render_block->SetParent(this);
+    }
+
+    FileLoader::Get()->ReadFile(mesh_name, [&, callback, mesh_name, render_block](bool success, FileBuffer data) {
+        if (success) {
+            auto mesh_adf = AvalancheDataFormat::make(mesh_name);
+            if (!mesh_adf->Parse(data)) {
+                LOG_ERROR("Failed to parse meshc ADF");
+                return callback(false);
+            }
+
+            auto strides = mesh_adf->GetMember("VertexStreamStrides");
+            auto offsets = mesh_adf->GetMember("VertexStreamOffsets");
+
+            auto& _offsets = CastBuffer<uint32_t>(&offsets->m_Data);
+
+            auto vertex_buffers = mesh_adf->GetMember("VertexBuffers");
+            auto index_buffers  = mesh_adf->GetMember("IndexBuffers");
+
+            auto vb_data = mesh_adf->GetMember(vertex_buffers, "Data")->m_Data;
+            auto ib_data = mesh_adf->GetMember(index_buffers, "Data")->m_Data;
+
+            //
+            auto stream_attr  = mesh_adf->GetMember("StreamAttributes");
+            //auto packing_data = stream_attr->m_Members[2]->m_Members[2]; // PackingData
+
+            // multiple vertex buffers
+            FileBuffer vert_data;
+            std::copy(vb_data.begin() + _offsets[0], vb_data.begin() + _offsets[1], std::back_inserter(vert_data));
+            FileBuffer uv_data;
+            std::copy(vb_data.begin() + _offsets[1], vb_data.end(), std::back_inserter(uv_data));
+
+            ((RenderBlockGeneral*)render_block)->CreateBuffers(&vert_data, &uv_data, &ib_data);
+
+            m_RenderBlocks.emplace_back(render_block);
+            // Renderer::Get()->AddToRenderList(render_block);
+        }
+
+        callback(success);
+    });
+}
+
 void RenderBlockModel::DrawGizmos()
 {
     auto largest_scale = 0.0f;
@@ -200,7 +260,12 @@ void RenderBlockModel::ReadFileCallback(const std::filesystem::path& filename, c
 {
     auto rbm = RenderBlockModel::make(filename);
     assert(rbm);
-    rbm->Parse(data);
+
+    if (filename.extension() == ".rbm") {
+        rbm->ParseRBM(data);
+    } else if (filename.extension() == ".modelc") {
+        rbm->ParseAMF(data, [](bool) {});
+    }
 }
 
 bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path)
@@ -265,9 +330,7 @@ void RenderBlockModel::Load(const std::filesystem::path& filename)
 {
     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
         if (success) {
-            auto rbm = RenderBlockModel::make(filename);
-            assert(rbm);
-            rbm->Parse(data);
+            RenderBlockModel::ReadFileCallback(filename, std::move(data), false);
         } else {
             LOG_ERROR("Failed to read model \"{}\"", filename.string());
         }
