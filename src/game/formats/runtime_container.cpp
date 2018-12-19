@@ -6,6 +6,8 @@
 
 #include <misc/cpp/imgui_stdlib.h>
 
+extern bool g_IsJC4Mode;
+
 std::recursive_mutex                                  Factory<RuntimeContainer>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<RuntimeContainer>> Factory<RuntimeContainer>::Instances;
 
@@ -166,6 +168,203 @@ void RuntimeContainer::ReadFileCallback(const std::filesystem::path& filename, c
 {
     const auto rtpc = FileLoader::Get()->ParseRuntimeContainer(filename, data);
     assert(rtpc);
+}
+
+bool RuntimeContainer::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path)
+{
+    const auto rc = RuntimeContainer::get(filename.string());
+    if (rc) {
+        using namespace jc::RuntimeContainer;
+
+		std::ofstream stream(path, std::ios::binary);
+        if (stream.fail()) {
+            return false;
+        }
+
+        // generate the header
+        Header header;
+        header.m_Version = g_IsJC4Mode ? 3 : 1;
+        stream.write((char*)&header, sizeof(header));
+
+        //
+        std::queue<std::pair<uint32_t, RuntimeContainer*>> instance_queue;
+        instance_queue.push({sizeof(Header), rc.get()});
+
+        //
+        std::vector<std::pair<uint32_t, Node>>    raw_nodes;
+        std::unordered_map<std::string, uint32_t> string_offsets;
+
+        stream.seekp(static_cast<uint32_t>(stream.tellp()) + sizeof(Node));
+        while (!instance_queue.empty()) {
+            const auto& [offset, container] = instance_queue.front();
+
+            auto properties = container->GetProperties();
+            auto containers = container->GetContainers();
+
+            // sort properties
+            std::sort(properties.begin(), properties.end(),
+                      [&](RuntimeContainerProperty* a, RuntimeContainerProperty* b) {
+                          return a->GetNameHash() < b->GetNameHash();
+                      });
+
+            // sort containers
+            std::sort(containers.begin(), containers.end(),
+                      [&](RuntimeContainer* a, RuntimeContainer* b) { return a->GetNameHash() < b->GetNameHash(); });
+
+            const uint32_t prop_offset            = static_cast<uint32_t>(stream.tellp());
+            const uint32_t _child_offset_no_align = (prop_offset + (sizeof(Property) * properties.size()));
+            uint32_t       child_offset           = jc::ALIGN_TO_BOUNDARY(_child_offset_no_align);
+            const uint32_t prop_data_offset       = (child_offset + (sizeof(Node) * containers.size()));
+
+            Node _node{container->GetNameHash(), prop_offset, static_cast<uint16_t>(properties.size()),
+                       static_cast<uint16_t>(containers.size())};
+            raw_nodes.emplace_back(std::make_pair(offset, std::move(_node)));
+
+            std::vector<Property> _raw_properties;
+            _raw_properties.reserve(properties.size());
+
+            // write property data
+            stream.seekp(prop_data_offset);
+            for (const auto& prop : properties) {
+                auto       current_pos = static_cast<uint32_t>(stream.tellp());
+                const auto type        = prop->GetType();
+
+                // alignment
+                if (type != RTPC_TYPE_INTEGER && type != RTPC_TYPE_FLOAT && type != RTPC_TYPE_STRING) {
+                    const auto padding = jc::DISTANCE_TO_BOUNDARY(current_pos);
+                    current_pos += padding;
+
+                    static uint8_t PADDING_BYTE = 0x50;
+                    stream.write((char*)&PADDING_BYTE, padding);
+                }
+
+                Property _raw_property{prop->GetNameHash(), current_pos, prop->GetType()};
+                switch (type) {
+                    case RTPC_TYPE_INTEGER: {
+                        auto value                 = std::any_cast<int32_t>(prop->GetValue());
+                        _raw_property.m_DataOffset = static_cast<uint32_t>(value);
+                        break;
+                    }
+
+                    case RTPC_TYPE_FLOAT: {
+                        auto value                 = std::any_cast<float>(prop->GetValue());
+                        _raw_property.m_DataOffset = static_cast<uint32_t>(value);
+                        break;
+                    }
+
+                    case RTPC_TYPE_STRING: {
+                        auto& value = std::any_cast<std::string>(prop->GetValue());
+
+                        auto it = string_offsets.find(value);
+                        if (it == string_offsets.end()) {
+                            string_offsets[value] = _raw_property.m_DataOffset;
+
+                            // write the null-terminated string value
+                            stream.write(value.c_str(), value.length());
+                            stream << '\0';
+                        }
+                        // update the current property data offset
+                        else {
+                            _raw_property.m_DataOffset = (*it).second;
+                        }
+
+                        break;
+                    }
+
+                    case RTPC_TYPE_VEC2:
+                    case RTPC_TYPE_VEC3:
+                    case RTPC_TYPE_VEC4:
+                    case RTPC_TYPE_MAT4X4: {
+                        if (type == RTPC_TYPE_VEC2) {
+                            auto& value = std::any_cast<glm::vec2>(prop->GetValue());
+                            stream.write((char*)&value, sizeof(value));
+                        } else if (type == RTPC_TYPE_VEC3) {
+                            auto& value = std::any_cast<glm::vec3>(prop->GetValue());
+                            stream.write((char*)&value, sizeof(value));
+                        } else if (type == RTPC_TYPE_VEC4) {
+                            auto& value = std::any_cast<glm::vec4>(prop->GetValue());
+                            stream.write((char*)&value, sizeof(value));
+                        } else if (type == RTPC_TYPE_MAT4X4) {
+                            auto& value = std::any_cast<glm::mat4x4>(prop->GetValue());
+                            stream.write((char*)&value, sizeof(value));
+                        }
+
+                        break;
+                    }
+
+                    case RTPC_TYPE_LIST_INTEGERS:
+                    case RTPC_TYPE_LIST_FLOATS:
+                    case RTPC_TYPE_LIST_BYTES: {
+                        if (type == RTPC_TYPE_LIST_INTEGERS) {
+                            auto& value = std::any_cast<std::vector<int32_t>>(prop->GetValue());
+                            auto  count = static_cast<uint32_t>(value.size());
+
+                            stream.write((char*)&count, sizeof(count));
+                            stream.write((char*)value.data(), (value.size() * sizeof(int32_t)));
+                        } else if (type == RTPC_TYPE_LIST_FLOATS) {
+                            auto& value = std::any_cast<std::vector<float>>(prop->GetValue());
+                            auto  count = static_cast<uint32_t>(value.size());
+
+                            stream.write((char*)&count, sizeof(count));
+                            stream.write((char*)value.data(), (value.size() * sizeof(float)));
+                        } else if (type == RTPC_TYPE_LIST_BYTES) {
+                            auto& value = std::any_cast<std::vector<uint8_t>>(prop->GetValue());
+                            auto  count = static_cast<uint32_t>(value.size());
+
+                            stream.write((char*)&count, sizeof(count));
+                            stream.write((char*)value.data(), (value.size() * sizeof(uint8_t)));
+                        }
+
+                        break;
+                    }
+
+                    case RTPC_TYPE_OBJECT_ID: {
+                        auto& value = std::any_cast<std::pair<uint32_t, uint32_t>>(prop->GetValue());
+                        stream.write((char*)&value, (sizeof(uint32_t) * 2));
+                        break;
+                    }
+
+                    case RTPC_TYPE_EVENTS: {
+                        auto& value = std::any_cast<std::vector<std::pair<uint32_t, uint32_t>>>(prop->GetValue());
+
+                        auto count = static_cast<uint32_t>(value.size());
+                        stream.write((char*)&count, sizeof(count));
+                        stream.write((char*)value.data(), (value.size() * (sizeof(uint32_t) * 2)));
+                        break;
+                    }
+                }
+
+                _raw_properties.emplace_back(std::move(_raw_property));
+            }
+
+            auto current_pos       = static_cast<uint32_t>(stream.tellp());
+            auto child_data_offset = jc::ALIGN_TO_BOUNDARY(current_pos);
+
+            // write properties
+            stream.seekp(prop_offset);
+            stream.write((char*)_raw_properties.data(), (sizeof(Property) * _raw_properties.size()));
+
+            // write child containers
+            stream.seekp(child_data_offset);
+            for (auto child : containers) {
+                instance_queue.push({child_offset, child});
+                child_offset += sizeof(Node);
+            }
+
+            instance_queue.pop();
+        }
+
+        // write the nodes
+        for (const auto& node : raw_nodes) {
+            stream.seekp(node.first);
+            stream.write((char*)&node.second, sizeof(node.second));
+        }
+
+		stream.close();
+        return true;
+    }
+
+    return false;
 }
 
 void RuntimeContainer::DrawUI(int32_t index, uint8_t depth)

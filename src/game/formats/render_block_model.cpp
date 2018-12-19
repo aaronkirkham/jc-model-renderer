@@ -160,6 +160,7 @@ end:
 
 void RenderBlockModel::ParseAMF(const FileBuffer& data, ParseCallback_t callback, bool add_to_render_list)
 {
+#ifdef DEBUG
     auto model_adf = AvalancheDataFormat::make(m_Filename);
     if (!model_adf->Parse(data)) {
         LOG_ERROR("Failed to parse modelc ADF!");
@@ -197,8 +198,8 @@ void RenderBlockModel::ParseAMF(const FileBuffer& data, ParseCallback_t callback
             auto ib_data = mesh_adf->GetMember(index_buffers, "Data")->m_Data;
 
             //
-            auto stream_attr  = mesh_adf->GetMember("StreamAttributes");
-            //auto packing_data = stream_attr->m_Members[2]->m_Members[2]; // PackingData
+            auto stream_attr = mesh_adf->GetMember("StreamAttributes");
+            // auto packing_data = stream_attr->m_Members[2]->m_Members[2]; // PackingData
 
             // multiple vertex buffers
             FileBuffer vert_data;
@@ -214,6 +215,7 @@ void RenderBlockModel::ParseAMF(const FileBuffer& data, ParseCallback_t callback
 
         callback(success);
     });
+#endif
 }
 
 void RenderBlockModel::DrawGizmos()

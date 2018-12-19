@@ -96,7 +96,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         Window::Get()->CheckForUpdates();
 #endif
 
-#ifdef DEBUG
+#if 1
         // input thread
         std::thread([&] {
             while (true) {
@@ -105,10 +105,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     continue;
                 }
 
-                if (GetAsyncKeyState(VK_F1) & 1) {
-                    // FileLoader::Get()->LocateFileInDictionary("models/jc_environments/props/animation_prop/textures/bucket_dif.hmddsc");
-                    FileLoader::Get()->LocateFileInDictionary("bucket_dif.hmddsc");
-                }
+                if (GetAsyncKeyState(VK_F1) & 1) {}
 
                 if (GetAsyncKeyState(VK_F2) & 1) {
                     std::filesystem::path filename = "editor/entities/gameobjects/main_character.ee";
@@ -276,6 +273,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         // register save file type callbacks
         FileLoader::Get()->RegisterSaveCallback({".rbm"}, RenderBlockModel::SaveFileCallback);
         FileLoader::Get()->RegisterSaveCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::SaveFileCallback);
+        FileLoader::Get()->RegisterSaveCallback({".epe", ".blo"}, RuntimeContainer::SaveFileCallback);
 
 #if 1
         FileLoader::Get()->RegisterReadCallback({".meshc", ".hrmeshc"}, AvalancheDataFormat::FileReadCallback);

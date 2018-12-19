@@ -2,8 +2,8 @@
 
 #include <any>
 
-#include "../../graphics/types.h"
 #include "../../factory.h"
+#include "../../graphics/types.h"
 
 enum PropertyType : uint8_t {
     RTPC_TYPE_UNASSIGNED = 0,
@@ -122,18 +122,21 @@ class RuntimeContainer : public Factory<RuntimeContainer>
 
     void GenerateBetterNames();
 
+    static void ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);
+    static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path);
+
+    void        DrawUI(int32_t index = 0, uint8_t depth = 0);
+    static void ContextMenuUI(const std::filesystem::path& filename);
+
     void AddProperty(RuntimeContainerProperty* prop)
     {
         m_Properties.emplace_back(prop);
     }
+
     void AddContainer(RuntimeContainer* cont)
     {
         m_Containers.emplace_back(cont);
-    };
-
-    static void ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);
-    void        DrawUI(int32_t index = 0, uint8_t depth = 0);
-    static void ContextMenuUI(const std::filesystem::path& filename);
+    }
 
     void SetFileName(const std::filesystem::path& filename)
     {

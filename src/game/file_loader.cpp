@@ -1169,90 +1169,6 @@ bool FileLoader::WriteAVTX(Texture* texture, FileBuffer* outData) noexcept
     return true;
 }
 
-void FileLoader::WriteRuntimeContainer(RuntimeContainer* runtime_container) noexcept
-{
-    std::ofstream stream("C:/users/aaron/desktop/rtpc.bin", std::ios::binary);
-    assert(!stream.fail());
-
-    assert(runtime_container);
-
-    // generate the header
-    jc::RuntimeContainer::Header header;
-    strncpy(header.m_Magic, "RTPC", 4);
-    header.m_Version = 1;
-
-    stream.write((char*)&header, sizeof(header));
-
-    // get the inital write offset (header + root node)
-    auto offset = static_cast<uint32_t>(sizeof(jc::RuntimeContainer::Header) + sizeof(jc::RuntimeContainer::Node));
-
-    std::queue<RuntimeContainer*> instanceQueue;
-    instanceQueue.push(runtime_container);
-
-    while (!instanceQueue.empty()) {
-        const auto& container = instanceQueue.front();
-
-        const auto& properties = container->GetProperties();
-        const auto& instances  = container->GetContainers();
-
-        // write the current node
-        jc::RuntimeContainer::Node _node;
-        _node.m_NameHash      = container->GetNameHash();
-        _node.m_DataOffset    = offset;
-        _node.m_PropertyCount = properties.size();
-        _node.m_InstanceCount = instances.size();
-
-        stream.write((char*)&_node, sizeof(_node));
-
-        auto _child_offset =
-            offset + static_cast<uint32_t>(sizeof(jc::RuntimeContainer::Property) * _node.m_PropertyCount);
-
-        // calculate the property and instance write offsets
-        const auto property_offset  = offset;
-        const auto child_offset     = jc::ALIGN_TO_BOUNDARY(_child_offset);
-        const auto prop_data_offset = child_offset + (sizeof(jc::RuntimeContainer::Node) * _node.m_InstanceCount);
-
-        // write all the properties
-#if 0
-        stream.seekp(prop_data_offset);
-		LOG_TRACE("seek to {} to write properties...", prop_data_offset);
-        for (const auto& prop : properties) {
-            if (prop->GetType() == PropertyType::RTPC_TYPE_INTEGER || prop->GetType() == PropertyType::RTPC_TYPE_FLOAT) {
-            }
-            else if (prop->GetType() == PropertyType::RTPC_TYPE_STRING) {
-            }
-            else {
-            }
-
-            jc::RuntimeContainer::Property _prop;
-            _prop.m_NameHash = prop->GetNameHash();
-            _prop.m_Data = 0;
-            _prop.m_Type = static_cast<uint8_t>(prop->GetType());
-
-            stream.write((char *)&_prop, sizeof(_prop));
-        }
-#endif
-
-        stream.seekp(property_offset);
-        for (const auto& prop : properties) {
-            if (prop->GetType() == PropertyType::RTPC_TYPE_INTEGER) {
-                auto val = prop->GetValue<int32_t>();
-                stream.write((char*)&val, sizeof(val));
-            } else if (prop->GetType() == PropertyType::RTPC_TYPE_FLOAT) {
-                auto val = prop->GetValue<float>();
-                stream.write((char*)&val, sizeof(val));
-            }
-        }
-
-        // queue all the child nodes
-        for (const auto& child : instances) {
-            instanceQueue.push(child);
-        }
-
-        instanceQueue.pop();
-    }
-}
-
 std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::filesystem::path& filename,
                                                                     const FileBuffer&            buffer) noexcept
 {
@@ -1326,7 +1242,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
         const auto& [current_property, prop] = propertyQueue.front();
 
         // read each type
-        const auto& type = current_property->GetType();
+        const auto type = current_property->GetType();
         switch (type) {
             // integer
             case RTPC_TYPE_INTEGER: {
@@ -1442,6 +1358,13 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
                 }
 
                 current_property->SetValue(result);
+                break;
+            }
+
+            default: {
+#ifdef DEBUG
+                __debugbreak();
+#endif
                 break;
             }
         }
