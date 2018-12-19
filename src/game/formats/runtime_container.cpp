@@ -176,7 +176,7 @@ bool RuntimeContainer::SaveFileCallback(const std::filesystem::path& filename, c
     if (rc) {
         using namespace jc::RuntimeContainer;
 
-		std::ofstream stream(path, std::ios::binary);
+        std::ofstream stream(path, std::ios::binary);
         if (stream.fail()) {
             return false;
         }
@@ -360,7 +360,7 @@ bool RuntimeContainer::SaveFileCallback(const std::filesystem::path& filename, c
             stream.write((char*)&node.second, sizeof(node.second));
         }
 
-		stream.close();
+        stream.close();
         return true;
     }
 
