@@ -1347,7 +1347,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
                 stream.read((char*)&count, sizeof(count));
 
                 std::vector<std::pair<uint32_t, uint32_t>> result;
-                result.resize(count);
+                result.reserve(count);
 
                 for (int32_t i = 0; i < count; ++i) {
                     uint32_t key, value;
