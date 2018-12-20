@@ -231,11 +231,20 @@ bool RuntimeContainer::SaveFileCallback(const std::filesystem::path& filename, c
 
                 // alignment
                 if (type != RTPC_TYPE_INTEGER && type != RTPC_TYPE_FLOAT && type != RTPC_TYPE_STRING) {
-                    const auto padding = jc::DISTANCE_TO_BOUNDARY(current_pos);
+                    uint32_t alignment = 4;
+
+                    if (type == RTPC_TYPE_VEC4 || type == RTPC_TYPE_MAT4X4) {
+                        alignment = 16;
+                    }
+
+                    // write padding bytes
+                    auto padding = jc::DISTANCE_TO_BOUNDARY(current_pos, alignment);
                     current_pos += padding;
 
                     static uint8_t PADDING_BYTE = 0x50;
-                    stream.write((char*)&PADDING_BYTE, padding);
+                    for (decltype(padding) i = 0; i < padding; ++i) {
+                        stream.write((char*)&PADDING_BYTE, 1);
+                    }
                 }
 
                 Property _raw_property{prop->GetNameHash(), current_pos, prop->GetType()};
@@ -248,7 +257,7 @@ bool RuntimeContainer::SaveFileCallback(const std::filesystem::path& filename, c
 
                     case RTPC_TYPE_FLOAT: {
                         auto value                 = std::any_cast<float>(prop->GetValue());
-                        _raw_property.m_DataOffset = static_cast<uint32_t>(value);
+                        _raw_property.m_DataOffset = *(uint32_t*)&value;
                         break;
                     }
 
@@ -297,22 +306,22 @@ bool RuntimeContainer::SaveFileCallback(const std::filesystem::path& filename, c
                     case RTPC_TYPE_LIST_BYTES: {
                         if (type == RTPC_TYPE_LIST_INTEGERS) {
                             auto& value = std::any_cast<std::vector<int32_t>>(prop->GetValue());
-                            auto  count = static_cast<uint32_t>(value.size());
+                            auto  count = static_cast<int32_t>(value.size());
 
                             stream.write((char*)&count, sizeof(count));
-                            stream.write((char*)value.data(), (value.size() * sizeof(int32_t)));
+                            stream.write((char*)value.data(), (count * sizeof(int32_t)));
                         } else if (type == RTPC_TYPE_LIST_FLOATS) {
                             auto& value = std::any_cast<std::vector<float>>(prop->GetValue());
-                            auto  count = static_cast<uint32_t>(value.size());
+                            auto  count = static_cast<int32_t>(value.size());
 
                             stream.write((char*)&count, sizeof(count));
-                            stream.write((char*)value.data(), (value.size() * sizeof(float)));
+                            stream.write((char*)value.data(), (count * sizeof(float)));
                         } else if (type == RTPC_TYPE_LIST_BYTES) {
                             auto& value = std::any_cast<std::vector<uint8_t>>(prop->GetValue());
-                            auto  count = static_cast<uint32_t>(value.size());
+                            auto  count = static_cast<int32_t>(value.size());
 
                             stream.write((char*)&count, sizeof(count));
-                            stream.write((char*)value.data(), (value.size() * sizeof(uint8_t)));
+                            stream.write((char*)value.data(), (count * sizeof(uint8_t)));
                         }
 
                         break;
@@ -327,9 +336,9 @@ bool RuntimeContainer::SaveFileCallback(const std::filesystem::path& filename, c
                     case RTPC_TYPE_EVENTS: {
                         auto& value = std::any_cast<std::vector<std::pair<uint32_t, uint32_t>>>(prop->GetValue());
 
-                        auto count = static_cast<uint32_t>(value.size());
+                        auto count = static_cast<int32_t>(value.size());
                         stream.write((char*)&count, sizeof(count));
-                        stream.write((char*)value.data(), (value.size() * (sizeof(uint32_t) * 2)));
+                        stream.write((char*)value.data(), (count * (sizeof(uint32_t) * 2)));
                         break;
                     }
                 }
@@ -337,15 +346,14 @@ bool RuntimeContainer::SaveFileCallback(const std::filesystem::path& filename, c
                 _raw_properties.emplace_back(std::move(_raw_property));
             }
 
-            auto current_pos       = static_cast<uint32_t>(stream.tellp());
-            auto child_data_offset = jc::ALIGN_TO_BOUNDARY(current_pos);
+            auto child_data_offset = static_cast<uint32_t>(stream.tellp());
 
             // write properties
             stream.seekp(prop_offset);
             stream.write((char*)_raw_properties.data(), (sizeof(Property) * _raw_properties.size()));
 
             // write child containers
-            stream.seekp(child_data_offset);
+            stream.seekp(jc::ALIGN_TO_BOUNDARY(child_data_offset));
             for (auto child : containers) {
                 instance_queue.push({child_offset, child});
                 child_offset += sizeof(Node);
