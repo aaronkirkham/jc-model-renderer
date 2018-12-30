@@ -50,13 +50,24 @@ RuntimeContainer::~RuntimeContainer()
 void RuntimeContainer::GenerateBetterNames()
 {
     std::string tmp;
-    const auto  _class = GetProperty("_class", false);
-    const auto  _name  = GetProperty("name", false);
+    auto        _class = GetProperty("_class", false);
+    auto        _name  = GetProperty("name", false);
 
     if (_class) {
         tmp.append(_class->GetValue<std::string>());
         if (_name) {
             tmp.append(" (");
+        }
+    }
+    // if we don't have a class name, look for the class hash (mainly used in jc4)
+    else {
+        _class = GetProperty("_class_hash", false);
+
+        if (_class) {
+            tmp.append(NameHashLookup::GetName(_class->GetValue<int32_t>()));
+            if (_name) {
+                tmp.append(" (");
+            }
         }
     }
 
@@ -186,10 +197,12 @@ void WriteNode(std::ofstream& stream, RuntimeContainer* node, std::unordered_map
     std::vector<Property> _raw_properties;
     _raw_properties.reserve(properties.size());
 
-    std::sort(properties.begin(), properties.end(),
-              [](const RuntimeContainerProperty* a, const RuntimeContainerProperty* b) {
-                  return a->GetNameHash() < b->GetNameHash();
-              });
+    if (g_IsJC4Mode) {
+        std::sort(properties.begin(), properties.end(),
+                  [](const RuntimeContainerProperty* a, const RuntimeContainerProperty* b) {
+                      return a->GetNameHash() < b->GetNameHash();
+                  });
+    }
 
     // write property data
     stream.seekp(prop_data_offset);
@@ -326,11 +339,8 @@ void WriteNode(std::ofstream& stream, RuntimeContainer* node, std::unordered_map
     // write child containers
     stream.seekp(jc::ALIGN_TO_BOUNDARY(child_data_offset));
     for (auto child : containers) {
-        const auto offset = static_cast<uint32_t>(stream.tellp());
-
-        // TODO: offsets are wrong.. maybe?
-
-        Node _node{child->GetNameHash(), offset, static_cast<uint16_t>(child->GetProperties().size()),
+        Node _node{child->GetNameHash(), static_cast<uint32_t>(stream.tellp()),
+                   static_cast<uint16_t>(child->GetProperties().size()),
                    static_cast<uint16_t>(child->GetContainers().size())};
         raw_nodes.emplace_back(std::make_pair(child_offset, std::move(_node)));
 
@@ -353,7 +363,7 @@ bool RuntimeContainer::SaveFileCallback(const std::filesystem::path& filename, c
 
         // generate the header
         Header header;
-        header.m_Version = g_IsJC4Mode ? 3 : 1;
+        header.m_Version = 1;
         stream.write((char*)&header, sizeof(header));
 
         //
@@ -385,7 +395,7 @@ bool RuntimeContainer::SaveFileCallback(const std::filesystem::path& filename, c
 void RuntimeContainer::DrawUI(int32_t index, uint8_t depth)
 {
     // skip "root"
-    if (m_NameHash == 0xaa7d522a) {
+    if (m_NameHash == 0xAA7D522A) {
         // draw children
         if (m_Containers.size() > 0) {
             auto _depth = ++depth;
@@ -401,6 +411,20 @@ void RuntimeContainer::DrawUI(int32_t index, uint8_t depth)
 
     if (ImGui::TreeNode(title.c_str())) {
         for (const auto& prop : GetSortedProperties()) {
+            // special case for hashes
+            // TODO: Move into a function which gets run once, we need lots of custom cases for these (vehicles)
+            // instead of just showing the hash, we should do a NameHashLookup and show the string value. If the
+            // string is changed, when we save the EPE we need to convert the string back to a hash and save that
+            if (prop->GetNameHash() == 0x932E9257 || // ragdoll
+                prop->GetNameHash() == 0x26FA86FE || // skeleton
+                prop->GetNameHash() == 0x0F94740B || // model
+                prop->GetName().rfind("hash") != std::string::npos) {
+                auto value = std::any_cast<int32_t>(prop->GetValue());
+                ImGui::InputInt(prop->GetName().c_str(), (int32_t*)&value, 0, 0,
+                                ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_ReadOnly);
+                continue;
+            }
+
             switch (prop->GetType()) {
                 case RTPC_TYPE_INTEGER: {
                     auto value = std::any_cast<int32_t>(prop->GetValue());

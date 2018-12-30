@@ -1362,9 +1362,6 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
             }
 
             default: {
-#ifdef DEBUG
-                __debugbreak();
-#endif
                 break;
             }
         }
