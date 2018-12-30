@@ -50,37 +50,42 @@ RuntimeContainer::~RuntimeContainer()
 void RuntimeContainer::GenerateBetterNames()
 {
     std::string tmp;
-    auto        _class = GetProperty("_class", false);
     auto        _name  = GetProperty("name", false);
+    auto        _class = GetProperty("_class", false);
 
+    // append the real name
+    if (_name) {
+        tmp.append(_name->GetValue<std::string>());
+    }
+
+    // append the class name
     if (_class) {
-        tmp.append(_class->GetValue<std::string>());
         if (_name) {
             tmp.append(" (");
         }
-    }
-    // if we don't have a class name, look for the class hash (mainly used in jc4)
-    else {
-        _class = GetProperty("_class_hash", false);
 
-        if (_class) {
-            tmp.append(NameHashLookup::GetName(_class->GetValue<int32_t>()));
-            if (_name) {
-                tmp.append(" (");
-            }
+        tmp.append(_class->GetValue<std::string>());
+
+        if (_name) {
+            tmp.append(")");
         }
     }
+    // if we don't have a class name, look for the class hash (mainly used in jc4)
+    else if (_class = GetProperty("_class_hash", false)) {
+        if (_name) {
+            tmp.append(" (");
+        }
 
-    if (_name) {
-        tmp.append(_name->GetValue<std::string>());
-        if (_class) {
+        tmp.append(NameHashLookup::GetName(_class->GetValue<int32_t>()));
+
+        if (_name) {
             tmp.append(")");
         }
     }
 
     if (m_Name.empty()) {
         m_Name = tmp;
-    } else if (!tmp.empty()) {
+    } else {
         m_Name = tmp + " (" + m_Name + ")";
     }
 
@@ -415,10 +420,11 @@ void RuntimeContainer::DrawUI(int32_t index, uint8_t depth)
             // TODO: Move into a function which gets run once, we need lots of custom cases for these (vehicles)
             // instead of just showing the hash, we should do a NameHashLookup and show the string value. If the
             // string is changed, when we save the EPE we need to convert the string back to a hash and save that
-            if (prop->GetNameHash() == 0x932E9257 || // ragdoll
-                prop->GetNameHash() == 0x26FA86FE || // skeleton
-                prop->GetNameHash() == 0x0F94740B || // model
-                prop->GetName().rfind("hash") != std::string::npos) {
+            if (prop->GetType() == RTPC_TYPE_INTEGER
+                && (prop->GetNameHash() == 0x932E9257 || // ragdoll
+                    prop->GetNameHash() == 0x26FA86FE || // skeleton
+                    prop->GetNameHash() == 0x0F94740B || // model
+                    prop->GetName().rfind("hash") != std::string::npos)) {
                 auto value = std::any_cast<int32_t>(prop->GetValue());
                 ImGui::InputInt(prop->GetName().c_str(), (int32_t*)&value, 0, 0,
                                 ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_ReadOnly);
