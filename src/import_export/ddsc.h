@@ -17,7 +17,7 @@ class DDSC : public IImportExporter
 
     ImportExportType GetType() override final
     {
-        return IE_TYPE_EXPORTER;
+        return IE_TYPE_BOTH;
     }
 
     const char* GetName() override final
@@ -37,7 +37,25 @@ class DDSC : public IImportExporter
 
     void Import(const std::filesystem::path& filename, ImportFinishedCallback callback) override final
     {
-        //
+        LOG_INFO("Importing \"{}\"", filename.string());
+
+        if (!std::filesystem::exists(filename)) {
+            return callback(false, filename, 0);
+        }
+
+        std::ifstream stream(filename, std::ios::binary);
+        if (stream.fail()) {
+            return callback(false, filename, 0);
+        }
+
+        const auto size = std::filesystem::file_size(filename);
+
+        FileBuffer buffer;
+        buffer.resize(size);
+        stream.read((char*)buffer.data(), size);
+        stream.close();
+
+        callback(true, filename, std::move(buffer));
     }
 
     void Export(const std::filesystem::path& filename, const std::filesystem::path& to,

@@ -99,22 +99,6 @@ void UI::Render(RenderContext_t* context)
 
         // file
         if (ImGui::BeginMenu("File")) {
-#ifdef ENABLE_ASSET_CREATOR
-            if (ImGui::BeginMenu(ICON_FA_PLUS_SQUARE "  New")) {
-                if (ImGui::MenuItem("Avalanche Archive", ".ee")) {
-                    AvalancheArchive::make("new.ee");
-                }
-
-                if (ImGui::MenuItem("Render Block Model", ".rbm")) {
-                    RenderBlockModel::make("new.rbm");
-                }
-
-                ImGui::EndMenu();
-            }
-
-            ImGui::Separator();
-#endif
-
             // temp game selection.
             if (ImGui::BeginMenu("Select Game")) {
                 // TODO: only enabled if we are not loading anything
@@ -141,9 +125,29 @@ void UI::Render(RenderContext_t* context)
             ImGui::EndMenu();
         }
 
+        // create
+#ifdef ENABLE_ASSET_CREATOR
+        if (ImGui::BeginMenu("Create")) {
+            if (ImGui::MenuItem("Avalanche Archive", ".ee")) {
+                AvalancheArchive::make("new.ee");
+            }
+
+            if (ImGui::MenuItem("Render Block Model", ".rbm")) {
+                RenderBlockModel::make("new.rbm");
+            }
+
+            if (ImGui::MenuItem("Texture", ".ddsc")) {
+                m_NewTextureSettings.Texture      = nullptr;
+                m_NewTextureSettings.ShowSettings = true;
+            }
+
+            ImGui::EndMenu();
+        }
+#endif
+
         // renderer
         if (ImGui::BeginMenu("Renderer")) {
-            if (ImGui::BeginMenu("Visualize")) {
+            if (ImGui::BeginMenu(ICON_FA_EYE "  Visualize")) {
                 if (ImGui::MenuItem("Diffuse", nullptr, m_CurrentActiveGBuffer == 0)) {
                     m_CurrentActiveGBuffer = 0;
                 }
@@ -163,8 +167,23 @@ void UI::Render(RenderContext_t* context)
                 ImGui::EndMenu();
             }
 
+            // camera
+            if (ImGui::BeginMenu(ICON_FA_CAMERA "  Camera")) {
+                if (ImGui::BeginMenu("Focus On", RenderBlockModel::Instances.size() != 0)) {
+                    for (const auto& model : RenderBlockModel::Instances) {
+                        if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
+                            Camera::Get()->FocusOn(model.second.get());
+                        }
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                ImGui::EndMenu();
+            }
+
             static bool wireframe = false;
-            if (ImGui::MenuItem("Wireframe", nullptr, wireframe)) {
+            if (ImGui::MenuItem(ICON_FA_SHAPES "  Wireframe", nullptr, wireframe)) {
                 wireframe = !wireframe;
                 Renderer::Get()->SetFillMode(wireframe ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID);
             }
@@ -187,21 +206,6 @@ void UI::Render(RenderContext_t* context)
 
                 if (ImGui::Button("Reset To Default")) {
                     Renderer::Get()->SetClearColour(g_DefaultClearColour);
-                }
-
-                ImGui::EndMenu();
-            }
-
-            ImGui::EndMenu();
-        }
-
-        // camera
-        if (ImGui::BeginMenu("Camera")) {
-            if (ImGui::BeginMenu(ICON_FA_CAMERA "  Focus On", RenderBlockModel::Instances.size() != 0)) {
-                for (const auto& model : RenderBlockModel::Instances) {
-                    if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
-                        Camera::Get()->FocusOn(model.second.get());
-                    }
                 }
 
                 ImGui::EndMenu();
@@ -415,6 +419,75 @@ void UI::Render(RenderContext_t* context)
         ImGui::End();
     }
 
+    // texture creator
+    if (m_NewTextureSettings.ShowSettings) {
+        ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
+        if (ImGui::Begin("New Texture", &m_NewTextureSettings.ShowSettings, ImGuiWindowFlags_NoCollapse)) {
+            ImGui::Columns(2, nullptr, false);
+            {
+                const auto col_width = (ImGui::GetWindowWidth() / ImGui::GetColumnsCount());
+
+                // draw texture
+                ImGui::BeginGroup();
+                {
+                    if (m_NewTextureSettings.Texture) {
+                        ImGui::Text(m_NewTextureSettings.Texture->GetFileName().string().c_str());
+                        ImGui::Image(m_NewTextureSettings.Texture->GetSRV(), ImVec2(col_width, col_width), ImVec2(0, 0),
+                                     ImVec2(1, 1), ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 1));
+                    }
+
+                    // open texture preview
+                    /*if (texture->IsLoaded() && ImGui::IsItemClicked()) {
+                        TextureManager::Get()->PreviewTexture(texture);
+                    }*/
+
+                    // import from
+                    if (ImGuiCustom::BeginButtonDropDown("Import Texture From")) {
+                        const auto& importers = ImportExportManager::Get()->GetImporters(".ddsc");
+                        for (const auto& importer : importers) {
+                            if (ImGui::MenuItem(importer->GetName(), importer->GetExportExtension())) {
+                                UI::Events().ImportFileRequest(
+                                    importer, [&](bool success, std::filesystem::path filename, std::any data) {
+                                        if (success) {
+                                            auto& buffer                 = std::any_cast<FileBuffer>(data);
+                                            m_NewTextureSettings.Texture = TextureManager::Get()->GetTexture(
+                                                filename, &buffer,
+                                                TextureManager::TextureCreateFlags_CreateIfNotExists);
+                                        }
+                                    });
+                            }
+                        }
+
+                        ImGuiCustom::EndButtonDropDown();
+                    }
+                }
+                ImGui::EndGroup();
+                ImGui::NextColumn();
+
+                // draw text
+                if (m_NewTextureSettings.Texture) {
+                    const auto desc = m_NewTextureSettings.Texture->GetDesc();
+                    ImGui::Text("Width: %d", desc->Width);
+                    ImGui::Text("Height: %d", desc->Height);
+                    ImGui::Text("Format: %d (DXGI_FORMAT_R16G16_SNORM)", desc->Format); // TODO: format to string
+                    ImGui::Text("MipLevels: %d", desc->MipLevels);
+
+					// TODO: choose name & location..
+                    if (ImGui::Button("Save as...")) {
+                        FileBuffer buffer;
+                        if (FileLoader::Get()->WriteAVTX(m_NewTextureSettings.Texture.get(), &buffer)) {
+                            std::ofstream file("C:/users/aaron/desktop/test_texture.ddsc", std::ios::binary);
+                            file.write((char*)buffer.data(), buffer.size());
+                            file.close();
+                        }
+                    }
+                }
+            }
+            ImGui::EndColumns();
+        }
+        ImGui::End();
+    }
+
     // gbuffer view
     {
         ImGui::SetNextWindowPos({0, m_MainMenuBarHeight});
@@ -449,8 +522,8 @@ void UI::Render(RenderContext_t* context)
                 const auto& io        = ImGui::GetIO();
                 const auto& mouse_pos = glm::vec2(io.MousePos.x, io.MousePos.y);
 
-                // because we manually toggle the mouse down when drag/dropping from an external source, we need to
-                // check this or the camera will be moved
+                // because we manually toggle the mouse down when drag/dropping from an external source, we need
+                // to check this or the camera will be moved
                 if (!UI::Get()->IsDragDropping()) {
                     // handle mouse press
                     for (int i = 0; i < 2; ++i) {
@@ -702,17 +775,17 @@ void UI::RenderFileTreeView()
                                         const auto& importers = ImportExportManager::Get()->GetImporters(".rbm");
                                         for (const auto& importer : importers) {
                                             if (ImGui::MenuItem(importer->GetName(), importer->GetExportExtension())) {
-                                                UI::Events().ImportFileRequest(importer, [&](bool     success,
-                                                                                             std::any data) {
-                                                    auto& [vertices, indices, materials] =
-                                                        std::any_cast<std::tuple<vertices_t, uint16s_t, materials_t>>(
-                                                            data);
+                                                UI::Events().ImportFileRequest(
+                                                    importer,
+                                                    [&](bool success, std::filesystem::path filename, std::any data) {
+                                                        auto& [vertices, indices, materials] = std::any_cast<
+                                                            std::tuple<vertices_t, uint16s_t, materials_t>>(data);
 
-                                                    render_block->SetData(&vertices, &indices, &materials);
-                                                    render_block->Create();
+                                                        render_block->SetData(&vertices, &indices, &materials);
+                                                        render_block->Create();
 
-                                                    Renderer::Get()->AddToRenderList(render_block);
-                                                });
+                                                        Renderer::Get()->AddToRenderList(render_block);
+                                                    });
                                             }
                                         }
 

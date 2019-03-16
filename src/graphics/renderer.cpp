@@ -727,6 +727,11 @@ void Renderer::ClearTextures(int32_t start, int32_t last)
 VertexDeclaration_t* Renderer::CreateVertexDeclaration(const D3D11_INPUT_ELEMENT_DESC* layout, uint32_t count,
                                                        VertexShader_t* shader, const char* debugName)
 {
+    if (!shader) {
+        LOG_ERROR("Can't create vertex declaration because vertex shader is nullptr!");
+        return nullptr;
+    }
+
     auto declaration = new VertexDeclaration_t;
     assert(declaration);
 

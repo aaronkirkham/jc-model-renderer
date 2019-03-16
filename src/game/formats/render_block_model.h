@@ -37,6 +37,7 @@ class RenderBlockModel : public Factory<RenderBlockModel>
     static void Load(const std::filesystem::path& filename);
     static void LoadFromRuntimeContainer(const std::filesystem::path& filename, std::shared_ptr<RuntimeContainer> rc);
 
+    bool ParseLOD(const FileBuffer& data);
     bool ParseRBM(const FileBuffer& data, bool add_to_render_list = true);
     void ParseAMF(const FileBuffer& data, ParseCallback_t callback, bool add_to_render_list = true);
 

@@ -70,6 +70,11 @@ class UI : public Singleton<UI>
         std::filesystem::path Filename           = "";
     } m_ExportSettings;
 
+    struct {
+        bool                     ShowSettings = false;
+        std::shared_ptr<Texture> Texture      = nullptr;
+    } m_NewTextureSettings;
+
     ImDrawList* m_SceneDrawList = nullptr;
     float       m_SceneWidth    = 0.0f;
     float       m_SidebarWidth  = MIN_SIDEBAR_WIDTH;

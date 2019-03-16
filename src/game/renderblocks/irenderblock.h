@@ -98,13 +98,9 @@ class IRenderBlock
 
     virtual void Setup(RenderContext_t* context)
     {
-        if (!m_Visible)
+        if (!m_Visible || !m_VertexShader || !m_PixelShader || !m_VertexDeclaration || !m_VertexBuffer) {
             return;
-
-        assert(m_VertexShader);
-        assert(m_PixelShader);
-        assert(m_VertexDeclaration);
-        assert(m_VertexBuffer);
+        }
 
         // enable the vertex and pixel shaders
         context->m_DeviceContext->VSSetShader(m_VertexShader->m_Shader, nullptr, 0);

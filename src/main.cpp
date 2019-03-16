@@ -217,21 +217,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     });*/
 
                     const auto& importers = ImportExportManager::Get()->GetImporters(".rbm");
-                    importers[0]->Import(
-                        "C:/users/aaron/desktop/nanos cube/nanos.obj", [&](bool success, std::any data) {
-                            const auto rbm          = RenderBlockModel::make("nanos.rbm");
-                            const auto render_block = RenderBlockFactory::CreateRenderBlock("GeneralMkIII");
+                    importers[0]->Import("C:/users/aaron/desktop/nanos cube/nanos.obj",
+                                         [&](bool success, std::filesystem::path filename, std::any data) {
+                                             const auto rbm = RenderBlockModel::make("nanos.rbm");
+                                             const auto render_block =
+                                                 RenderBlockFactory::CreateRenderBlock("GeneralMkIII");
 
-                            rbm->GetRenderBlocks().emplace_back(render_block);
+                                             rbm->GetRenderBlocks().emplace_back(render_block);
 
-                            auto& [vertices, indices, materials] =
-                                std::any_cast<std::tuple<vertices_t, uint16s_t, materials_t>>(data);
+                                             auto& [vertices, indices, materials] =
+                                                 std::any_cast<std::tuple<vertices_t, uint16s_t, materials_t>>(data);
 
-                            render_block->SetData(&vertices, &indices, &materials);
-                            render_block->Create();
+                                             render_block->SetData(&vertices, &indices, &materials);
+                                             render_block->Create();
 
-                            Renderer::Get()->AddToRenderList(render_block);
-                        });
+                                             Renderer::Get()->AddToRenderList(render_block);
+                                         });
                 }
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -240,7 +241,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 #endif
 
         // register read file type callbacks
-        FileLoader::Get()->RegisterReadCallback({".rbm", ".modelc"}, RenderBlockModel::ReadFileCallback);
+        FileLoader::Get()->RegisterReadCallback({".lod", ".rbm", ".modelc"}, RenderBlockModel::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({".epe", ".blo"}, RuntimeContainer::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback(

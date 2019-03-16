@@ -101,12 +101,12 @@ class Wavefront_Obj : public IImportExporter
         LOG_INFO("Importing \"{}\"", filename.string());
 
         if (!std::filesystem::exists(filename)) {
-            return callback(false, 0);
+            return callback(false, filename, 0);
         }
 
         std::ifstream stream(filename);
         if (stream.fail()) {
-            return callback(false, 0);
+            return callback(false, filename, 0);
         }
 
         vertices_t  vertices;
@@ -234,7 +234,7 @@ class Wavefront_Obj : public IImportExporter
             }
         }
 
-        callback(true, std::make_tuple(vertices, indices, materials));
+        callback(true, filename, std::make_tuple(vertices, indices, materials));
     }
 
     void WriteModelFile(const std::filesystem::path& filename, const std::filesystem::path& path,

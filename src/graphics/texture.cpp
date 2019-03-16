@@ -53,7 +53,7 @@ bool Texture::LoadFromBuffer(FileBuffer* buffer)
         auto& fn = m_Filename.filename().string();
         D3D_SET_OBJECT_NAME_A(m_Texture, fn.c_str());
         fn += " (SRV)";
-        D3D_SET_OBJECT_NAME_A(m_Texture, fn.c_str());
+        D3D_SET_OBJECT_NAME_A(m_SRV, fn.c_str());
 #endif
     }
 
@@ -70,7 +70,7 @@ bool Texture::LoadFromBuffer(FileBuffer* buffer)
 
 bool Texture::LoadFromFile(const std::filesystem::path& filename)
 {
-    std::ifstream stream(filename.c_str(), std::ios::binary);
+    std::ifstream stream(filename, std::ios::binary);
     if (stream.fail()) {
         LOG_ERROR("Failed to create texture from file \"{}\"", filename.filename().string());
         Window::Get()->ShowMessageBox("Failed to open texture \"" + filename.generic_string() + "\".");

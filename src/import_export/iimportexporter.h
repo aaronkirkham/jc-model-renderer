@@ -7,7 +7,7 @@
 
 enum ImportExportType { IE_TYPE_IMPORTER = 0, IE_TYPE_EXPORTER, IE_TYPE_BOTH };
 
-using ImportFinishedCallback = std::function<void(bool, std::any)>;
+using ImportFinishedCallback = std::function<void(bool, std::filesystem::path, std::any)>;
 using ExportFinishedCallback = std::function<void(bool)>;
 
 class RenderBlockModel;

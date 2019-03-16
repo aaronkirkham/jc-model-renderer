@@ -106,7 +106,7 @@ class RenderBlockGeneral : public IRenderBlock
         m_Block.attributes.packed.scale     = 1.0f;
         m_Block.attributes.packed.uv0Extent = {1.0f, 1.0f};
 
-        // Create();
+        Create();
     }
 
     virtual void Create() override final

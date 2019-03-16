@@ -10,8 +10,10 @@
 
 extern bool g_IsJC4Mode;
 
+#if DUMP_SHADERS
 #pragma comment(lib, "D3dcompiler.lib")
 #include <d3dcompiler.h>
+#endif
 
 void ShaderManager::Init()
 {
@@ -23,80 +25,78 @@ void ShaderManager::Init()
 
     std::thread([&, filename = std::move(filename), status_text_id] {
         m_ShaderBundle = FileLoader::Get()->ReadAdf(filename);
+        UI::Get()->PopStatusText(status_text_id);
 
         // exit now if the shader bundle wasn't loaded
         if (!m_ShaderBundle) {
-            Window::Get()->ShowMessageBox(
-                "Failed to load shader bundle.\n\nPlease make sure your Just Cause directory is valid.",
-                MB_ICONERROR | MB_OK);
+            Window::Get()->ShowMessageBox("Failed to load shader bundle. Some features won't be available.\n\nPlease "
+                                          "make sure your Just Cause directory is valid.",
+                                          MB_ICONWARNING | MB_OK);
+            return;
         }
 
-#if 0
-        // dump shaders
-        {
-            std::filesystem::path path = "C:/users/aaron/desktop/shaders";
-            std::filesystem::create_directories(path);
+#if DUMP_SHADERS
+        std::filesystem::path path = "C:/users/aaron/desktop/shaders";
+        std::filesystem::create_directories(path);
 
-            const auto& vertex_shaders = m_ShaderBundle->GetMember("VertexShaders");
-            for (const auto& member : vertex_shaders->m_Members) {
-                LOG_INFO(member->m_Members[0]->m_StringData);
+        const auto& vertex_shaders = m_ShaderBundle->GetMember("VertexShaders");
+        for (const auto& member : vertex_shaders->m_Members) {
+            LOG_INFO(member->m_Members[0]->m_StringData);
 
-                const auto& shader_data = member->m_Members[1]->m_Members[0]->m_Data;
+            const auto& shader_data = member->m_Members[1]->m_Members[0]->m_Data;
 
-                // ID3D11VertexShader* shader = nullptr;
-                // auto result = Renderer::Get()->GetDevice()->CreateVertexShader(shader_data.data(),
-                // shader_data.size(),
-                //                                                               nullptr, &shader);
-                // assert(SUCCEEDED(result));
+            // ID3D11VertexShader* shader = nullptr;
+            // auto result = Renderer::Get()->GetDevice()->CreateVertexShader(shader_data.data(),
+            // shader_data.size(),
+            //                                                               nullptr, &shader);
+            // assert(SUCCEEDED(result));
 
-                ID3D11ShaderReflection* reflector = nullptr;
-                auto result = D3DReflect(shader_data.data(), shader_data.size(), IID_ID3D11ShaderReflection, (void**)&reflector);
+            ID3D11ShaderReflection* reflector = nullptr;
+            auto                    result =
+                D3DReflect(shader_data.data(), shader_data.size(), IID_ID3D11ShaderReflection, (void**)&reflector);
 
-				D3D11_SHADER_DESC desc{};
-				reflector->GetDesc(&desc);
+            D3D11_SHADER_DESC desc{};
+            reflector->GetDesc(&desc);
 
-				if (desc.ConstantBuffers == 0) {
-                    continue;
-				}
-
-				for (UINT i = 0; i < desc.ConstantBuffers; ++i) {
-                    D3D11_SHADER_BUFFER_DESC buffer_desc{};
-                    auto cb = reflector->GetConstantBufferByIndex(i);
-                    cb->GetDesc(&buffer_desc);
-
-					LOG_INFO(buffer_desc.Name);
-				}
-
-#if 0
-                ID3DBlob* blob = nullptr;
-                auto      hr   = D3DDisassemble(shader_data.data(), shader_data.size(), 0, nullptr, &blob);
-                if (FAILED(hr)) {
-                    __debugbreak();
-                }
-
-				auto shader_path = path / member->m_Members[0]->m_StringData;
-                shader_path += ".vb";
-                std::ofstream stream2(shader_path, std::ios::binary);
-                stream2.write((char*)shader_data.data(), shader_data.size());
-                stream2.close();
-
-                std::string str((const char*)blob->GetBufferPointer(), blob->GetBufferSize());
-                //str = str.substr(0, str.find("vs_5_0"));
-
-                auto file_path = path / member->m_Members[0]->m_StringData;
-                file_path += ".txt";
-                std::ofstream stream(file_path);
-                stream << str;
-                stream.close();
-
-                blob->Release();
-                break;
-#endif
+            if (desc.ConstantBuffers == 0) {
+                continue;
             }
+
+            for (UINT i = 0; i < desc.ConstantBuffers; ++i) {
+                D3D11_SHADER_BUFFER_DESC buffer_desc{};
+                auto                     cb = reflector->GetConstantBufferByIndex(i);
+                cb->GetDesc(&buffer_desc);
+
+                LOG_INFO(buffer_desc.Name);
+            }
+
+#if 0
+            ID3DBlob* blob = nullptr;
+            auto      hr   = D3DDisassemble(shader_data.data(), shader_data.size(), 0, nullptr, &blob);
+            if (FAILED(hr)) {
+                __debugbreak();
+            }
+
+			auto shader_path = path / member->m_Members[0]->m_StringData;
+            shader_path += ".vb";
+            std::ofstream stream2(shader_path, std::ios::binary);
+            stream2.write((char*)shader_data.data(), shader_data.size());
+            stream2.close();
+
+            std::string str((const char*)blob->GetBufferPointer(), blob->GetBufferSize());
+            //str = str.substr(0, str.find("vs_5_0"));
+
+            auto file_path = path / member->m_Members[0]->m_StringData;
+            file_path += ".txt";
+            std::ofstream stream(file_path);
+            stream << str;
+            stream.close();
+
+            blob->Release();
+            break;
+#endif
         }
 #endif
-
-        UI::Get()->PopStatusText(status_text_id);
     }).detach();
 }
 
@@ -121,10 +121,14 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
         return it->second;
     }
 
-    assert(m_ShaderBundle);
-    const auto& vertex_shaders = m_ShaderBundle->GetMember("VertexShaders");
+    // ensure the shader bundle is loaded
+    if (!m_ShaderBundle) {
+        LOG_ERROR("Can't create vertex shader because shader bundle isn't loaded!");
+        return nullptr;
+    }
 
     // look for the correct member
+    const auto& vertex_shaders = m_ShaderBundle->GetMember("VertexShaders");
     for (const auto& member : vertex_shaders->m_Members) {
         if (member->m_Members[0]->m_StringData == name) {
             const auto& shader_data = member->m_Members[1]->m_Data;
@@ -164,10 +168,14 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
         return it->second;
     }
 
-    assert(m_ShaderBundle);
-    const auto& fragment_shaders = m_ShaderBundle->GetMember("FragmentShaders");
+    // ensure the shader bundle is loaded
+    if (!m_ShaderBundle) {
+        LOG_ERROR("Can't create pixel shader because shader bundle isn't loaded!");
+        return nullptr;
+    }
 
     // look for the correct member
+    const auto& fragment_shaders = m_ShaderBundle->GetMember("FragmentShaders");
     for (const auto& member : fragment_shaders->m_Members) {
         if (member->m_Members[0]->m_StringData == name) {
             const auto& shader_data = member->m_Members[1]->m_Data;

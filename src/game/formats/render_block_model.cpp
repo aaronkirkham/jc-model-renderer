@@ -41,6 +41,18 @@ RenderBlockModel::~RenderBlockModel()
     }
 }
 
+bool RenderBlockModel::ParseLOD(const FileBuffer& data)
+{
+    std::istringstream stream(std::string{(char*)data.data(), data.size()});
+    std::string        line;
+
+    while (std::getline(stream, line)) {
+        LOG_INFO(line);
+    }
+
+    return true;
+}
+
 bool RenderBlockModel::ParseRBM(const FileBuffer& data, bool add_to_render_list)
 {
     std::istringstream stream(std::string{(char*)data.data(), data.size()});
@@ -173,6 +185,8 @@ void RenderBlockModel::ParseAMF(const FileBuffer& data, ParseCallback_t callback
     auto  materials       = model_adf->GetMember(inst, "Materials");
     auto& render_block_id = model_adf->GetMember(materials, "RenderBlockId")->m_StringData;
 
+    LOG_INFO("Creating render block \"{}\"", render_block_id);
+
     const auto render_block = RenderBlockFactory::CreateRenderBlock(render_block_id);
     if (render_block) {
         render_block->SetParent(this);
@@ -263,7 +277,9 @@ void RenderBlockModel::ReadFileCallback(const std::filesystem::path& filename, c
     auto rbm = RenderBlockModel::make(filename);
     assert(rbm);
 
-    if (filename.extension() == ".rbm") {
+    if (filename.extension() == ".lod") {
+        rbm->ParseLOD(data);
+    } else if (filename.extension() == ".rbm") {
         rbm->ParseRBM(data);
     } else if (filename.extension() == ".modelc") {
         rbm->ParseAMF(data, [](bool) {});
