@@ -114,7 +114,8 @@ FileLoader::FileLoader()
         filter.push_back('\0');
 
         Window::Get()->ShowFileSelection(
-            "Select a file to import", filter, [&, importer, callback](const std::filesystem::path& selected) {
+            "Select a file to import", filter.c_str(), importer->GetExportExtension(),
+            [&, importer, callback](const std::filesystem::path& selected) {
                 LOG_INFO("(ImportFileRequest) Want to import file \"{}\"", selected.string());
                 std::thread([&, importer, selected, callback] { importer->Import(selected, callback); }).detach();
             });

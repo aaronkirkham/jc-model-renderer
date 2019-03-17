@@ -75,7 +75,7 @@ bool Window::Initialise(const HINSTANCE& instance)
         SetConsoleTitle("Debug Console");
     }
 
-    //spdlog::set_level(spdlog::level::trace);
+    // spdlog::set_level(spdlog::level::trace);
     spdlog::set_pattern("[%H:%M:%S] [%^%l%$] %v");
 
     m_Log = spdlog::stdout_color_mt("console");
@@ -228,7 +228,7 @@ int32_t Window::ShowMessageBox(const std::string& message, uint32_t type)
     return result;
 }
 
-void Window::ShowFileSelection(const std::string& title, const std::string& filter,
+void Window::ShowFileSelection(const std::string& title, const char* filter, const char* def_extension,
                                std::function<void(const std::filesystem::path&)> fn_selected)
 {
     char         filename[MAX_PATH] = {0};
@@ -236,13 +236,34 @@ void Window::ShowFileSelection(const std::string& title, const std::string& filt
 
     ofn.lStructSize = sizeof(OPENFILENAME);
     ofn.hwndOwner   = m_Hwnd;
-    ofn.lpstrFilter = filter.c_str();
+    ofn.lpstrFilter = filter;
+    ofn.lpstrDefExt = def_extension;
     ofn.lpstrFile   = filename;
     ofn.nMaxFile    = MAX_PATH;
     ofn.lpstrTitle  = title.c_str();
     ofn.Flags       = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
 
     if (GetOpenFileName(&ofn)) {
+        fn_selected(filename);
+    }
+}
+
+void Window::ShowFileFolderSelection(const std::string& title, const char* filter, const char* def_extension,
+                                     std::function<void(const std::filesystem::path&)> fn_selected)
+{
+    char         filename[MAX_PATH] = {0};
+    OPENFILENAME sfn                = {0};
+
+    sfn.lStructSize = sizeof(OPENFILENAME);
+    sfn.hwndOwner   = m_Hwnd;
+    sfn.lpstrFilter = filter;
+    sfn.lpstrDefExt = def_extension;
+    sfn.lpstrFile   = filename;
+    sfn.nMaxFile    = MAX_PATH;
+    sfn.lpstrTitle  = title.c_str();
+    sfn.Flags       = OFN_DONTADDTORECENT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+
+    if (GetSaveFileName(&sfn)) {
         fn_selected(filename);
     }
 }

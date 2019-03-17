@@ -472,13 +472,23 @@ void UI::Render(RenderContext_t* context)
                     ImGui::Text("Format: %d (DXGI_FORMAT_R16G16_SNORM)", desc->Format); // TODO: format to string
                     ImGui::Text("MipLevels: %d", desc->MipLevels);
 
-					// TODO: choose name & location..
+                    // save texture as...
                     if (ImGui::Button("Save as...")) {
                         FileBuffer buffer;
                         if (FileLoader::Get()->WriteAVTX(m_NewTextureSettings.Texture.get(), &buffer)) {
-                            std::ofstream file("C:/users/aaron/desktop/test_texture.ddsc", std::ios::binary);
-                            file.write((char*)buffer.data(), buffer.size());
-                            file.close();
+                            Window::Get()->ShowFileFolderSelection(
+                                "Save as...", "Avalanche Compressed Texture (*.ddsc)\0*.ddsc\0\0", ".ddsc",
+                                [&](const std::filesystem::path& filename) {
+                                    std::ofstream file(filename, std::ios::binary);
+                                    if (file.fail()) {
+                                        Window::Get()->ShowMessageBox("Failed to save file.",
+                                                                      MB_ICONEXCLAMATION | MB_OK);
+                                        return;
+                                    }
+
+                                    file.write((char*)buffer.data(), buffer.size());
+                                    file.close();
+                                });
                         }
                     }
                 }
