@@ -268,39 +268,28 @@ void UI::Render(RenderContext_t* context)
             static std::string _jc3_path = Settings::Get()->GetValue<std::string>("jc3_directory");
             static std::string _jc4_path = Settings::Get()->GetValue<std::string>("jc4_directory");
 
-            static auto SelectJCDirectory = [](bool is_jc3) {
-                std::string title = is_jc3 ? "Please select your Just Cause 3 install folder"
-                                           : "Please select your Just Cause 4 install folder";
-
-                Window::Get()->ShowFolderSelection(title, [&, is_jc3](const std::filesystem::path& selected) {
-                    if (is_jc3) {
-                        _jc3_path = selected.string();
-                        Settings::Get()->SetValue("jc3_directory", _jc3_path);
-                    } else {
-                        _jc4_path = selected.string();
-                        Settings::Get()->SetValue("jc4_directory", _jc4_path);
-                    }
-                });
-            };
-
+            // select jc3 path
             ImGui::Text("Just Cause 3 Path");
             ImGui::PushItemWidth(405);
             ImGui::InputText("##jc3_path", &_jc3_path, ImGuiInputTextFlags_ReadOnly);
             ImGui::PopItemWidth();
             ImGui::SameLine();
             if (ImGui::Button("...##select_jc3_path")) {
-                SelectJCDirectory(true);
+                Window::Get()->SelectJustCauseDirectory(true, true);
+                _jc3_path = Settings::Get()->GetValue<std::string>("jc3_directory");
             }
 
             ImGui::Separator();
 
+            // select jc4 path
             ImGui::Text("Just Cause 4 Path");
             ImGui::PushItemWidth(405);
             ImGui::InputText("##jc4_path", &_jc4_path, ImGuiInputTextFlags_ReadOnly);
             ImGui::PopItemWidth();
             ImGui::SameLine();
             if (ImGui::Button("...##select_jc4_path")) {
-                SelectJCDirectory(false);
+                Window::Get()->SelectJustCauseDirectory(true, false);
+                _jc4_path = Settings::Get()->GetValue<std::string>("jc4_directory");
             }
 
             ImGui::EndPopup();

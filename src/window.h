@@ -101,7 +101,7 @@ class Window : public Singleton<Window>
                                 std::function<void()> fn_cancelled = {});
 
     void                  SwitchMode(bool jc3_mode);
-    void                  SelectJustCauseDirectory();
+    void                  SelectJustCauseDirectory(bool override_mode = false, bool jc3_mode = true);
     std::filesystem::path GetJustCauseDirectory();
     void                  CheckForUpdates(bool show_no_update_messagebox = false);
 

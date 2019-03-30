@@ -318,28 +318,33 @@ void Window::SwitchMode(bool jc3_mode)
     Settings::Get()->SetValue<bool>("jc4_mode", g_IsJC4Mode);
 }
 
-void Window::SelectJustCauseDirectory()
+void Window::SelectJustCauseDirectory(bool override_mode, bool jc3_mode)
 {
-    std::string title = g_IsJC4Mode ? "Please select your Just Cause 4 install folder"
+    bool is_jc4_mode = g_IsJC4Mode;
+    if (override_mode) {
+        is_jc4_mode = !jc3_mode;
+    }
+
+    std::string title = is_jc4_mode ? "Please select your Just Cause 4 install folder"
                                     : "Please select your Just Cause 3 install folder";
 
     static auto OnSelected = [&](const std::filesystem::path& selected) {
         LOG_INFO("Selected directory: \"{}\"", selected.string());
 
         std::filesystem::path exe_path = selected;
-        exe_path /= (g_IsJC4Mode ? "JustCause4.exe" : "JustCause3.exe");
+        exe_path /= (is_jc4_mode ? "JustCause4.exe" : "JustCause3.exe");
 
         if (!std::filesystem::exists(exe_path)) {
             ShowMessageBox("Invalid Just Cause directory specified.\n\nMake sure you select the root directory.");
-            return SelectJustCauseDirectory();
+            return SelectJustCauseDirectory(override_mode, jc3_mode);
         }
 
-        Settings::Get()->SetValue(g_IsJC4Mode ? "jc4_directory" : "jc3_directory", selected.string());
+        Settings::Get()->SetValue(is_jc4_mode ? "jc4_directory" : "jc3_directory", selected.string());
     };
 
     static auto OnCancelled = [&]() {
         const auto& jc_directory =
-            Settings::Get()->GetValue<std::string>(g_IsJC4Mode ? "jc4_directory" : "jc3_directory");
+            Settings::Get()->GetValue<std::string>(is_jc4_mode ? "jc4_directory" : "jc3_directory");
         if (jc_directory.empty()) {
             ShowMessageBox("Unable to find Just Cause root directory.\n\nSome features will be disabled.");
         }
