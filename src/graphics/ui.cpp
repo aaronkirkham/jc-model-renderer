@@ -411,7 +411,8 @@ void UI::Render(RenderContext_t* context)
     // texture creator
     if (m_NewTextureSettings.ShowSettings) {
         ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
-        if (ImGui::Begin("New Texture", &m_NewTextureSettings.ShowSettings, ImGuiWindowFlags_NoCollapse)) {
+        if (ImGui::Begin(ICON_FA_FILE_IMAGE "  New Texture", &m_NewTextureSettings.ShowSettings,
+                         ImGuiWindowFlags_NoCollapse)) {
             ImGui::Columns(2, nullptr, false);
             {
                 const auto col_width = (ImGui::GetWindowWidth() / ImGui::GetColumnsCount());
@@ -462,7 +463,7 @@ void UI::Render(RenderContext_t* context)
                     ImGui::Text("MipLevels: %d", desc->MipLevels);
 
                     // save texture as...
-                    if (ImGui::Button("Save as...")) {
+                    if (ImGui::Button(ICON_FA_SAVE "  Save as...")) {
                         FileBuffer buffer;
                         if (FileLoader::Get()->WriteAVTX(m_NewTextureSettings.Texture.get(), &buffer)) {
                             Window::Get()->ShowFileFolderSelection(
