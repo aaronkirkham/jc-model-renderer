@@ -238,6 +238,11 @@ void UI::Render(RenderContext_t* context)
                               SW_SHOWNORMAL);
             }
 
+            if (ImGui::MenuItem(ICON_FA_BUG "  Report a Bug")) {
+                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc-model-renderer/issues/new", nullptr,
+                              nullptr, SW_SHOWNORMAL);
+            }
+
             ImGui::EndMenu();
         }
 
@@ -459,7 +464,7 @@ void UI::Render(RenderContext_t* context)
                     const auto desc = m_NewTextureSettings.Texture->GetDesc();
                     ImGui::Text("Width: %d", desc->Width);
                     ImGui::Text("Height: %d", desc->Height);
-                    ImGui::Text("Format: %d (DXGI_FORMAT_R16G16_SNORM)", desc->Format); // TODO: format to string
+                    ImGui::Text("Format: %d (%s)", desc->Format, TextureManager::GetFormatString(desc->Format));
                     ImGui::Text("MipLevels: %d", desc->MipLevels);
 
                     // save texture as...

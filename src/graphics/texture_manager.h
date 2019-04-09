@@ -40,6 +40,7 @@ class TextureManager : public Singleton<TextureManager>
     void PreviewTexture(std::shared_ptr<Texture> texture);
 
     static DDS_PIXELFORMAT GetPixelFormat(DXGI_FORMAT format);
+    static const char*     GetFormatString(DXGI_FORMAT format);
 
     const std::unordered_map<uint32_t, std::shared_ptr<Texture>>& GetCache()
     {
