@@ -38,6 +38,7 @@ class TextureManager : public Singleton<TextureManager>
     void Empty();
 
     void PreviewTexture(std::shared_ptr<Texture> texture);
+    bool IsPreviewingTexture(std::shared_ptr<Texture> texture);
 
     static DDS_PIXELFORMAT GetPixelFormat(DXGI_FORMAT format);
     static const char*     GetFormatString(DXGI_FORMAT format);

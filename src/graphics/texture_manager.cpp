@@ -115,7 +115,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path&
     // if we have already cached this texture, use that
     auto it = m_Textures.find(key);
     if (it != m_Textures.end()) {
-        if (flags & TextureCreateFlags_IsUIRenderable) {
+        if ((flags & TextureCreateFlags_IsUIRenderable) && !IsPreviewingTexture(it->second)) {
             m_PreviewTextures.emplace_back(it->second);
         }
 
@@ -129,7 +129,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path&
             LOG_ERROR("Failed to load texture from buffer!");
         }
 
-        if (flags & TextureCreateFlags_IsUIRenderable) {
+        if ((flags & TextureCreateFlags_IsUIRenderable) && !IsPreviewingTexture(m_Textures[key])) {
             m_PreviewTextures.emplace_back(m_Textures[key]);
         }
 
@@ -137,6 +137,14 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path&
     }
 
     return nullptr;
+}
+
+bool TextureManager::IsPreviewingTexture(std::shared_ptr<Texture> texture)
+{
+    const auto it =
+        std::find_if(m_PreviewTextures.begin(), m_PreviewTextures.end(),
+                     [&](const std::shared_ptr<Texture> item) { return texture->GetHash() == item->GetHash(); });
+    return it != m_PreviewTextures.end();
 }
 
 bool TextureManager::HasTexture(const std::filesystem::path& filename)
