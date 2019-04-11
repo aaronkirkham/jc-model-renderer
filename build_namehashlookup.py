@@ -10,7 +10,12 @@ import os
 import struct
 import lookup3
 import json
+import argparse
 from decimal import Decimal
+
+parser = argparse.ArgumentParser(description='Build namehash lookup files for jc-model-renderer')
+parser.add_argument('--pretty', help='Pretty print output JSON', action='store_true')
+args = parser.parse_args()
 
 ROOT = os.path.dirname(os.path.realpath(sys.argv[0]))
 GENERATED_HASHES = "%s\\assets\\namehashlookup_generated.txt" % ROOT
@@ -18,7 +23,6 @@ CUSTOM_HASHES = "%s\\assets\\namehashlookup_custom.txt" % ROOT
 JC4_HASHES = "%s\\assets\\namehashlookup_jc4.txt" % ROOT
 OUT_PATH = "%s\\assets\\" % ROOT
 DATA = {}
-WRITE_PRETTY_JSON = False
 
 print ("Generating namehash lookup...")
 
@@ -40,7 +44,7 @@ load_hints(JC4_HASHES)
 # write the output
 OUTPUT_FILE = os.path.join(OUT_PATH, "namehashlookup.json")
 with open(OUTPUT_FILE, "w") as file:
-  if WRITE_PRETTY_JSON:
+  if args.pretty:
     file.write(json.dumps(DATA, indent=4, sort_keys=True))
   else:
     json.dump(DATA, file)

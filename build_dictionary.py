@@ -11,7 +11,8 @@ import json
 import argparse
 from pathlib import Path
 
-parser = argparse.ArgumentParser(description='Build dictionary lookup files for jc-rbm-renderer')
+parser = argparse.ArgumentParser(description='Build dictionary lookup files for jc-model-renderer')
+parser.add_argument('--pretty', help='Pretty print output JSON', action='store_true')
 parser.add_argument('--game', help='Game selector. (jc3 / jc4)')
 args = parser.parse_args()
 
@@ -78,4 +79,7 @@ for filename, data in FILELIST.items():
 
 # write the dictionary json
 with open("{0}/dictionary.json".format(ASSETS), "w") as file:
-  json.dump(FILELIST, file)
+  if args.pretty:
+    file.write(json.dumps(FILELIST, indent=4, sort_keys=True))
+  else:
+    json.dump(FILELIST, file)
