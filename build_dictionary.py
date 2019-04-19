@@ -38,7 +38,7 @@ if args.game == "jc4":
   ]
 # jc3 directories
 else:
-  ASSETS = os.path.dirname(os.path.realpath(sys.argv[0])) + "/assets"
+  ASSETS = os.path.dirname(os.path.realpath(sys.argv[0])) + "/assets/jc3"
 
   FILELIST_DIRECTORIES = [
     "archives_win64", "patch_win64", "dlc_win64/bavarium_sea_heist", "dlc_win64/bavarium_sea_heist/arc",
