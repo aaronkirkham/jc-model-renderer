@@ -1,4 +1,4 @@
-; 1156/1179 (98%)
+; 1179/1179 (100%)
 models/characters/main_characters/cesar/textures/cesar_body_002_nrm.atx2
 models/characters/main_characters/cesar/textures/cesar_hair_002_alpha_dif.atx2
 models/characters/main_characters/cesar/textures/cesar_hair_002_alpha_mpm.atx2
@@ -144,6 +144,24 @@ models/characters/main_characters/sheldon/textures/sheldon_hair_002a_nrm.atx2
 models/characters/main_characters/sheldon/textures/sheldon_head_002_alpha_mpm.atx2
 models/characters/main_characters/sheldon/textures/sheldon_head_002_dif.atx2
 models/characters/main_characters/sheldon/textures/sheldon_head_002_nrm.atx2
+models/characters/rico/textures/rico_accessories_alpha_mpm.atx2
+models/characters/rico/textures/rico_accessories_dif.atx2
+models/characters/rico/textures/rico_accessories_nrm.atx2
+models/characters/rico/textures/rico_arms_alpha_mpm.atx2
+models/characters/rico/textures/rico_arms_dif.atx2
+models/characters/rico/textures/rico_arms_nrm.atx2
+models/characters/rico/textures/rico_bots_alpha_mpm.atx2
+models/characters/rico/textures/rico_bots_dif.atx2
+models/characters/rico/textures/rico_bots_nrm.atx2
+models/characters/rico/textures/rico_hair_alpha_dif.atx2
+models/characters/rico/textures/rico_hair_alpha_mpm.atx2
+models/characters/rico/textures/rico_hair_nrm.atx2
+models/characters/rico/textures/rico_head_alpha_mpm.atx2
+models/characters/rico/textures/rico_head_dif.atx2
+models/characters/rico/textures/rico_head_nrm.atx2
+models/characters/rico/textures/rico_tops_alpha_mpm.atx2
+models/characters/rico/textures/rico_tops_dif.atx2
+models/characters/rico/textures/rico_tops_nrm.atx2
 models/characters/shared/beard/textures/beard_01_alpha_dif.atx2
 models/characters/shared/beard/textures/beard_01_alpha_mpm.atx2
 models/characters/shared/beard/textures/beard_01_nrm.atx2
@@ -298,10 +316,15 @@ models/characters/shared/bodyparts/textures/shared_head_alpha_mpm.atx2
 models/characters/shared/bodyparts/textures/shared_head_mpm.atx2
 models/characters/shared/bodyparts/textures/shared_legs_mpm.atx2
 models/characters/shared/bodyparts/textures/shared_torso_mpm.atx2
+models/characters/shared/detail_skin/skin_forehead.atx2
+models/characters/shared/detail_skin/skin_neck.atx2
 models/characters/shared/emissives/textures/emissives_001_dif.atx2
 models/characters/shared/emissives/textures/emissives_001_emi.atx2
 models/characters/shared/emissives/textures/emissives_001_mpm.atx2
 models/characters/shared/eyelashes/textures/m_afri_eyelashes_a001_alpha_dif.atx2
+models/characters/shared/eyes/textures/eyegloss_dif.atx2
+models/characters/shared/fabric_swatches/textures/fabric_denim_nrm.atx2
+models/characters/shared/fabric_swatches/textures/fabric_leather_nrm.atx2
 models/characters/shared/fabric_swatches/textures/fabric_swatch_crosshatch_dif.atx2
 models/characters/shared/fabric_swatches/textures/fabric_swatch_crosshatch_mpm.atx2
 models/characters/shared/fabric_swatches/textures/fabric_swatch_crosshatch_nrm.atx2
