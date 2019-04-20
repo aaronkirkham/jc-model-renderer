@@ -78,12 +78,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
     const auto& jc_directory = Window::Get()->GetJustCauseDirectory();
     if (Window::Get()->Initialise(hInstance)) {
-#ifdef DEBUG
-        if (g_IsJC4Mode) {
-            LOG_INFO("RUNNING IN JUST CAUSE 4 MODE");
-        }
-#endif
-
         LOG_INFO("Just Cause directory: \"{}\"", jc_directory.string());
 
         // do we need to select the install directory manually?
@@ -105,7 +99,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     continue;
                 }
 
-                if (GetAsyncKeyState(VK_F1) & 1) {}
+                if (GetAsyncKeyState(VK_F1) & 1) {
+                    std::filesystem::path filename = "editor/entities/characters/main_characters/sheldon.ee";
+                    FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
+                        auto archive = AvalancheArchive::make(filename, data);
+                        while (!archive->GetStreamArchive()) {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                        }
+
+                        std::filesystem::path rbm = "models/characters/main_characters/sheldon/sheldon_body_002.modelc";
+                        RenderBlockModel::Load(rbm);
+                    });
+                }
 
                 if (GetAsyncKeyState(VK_F2) & 1) {
                     std::filesystem::path filename = "editor/entities/gameobjects/main_character.ee";

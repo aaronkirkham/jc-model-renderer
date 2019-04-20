@@ -43,14 +43,14 @@ void ShaderManager::Init()
         for (const auto& member : vertex_shaders->m_Members) {
             LOG_INFO(member->m_Members[0]->m_StringData);
 
-            const auto& shader_data = member->m_Members[1]->m_Members[0]->m_Data;
+            const auto& shader_data = member->m_Members[1]->m_Data;
 
             // ID3D11VertexShader* shader = nullptr;
             // auto result = Renderer::Get()->GetDevice()->CreateVertexShader(shader_data.data(),
             // shader_data.size(),
             //                                                               nullptr, &shader);
             // assert(SUCCEEDED(result));
-
+#if 0
             ID3D11ShaderReflection* reflector = nullptr;
             auto                    result =
                 D3DReflect(shader_data.data(), shader_data.size(), IID_ID3D11ShaderReflection, (void**)&reflector);
@@ -69,22 +69,23 @@ void ShaderManager::Init()
 
                 LOG_INFO(buffer_desc.Name);
             }
+#endif
 
-#if 0
+#if 1
             ID3DBlob* blob = nullptr;
             auto      hr   = D3DDisassemble(shader_data.data(), shader_data.size(), 0, nullptr, &blob);
             if (FAILED(hr)) {
                 __debugbreak();
             }
 
-			auto shader_path = path / member->m_Members[0]->m_StringData;
+            auto shader_path = path / member->m_Members[0]->m_StringData;
             shader_path += ".vb";
             std::ofstream stream2(shader_path, std::ios::binary);
             stream2.write((char*)shader_data.data(), shader_data.size());
             stream2.close();
 
             std::string str((const char*)blob->GetBufferPointer(), blob->GetBufferSize());
-            //str = str.substr(0, str.find("vs_5_0"));
+            // str = str.substr(0, str.find("vs_5_0"));
 
             auto file_path = path / member->m_Members[0]->m_StringData;
             file_path += ".txt";
@@ -93,7 +94,6 @@ void ShaderManager::Init()
             stream.close();
 
             blob->Release();
-            break;
 #endif
         }
 #endif

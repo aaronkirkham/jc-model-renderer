@@ -166,9 +166,9 @@ void AvalancheDataFormat::FileReadCallback(const std::filesystem::path& filename
     assert(adf);
     adf->Parse(data);
 
-#ifdef DEBUG
-    __debugbreak();
-#endif
+//#ifdef DEBUG
+//    __debugbreak();
+//#endif
 }
 
 AdfTypeDefinition* AvalancheDataFormat::GetTypeDefinition(uint32_t type_hash)

@@ -9,6 +9,8 @@ static constexpr auto RBM_END_OF_BLOCK = 0x89ABCDEF;
 
 class AvalancheArchive;
 class RuntimeContainer;
+class AvalancheDataFormat;
+class AdfInstanceMemberInfo;
 class IRenderBlock;
 
 class RenderBlockModel : public Factory<RenderBlockModel>
@@ -40,6 +42,9 @@ class RenderBlockModel : public Factory<RenderBlockModel>
     bool ParseLOD(const FileBuffer& data);
     bool ParseRBM(const FileBuffer& data, bool add_to_render_list = true);
     void ParseAMF(const FileBuffer& data, ParseCallback_t callback, bool add_to_render_list = true);
+
+    bool ParseAMFMeshBuffers(AvalancheDataFormat* adf, AdfInstanceMemberInfo* meshes,
+                             AdfInstanceMemberInfo* vertex_buffers, AdfInstanceMemberInfo* index_buffers);
 
     inline static bool                     LoadingFromRC = false;
     inline static std::vector<std::string> SuppressedWarnings;

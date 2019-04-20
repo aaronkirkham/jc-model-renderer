@@ -182,54 +182,169 @@ void RenderBlockModel::ParseAMF(const FileBuffer& data, ParseCallback_t callback
     auto        inst      = model_adf->GetMember("instance");
     const auto& mesh_name = inst->m_Members[0]->m_StringData;
 
+    // get the high resolution model name
+    std::filesystem::path hrmesh_name = mesh_name;
+    hrmesh_name.replace_extension("hrmeshc");
+
+    // MODELC	= contains all model information (textures, mesh files...)
+    // MESHC	= contains all mesh information
+    // HRMESHC	= only high resolution BUFFERS
+
     auto  materials       = model_adf->GetMember(inst, "Materials");
     auto& render_block_id = model_adf->GetMember(materials, "RenderBlockId")->m_StringData;
 
-    LOG_INFO("Creating render block \"{}\"", render_block_id);
+    LOG_INFO("Creating render block \"{}\". Reading mesh: \"{}\"", render_block_id, mesh_name);
 
     const auto render_block = RenderBlockFactory::CreateRenderBlock(render_block_id);
     if (render_block) {
         render_block->SetParent(this);
     }
 
-    FileLoader::Get()->ReadFile(mesh_name, [&, callback, mesh_name, render_block](bool success, FileBuffer data) {
-        if (success) {
-            auto mesh_adf = AvalancheDataFormat::make(mesh_name);
-            if (!mesh_adf->Parse(data)) {
-                LOG_ERROR("Failed to parse meshc ADF");
-                return callback(false);
+    // read the meshc
+    FileLoader::Get()->ReadFile(
+        mesh_name, [&, callback, mesh_name, hrmesh_name, render_block](bool success, FileBuffer data) {
+            if (success) {
+                auto mesh_adf = AvalancheDataFormat::make(mesh_name);
+                if (!mesh_adf->Parse(data)) {
+                    LOG_ERROR("Failed to parse meshc ADF");
+                    return callback(false);
+                }
+
+                const auto meshes = mesh_adf->GetMember("Meshes");
+                if (!meshes) {
+                    LOG_ERROR("Model has no meshes!!!");
+#ifdef DEBUG
+                    __debugbreak();
+#endif
+                    return callback(false);
+                }
+
+                // read the hrmeshc
+                FileLoader::Get()->ReadFile(hrmesh_name, [&, callback, render_block, mesh_adf, hrmesh_name,
+                                                          meshes](bool success, FileBuffer hrmesh_data) {
+                    AdfInstanceMemberInfo* vertex_buffers = nullptr;
+                    AdfInstanceMemberInfo* index_buffers  = nullptr;
+
+                    if (success) {
+                        LOG_INFO("Using high resolution mesh! ({})", hrmesh_name.string());
+
+                        auto hrmesh_adf = AvalancheDataFormat::make(hrmesh_name);
+                        if (!hrmesh_adf->Parse(hrmesh_data)) {
+                            LOG_ERROR("Failed to parse hrmeshc ADF");
+                            return callback(false);
+                        }
+
+                        vertex_buffers = hrmesh_adf->GetMember("VertexBuffers");
+                        index_buffers  = hrmesh_adf->GetMember("IndexBuffers");
+                    } else {
+                        LOG_INFO("No high resolution mesh available. Using low resolution mesh. ({})",
+                                 hrmesh_name.string());
+
+                        vertex_buffers = mesh_adf->GetMember("VertexBuffers");
+                        index_buffers  = mesh_adf->GetMember("IndexBuffers");
+                    }
+
+                    const auto result = ParseAMFMeshBuffers(mesh_adf.get(), meshes, vertex_buffers, index_buffers);
+                });
+
+                /*
+                    // multiple vertex buffers
+                    FileBuffer vert_data;
+                    std::copy(vb_data.begin() + _offsets[0], vb_data.begin() + _offsets[1],
+                   std::back_inserter(vert_data)); FileBuffer uv_data; std::copy(vb_data.begin() + _offsets[1],
+                   vb_data.end(), std::back_inserter(uv_data));
+
+                    ((RenderBlockGeneral*)render_block)->CreateBuffers(&vert_data, &uv_data, &ib_data);
+
+                    m_RenderBlocks.emplace_back(render_block);
+                    // Renderer::Get()->AddToRenderList(render_block);
+                */
             }
 
-            auto strides = mesh_adf->GetMember("VertexStreamStrides");
-            auto offsets = mesh_adf->GetMember("VertexStreamOffsets");
+            callback(success);
+        });
+#endif
+}
 
-            auto& _offsets = CastBuffer<uint32_t>(&offsets->m_Data);
+bool RenderBlockModel::ParseAMFMeshBuffers(AvalancheDataFormat* adf, AdfInstanceMemberInfo* meshes,
+                                           AdfInstanceMemberInfo* vertex_buffers, AdfInstanceMemberInfo* index_buffers)
+{
+    if (!adf || !meshes || !vertex_buffers || !index_buffers) {
+#ifdef DEBUG
+        __debugbreak();
+#endif
+        return false;
+    }
 
-            auto vertex_buffers = mesh_adf->GetMember("VertexBuffers");
-            auto index_buffers  = mesh_adf->GetMember("IndexBuffers");
+    const auto vb_data = adf->GetMember(vertex_buffers, "Data")->m_Data;
 
-            auto vb_data = mesh_adf->GetMember(vertex_buffers, "Data")->m_Data;
-            auto ib_data = mesh_adf->GetMember(index_buffers, "Data")->m_Data;
+    uint8_t  index            = meshes->m_Members.size();
+    uint32_t total_mesh_data  = 0;
+    uint32_t last_mesh_offset = vb_data.size();
 
-            //
-            auto stream_attr = mesh_adf->GetMember("StreamAttributes");
-            // auto packing_data = stream_attr->m_Members[2]->m_Members[2]; // PackingData
+    for (auto it = meshes->m_Members.rbegin(); it != meshes->m_Members.rend(); ++it) {
+        const auto& mesh = (*it).get();
 
-            // multiple vertex buffers
-            FileBuffer vert_data;
-            std::copy(vb_data.begin() + _offsets[0], vb_data.begin() + _offsets[1], std::back_inserter(vert_data));
-            FileBuffer uv_data;
-            std::copy(vb_data.begin() + _offsets[1], vb_data.end(), std::back_inserter(uv_data));
+        const auto type    = adf->GetMember(mesh, "MeshTypeId")->m_StringData;
+        const auto strides = adf->GetMember(mesh, "VertexStreamStrides");
+        const auto offsets = adf->GetMember(mesh, "VertexStreamOffsets");
 
-            ((RenderBlockGeneral*)render_block)->CreateBuffers(&vert_data, &uv_data, &ib_data);
+        auto& cast_strides = CastBuffer<uint8_t>(&strides->m_Data);
+        auto& cast_offsets = CastBuffer<uint32_t>(&offsets->m_Data);
 
-            m_RenderBlocks.emplace_back(render_block);
-            // Renderer::Get()->AddToRenderList(render_block);
+#ifdef DEBUG
+        if (cast_strides.size() > 1 || cast_offsets.size() > 1) {
+            __debugbreak();
+        }
+#endif
+
+        LOG_INFO("Creating mesh with type: {}, stride={}, offset={}", type, cast_strides[0], cast_offsets[0]);
+
+        // copy the vertex buffer data
+        FileBuffer vertex_data;
+        auto       start = (last_mesh_offset - (last_mesh_offset - cast_offsets[0]));
+        auto       end   = (last_mesh_offset);
+        std::copy(vb_data.begin() + start, vb_data.begin() + end, std::back_inserter(vertex_data));
+
+        // __debugbreak();
+
+        // TEMP UNPACK
+        auto& packed_vertex_data = CastBuffer<jc::Vertex::RenderBlockCharacter::Packed4Bones1UV>(&vertex_data);
+        std::vector<float> unpacked_vertex_data;
+        unpacked_vertex_data.reserve(packed_vertex_data.size());
+        for (const auto& v : packed_vertex_data) {
+            unpacked_vertex_data.push_back(jc::Vertex::unpack(v.x));
+            unpacked_vertex_data.push_back(jc::Vertex::unpack(v.y));
+            unpacked_vertex_data.push_back(jc::Vertex::unpack(v.z));
         }
 
-        callback(success);
-    });
+        // get the index buffer data
+        auto& index_data = CastBuffer<uint16_t>(&index_buffers->m_Members[index - 1]->m_Members[0]->m_Data);
+
+#if 1
+        std::ofstream stream("C:/users/aaron/desktop/" + type + "-" + std::to_string(index) + ".obj");
+        for (uint32_t i = 0; i < unpacked_vertex_data.size(); i += 3) {
+            float x = unpacked_vertex_data[i];
+            float y = unpacked_vertex_data[i + 1];
+            float z = unpacked_vertex_data[i + 2];
+            stream << "v " << x << " " << y << " " << z << std::endl;
+        }
+
+        stream << std::endl;
+
+        for (auto i = 0; i < index_data.size(); i += 3) {
+            int32_t indices[3] = {index_data[i] + 1, index_data[i + 1] + 1, index_data[i + 2] + 1};
+            stream << "f " << indices[0] << " " << indices[1] << " " << indices[2] << std::endl;
+        }
+
+        stream.close();
 #endif
+
+        last_mesh_offset = cast_offsets[0];
+        --index;
+    }
+
+    return true;
 }
 
 void RenderBlockModel::DrawGizmos()
