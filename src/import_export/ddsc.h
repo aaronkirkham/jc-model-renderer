@@ -27,7 +27,7 @@ class DDSC : public IImportExporter
 
     std::vector<const char*> GetImportExtension() override final
     {
-        return {".ddsc", ".hmddsc"};
+        return {".ddsc", ".hmddsc", ".atx1", ".atx2"};
     }
 
     const char* GetExportExtension() override final

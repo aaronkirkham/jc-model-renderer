@@ -283,16 +283,20 @@ bool RenderBlockModel::ParseAMFMeshBuffers(AvalancheDataFormat* mesh_adf, AdfIns
             vertex_buffers.emplace_back(v->m_Members[0]->m_Data);
         }
 
-        for (const auto& v : hr_vertex_buffers->m_Members) {
-            vertex_buffers.emplace_back(v->m_Members[0]->m_Data);
+        if (hr_vertex_buffers) {
+            for (const auto& v : hr_vertex_buffers->m_Members) {
+                vertex_buffers.emplace_back(v->m_Members[0]->m_Data);
+            }
         }
 
         for (const auto& i : lr_index_buffers->m_Members) {
             index_buffers.emplace_back(i->m_Members[0]->m_Data);
         }
 
-        for (const auto& i : hr_index_buffers->m_Members) {
-            index_buffers.emplace_back(i->m_Members[0]->m_Data);
+        if (hr_index_buffers) {
+            for (const auto& i : hr_index_buffers->m_Members) {
+                index_buffers.emplace_back(i->m_Members[0]->m_Data);
+            }
         }
     }
 
@@ -300,7 +304,7 @@ bool RenderBlockModel::ParseAMFMeshBuffers(AvalancheDataFormat* mesh_adf, AdfIns
     std::ofstream stream("C:/users/aaron/desktop/sheldon_body_002.obj");
     uint32_t      _num_vertices = 0;
 
-    const auto& meshes = mesh_adf->GetMember(lod_groups->m_Members[4].get(), "Meshes");
+    const auto& meshes = mesh_adf->GetMember(lod_groups->m_Members.back().get(), "Meshes");
     for (const auto& mesh : meshes->m_Members) {
         const auto  type    = mesh_adf->GetMember(mesh.get(), "MeshTypeId")->m_StringData;
         const auto& mesh_id = mesh_adf->GetMember(mesh.get(), "SubMeshId")->m_StringData;
