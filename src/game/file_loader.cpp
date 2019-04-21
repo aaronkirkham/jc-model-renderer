@@ -602,6 +602,8 @@ void FileLoader::ReadStreamArchive(const std::filesystem::path& filename, const 
 {
     static auto read_archive = [&, filename](const FileBuffer* data,
                                              FileBuffer*       toc_buffer) -> std::unique_ptr<StreamArchive_t> {
+        assert(data->size() > 0);
+
         // decompress the archive data
         std::istringstream compressed_buffer(std::string{(char*)data->data(), data->size()});
 
@@ -939,7 +941,10 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
                 auto atx2 = filename;
                 atx2.replace_extension(".atx2");
 
-                bool has_atx2 = FileLoader::Get()->HasFileInDictionary(hashlittle(atx2.string().c_str()));
+				// TODO: .atx2 is very weird.
+				// in the archive they as usually offset 0, size 0 - figure this out before we enable them again.
+
+                bool has_atx2 = false; // FileLoader::Get()->HasFileInDictionary(hashlittle(atx2.string().c_str()));
                 if (!has_atx2) {
                     auto atx1 = filename;
                     atx1.replace_extension(".atx1");
@@ -1441,8 +1446,6 @@ bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::ve
         return false;
     }
 
-    // NOTE: TabFileHeader m_Version didn't change
-
     if (g_IsJC4Mode) {
         const auto length = stream.tellg();
         stream.seekg(std::ios::beg);
@@ -1629,7 +1632,10 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
                 return output->size() > 0;
             }
         } else {
-            assert(entry.m_CompressedSize != 0);
+            if (entry.m_CompressedSize == 0) {
+                LOG_ERROR("Archive entry doesn't contain a buffer size. Can't read from stream.");
+                return false;
+            }
 
             FileBuffer data;
             data.resize(entry.m_CompressedSize);

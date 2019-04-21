@@ -12,6 +12,7 @@
 
 #include "game/file_loader.h"
 #include "game/formats/avalanche_archive.h"
+#include "game/formats/avalanche_model_format.h"
 #include "game/formats/render_block_model.h"
 #include "game/formats/runtime_container.h"
 #include "game/render_block_factory.h"
@@ -107,8 +108,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                             std::this_thread::sleep_for(std::chrono::milliseconds(50));
                         }
 
-                        std::filesystem::path rbm = "models/characters/main_characters/sheldon/sheldon_body_002.modelc";
-                        RenderBlockModel::Load(rbm);
+                        std::filesystem::path model =
+                            "models/characters/main_characters/sheldon/sheldon_body_002.modelc";
+                        AvalancheModelFormat::Load(model);
                     });
                 }
 
@@ -246,7 +248,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 #endif
 
         // register read file type callbacks
-        FileLoader::Get()->RegisterReadCallback({".lod", ".rbm", ".modelc"}, RenderBlockModel::ReadFileCallback);
+        FileLoader::Get()->RegisterReadCallback({".lod", ".rbm"}, RenderBlockModel::ReadFileCallback);
+        FileLoader::Get()->RegisterReadCallback({".modelc"}, AvalancheModelFormat::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({".epe", ".blo"}, RuntimeContainer::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback(
@@ -278,15 +281,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
         // register save file type callbacks
         FileLoader::Get()->RegisterSaveCallback({".rbm"}, RenderBlockModel::SaveFileCallback);
+        FileLoader::Get()->RegisterSaveCallback({".modelc"}, AvalancheModelFormat::SaveFileCallback);
         FileLoader::Get()->RegisterSaveCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::SaveFileCallback);
         FileLoader::Get()->RegisterSaveCallback({".epe", ".blo"}, RuntimeContainer::SaveFileCallback);
 
-#if 1
-        FileLoader::Get()->RegisterReadCallback({".meshc", ".hrmeshc"}, AvalancheDataFormat::FileReadCallback);
-#endif
-
         // register file type context menu callbacks
-        UI::Get()->RegisterContextMenuCallback({".rbm", ".modelc"}, RenderBlockModel::ContextMenuUI);
+        UI::Get()->RegisterContextMenuCallback({".rbm"}, RenderBlockModel::ContextMenuUI);
+        // UI::Get()->RegisterContextMenuCallback({".modelc"}, AvalancheModelFormat::ContextMenuUI);
         UI::Get()->RegisterContextMenuCallback({".epe"}, RuntimeContainer::ContextMenuUI);
 
         // register importers and exporters

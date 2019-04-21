@@ -835,3 +835,9 @@ void Renderer::RemoveFromRenderList(const std::vector<IRenderBlock*>& renderbloc
         m_RenderList.erase(std::remove(m_RenderList.begin(), m_RenderList.end(), render_block), m_RenderList.end());
     }
 }
+
+void Renderer::RemoveFromRenderList(IRenderBlock* renderblock)
+{
+    std::lock_guard<decltype(m_RenderListMutex)> _lk{m_RenderListMutex};
+    m_RenderList.erase(std::remove(m_RenderList.begin(), m_RenderList.end(), renderblock), m_RenderList.end());
+}

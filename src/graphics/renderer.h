@@ -239,6 +239,7 @@ class Renderer : public Singleton<Renderer>
     void AddToRenderList(const std::vector<IRenderBlock*>& renderblocks);
     void AddToRenderList(IRenderBlock* renderblock);
     void RemoveFromRenderList(const std::vector<IRenderBlock*>& renderblocks);
+    void RemoveFromRenderList(IRenderBlock* renderblock);
 
     ID3D11Device* GetDevice()
     {

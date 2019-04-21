@@ -80,6 +80,8 @@ class UI : public Singleton<UI>
     float       m_SidebarWidth  = MIN_SIDEBAR_WIDTH;
 
     void RenderFileTreeView();
+    void RenderModelsTab_RBM();
+    void RenderModelsTab_AMF();
 
   public:
     UI();

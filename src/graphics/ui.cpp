@@ -17,6 +17,7 @@
 
 #include "../game/file_loader.h"
 #include "../game/formats/avalanche_archive.h"
+#include "../game/formats/avalanche_model_format.h"
 #include "../game/formats/render_block_model.h"
 #include "../game/formats/runtime_container.h"
 #include "../game/render_block_factory.h"
@@ -132,7 +133,7 @@ void UI::Render(RenderContext_t* context)
                 AvalancheArchive::make("new.ee");
             }
 
-            if (ImGui::MenuItem("Render Block Model", ".rbm")) {
+            if (ImGui::MenuItem("Render Block Model", ".rbm", nullptr, !g_IsJC4Mode)) {
                 RenderBlockModel::make("new.rbm");
             }
 
@@ -710,120 +711,11 @@ void UI::RenderFileTreeView()
                 }
             }
 
-            // render blocks
-            if (ImGuiCustom::TabItemScroll("Models", m_TabToSwitch == TreeViewTab_Models, nullptr,
-                                           RenderBlockModel::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
-                for (auto it = RenderBlockModel::Instances.begin(); it != RenderBlockModel::Instances.end();) {
-                    const auto& filename_with_path = (*it).second->GetPath();
-                    const auto& filename           = (*it).second->GetFileName();
-
-                    // render the current model info
-                    bool       is_still_open = true;
-                    const auto open          = ImGui::CollapsingHeader(filename.c_str(), &is_still_open);
-
-                    // context menu
-                    RenderContextMenu(filename_with_path);
-
-                    if (open) {
-                        auto& render_blocks = (*it).second->GetRenderBlocks();
-
-#ifdef ENABLE_ASSET_CREATOR
-                        if (render_blocks.size() == 0) {
-                            static auto red = ImVec4{1, 0, 0, 1};
-                            ImGui::TextColored(red, "This model doesn't have any Render Blocks!");
-
-                            if (ImGuiCustom::BeginButtonDropDown("Add Render Block")) {
-                                // show available render blocks
-                                for (const auto& block_name : RenderBlockFactory::GetValidRenderBlocks()) {
-                                    if (ImGui::MenuItem(block_name)) {
-                                        const auto render_block = RenderBlockFactory::CreateRenderBlock(block_name);
-                                        assert(render_block);
-                                        render_block->SetParent((*it).second.get());
-                                        render_blocks.emplace_back(render_block);
-                                    }
-                                }
-
-                                ImGuiCustom::EndButtonDropDown();
-                            }
-                        }
-#endif
-
-                        uint32_t index = 0;
-                        for (const auto& render_block : render_blocks) {
-                            // unique id
-                            std::string label(render_block->GetTypeName());
-                            label.append("##" + filename + "-" + std::to_string(index));
-
-                            // make the things transparent if the block isn't rendering
-                            const auto block_visible = render_block->IsVisible();
-                            if (!block_visible)
-                                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.35f);
-
-                            // current block header
-                            const auto tree_open = ImGui::TreeNode(label.c_str());
-
-                            // draw render block context menu
-                            if (ImGui::BeginPopupContextItem()) {
-                                render_block->DrawContextMenu();
-                                ImGui::EndPopup();
-                            }
-
-                            // render the current render block info
-                            if (tree_open) {
-                                // show import button if the block doesn't have a vertex buffer
-                                if (!render_block->GetVertexBuffer()) {
-#ifdef ENABLE_ASSET_CREATOR
-                                    static auto red = ImVec4{1, 0, 0, 1};
-                                    ImGui::TextColored(red, "This Render Block doesn't have any mesh!");
-
-                                    if (ImGuiCustom::BeginButtonDropDown("Import Mesh From")) {
-                                        const auto& importers = ImportExportManager::Get()->GetImporters(".rbm");
-                                        for (const auto& importer : importers) {
-                                            if (ImGui::MenuItem(importer->GetName(), importer->GetExportExtension())) {
-                                                UI::Events().ImportFileRequest(
-                                                    importer,
-                                                    [&](bool success, std::filesystem::path filename, std::any data) {
-                                                        auto& [vertices, indices, materials] = std::any_cast<
-                                                            std::tuple<vertices_t, uint16s_t, materials_t>>(data);
-
-                                                        render_block->SetData(&vertices, &indices, &materials);
-                                                        render_block->Create();
-
-                                                        Renderer::Get()->AddToRenderList(render_block);
-                                                    });
-                                            }
-                                        }
-
-                                        ImGuiCustom::EndButtonDropDown();
-                                    }
-#endif
-                                } else {
-                                    // draw model attributes ui
-                                    render_block->DrawUI();
-                                }
-
-                                ImGui::TreePop();
-                            }
-
-                            ++index;
-                        }
-                    }
-
-                    // if the close button was pressed, delete the model
-                    if (!is_still_open) {
-                        std::lock_guard<std::recursive_mutex> _lk{RenderBlockModel::InstancesMutex};
-                        it = RenderBlockModel::Instances.erase(it);
-
-                        continue;
-                    }
-
-                    ++it;
-                }
-
-                ImGuiCustom::EndTabItemScroll();
-                if (m_TabToSwitch == TreeViewTab_Models) {
-                    m_TabToSwitch = TreeViewTab_Total;
-                }
+            // models
+            if (g_IsJC4Mode) {
+                RenderModelsTab_AMF();
+            } else {
+                RenderModelsTab_RBM();
             }
         }
         ImGui::EndTabBar();
@@ -831,6 +723,183 @@ void UI::RenderFileTreeView()
     ImGui::End();
 
     ImGui::PopStyleColor(3);
+}
+
+void UI::RenderModelsTab_RBM()
+{
+    if (ImGuiCustom::TabItemScroll("Models", m_TabToSwitch == TreeViewTab_Models, nullptr,
+                                   RenderBlockModel::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
+        for (auto it = RenderBlockModel::Instances.begin(); it != RenderBlockModel::Instances.end();) {
+            const auto& filename_with_path = (*it).second->GetPath();
+            const auto& filename           = (*it).second->GetFileName();
+
+            // render the current model info
+            bool       is_still_open = true;
+            const auto open          = ImGui::CollapsingHeader(filename.c_str(), &is_still_open);
+
+            // context menu
+            RenderContextMenu(filename_with_path);
+
+            if (open) {
+                auto& render_blocks = (*it).second->GetRenderBlocks();
+
+#ifdef ENABLE_ASSET_CREATOR
+                if (render_blocks.size() == 0) {
+                    static auto red = ImVec4{1, 0, 0, 1};
+                    ImGui::TextColored(red, "This model doesn't have any Render Blocks!");
+
+                    if (ImGuiCustom::BeginButtonDropDown("Add Render Block")) {
+                        // show available render blocks
+                        for (const auto& block_name : RenderBlockFactory::GetValidRenderBlocks()) {
+                            if (ImGui::MenuItem(block_name)) {
+                                const auto render_block = RenderBlockFactory::CreateRenderBlock(block_name);
+                                assert(render_block);
+                                render_block->SetParent((*it).second.get());
+                                render_blocks.emplace_back(render_block);
+                            }
+                        }
+
+                        ImGuiCustom::EndButtonDropDown();
+                    }
+                }
+#endif
+
+                uint32_t index = 0;
+                for (const auto& render_block : render_blocks) {
+                    // unique id
+                    std::string label(render_block->GetTypeName());
+                    label.append("##" + filename + "-" + std::to_string(index));
+
+                    // make the things transparent if the block isn't rendering
+                    const auto block_visible = render_block->IsVisible();
+                    if (!block_visible)
+                        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.35f);
+
+                    // current block header
+                    const auto tree_open = ImGui::TreeNode(label.c_str());
+
+                    // draw render block context menu
+                    if (ImGui::BeginPopupContextItem()) {
+                        render_block->DrawContextMenu();
+                        ImGui::EndPopup();
+                    }
+
+                    // render the current render block info
+                    if (tree_open) {
+                        // show import button if the block doesn't have a vertex buffer
+                        if (!render_block->GetVertexBuffer()) {
+#ifdef ENABLE_ASSET_CREATOR
+                            static auto red = ImVec4{1, 0, 0, 1};
+                            ImGui::TextColored(red, "This Render Block doesn't have any mesh!");
+
+                            if (ImGuiCustom::BeginButtonDropDown("Import Mesh From")) {
+                                const auto& importers = ImportExportManager::Get()->GetImporters(".rbm");
+                                for (const auto& importer : importers) {
+                                    if (ImGui::MenuItem(importer->GetName(), importer->GetExportExtension())) {
+                                        UI::Events().ImportFileRequest(
+                                            importer, [&](bool success, std::filesystem::path filename, std::any data) {
+                                                auto& [vertices, indices, materials] =
+                                                    std::any_cast<std::tuple<vertices_t, uint16s_t, materials_t>>(data);
+
+                                                render_block->SetData(&vertices, &indices, &materials);
+                                                render_block->Create();
+
+                                                Renderer::Get()->AddToRenderList(render_block);
+                                            });
+                                    }
+                                }
+
+                                ImGuiCustom::EndButtonDropDown();
+                            }
+#endif
+                        } else {
+                            // draw model attributes ui
+                            render_block->DrawUI();
+                        }
+
+                        ImGui::TreePop();
+                    }
+
+                    ++index;
+                }
+            }
+
+            // if the close button was pressed, delete the model
+            if (!is_still_open) {
+                std::lock_guard<std::recursive_mutex> _lk{RenderBlockModel::InstancesMutex};
+                it = RenderBlockModel::Instances.erase(it);
+
+                continue;
+            }
+
+            ++it;
+        }
+
+        ImGuiCustom::EndTabItemScroll();
+        if (m_TabToSwitch == TreeViewTab_Models) {
+            m_TabToSwitch = TreeViewTab_Total;
+        }
+    }
+}
+
+void UI::RenderModelsTab_AMF()
+{
+    if (ImGuiCustom::TabItemScroll("Models", m_TabToSwitch == TreeViewTab_Models, nullptr,
+                                   AvalancheModelFormat::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
+        for (auto it = AvalancheModelFormat::Instances.begin(); it != AvalancheModelFormat::Instances.end();) {
+            const auto& filename_with_path = (*it).second->GetPath();
+            const auto& filename           = (*it).second->GetFileName();
+
+            // render the current model info
+            bool       is_still_open = true;
+            const auto open          = ImGui::CollapsingHeader(filename.c_str(), &is_still_open);
+
+            // context menu
+            RenderContextMenu(filename_with_path);
+
+            if (open) {
+                const auto& meshes = (*it).second->GetMeshes();
+
+                if (meshes.size() == 0) {
+                    static auto red = ImVec4{1, 0, 0, 1};
+                    ImGui::TextColored(red, "This model doesn't have any Render Blocks!");
+                }
+
+                uint32_t index = 0;
+                for (const auto& mesh : meshes) {
+                    // unique id
+                    std::string label(mesh->GetName());
+                    label.append("##" + filename + "-" + std::to_string(index));
+
+                    // current block header
+                    const auto tree_open = ImGui::TreeNode(label.c_str());
+                    if (tree_open) {
+                        // draw model attributes ui
+                        mesh->GetRenderBlock()->DrawUI();
+
+                        ImGui::TreePop();
+                    }
+
+                    ++index;
+                }
+            }
+
+            // if the close button was pressed, delete the model
+            if (!is_still_open) {
+                std::lock_guard<std::recursive_mutex> _lk{AvalancheModelFormat::InstancesMutex};
+                it = AvalancheModelFormat::Instances.erase(it);
+
+                continue;
+            }
+
+            ++it;
+        }
+
+        ImGuiCustom::EndTabItemScroll();
+        if (m_TabToSwitch == TreeViewTab_Models) {
+            m_TabToSwitch = TreeViewTab_Total;
+        }
+    }
 }
 
 void UI::RenderSpinner(const std::string& str)

@@ -41,12 +41,8 @@ class RenderBlockModel : public Factory<RenderBlockModel>
 
     bool ParseLOD(const FileBuffer& data);
     bool ParseRBM(const FileBuffer& data, bool add_to_render_list = true);
-    void ParseAMF(const FileBuffer& data, ParseCallback_t callback, bool add_to_render_list = true);
 
-    bool ParseAMFMeshBuffers(AvalancheDataFormat* mesh_adf, AdfInstanceMemberInfo* lod_groups,
-                             AdfInstanceMemberInfo* hr_vertex_buffers, AdfInstanceMemberInfo* hr_index_buffers);
-
-    inline static bool                     LoadingFromRC = false;
+    inline static bool                     LoadingFromRuntimeContainer = false;
     inline static std::vector<std::string> SuppressedWarnings;
 
     void DrawGizmos();

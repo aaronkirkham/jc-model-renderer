@@ -26,6 +26,7 @@ RenderBlockModel::RenderBlockModel(const std::filesystem::path& filename)
     for (const auto& archive : AvalancheArchive::Instances) {
         if (archive.second->HasFile(filename)) {
             m_ParentArchive = archive.second;
+            break;
         }
     }
 }
@@ -93,8 +94,9 @@ bool RenderBlockModel::ParseRBM(const FileBuffer& data, bool add_to_render_list)
     }
 
     // use file batches
-    if (!LoadingFromRC)
+    if (!LoadingFromRuntimeContainer) {
         FileLoader::UseBatches = true;
+    }
 
     // read all the blocks
     for (uint32_t i = 0; i < header.m_NumberOfBlocks; ++i) {
@@ -122,7 +124,7 @@ bool RenderBlockModel::ParseRBM(const FileBuffer& data, bool add_to_render_list)
         } else {
             LOG_ERROR("Unknown render block \"{}\" (0x{:x})", RenderBlockFactory::GetRenderBlockName(hash), hash);
 
-            if (LoadingFromRC) {
+            if (LoadingFromRuntimeContainer) {
                 std::stringstream error;
                 error << "\"RenderBlock" << RenderBlockFactory::GetRenderBlockName(hash) << "\" (0x" << std::uppercase
                       << std::setw(4) << std::hex << hash << ") is not yet supported.\n";
@@ -154,7 +156,7 @@ end:
     if (parse_success) {}
 
     // if we are not loading from a runtime container, run the batches now
-    if (!LoadingFromRC) {
+    if (!LoadingFromRuntimeContainer) {
         // run file batches
         FileLoader::UseBatches = false;
         FileLoader::Get()->RunFileBatches();
@@ -168,11 +170,11 @@ end:
     return parse_success;
 }
 
+#if 0
 #include "../renderblocks/renderblockgeneral.h"
 
 void RenderBlockModel::ParseAMF(const FileBuffer& data, ParseCallback_t callback, bool add_to_render_list)
 {
-#ifdef DEBUG
     auto model_adf = AvalancheDataFormat::make(m_Filename);
     if (!model_adf->Parse(data)) {
         LOG_ERROR("Failed to parse modelc ADF!");
@@ -255,7 +257,6 @@ void RenderBlockModel::ParseAMF(const FileBuffer& data, ParseCallback_t callback
 
         // callback(success);
     });
-#endif
 }
 
 bool RenderBlockModel::ParseAMFMeshBuffers(AvalancheDataFormat* mesh_adf, AdfInstanceMemberInfo* lod_groups,
@@ -372,6 +373,7 @@ bool RenderBlockModel::ParseAMFMeshBuffers(AvalancheDataFormat* mesh_adf, AdfIns
 
     return true;
 }
+#endif
 
 void RenderBlockModel::DrawGizmos()
 {
@@ -422,8 +424,6 @@ void RenderBlockModel::ReadFileCallback(const std::filesystem::path& filename, c
         rbm->ParseLOD(data);
     } else if (filename.extension() == ".rbm") {
         rbm->ParseRBM(data);
-    } else if (filename.extension() == ".modelc") {
-        rbm->ParseAMF(data, [](bool) {});
     }
 }
 
@@ -505,8 +505,8 @@ void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&    
     path      = path.replace(path.find("editor/entities"), strlen("editor/entities"), "models");
 
     std::thread([&, rc, path] {
-        FileLoader::UseBatches          = true;
-        RenderBlockModel::LoadingFromRC = true;
+        FileLoader::UseBatches                        = true;
+        RenderBlockModel::LoadingFromRuntimeContainer = true;
 
         for (const auto& container : rc->GetAllContainers("CPartProp")) {
             auto name     = container->GetProperty("name");
@@ -519,8 +519,8 @@ void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&    
             RenderBlockModel::Load(modelname.generic_string());
         }
 
-        RenderBlockModel::LoadingFromRC = false;
-        FileLoader::UseBatches          = false;
+        RenderBlockModel::LoadingFromRuntimeContainer = false;
+        FileLoader::UseBatches                        = false;
         FileLoader::Get()->RunFileBatches();
 
         std::stringstream error;

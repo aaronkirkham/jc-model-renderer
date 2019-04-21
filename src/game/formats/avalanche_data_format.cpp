@@ -303,7 +303,10 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
             const auto definition = info->m_TypeDef->m_Parent->GetTypeDefinition(static_cast<uint32_t>(type_hash));
 
             if (!definition) {
-                LOG_ERROR("Unknown type definition: {}", static_cast<uint32_t>(type_hash));
+                const auto type_hash_uint32 = static_cast<uint32_t>(type_hash);
+                if (type_hash_uint32 != 0xDEFE88ED) {
+                    LOG_ERROR("Unknown type definition: {}", type_hash_uint32);
+                }
                 break;
             }
 
