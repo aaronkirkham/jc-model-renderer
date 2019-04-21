@@ -165,10 +165,6 @@ void AvalancheDataFormat::FileReadCallback(const std::filesystem::path& filename
     auto adf = AvalancheDataFormat::make(filename);
     assert(adf);
     adf->Parse(data);
-
-//#ifdef DEBUG
-//    __debugbreak();
-//#endif
 }
 
 AdfTypeDefinition* AvalancheDataFormat::GetTypeDefinition(uint32_t type_hash)
@@ -285,6 +281,9 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
         case jc::AvalancheDataFormat::TypeMemberHash::Float:
         case jc::AvalancheDataFormat::TypeMemberHash::Double: {
             LOG_TRACE("\"{}\" is a primivite", name);
+
+            auto new_info = std::make_unique<AdfInstanceMemberInfo>(name, type_hash, offset, this);
+            info->m_Members.emplace_back(std::move(new_info));
             break;
         }
 
@@ -312,8 +311,6 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
                 case jc::AvalancheDataFormat::TypeDefinitionType::InlineArray:
                 case jc::AvalancheDataFormat::TypeDefinitionType::Structure:
                 case jc::AvalancheDataFormat::TypeDefinitionType::StringHash: {
-                    LOG_TRACE("\"{}\" is a structure", name);
-
                     auto new_info = std::make_unique<AdfInstanceMemberInfo>(
                         name, definition, info->m_Adf->m_DataOffset, this, definition->m_Definition.m_ElementLength);
                     info->m_Members.emplace_back(std::move(new_info));
@@ -321,13 +318,9 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
                 }
 
                 case jc::AvalancheDataFormat::TypeDefinitionType::Array: {
-                    LOG_TRACE("\"{}\" is an array", name);
-
                     auto dest_offset = info->m_Adf->ReadData<uint32_t>();
                     info->m_Adf->m_DataOffset += 4;
                     auto element_count = info->m_Adf->ReadData<int64_t>();
-
-                    LOG_TRACE(" - DestOffset={}, ElementCount={}", dest_offset, element_count);
 
 #ifdef DEBUG
                     if (dest_offset == 0 && element_count == 0) {
@@ -355,8 +348,6 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
                 }
 
                 case jc::AvalancheDataFormat::TypeDefinitionType::Enumeration: {
-                    LOG_INFO("\"{}\" is an enumeration", name);
-
                     auto  enum_index = info->m_Adf->ReadData<uint32_t>();
                     auto& enum_data  = definition->m_Enums[enum_index];
 
@@ -486,9 +477,49 @@ AdfInstanceMemberInfo::AdfInstanceMemberInfo(const std::string& name, jc::Avalan
     switch (type) {
         case jc::AvalancheDataFormat::TypeMemberHash::Int8:
         case jc::AvalancheDataFormat::TypeMemberHash::UInt8: {
-            LOG_TRACE("read byte..");
+            LOG_TRACE("read int8/uint8");
 
             adf->m_DataOffset = offset;
+            m_Data.push_back(adf->ReadData<uint8_t>());
+            break;
+        }
+
+        case jc::AvalancheDataFormat::TypeMemberHash::Int16:
+        case jc::AvalancheDataFormat::TypeMemberHash::UInt16: {
+            LOG_TRACE("read int16/uint16");
+
+            adf->m_DataOffset = offset;
+            m_Data.push_back(adf->ReadData<uint8_t>());
+            m_Data.push_back(adf->ReadData<uint8_t>());
+            break;
+        }
+
+        case jc::AvalancheDataFormat::TypeMemberHash::Int32:
+        case jc::AvalancheDataFormat::TypeMemberHash::UInt32:
+        case jc::AvalancheDataFormat::TypeMemberHash::Float: {
+            LOG_TRACE("read int32/uint32/float");
+
+            adf->m_DataOffset = offset;
+            m_Data.push_back(adf->ReadData<uint8_t>());
+            m_Data.push_back(adf->ReadData<uint8_t>());
+            m_Data.push_back(adf->ReadData<uint8_t>());
+            m_Data.push_back(adf->ReadData<uint8_t>());
+            break;
+        }
+
+        case jc::AvalancheDataFormat::TypeMemberHash::Int64:
+        case jc::AvalancheDataFormat::TypeMemberHash::UInt64:
+        case jc::AvalancheDataFormat::TypeMemberHash::Double: {
+            LOG_TRACE("read int64/uint64/double");
+
+            adf->m_DataOffset = offset;
+            m_Data.push_back(adf->ReadData<uint8_t>());
+            m_Data.push_back(adf->ReadData<uint8_t>());
+            m_Data.push_back(adf->ReadData<uint8_t>());
+            m_Data.push_back(adf->ReadData<uint8_t>());
+            m_Data.push_back(adf->ReadData<uint8_t>());
+            m_Data.push_back(adf->ReadData<uint8_t>());
+            m_Data.push_back(adf->ReadData<uint8_t>());
             m_Data.push_back(adf->ReadData<uint8_t>());
             break;
         }

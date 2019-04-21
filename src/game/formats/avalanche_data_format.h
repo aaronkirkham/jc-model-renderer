@@ -36,6 +36,11 @@ class AdfInstanceMemberInfo
     AdfInstanceMemberInfo(const std::string& name, AdfTypeDefinition* type, int64_t offset, AdfInstanceInfo* adf,
                           jc::AvalancheDataFormat::Enum* enum_data);
     virtual ~AdfInstanceMemberInfo() = default;
+
+    template <typename T> T GetData()
+    {
+        return CastBuffer<T>(&m_Data)[0];
+    }
 };
 
 class AdfInstanceInfo
