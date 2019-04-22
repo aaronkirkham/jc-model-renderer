@@ -36,21 +36,52 @@ void ShaderManager::Init()
         }
 
 #if DUMP_SHADERS
-        std::filesystem::path path = "C:/users/aaron/desktop/shaders";
+        std::filesystem::path path = "C:/users/aaron/desktop/shaders_jc4";
         std::filesystem::create_directories(path);
 
-        const auto& vertex_shaders = m_ShaderBundle->GetMember("VertexShaders");
-        for (const auto& member : vertex_shaders->m_Members) {
-            LOG_INFO(member->m_Members[0]->m_StringData);
+        std::filesystem::path bin_path = path / "bin";
+        std::filesystem::create_directories(bin_path);
 
-            const auto& shader_data = member->m_Members[1]->m_Data;
+        static const auto DumpShader = [&](const std::string& shader_name, const std::string& extension,
+                                           const FileBuffer& shader_data) {
+            ID3DBlob* blob = nullptr;
+            auto      hr   = D3DDisassemble(shader_data.data(), shader_data.size(), 0, nullptr, &blob);
+            if (FAILED(hr)) {
+                __debugbreak();
+            }
 
+            auto shader_path = bin_path / shader_name;
+            shader_path += extension;
+            std::ofstream stream2(shader_path, std::ios::binary);
+            stream2.write((char*)shader_data.data(), shader_data.size());
+            stream2.close();
+
+            std::string str((const char*)blob->GetBufferPointer(), blob->GetBufferSize());
+            // str = str.substr(0, str.find("vs_5_0"));
+
+            auto file_path = path / shader_name;
+            file_path += extension;
+            file_path += ".txt";
+            std::ofstream stream(file_path);
+            stream << str;
+            stream.close();
+
+            blob->Release();
+        };
+
+        for (const auto& member : m_ShaderBundle->GetMember("VertexShaders")->m_Members) {
+            const auto& shader_name = m_ShaderBundle->GetMember(member.get(), "Name")->m_StringData;
+            const auto& shader_data = m_ShaderBundle->GetMember(member.get(), "BinaryData")->m_Data;
+
+            DumpShader(shader_name, ".vb", shader_data);
+
+#if 0
             // ID3D11VertexShader* shader = nullptr;
             // auto result = Renderer::Get()->GetDevice()->CreateVertexShader(shader_data.data(),
             // shader_data.size(),
             //                                                               nullptr, &shader);
             // assert(SUCCEEDED(result));
-#if 0
+
             ID3D11ShaderReflection* reflector = nullptr;
             auto                    result =
                 D3DReflect(shader_data.data(), shader_data.size(), IID_ID3D11ShaderReflection, (void**)&reflector);
@@ -70,31 +101,13 @@ void ShaderManager::Init()
                 LOG_INFO(buffer_desc.Name);
             }
 #endif
+        }
 
-#if 1
-            ID3DBlob* blob = nullptr;
-            auto      hr   = D3DDisassemble(shader_data.data(), shader_data.size(), 0, nullptr, &blob);
-            if (FAILED(hr)) {
-                __debugbreak();
-            }
+        for (const auto& member : m_ShaderBundle->GetMember("FragmentShaders")->m_Members) {
+            const auto& shader_name = m_ShaderBundle->GetMember(member.get(), "Name")->m_StringData;
+            const auto& shader_data = m_ShaderBundle->GetMember(member.get(), "BinaryData")->m_Data;
 
-            auto shader_path = path / member->m_Members[0]->m_StringData;
-            shader_path += ".vb";
-            std::ofstream stream2(shader_path, std::ios::binary);
-            stream2.write((char*)shader_data.data(), shader_data.size());
-            stream2.close();
-
-            std::string str((const char*)blob->GetBufferPointer(), blob->GetBufferSize());
-            // str = str.substr(0, str.find("vs_5_0"));
-
-            auto file_path = path / member->m_Members[0]->m_StringData;
-            file_path += ".txt";
-            std::ofstream stream(file_path);
-            stream << str;
-            stream.close();
-
-            blob->Release();
-#endif
+            DumpShader(shader_name, ".fb", shader_data);
         }
 #endif
     }).detach();
@@ -130,8 +143,9 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
     // look for the correct member
     const auto& vertex_shaders = m_ShaderBundle->GetMember("VertexShaders");
     for (const auto& member : vertex_shaders->m_Members) {
-        if (member->m_Members[0]->m_StringData == name) {
-            const auto& shader_data = member->m_Members[1]->m_Data;
+        const auto& shader_name = m_ShaderBundle->GetMember(member.get(), "Name")->m_StringData;
+        if (shader_name == name) {
+            const auto& shader_data = m_ShaderBundle->GetMember(member.get(), "BinaryData")->m_Data;
 
             auto shader    = std::make_shared<VertexShader_t>();
             shader->m_Code = shader_data;
@@ -177,8 +191,9 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
     // look for the correct member
     const auto& fragment_shaders = m_ShaderBundle->GetMember("FragmentShaders");
     for (const auto& member : fragment_shaders->m_Members) {
-        if (member->m_Members[0]->m_StringData == name) {
-            const auto& shader_data = member->m_Members[1]->m_Data;
+        const auto& shader_name = m_ShaderBundle->GetMember(member.get(), "Name")->m_StringData;
+        if (shader_name == name) {
+            const auto& shader_data = m_ShaderBundle->GetMember(member.get(), "BinaryData")->m_Data;
 
             auto shader    = std::make_shared<PixelShader_t>();
             shader->m_Code = shader_data;

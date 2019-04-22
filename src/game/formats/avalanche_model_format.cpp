@@ -69,6 +69,10 @@ void AvalancheModelFormat::Parse(const FileBuffer& data, ParseCallback_t callbac
         return callback(false);
     }
 
+    //
+    /*auto character_skin_constants = m_ModelAdf->GetMember("CharacterSkinConstants");
+    __debugbreak();*/
+
     const auto instance  = m_ModelAdf->GetMember("instance"); // TODO: not all models have this name.
     const auto materials = m_ModelAdf->GetMember(instance, "Materials");
 
@@ -158,41 +162,16 @@ bool AvalancheModelFormat::ParseMeshBuffers()
         });
 
         if (find_it != m_Meshes.end()) {
-            /*
-            // vertex buffer
-            const auto vertex_count         = m_MeshAdf->GetMember(mesh.get(), "VertexCount")->GetData<uint32_t>();
-            const auto vertex_buffer_index  = m_MeshAdf->GetMember(mesh.get(), "VertexBufferIndices")->m_Data[0];
-            const auto vertex_buffer_stride = m_MeshAdf->GetMember(mesh.get(), "VertexStreamStrides")->m_Data[0];
-            const auto vertex_buffer_offset =
-                m_MeshAdf->GetMember(mesh.get(), "VertexStreamOffsets")->GetData<uint32_t>();
+            const auto vertex_buffer_index = m_MeshAdf->GetMember(mesh.get(), "VertexBufferIndices")->m_Data[0];
+            auto&      vertex_buffer       = vertex_buffers.at(vertex_buffer_index);
 
-            LOG_INFO(" - VertexCount={}, VertexBufferIndices={}, VertexStreamStrides={}, VertexStreamOffsets={}",
-                     vertex_count, vertex_buffer_index, vertex_buffer_stride, vertex_buffer_offset);
+            const auto index_buffer_index = m_MeshAdf->GetMember(mesh.get(), "IndexBufferIndex")->m_Data[0];
+            auto&      index_buffer       = index_buffers.at(index_buffer_index);
 
-            const auto& vertex_buffer = vertex_buffers.at(vertex_buffer_index);
+            LOG_INFO(" - VertexBufferIndex={}, IndexBufferIndex={}", vertex_buffer_index, index_buffer_index);
 
-            // copy the vertex buffer
-            std::vector<uint8_t> vertices;
-            std::copy(vertex_buffer.begin() + vertex_buffer_offset,
-                      vertex_buffer.begin() + vertex_buffer_offset + (vertex_count * vertex_buffer_stride),
-                      std::back_inserter(vertices));
-
-            // index buffer
-            const auto index_count         = m_MeshAdf->GetMember(mesh.get(), "IndexCount")->GetData<uint32_t>();
-            const auto index_buffer_index  = m_MeshAdf->GetMember(mesh.get(), "IndexBufferIndex")->m_Data[0];
-            const auto index_buffer_stride = m_MeshAdf->GetMember(mesh.get(), "IndexBufferStride")->m_Data[0];
-            const auto index_buffer_offset = m_MeshAdf->GetMember(mesh.get(), "IndexBufferOffset")->m_Data[0];
-
-            LOG_INFO(" - IndexCount={}, IndexBufferIndex={}, IndexBufferStride={}, IndexBufferOffset={}", index_count,
-                     index_buffer_index, index_buffer_stride, index_buffer_offset);
-
-            const auto& index_buffer = CastBuffer<uint16_t>(&index_buffers.at(index_buffer_index));
-
-            // copy the index buffer
-            std::vector<uint16_t> indices;
-            std::copy(index_buffer.begin() + index_buffer_offset,
-                      index_buffer.begin() + index_buffer_offset + (index_count), std::back_inserter(indices));
-            */
+            // load the mesh buffers
+            (*find_it)->LoadBuffers(mesh.get(), &vertex_buffer, &index_buffer);
         }
     }
 
@@ -203,9 +182,9 @@ AMFMesh::AMFMesh(AdfInstanceMemberInfo* info, AvalancheModelFormat* parent)
     : m_Info(info)
     , m_Parent(parent)
 {
-    auto model_adf  = parent->GetModelAdf();
-    m_Name          = model_adf->GetMember(info, "Name")->m_StringData;
-    m_RenderBlockId = model_adf->GetMember(info, "RenderBlockId")->m_StringData;
+    const auto model_adf = parent->GetModelAdf();
+    m_Name               = model_adf->GetMember(info, "Name")->m_StringData;
+    m_RenderBlockId      = model_adf->GetMember(info, "RenderBlockId")->m_StringData;
 
     LOG_INFO("{} ({})", m_Name, m_RenderBlockId);
 
@@ -225,4 +204,76 @@ AMFMesh::~AMFMesh()
 {
     Renderer::Get()->RemoveFromRenderList(m_RenderBlock);
     // SAFE_DELETE(m_RenderBlock);
+}
+
+#include "game/renderblocks/renderblockcharacter.h"
+
+void AMFMesh::LoadBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, FileBuffer* indices)
+{
+    const auto mesh_adf = m_Parent->GetMeshAdf();
+
+    // parse vertex buffer
+    const auto vertex_count         = mesh_adf->GetMember(info, "VertexCount")->GetData<uint32_t>();
+    const auto vertex_buffer_stride = mesh_adf->GetMember(info, "VertexStreamStrides")->m_Data[0];
+    const auto vertex_buffer_offset = mesh_adf->GetMember(info, "VertexStreamOffsets")->GetData<uint32_t>();
+
+    LOG_INFO(" - VertexCount={}, VertexStreamStrides={}, VertexStreamOffsets={}", vertex_count, vertex_buffer_stride,
+             vertex_buffer_offset);
+
+    // copy the vertex buffer
+    std::vector<uint8_t> vertex_buffer;
+    vertex_buffer.reserve(vertex_count * vertex_buffer_stride);
+    std::copy(vertices->begin() + vertex_buffer_offset,
+              vertices->begin() + vertex_buffer_offset + (vertex_count * vertex_buffer_stride),
+              std::back_inserter(vertex_buffer));
+
+    // parse index buffer
+    const auto index_count         = mesh_adf->GetMember(info, "IndexCount")->GetData<uint32_t>();
+    const auto index_buffer_stride = mesh_adf->GetMember(info, "IndexBufferStride")->m_Data[0];
+    const auto index_buffer_offset = mesh_adf->GetMember(info, "IndexBufferOffset")->m_Data[0];
+
+    LOG_INFO(" - IndexCount={}, IndexBufferStride={}, IndexBufferOffset={}", index_count, index_buffer_stride,
+             index_buffer_offset);
+
+    // copy the index buffer
+    std::vector<uint8_t> index_buffer;
+    index_buffer.reserve(index_count * index_buffer_stride);
+    std::copy(indices->begin() + index_buffer_offset,
+              indices->begin() + index_buffer_offset + (index_count * index_buffer_stride),
+              std::back_inserter(index_buffer));
+
+    if (m_RenderBlockId == "Character") {
+        ((RenderBlockCharacter*)m_RenderBlock)->CreateBuffers(&vertex_buffer, &index_buffer);
+        Renderer::Get()->AddToRenderList(m_RenderBlock);
+    }
+
+#ifdef DEBUG
+#if 0
+    {
+        std::ofstream stream("C:/users/aaron/desktop/" + m_Name + ".obj");
+
+        // TODO: need to cast to the correct types depending on the VertexStreamStrides (MeshTypeId for correct type
+        // name) and IndexBufferStride
+
+        // dump vertices
+        auto& packed_vertices = CastBuffer<jc::Vertex::RenderBlockCharacter::Packed4Bones1UV>(&vertex_buffer);
+        for (const auto& vertex : packed_vertices) {
+            float x = jc::Vertex::unpack(vertex.x);
+            float y = jc::Vertex::unpack(vertex.y);
+            float z = jc::Vertex::unpack(vertex.z);
+            stream << "v " << x << " " << y << " " << z << std::endl;
+        }
+
+        // dump indices
+        auto& unpacked_indices = CastBuffer<uint16_t>(&index_buffer);
+        for (auto i = 0; i < unpacked_indices.size(); i += 3) {
+            int32_t index[3] = {unpacked_indices[i] + 1, unpacked_indices[i + 1] + 1, unpacked_indices[i + 2] + 1};
+
+            stream << "f " << index[0] << " " << index[1] << " " << index[2] << std::endl;
+        }
+
+        stream.close();
+    }
+#endif
+#endif
 }

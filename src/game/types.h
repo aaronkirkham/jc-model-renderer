@@ -485,23 +485,32 @@ namespace AvalancheDataFormat
         Array       = 3,
         InlineArray = 4,
         String      = 5,
+        Unknown     = 6,
         BitField    = 7,
         Enumeration = 8,
         StringHash  = 9,
+        Deferred    = 10,
     };
 
     enum class TypeMemberHash : uint32_t {
-        Int8   = 0x580D0A62,
-        UInt8  = 0xCA2821D,
-        Int16  = 0xD13FCF93,
-        UInt16 = 0x86D152BD,
-        Int32  = 0x192FE633,
-        UInt32 = 0x75E4E4F,
-        Int64  = 0xAF41354F,
-        UInt64 = 0xA139E01F,
-        Float  = 0x7515A207,
-        Double = 0xC609F663,
-        String = 0x8955583E,
+        Int8     = 0x580D0A62,
+        UInt8    = 0xCA2821D,
+        Int16    = 0xD13FCF93,
+        UInt16   = 0x86D152BD,
+        Int32    = 0x192FE633,
+        UInt32   = 0x75E4E4F,
+        Int64    = 0xAF41354F,
+        UInt64   = 0xA139E01F,
+        Float    = 0x7515A207,
+        Double   = 0xC609F663,
+        String   = 0x8955583E,
+        Deferred = 0xDEFE88ED,
+    };
+
+    enum class PrimitiveType : uint16_t {
+        Signed   = 0,
+        Unsigned = 1,
+        Float    = 2,
     };
 
     static const char* TypeDefinitionStr(TypeDefinitionType type)
@@ -525,6 +534,8 @@ namespace AvalancheDataFormat
                 return "Enumeration";
             case TypeDefinitionType::StringHash:
                 return "StringHash";
+            case TypeDefinitionType::Deferred:
+                return "Deferred";
         }
 
         return "Unknown";
@@ -534,11 +545,12 @@ namespace AvalancheDataFormat
         TypeDefinitionType m_Type;
         uint32_t           m_Size;
         uint32_t           m_Alignment;
-        uint32_t           m_NameHash;
+        TypeMemberHash     m_TypeHash;
         int64_t            m_NameIndex;
-        uint32_t           m_Flags;
-        uint32_t           m_ElementTypeHash;
-        uint32_t           m_ElementLength;
+        uint16_t           m_Flags;
+        PrimitiveType      m_PrimitiveType;
+        TypeMemberHash     m_ElementTypeHash;
+        uint32_t           m_ArraySizeOrBitCount;
     };
 
     struct MemeberDefinition {
@@ -551,11 +563,11 @@ namespace AvalancheDataFormat
     };
 
     struct InstanceInfo {
-        uint32_t m_NameHash;
-        uint32_t m_TypeHash;
-        uint32_t m_Offset;
-        uint32_t m_Size;
-        int64_t  m_NameIndex;
+        uint32_t       m_NameHash;
+        TypeMemberHash m_TypeHash;
+        uint32_t       m_Offset;
+        uint32_t       m_Size;
+        int64_t        m_NameIndex;
     };
 
     struct Enum {

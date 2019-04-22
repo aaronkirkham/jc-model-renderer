@@ -25,6 +25,8 @@ class AMFMesh
     AMFMesh(AdfInstanceMemberInfo* info, AvalancheModelFormat* parent);
     virtual ~AMFMesh();
 
+    void LoadBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, FileBuffer* indices);
+
     const std::string& GetName()
     {
         return m_Name;

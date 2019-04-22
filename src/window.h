@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sstream>
+#include <filesystem>
 
 #include "drop_target.h"
 #include "singleton.h"

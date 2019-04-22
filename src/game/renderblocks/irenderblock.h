@@ -145,6 +145,16 @@ class IRenderBlock
         return BindTexture(texture_index, texture_index, sampler);
     }
 
+    inline void AllocateTextureSlots(int32_t count)
+    {
+        m_Textures.resize(count);
+    }
+
+    inline void SetTexture(int32_t texture_index, std::shared_ptr<Texture> texture)
+    {
+        m_Textures[texture_index] = texture;
+    }
+
     IBuffer_t* ReadBuffer(std::istream& stream, BufferType type, uint32_t stride)
     {
         assert(stride);

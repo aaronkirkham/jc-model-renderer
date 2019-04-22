@@ -108,6 +108,38 @@ class RenderBlockCharacter : public IRenderBlock
         return ((flags & BODY_PART) == GEAR || (flags & BODY_PART) == HAIR) && !(flags & TRANSPARENCY_ALPHABLENDING);
     }
 
+    void CreateBuffers(FileBuffer* vertex, FileBuffer* index)
+    {
+        m_VertexBuffer = Renderer::Get()->CreateBuffer(
+            vertex->data(), (vertex->size() / sizeof(jc::Vertex::RenderBlockCharacter::Packed4Bones1UV)),
+            sizeof(jc::Vertex::RenderBlockCharacter::Packed4Bones1UV), VERTEX_BUFFER);
+
+        m_IndexBuffer = Renderer::Get()->CreateBuffer(index->data(), (index->size() / sizeof(uint16_t)),
+                                                      sizeof(uint16_t), INDEX_BUFFER);
+
+        m_Block                  = {};
+        m_Block.attributes.scale = 1.0f;
+
+        Create();
+
+        /*uint32_t stride_1 = sizeof(jc::Vertex::PackedVertexPosition);
+        uint32_t stride_2 = sizeof(jc::Vertex::GeneralShortPacked);
+
+        m_VertexBuffer =
+            Renderer::Get()->CreateBuffer(vertex->data(), vertex->size() / stride_1, stride_1, VERTEX_BUFFER);
+        m_VertexBufferData =
+            Renderer::Get()->CreateBuffer(data->data(), data->size() / stride_2, stride_2, VERTEX_BUFFER);
+        m_IndexBuffer = Renderer::Get()->CreateBuffer(index->data(), index->size() / sizeof(uint16_t), sizeof(uint16_t),
+                                                      INDEX_BUFFER);
+
+        m_Block                             = {};
+        m_Block.attributes.packed.format    = 1;
+        m_Block.attributes.packed.scale     = 1.0f;
+        m_Block.attributes.packed.uv0Extent = {1.0f, 1.0f};
+
+        Create();*/
+    }
+
     virtual void Create() override final
     {
         m_PixelShader = ShaderManager::Get()->GetPixelShader(
@@ -485,7 +517,11 @@ class RenderBlockCharacter : public IRenderBlock
         if (!m_Visible)
             return;
 
-        IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
+        if (m_SkinBatches.size() > 0) {
+            IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
+        } else {
+            IRenderBlock::Draw(context);
+        }
     }
 
     virtual void DrawContextMenu() override final

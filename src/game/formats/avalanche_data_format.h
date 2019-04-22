@@ -13,6 +13,9 @@ class AdfInstanceInfo;
 class AdfTypeDefinition;
 class AvalancheDataFormat;
 
+static constexpr const char* ADF_TYPE_NAMES[12] = {"uint8",  "int8",  "uint16", "int16",  "uint32", "int32",
+                                                   "uint64", "int64", "float",  "double", "String", "void"};
+
 class AdfInstanceMemberInfo
 {
   public:
@@ -31,6 +34,7 @@ class AdfInstanceMemberInfo
     AdfInstanceMemberInfo() = default;
     AdfInstanceMemberInfo(const std::string& name, AdfTypeDefinition* type, int64_t offset, AdfInstanceInfo* adf,
                           uint32_t expected_element_count);
+    AdfInstanceMemberInfo(const std::string& name, AdfTypeDefinition* type, int64_t offset, AdfInstanceInfo* adf);
     AdfInstanceMemberInfo(const std::string& name, jc::AvalancheDataFormat::TypeMemberHash type, int64_t offset,
                           AdfInstanceInfo* adf);
     AdfInstanceMemberInfo(const std::string& name, AdfTypeDefinition* type, int64_t offset, AdfInstanceInfo* adf,
@@ -56,10 +60,10 @@ class AdfInstanceInfo
                                  const std::string& name, int64_t offset);
 
   public:
-    std::string                                         m_Name     = "";
-    AdfTypeDefinition*                                  m_Type     = nullptr;
-    uint32_t                                            m_Offset   = 0;
-    uint32_t                                            m_TypeHash = 0;
+    std::string                                         m_Name   = "";
+    AdfTypeDefinition*                                  m_Type   = nullptr;
+    uint32_t                                            m_Offset = 0;
+    jc::AvalancheDataFormat::TypeMemberHash             m_TypeHash;
     std::vector<std::unique_ptr<AdfInstanceMemberInfo>> m_Members;
     std::unordered_map<int64_t, AdfInstanceMemberInfo*> m_MemberOffsets;
     AvalancheDataFormat*                                m_Parent = nullptr;
@@ -116,6 +120,11 @@ class AvalancheDataFormat : public Factory<AvalancheDataFormat>
     std::vector<std::unique_ptr<AdfTypeDefinition>> m_TypeDefinitions;
     std::vector<std::unique_ptr<AdfInstanceInfo>>   m_InstanceInfos;
 
+    void AddBuiltInTypes();
+    void AddBuiltInType(jc::AvalancheDataFormat::TypeDefinitionType type,
+                        jc::AvalancheDataFormat::PrimitiveType primitive_type, uint32_t size, uint32_t type_index,
+                        uint16_t flags);
+
   public:
     AvalancheDataFormat(const std::filesystem::path& file);
     AvalancheDataFormat(const std::filesystem::path& filename, const FileBuffer& buffer);
@@ -130,7 +139,7 @@ class AvalancheDataFormat : public Factory<AvalancheDataFormat>
 
     static void FileReadCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);
 
-    AdfTypeDefinition* GetTypeDefinition(uint32_t type_hash);
+    AdfTypeDefinition* GetTypeDefinition(jc::AvalancheDataFormat::TypeMemberHash type_hash);
 
     AdfInstanceMemberInfo* GetMember(const std::string& name);
     AdfInstanceMemberInfo* GetMember(AdfInstanceMemberInfo* info, const std::string& name);
