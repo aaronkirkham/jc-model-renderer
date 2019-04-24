@@ -44,10 +44,10 @@ FileLoader::FileLoader()
     // trigger the file type callbacks
     UI::Get()->Events().FileTreeItemSelected.connect([&](const std::filesystem::path& file, AvalancheArchive* archive) {
         // do we have a registered callback for this file type?
-        if (m_FileTypeCallbacks.find(file.extension().string()) != m_FileTypeCallbacks.end()) {
+        if (m_FileReadHandlers.find(file.extension().string()) != m_FileReadHandlers.end()) {
             ReadFile(file, [&, file](bool success, FileBuffer data) {
                 if (success) {
-                    for (const auto& fn : m_FileTypeCallbacks[file.extension().string()]) {
+                    for (const auto& fn : m_FileReadHandlers[file.extension().string()]) {
                         fn(file, data, false);
                     }
                 } else {
@@ -80,8 +80,8 @@ FileLoader::FileLoader()
             std::filesystem::create_directories(path.parent_path());
 
             // try use a handler
-            if (m_SaveFileCallbacks.find(file.extension().string()) != m_SaveFileCallbacks.end()) {
-                for (const auto& fn : m_SaveFileCallbacks[file.extension().string()]) {
+            if (m_FileSaveHandlers.find(file.extension().string()) != m_FileSaveHandlers.end()) {
+                for (const auto& fn : m_FileSaveHandlers[file.extension().string()]) {
                     was_handled = fn(file, path);
                 }
             }
@@ -253,7 +253,8 @@ void FileLoader::Shutdown()
     m_FileList = nullptr;
 }
 
-void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileCallback callback, uint8_t flags) noexcept
+void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultCallback callback,
+                          uint8_t flags) noexcept
 {
     uint64_t status_text_id = 0;
 
@@ -315,7 +316,7 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileCallbac
     }).detach();
 }
 
-void FileLoader::ReadFileBatched(const std::filesystem::path& filename, ReadFileCallback callback) noexcept
+void FileLoader::ReadFileBatched(const std::filesystem::path& filename, ReadFileResultCallback callback) noexcept
 {
     std::lock_guard<std::recursive_mutex> _lk{m_BatchesMutex};
     m_PathBatches[filename.string()].emplace_back(callback);
@@ -441,7 +442,7 @@ void FileLoader::ReadFileFromDisk(const std::filesystem::path& filename) noexcep
     const auto& extension = filename.extension().string();
 
     // do we have a registered callback for this file type?
-    if (m_FileTypeCallbacks.find(extension) != m_FileTypeCallbacks.end()) {
+    if (m_FileReadHandlers.find(extension) != m_FileReadHandlers.end()) {
         const auto size = std::filesystem::file_size(filename);
 
         FileBuffer data;
@@ -454,7 +455,7 @@ void FileLoader::ReadFileFromDisk(const std::filesystem::path& filename) noexcep
         stream.close();
 
         // run the callback handlers
-        for (const auto& fn : m_FileTypeCallbacks[extension]) {
+        for (const auto& fn : m_FileReadHandlers[extension]) {
             fn(filename.filename(), data, true);
         }
     } else {
@@ -873,7 +874,7 @@ static void DEBUG_TEXTURE_FLAGS(const jc::AvalancheTexture::Header* header)
     }
 }
 
-void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCallback callback) noexcept
+void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResultCallback callback) noexcept
 {
     FileLoader::Get()->ReadFile(
         filename,
@@ -941,8 +942,8 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileCall
                 auto atx2 = filename;
                 atx2.replace_extension(".atx2");
 
-				// TODO: .atx2 is very weird.
-				// in the archive they as usually offset 0, size 0 - figure this out before we enable them again.
+                // TODO: .atx2 is very weird.
+                // in the archive they as usually offset 0, size 0 - figure this out before we enable them again.
 
                 bool has_atx2 = false; // FileLoader::Get()->HasFileInDictionary(hashlittle(atx2.string().c_str()));
                 if (!has_atx2) {
@@ -1700,16 +1701,16 @@ DictionaryLookupResult FileLoader::LocateFileInDictionaryByPartOfName(const std:
     return {path.substr(0, pos), path.substr(pos + 1, path.length()), file.first};
 }
 
-void FileLoader::RegisterReadCallback(const std::vector<std::string>& extensions, FileTypeCallback fn)
+void FileLoader::RegisterReadCallback(const std::vector<std::string>& extensions, FileReadHandler fn)
 {
     for (const auto& extension : extensions) {
-        m_FileTypeCallbacks[extension].emplace_back(fn);
+        m_FileReadHandlers[extension].emplace_back(fn);
     }
 }
 
-void FileLoader::RegisterSaveCallback(const std::vector<std::string>& extensions, FileSaveCallback fn)
+void FileLoader::RegisterSaveCallback(const std::vector<std::string>& extensions, FileSaveHandler fn)
 {
     for (const auto& extension : extensions) {
-        m_SaveFileCallbacks[extension].emplace_back(fn);
+        m_FileSaveHandlers[extension].emplace_back(fn);
     }
 }

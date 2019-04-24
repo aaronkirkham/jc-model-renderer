@@ -285,6 +285,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterSaveCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::SaveFileCallback);
         FileLoader::Get()->RegisterSaveCallback({".epe", ".blo"}, RuntimeContainer::SaveFileCallback);
 
+        // FileLoader::Get()->RegisterSaveCallback(0x20464441, nullptr);
+
         // register file type context menu callbacks
         UI::Get()->RegisterContextMenuCallback({".rbm"}, RenderBlockModel::ContextMenuUI);
         // UI::Get()->RegisterContextMenuCallback({".modelc"}, AvalancheModelFormat::ContextMenuUI);
