@@ -206,7 +206,7 @@ AMFMesh::~AMFMesh()
     // SAFE_DELETE(m_RenderBlock);
 }
 
-#include "game/renderblocks/renderblockcharacter.h"
+#include "game/renderblocks/renderblockcharacter_jc4.h"
 
 void AMFMesh::LoadBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, FileBuffer* indices)
 {
@@ -242,9 +242,9 @@ void AMFMesh::LoadBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, Fil
               indices->begin() + index_buffer_offset + (index_count * index_buffer_stride),
               std::back_inserter(index_buffer));
 
-    if (m_RenderBlockId == "Character") {
-        ((RenderBlockCharacter*)m_RenderBlock)->CreateBuffers(&vertex_buffer, &index_buffer);
-        Renderer::Get()->AddToRenderList(m_RenderBlock);
+    if (m_RenderBlockId == "Character" || m_RenderBlockId == "CharacterSkin") {
+        ((jc4::RenderBlockCharacter*)m_RenderBlock)->CreateBuffers(&vertex_buffer, &index_buffer);
+        // Renderer::Get()->AddToRenderList(m_RenderBlock);
     }
 
 #ifdef DEBUG

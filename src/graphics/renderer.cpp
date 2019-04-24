@@ -15,6 +15,8 @@
 
 void SetupImGuiStyle();
 
+extern bool g_IsJC4Mode;
+
 Renderer::Renderer()
 {
     Window::Get()->Events().SizeChanged.connect([this](const glm::vec2& size) { SetResolution(size); });
@@ -370,14 +372,11 @@ void Renderer::CreateRenderTarget(const glm::vec2& size)
     m_DeviceContext->OMSetRenderTargets(1, &m_BackBuffer, m_DepthStencilView);
 
     // create the viewport
-    {
-        D3D11_VIEWPORT viewport{};
-        viewport.Width    = size.x;
-        viewport.Height   = size.y;
-        viewport.MaxDepth = 1.0f;
-
-        m_DeviceContext->RSSetViewports(1, &viewport);
-    }
+    D3D11_VIEWPORT viewport{};
+    viewport.Width    = size.x;
+    viewport.Height   = size.y;
+    viewport.MaxDepth = 1.0f;
+    m_DeviceContext->RSSetViewports(1, &viewport);
 }
 
 void Renderer::CreateGBuffer(const glm::vec2& size)

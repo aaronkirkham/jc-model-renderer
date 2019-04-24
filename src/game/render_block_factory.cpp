@@ -11,7 +11,11 @@
 #include "renderblocks/renderblockprop.h"
 #include "renderblocks/renderblockwindow.h"
 
+#include "renderblocks/renderblockcharacter_jc4.h"
+
 #include "hashlittle.h"
+
+extern bool g_IsJC4Mode;
 
 IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type)
 {
@@ -22,10 +26,18 @@ IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type)
             return new RenderBlockCarLight;
         case RB_CARPAINTMM:
             return new RenderBlockCarPaintMM;
-        case RB_CHARACTER:
+        case RB_CHARACTER: {
+            if (g_IsJC4Mode)
+                return new jc4::RenderBlockCharacter;
             return new RenderBlockCharacter;
-        case RB_CHARACTERSKIN:
+        }
+        case RB_CHARACTERSKIN: {
+            // NOTE: TEMP - although jc4 CharacterSkin uses the same shaders/rendering as Character
+            if (g_IsJC4Mode) {
+                return new jc4::RenderBlockCharacter;
+            }
             return new RenderBlockCharacterSkin;
+        }
         case RB_GENERAL:
             return new RenderBlockGeneral;
         case RB_GENERALJC3:

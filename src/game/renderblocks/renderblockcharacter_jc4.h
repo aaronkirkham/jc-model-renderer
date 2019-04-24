@@ -2,27 +2,26 @@
 
 #include "irenderblock.h"
 
-#pragma pack(push, 1)
-#pragma pack(pop)
-
-class RenderBlock___ : public IRenderBlock
+namespace jc4
+{
+class RenderBlockCharacter : public IRenderBlock
 {
   private:
   public:
-    RenderBlock___() = default;
-    virtual ~RenderBlock___()
+    RenderBlockCharacter() = default;
+    virtual ~RenderBlockCharacter()
     {
         //
     }
 
     virtual const char* GetTypeName() override final
     {
-        return "RenderBlock___";
+        return "RenderBlockCharacter";
     }
 
     virtual uint32_t GetTypeHash() const override final
     {
-        return 0x0;
+        return RenderBlockFactory::RB_CHARACTER;
     }
 
     virtual bool IsOpaque() override final
@@ -30,20 +29,10 @@ class RenderBlock___ : public IRenderBlock
         return true;
     }
 
-    virtual void Create() override final
-    {
-        //
-    }
+    virtual void Create() override final {}
 
-    virtual void Read(std::istream& stream) override final
-    {
-        //
-    }
-
-    virtual void Write(std::ostream& stream) override final
-    {
-        //
-    }
+    virtual void Read(std::istream& stream) override final {}
+    virtual void Write(std::ostream& stream) override final {}
 
     virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
     {
@@ -79,3 +68,4 @@ class RenderBlock___ : public IRenderBlock
         //
     }
 };
+}; // namespace jc4

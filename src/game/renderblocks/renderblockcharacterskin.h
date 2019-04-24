@@ -438,7 +438,6 @@ class RenderBlockCharacterSkin : public IRenderBlock
     virtual void DrawUI() override final
     {
         ImGui::Text(ICON_FA_COGS "  Attributes");
-
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
 
         // Textures

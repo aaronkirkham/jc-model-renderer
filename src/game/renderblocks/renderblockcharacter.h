@@ -2,6 +2,8 @@
 
 #include "irenderblock.h"
 
+extern bool g_IsJC4Mode;
+
 #pragma pack(push, 1)
 struct CharacterAttributes {
     uint32_t  flags;
@@ -54,28 +56,45 @@ class RenderBlockCharacter : public IRenderBlock
         BODY_PART = 0x3000,
     };
 
-    struct cbLocalConsts {
+    struct jc3_cbLocalConsts {
         glm::mat4   World;
         glm::mat4   WorldViewProjection;
         glm::vec4   Scale;
         glm::mat3x4 MatrixPalette[70];
-    } m_cbLocalConsts;
+    } m_jc3_cbLocalConsts;
 
-    struct cbInstanceConsts {
+    struct jc3_cbInstanceConsts {
         glm::vec4 _unknown      = glm::vec4(0);
         glm::vec4 DiffuseColour = glm::vec4(0, 0, 0, 1);
         glm::vec4 _unknown2     = glm::vec4(0); // .w is some kind of snow factor???
-    } m_cbInstanceConsts;
+    } m_jc3_cbInstanceConsts;
 
-    struct cbMaterialConsts {
+    struct jc3_cbMaterialConsts {
         glm::vec4 unknown[10];
-    } m_cbMaterialConsts;
+    } m_jc3_cbMaterialConsts;
+
+    struct jc4_cbLocalConsts {
+        glm::mat4 WorldViewProjection;
+        glm::mat4 World;
+    } m_jc4_cbLocalConsts;
+
+    struct jc4_cbSkinningConsts {
+        glm::mat3x4 MatrixPalette[70];
+    } m_jc4_cbSkinningConsts;
+
+    struct jc4_cbUnknownConsts {
+        glm::vec2 TilingUV = glm::vec2(1, 1);
+        glm::vec2 Unknown;
+        glm::vec4 Scale = glm::vec4(1, 1, 1, 1);
+    } m_jc4_cbUnknownConsts;
 
     jc::RenderBlocks::Character      m_Block;
     std::vector<jc::CSkinBatch>      m_SkinBatches;
-    ConstantBuffer_t*                m_VertexShaderConstants   = nullptr;
+    std::array<ConstantBuffer_t*, 3> m_VertexShaderConstants   = {nullptr};
     std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = {nullptr};
     int32_t                          m_Stride                  = 0;
+
+    // ConstantBuffer_t*                m_VertexShaderConstants     = nullptr;
 
   public:
     RenderBlockCharacter() = default;
@@ -87,7 +106,9 @@ class RenderBlockCharacter : public IRenderBlock
         }
 
         // destroy shader constants
-        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants);
+        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[0]);
+        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[1]);
+        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants[2]);
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
         Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[1]);
     }
@@ -282,20 +303,35 @@ class RenderBlockCharacter : public IRenderBlock
         }
 
         // create the constant buffer
-        m_VertexShaderConstants =
-            Renderer::Get()->CreateConstantBuffer(m_cbLocalConsts, "RenderBlockCharacter cbLocalConsts");
-        m_FragmentShaderConstants[0] =
-            Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockCharacter cbInstanceConsts");
-        m_FragmentShaderConstants[1] =
-            Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockCharacter cbMaterialConsts");
+        if (g_IsJC4Mode) {
+            m_VertexShaderConstants[0] =
+                Renderer::Get()->CreateConstantBuffer(m_jc4_cbLocalConsts, "RenderBlockCharacter jc4_cbLocalConsts");
+            m_VertexShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(
+                m_jc4_cbSkinningConsts, "RenderBlockCharacter jc4_cbSkinningConsts");
+            m_VertexShaderConstants[2] = Renderer::Get()->CreateConstantBuffer(
+                m_jc4_cbUnknownConsts, "RenderBlockCharacter jc4_cbUnknownConsts");
+
+            // TODO: fragment shader constants
+        } else {
+            m_VertexShaderConstants[0] =
+                Renderer::Get()->CreateConstantBuffer(m_jc3_cbLocalConsts, "RenderBlockCharacter jc3_cbLocalConsts");
+            m_FragmentShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(
+                m_jc3_cbInstanceConsts, "RenderBlockCharacter jc3_cbInstanceConsts");
+            m_FragmentShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(
+                m_jc3_cbMaterialConsts, "RenderBlockCharacter jc3_cbMaterialConsts");
+
+            // reset fragment shader material consts
+            memset(&m_jc3_cbMaterialConsts, 0, sizeof(m_jc3_cbMaterialConsts));
+        }
 
         // identity the palette data
         for (int i = 0; i < 70; ++i) {
-            m_cbLocalConsts.MatrixPalette[i] = glm::mat3x4(1);
+            if (g_IsJC4Mode) {
+                m_jc4_cbSkinningConsts.MatrixPalette[i] = glm::mat3x4(1);
+            } else {
+                m_jc3_cbLocalConsts.MatrixPalette[i] = glm::mat3x4(1);
+            }
         }
-
-        // reset fragment shader material consts
-        memset(&m_cbMaterialConsts, 0, sizeof(m_cbMaterialConsts));
 
         // create the sampler states
         {
@@ -423,25 +459,34 @@ class RenderBlockCharacter : public IRenderBlock
         const auto flags = m_Block.attributes.flags;
 
         // setup the constant buffer
-        {
-            static auto world = glm::mat4(1);
-
-            // set vertex shader constants
-            m_cbLocalConsts.World               = world;
-            m_cbLocalConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
-            m_cbLocalConsts.Scale               = glm::vec4(m_Block.attributes.scale * m_ScaleModifier);
-
-            // set fragment shader constants
-            //
-        }
+        static auto world = glm::mat4(1);
 
         // set the textures
         IRenderBlock::BindTexture(0, m_SamplerState);
 
-        // set the constant buffers
-        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbLocalConsts);
-        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbInstanceConsts);
-        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts);
+        if (g_IsJC4Mode) {
+            // local consts
+            m_jc4_cbLocalConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
+            m_jc4_cbLocalConsts.World               = world;
+            context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 2, m_jc4_cbLocalConsts);
+
+            // skinning consts
+            context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[1], 3, m_jc4_cbSkinningConsts);
+
+            // unknown consts
+            m_jc4_cbUnknownConsts.Scale = glm::vec4(1 * m_ScaleModifier);
+            context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[2], 4, m_jc4_cbUnknownConsts);
+        } else {
+            // set vertex shader constants
+            m_jc3_cbLocalConsts.World               = world;
+            m_jc3_cbLocalConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
+            m_jc3_cbLocalConsts.Scale               = glm::vec4(m_Block.attributes.scale * m_ScaleModifier);
+            context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 1, m_jc3_cbLocalConsts);
+
+            // set fragment shader constants
+            context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_jc3_cbInstanceConsts);
+            context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_jc3_cbMaterialConsts);
+        }
 
         // set the culling mode
         context->m_Renderer->SetCullMode((!(flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
@@ -539,22 +584,26 @@ class RenderBlockCharacter : public IRenderBlock
     virtual void DrawUI() override final
     {
         ImGui::Text(ICON_FA_COGS "  Attributes");
-
-        if (ImGui::RadioButton("Gear", ((m_Block.attributes.flags & BODY_PART) == GEAR))) {}
-
-        ImGui::SameLine();
-
-        if (ImGui::RadioButton("Eyes", ((m_Block.attributes.flags & BODY_PART) == EYES))) {}
-
-        ImGui::SameLine();
-
-        if (ImGui::RadioButton("Hair", ((m_Block.attributes.flags & BODY_PART) == HAIR))) {}
-
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
 
-        ImGui::SliderFloat4("Unknown #1", glm::value_ptr(m_cbInstanceConsts._unknown), 0, 1);
-        ImGui::ColorEdit4("Diffuse Colour", glm::value_ptr(m_cbInstanceConsts.DiffuseColour));
-        ImGui::SliderFloat4("Unknown #2", glm::value_ptr(m_cbInstanceConsts._unknown2), 0, 1);
+        if (g_IsJC4Mode) {
+            /*ImGui::DragFloat4("Unk", glm::value_ptr(m_cbJC4Unknown.unk));
+            ImGui::DragFloat4("Unk2", glm::value_ptr(m_cbJC4Unknown.unk2));*/
+        } else {
+            /*if (ImGui::RadioButton("Gear", ((m_Block.attributes.flags & BODY_PART) == GEAR))) {}
+
+            ImGui::SameLine();
+
+            if (ImGui::RadioButton("Eyes", ((m_Block.attributes.flags & BODY_PART) == EYES))) {}
+
+            ImGui::SameLine();
+
+            if (ImGui::RadioButton("Hair", ((m_Block.attributes.flags & BODY_PART) == HAIR))) {}*/
+
+            ImGui::SliderFloat4("Unknown #1", glm::value_ptr(m_jc3_cbInstanceConsts._unknown), 0, 1);
+            ImGui::ColorEdit4("Diffuse Colour", glm::value_ptr(m_jc3_cbInstanceConsts.DiffuseColour));
+            ImGui::SliderFloat4("Unknown #2", glm::value_ptr(m_jc3_cbInstanceConsts._unknown2), 0, 1);
+        }
 
         // Textures
         ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
