@@ -103,4 +103,16 @@ class AvalancheModelFormat : public Factory<AvalancheModelFormat>
     {
         return m_Meshes;
     }
+
+    std::vector<IRenderBlock*> GetRenderBlocks()
+    {
+        std::vector<IRenderBlock*> result;
+        result.reserve(m_Meshes.size());
+
+        for (const auto& mesh : m_Meshes) {
+            result.emplace_back(mesh->GetRenderBlock());
+        }
+
+        return result;
+    }
 };

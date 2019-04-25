@@ -31,6 +31,8 @@ struct GeneralJC3 {
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
+namespace jc3
+{
 class RenderBlockGeneralJC3 : public IRenderBlock
 {
   private:
@@ -196,53 +198,6 @@ class RenderBlockGeneralJC3 : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
-    {
-        //
-    }
-
-    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
-    {
-        using namespace jc::Vertex;
-
-        vertices_t vertices;
-        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
-
-        if (m_Block.attributes.packed.format != 1) {
-            const auto& vb = m_VertexBuffer->CastData<UnpackedVertexPosition2UV>();
-            vertices.reserve(vb.size());
-
-            for (const auto& vertex : vb) {
-                vertex_t v;
-                v.pos    = {vertex.x, vertex.y, vertex.z};
-                v.uv     = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)} * m_Block.attributes.packed.uv0Extent;
-                v.normal = unpack_normal(vertex.n);
-                vertices.emplace_back(std::move(v));
-
-                // TODO: u1,v1
-            }
-        } else {
-            const auto& vb     = m_VertexBuffer->CastData<PackedVertexPosition>();
-            const auto& vbdata = m_VertexBufferData->CastData<GeneralShortPacked>();
-            vertices.reserve(vb.size());
-
-            for (auto i = 0; i < vb.size(); ++i) {
-                auto& vertex = vb[i];
-                auto& data   = vbdata[i];
-
-                vertex_t v;
-                v.pos    = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
-                v.uv     = glm::vec2{unpack(data.u0), unpack(data.v0)} * m_Block.attributes.packed.uv0Extent;
-                v.normal = unpack_normal(data.n);
-                vertices.emplace_back(std::move(v));
-
-                // TODO: u1,v1
-            }
-        }
-
-        return {vertices, indices};
-    }
-
     virtual void Setup(RenderContext_t* context) override final
     {
         if (!m_Visible)
@@ -327,11 +282,59 @@ class RenderBlockGeneralJC3 : public IRenderBlock
         ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
         ImGui::Columns(3, nullptr, false);
         {
-            IRenderBlock::DrawTexture("DiffuseMap", 0);
-            IRenderBlock::DrawTexture("NormalMap", 1);
-            IRenderBlock::DrawTexture("PropertiesMap", 2);
-            IRenderBlock::DrawTexture("AOBlendMap", 3);
+            IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
+            IRenderBlock::DrawUI_Texture("NormalMap", 1);
+            IRenderBlock::DrawUI_Texture("PropertiesMap", 2);
+            IRenderBlock::DrawUI_Texture("AOBlendMap", 3);
         }
         ImGui::EndColumns();
     }
+
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
+    {
+        //
+    }
+
+    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
+    {
+        using namespace jc::Vertex;
+
+        vertices_t vertices;
+        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
+
+        if (m_Block.attributes.packed.format != 1) {
+            const auto& vb = m_VertexBuffer->CastData<UnpackedVertexPosition2UV>();
+            vertices.reserve(vb.size());
+
+            for (const auto& vertex : vb) {
+                vertex_t v;
+                v.pos    = {vertex.x, vertex.y, vertex.z};
+                v.uv     = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)} * m_Block.attributes.packed.uv0Extent;
+                v.normal = unpack_normal(vertex.n);
+                vertices.emplace_back(std::move(v));
+
+                // TODO: u1,v1
+            }
+        } else {
+            const auto& vb     = m_VertexBuffer->CastData<PackedVertexPosition>();
+            const auto& vbdata = m_VertexBufferData->CastData<GeneralShortPacked>();
+            vertices.reserve(vb.size());
+
+            for (auto i = 0; i < vb.size(); ++i) {
+                auto& vertex = vb[i];
+                auto& data   = vbdata[i];
+
+                vertex_t v;
+                v.pos    = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                v.uv     = glm::vec2{unpack(data.u0), unpack(data.v0)} * m_Block.attributes.packed.uv0Extent;
+                v.normal = unpack_normal(data.n);
+                vertices.emplace_back(std::move(v));
+
+                // TODO: u1,v1
+            }
+        }
+
+        return {vertices, indices};
+    }
 };
+} // namespace jc3

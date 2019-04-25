@@ -1,5 +1,4 @@
 #include <Windows.h>
-
 #include <atomic>
 #include <shellapi.h>
 
@@ -20,12 +19,13 @@
 #include "../game/formats/avalanche_model_format.h"
 #include "../game/formats/render_block_model.h"
 #include "../game/formats/runtime_container.h"
+#include "../game/irenderblock.h"
 #include "../game/render_block_factory.h"
-#include "../game/renderblocks/irenderblock.h"
+
+#include "../game/hashlittle.h"
 
 #include "../import_export/import_export_manager.h"
 
-#include "../game/hashlittle.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -754,7 +754,7 @@ void UI::RenderModelsTab_RBM()
                             if (ImGui::MenuItem(block_name)) {
                                 const auto render_block = RenderBlockFactory::CreateRenderBlock(block_name);
                                 assert(render_block);
-                                render_block->SetParent((*it).second.get());
+                                // render_block->SetParent((*it).second.get());
                                 render_blocks.emplace_back(render_block);
                             }
                         }
@@ -801,8 +801,8 @@ void UI::RenderModelsTab_RBM()
                                                 auto& [vertices, indices, materials] =
                                                     std::any_cast<std::tuple<vertices_t, uint16s_t, materials_t>>(data);
 
-                                                render_block->SetData(&vertices, &indices, &materials);
-                                                render_block->Create();
+                                                /*render_block->SetData(&vertices, &indices, &materials);
+                                                render_block->Create();*/
 
                                                 Renderer::Get()->AddToRenderList(render_block);
                                             });
@@ -1015,6 +1015,7 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
             std::filesystem::path payload_data(payload->data);
             texture->LoadFromFile(payload->data);
 
+#if 0
             // generate the new file path
             const auto parent = render_block->GetParent();
             if (parent) {
@@ -1024,6 +1025,7 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
                 // update the texture name
                 texture->SetFileName(filename);
             }
+#endif
 
             // TODO: do we want this??
 #if 0

@@ -28,6 +28,8 @@ struct Landmark {
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
+namespace jc3
+{
 class RenderBlockLandmark : public IRenderBlock
 {
   private:
@@ -158,16 +160,6 @@ class RenderBlockLandmark : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
-    {
-        //
-    }
-
-    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
-    {
-        return {};
-    }
-
     virtual void Setup(RenderContext_t* context) override final
     {
         if (!m_Visible)
@@ -255,9 +247,20 @@ class RenderBlockLandmark : public IRenderBlock
         ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
         ImGui::Columns(3, nullptr, false);
         {
-            IRenderBlock::DrawTexture("DiffuseMap", 0);
-            IRenderBlock::DrawTexture("PropertiesMap", 2);
+            IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
+            IRenderBlock::DrawUI_Texture("PropertiesMap", 2);
         }
         ImGui::EndColumns();
     }
+
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
+    {
+        //
+    }
+
+    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
+    {
+        return {};
+    }
 };
+} // namespace jc3

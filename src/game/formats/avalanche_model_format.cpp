@@ -3,8 +3,8 @@
 #include "avalanche_data_format.h"
 
 #include "../file_loader.h"
+#include "../jc4/renderblocks/irenderblock.h"
 #include "../render_block_factory.h"
-#include "../renderblocks/irenderblock.h"
 
 #include "../../graphics/renderer.h"
 #include "../../window.h"
@@ -188,7 +188,7 @@ AMFMesh::AMFMesh(AdfInstanceMemberInfo* info, AvalancheModelFormat* parent)
 
     LOG_INFO("{} ({})", m_Name, m_RenderBlockId);
 
-    m_RenderBlock = RenderBlockFactory::CreateRenderBlock(m_RenderBlockId);
+    m_RenderBlock = RenderBlockFactory::CreateRenderBlock(m_RenderBlockId, true);
     assert(m_RenderBlock != nullptr);
 
     // load textures
@@ -203,10 +203,8 @@ AMFMesh::AMFMesh(AdfInstanceMemberInfo* info, AvalancheModelFormat* parent)
 AMFMesh::~AMFMesh()
 {
     Renderer::Get()->RemoveFromRenderList(m_RenderBlock);
-    // SAFE_DELETE(m_RenderBlock);
+    SAFE_DELETE(m_RenderBlock);
 }
-
-#include "game/renderblocks/renderblockcharacter_jc4.h"
 
 void AMFMesh::LoadBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, FileBuffer* indices)
 {
@@ -242,10 +240,9 @@ void AMFMesh::LoadBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, Fil
               indices->begin() + index_buffer_offset + (index_count * index_buffer_stride),
               std::back_inserter(index_buffer));
 
-    if (m_RenderBlockId == "Character" || m_RenderBlockId == "CharacterSkin") {
-        // ((jc4::RenderBlockCharacter*)m_RenderBlock)->CreateBuffers(&vertex_buffer, &index_buffer);
-        // Renderer::Get()->AddToRenderList(m_RenderBlock);
-    }
+    // init the render block
+    ((jc4::IRenderBlock*)m_RenderBlock)->Create(&vertex_buffer, &index_buffer);
+    Renderer::Get()->AddToRenderList(m_RenderBlock);
 
 #ifdef DEBUG
 #if 0

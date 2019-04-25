@@ -21,6 +21,8 @@ struct CarPaintMM {
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
+namespace jc3
+{
 class RenderBlockCarPaintMM : public IRenderBlock
 {
   private:
@@ -316,72 +318,6 @@ class RenderBlockCarPaintMM : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
-    {
-        //
-    }
-
-    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
-    {
-        using namespace jc::Vertex;
-
-        vertices_t vertices;
-        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
-
-        if (m_Block.attributes.flags & IS_SKINNED) {
-            const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexWithNormal1>();
-            const auto& vbdata = m_VertexBufferData[0]->CastData<UnpackedNormals>();
-
-            assert(vb.size() == vbdata.size());
-            vertices.reserve(vb.size());
-
-            for (auto i = 0; i < vb.size(); ++i) {
-                vertex_t v;
-                v.pos    = {vb[i].x, vb[i].y, vb[i].z};
-                v.uv     = {vbdata[i].u0, vbdata[i].v0};
-                v.normal = unpack_normal(vbdata[i].n);
-                vertices.emplace_back(std::move(v));
-            }
-        } else if (m_Block.attributes.flags & IS_DEFORM) {
-            const auto& vb     = m_VertexBuffer->CastData<VertexDeformPos>();
-            const auto& vbdata = m_VertexBufferData[0]->CastData<VertexDeformNormal2>();
-
-            assert(vb.size() == vbdata.size());
-            vertices.reserve(vb.size());
-
-            for (auto i = 0; i < vb.size(); ++i) {
-                vertex_t v;
-                v.pos    = {vb[i].x, vb[i].y, vb[i].z};
-                v.uv     = {vbdata[i].u0, vbdata[i].v0};
-                v.normal = unpack_normal(vbdata[i].n);
-                vertices.emplace_back(std::move(v));
-            }
-        } else {
-            const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexPosition>();
-            const auto& vbdata = m_VertexBufferData[0]->CastData<UnpackedNormals>();
-
-            assert(vb.size() == vbdata.size());
-            vertices.reserve(vb.size());
-
-            for (auto i = 0; i < vb.size(); ++i) {
-                vertex_t v;
-                v.pos    = {vb[i].x, vb[i].y, vb[i].z};
-                v.uv     = {vbdata[i].u0, vbdata[i].v0};
-                v.normal = unpack_normal(vbdata[i].n);
-                vertices.emplace_back(std::move(v));
-            }
-        }
-
-#if 0
-        if (m_Block.attributes.flags & (SUPPORT_LAYERED | SUPPORT_OVERLAY)) {
-            const auto& uvs = m_VertexBufferData[1]->CastData<UnpackedUV>();
-            // TODO: u,v
-        }
-#endif
-
-        return {vertices, indices};
-    }
-
     virtual void Setup(RenderContext_t* context) override final
     {
         if (!m_Visible)
@@ -532,25 +468,92 @@ class RenderBlockCarPaintMM : public IRenderBlock
         ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
         ImGui::Columns(3, nullptr, false);
         {
-            IRenderBlock::DrawTexture("DiffuseMap", 0);
-            IRenderBlock::DrawTexture("NormalMap", 1);
-            IRenderBlock::DrawTexture("PropertyMap", 2);
-            IRenderBlock::DrawTexture("TintMap", 3);
-            IRenderBlock::DrawTexture("DamageNormalMap", 4);
-            IRenderBlock::DrawTexture("DamageAlbedoMap", 5);
-            IRenderBlock::DrawTexture("DirtMap", 6);
-            IRenderBlock::DrawTexture("DecalAlbedoMap", 7);
-            IRenderBlock::DrawTexture("DecalNormalMap", 8);
-            IRenderBlock::DrawTexture("DecalPropertyMap", 9);
+            IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
+            IRenderBlock::DrawUI_Texture("NormalMap", 1);
+            IRenderBlock::DrawUI_Texture("PropertyMap", 2);
+            IRenderBlock::DrawUI_Texture("TintMap", 3);
+            IRenderBlock::DrawUI_Texture("DamageNormalMap", 4);
+            IRenderBlock::DrawUI_Texture("DamageAlbedoMap", 5);
+            IRenderBlock::DrawUI_Texture("DirtMap", 6);
+            IRenderBlock::DrawUI_Texture("DecalAlbedoMap", 7);
+            IRenderBlock::DrawUI_Texture("DecalNormalMap", 8);
+            IRenderBlock::DrawUI_Texture("DecalPropertyMap", 9);
 
             if (m_Block.attributes.flags & SUPPORT_LAYERED) {
-                IRenderBlock::DrawTexture("LayeredAlbedoMap", 10);
+                IRenderBlock::DrawUI_Texture("LayeredAlbedoMap", 10);
             }
 
             if (m_Block.attributes.flags & SUPPORT_OVERLAY) {
-                IRenderBlock::DrawTexture("OverlayAlbedoMap", 11);
+                IRenderBlock::DrawUI_Texture("OverlayAlbedoMap", 11);
             }
         }
         ImGui::EndColumns();
     }
+
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
+    {
+        //
+    }
+
+    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
+    {
+        using namespace jc::Vertex;
+
+        vertices_t vertices;
+        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
+
+        if (m_Block.attributes.flags & IS_SKINNED) {
+            const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexWithNormal1>();
+            const auto& vbdata = m_VertexBufferData[0]->CastData<UnpackedNormals>();
+
+            assert(vb.size() == vbdata.size());
+            vertices.reserve(vb.size());
+
+            for (auto i = 0; i < vb.size(); ++i) {
+                vertex_t v;
+                v.pos    = {vb[i].x, vb[i].y, vb[i].z};
+                v.uv     = {vbdata[i].u0, vbdata[i].v0};
+                v.normal = unpack_normal(vbdata[i].n);
+                vertices.emplace_back(std::move(v));
+            }
+        } else if (m_Block.attributes.flags & IS_DEFORM) {
+            const auto& vb     = m_VertexBuffer->CastData<VertexDeformPos>();
+            const auto& vbdata = m_VertexBufferData[0]->CastData<VertexDeformNormal2>();
+
+            assert(vb.size() == vbdata.size());
+            vertices.reserve(vb.size());
+
+            for (auto i = 0; i < vb.size(); ++i) {
+                vertex_t v;
+                v.pos    = {vb[i].x, vb[i].y, vb[i].z};
+                v.uv     = {vbdata[i].u0, vbdata[i].v0};
+                v.normal = unpack_normal(vbdata[i].n);
+                vertices.emplace_back(std::move(v));
+            }
+        } else {
+            const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexPosition>();
+            const auto& vbdata = m_VertexBufferData[0]->CastData<UnpackedNormals>();
+
+            assert(vb.size() == vbdata.size());
+            vertices.reserve(vb.size());
+
+            for (auto i = 0; i < vb.size(); ++i) {
+                vertex_t v;
+                v.pos    = {vb[i].x, vb[i].y, vb[i].z};
+                v.uv     = {vbdata[i].u0, vbdata[i].v0};
+                v.normal = unpack_normal(vbdata[i].n);
+                vertices.emplace_back(std::move(v));
+            }
+        }
+
+#if 0
+        if (m_Block.attributes.flags & (SUPPORT_LAYERED | SUPPORT_OVERLAY)) {
+            const auto& uvs = m_VertexBufferData[1]->CastData<UnpackedUV>();
+            // TODO: u,v
+        }
+#endif
+
+        return {vertices, indices};
+    }
 };
+} // namespace jc3

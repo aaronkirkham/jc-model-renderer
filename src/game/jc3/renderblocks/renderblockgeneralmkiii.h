@@ -28,6 +28,8 @@ struct GeneralMkIII {
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
+namespace jc3
+{
 class RenderBlockGeneralMkIII : public IRenderBlock
 {
   private:
@@ -342,6 +344,106 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
+    virtual void Setup(RenderContext_t* context) override final
+    {
+        if (!m_Visible)
+            return;
+
+        IRenderBlock::Setup(context);
+
+        // setup the constant buffer
+        {
+            static auto world = glm::mat4(1);
+
+            // set vertex shader constants
+            m_cbRBIInfo.ModelWorldMatrix   = world;
+            m_cbInstanceAttributes.UVScale = {m_Block.attributes.packed.uv0Extent, m_Block.attributes.packed.uv1Extent};
+            m_cbInstanceAttributes.DepthBias         = m_Block.attributes.depthBias;
+            m_cbInstanceAttributes.QuantizationScale = m_Block.attributes.packed.scale * m_ScaleModifier;
+            m_cbInstanceAttributes.EmissiveTODScale =
+                (m_Block.attributes.flags & DYNAMIC_EMISSIVE ? m_Block.attributes.emissiveTODScale : 1.0f);
+            m_cbInstanceAttributes.EmissiveStartFadeDistSq = m_Block.attributes.emissiveStartFadeDistSq;
+        }
+
+        // set the textures
+        for (int i = 0; i < 4; ++i) {
+            IRenderBlock::BindTexture(i, m_SamplerState);
+        }
+
+        // set the constant buffers
+        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 12, m_cbRBIInfo);
+        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[1], 2, m_cbInstanceAttributes);
+        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbMaterialConsts);
+        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts2);
+
+        // set the culling mode
+        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
+                                                                                                  : D3D11_CULL_NONE);
+
+        // set the 2nd vertex buffers
+        context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
+    }
+
+    virtual void Draw(RenderContext_t* context) override final
+    {
+        if (!m_Visible)
+            return;
+
+        if (m_Block.attributes.flags & DESTRUCTION) {
+            // skin batches
+            for (auto& batch : m_SkinBatches) {
+                // set the skinning palette data
+                context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[2], 3, m_cbSkinningConsts);
+
+                // draw the skin batch
+                context->m_Renderer->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
+            }
+        } else if (m_Block.attributes.flags & IS_SKINNED) {
+            // TODO: skinning palette data
+            IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
+        } else {
+            IRenderBlock::Draw(context);
+        }
+    }
+
+    virtual void DrawContextMenu() override final
+    {
+        // clang-format off
+        static std::array flag_labels = {
+            "Disable Backface Culling",     "Transparency Alpha Blending",  "Transparency Alpha Testing",   "Dynamic Emissive",
+            "",                             "Is Skinned",                   "",                             "Use Layered",
+            "Use Overlay",                  "Use Decal",                    "Use Damage",                   "",
+            "",                             "",                             "Use Anisotropic Filtering",    "Destruction"
+        };
+        // clang-format on
+
+        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    }
+
+    virtual void DrawUI() override final
+    {
+        ImGui::Text(ICON_FA_COGS "  Attributes");
+
+        ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
+
+        ImGui::SliderFloat("Depth Bias", &m_Block.attributes.depthBias, 0, 1);
+
+        ImGuiCustom::PushDisabled(!(m_Block.attributes.flags & DYNAMIC_EMISSIVE));
+        ImGui::SliderFloat("Emissive Scale", &m_Block.attributes.emissiveTODScale, 0, 1);
+        ImGuiCustom::PopDisabled();
+
+        // Textures
+        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
+        ImGui::Columns(3, nullptr, false);
+        {
+            IRenderBlock::DrawUI_Texture("Albedo1Map", 0);
+            IRenderBlock::DrawUI_Texture("Gloss1Map", 1);
+            IRenderBlock::DrawUI_Texture("Metallic1Map", 2);
+            IRenderBlock::DrawUI_Texture("Normal1Map", 3);
+        }
+        ImGui::EndColumns();
+    }
+
     virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
     {
         using namespace jc::Vertex;
@@ -450,104 +552,5 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
         return {vertices, indices};
     }
-
-    virtual void Setup(RenderContext_t* context) override final
-    {
-        if (!m_Visible)
-            return;
-
-        IRenderBlock::Setup(context);
-
-        // setup the constant buffer
-        {
-            static auto world = glm::mat4(1);
-
-            // set vertex shader constants
-            m_cbRBIInfo.ModelWorldMatrix   = world;
-            m_cbInstanceAttributes.UVScale = {m_Block.attributes.packed.uv0Extent, m_Block.attributes.packed.uv1Extent};
-            m_cbInstanceAttributes.DepthBias         = m_Block.attributes.depthBias;
-            m_cbInstanceAttributes.QuantizationScale = m_Block.attributes.packed.scale * m_ScaleModifier;
-            m_cbInstanceAttributes.EmissiveTODScale =
-                (m_Block.attributes.flags & DYNAMIC_EMISSIVE ? m_Block.attributes.emissiveTODScale : 1.0f);
-            m_cbInstanceAttributes.EmissiveStartFadeDistSq = m_Block.attributes.emissiveStartFadeDistSq;
-        }
-
-        // set the textures
-        for (int i = 0; i < 4; ++i) {
-            IRenderBlock::BindTexture(i, m_SamplerState);
-        }
-
-        // set the constant buffers
-        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 12, m_cbRBIInfo);
-        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[1], 2, m_cbInstanceAttributes);
-        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbMaterialConsts);
-        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts2);
-
-        // set the culling mode
-        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
-                                                                                                  : D3D11_CULL_NONE);
-
-        // set the 2nd vertex buffers
-        context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
-    }
-
-    virtual void Draw(RenderContext_t* context) override final
-    {
-        if (!m_Visible)
-            return;
-
-        if (m_Block.attributes.flags & DESTRUCTION) {
-            // skin batches
-            for (auto& batch : m_SkinBatches) {
-                // set the skinning palette data
-                context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[2], 3, m_cbSkinningConsts);
-
-                // draw the skin batch
-                context->m_Renderer->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
-            }
-        } else if (m_Block.attributes.flags & IS_SKINNED) {
-            // TODO: skinning palette data
-            IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
-        } else {
-            IRenderBlock::Draw(context);
-        }
-    }
-
-    virtual void DrawContextMenu() override final
-    {
-        // clang-format off
-        static std::array flag_labels = {
-            "Disable Backface Culling",     "Transparency Alpha Blending",  "Transparency Alpha Testing",   "Dynamic Emissive",
-            "",                             "Is Skinned",                   "",                             "Use Layered",
-            "Use Overlay",                  "Use Decal",                    "Use Damage",                   "",
-            "",                             "",                             "Use Anisotropic Filtering",    "Destruction"
-        };
-        // clang-format on
-
-        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
-    }
-
-    virtual void DrawUI() override final
-    {
-        ImGui::Text(ICON_FA_COGS "  Attributes");
-
-        ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
-
-        ImGui::SliderFloat("Depth Bias", &m_Block.attributes.depthBias, 0, 1);
-
-        ImGuiCustom::PushDisabled(!(m_Block.attributes.flags & DYNAMIC_EMISSIVE));
-        ImGui::SliderFloat("Emissive Scale", &m_Block.attributes.emissiveTODScale, 0, 1);
-        ImGuiCustom::PopDisabled();
-
-        // Textures
-        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
-        ImGui::Columns(3, nullptr, false);
-        {
-            IRenderBlock::DrawTexture("Albedo1Map", 0);
-            IRenderBlock::DrawTexture("Gloss1Map", 1);
-            IRenderBlock::DrawTexture("Metallic1Map", 2);
-            IRenderBlock::DrawTexture("Normal1Map", 3);
-        }
-        ImGui::EndColumns();
-    }
 };
+} // namespace jc3

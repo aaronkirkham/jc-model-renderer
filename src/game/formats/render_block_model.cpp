@@ -4,7 +4,8 @@
 
 #include "../file_loader.h"
 #include "../render_block_factory.h"
-#include "../renderblocks/irenderblock.h"
+
+#include "../jc3/renderblocks/irenderblock.h"
 
 #include "../../graphics/camera.h"
 #include "../../graphics/renderer.h"
@@ -103,9 +104,9 @@ bool RenderBlockModel::ParseRBM(const FileBuffer& data, bool add_to_render_list)
         uint32_t hash;
         stream.read((char*)&hash, sizeof(uint32_t));
 
-        const auto render_block = RenderBlockFactory::CreateRenderBlock(hash);
+        const auto render_block = (jc3::IRenderBlock*)RenderBlockFactory::CreateRenderBlock(hash);
         if (render_block) {
-            render_block->SetParent(this);
+            // render_block->SetParent(this);
             render_block->Read(stream);
             render_block->Create();
 
@@ -378,7 +379,7 @@ bool RenderBlockModel::ParseAMFMeshBuffers(AvalancheDataFormat* mesh_adf, AdfIns
 void RenderBlockModel::DrawGizmos()
 {
     auto largest_scale = 0.0f;
-    for (auto& render_block : m_RenderBlocks) {
+    /*for (auto& render_block : m_RenderBlocks) {
         if (render_block->IsVisible()) {
             const auto scale = render_block->GetScale();
 
@@ -387,7 +388,7 @@ void RenderBlockModel::DrawGizmos()
                 largest_scale = scale;
             }
         }
-    }
+    }*/
 
     // hack to fix GetCenter
     m_BoundingBox.SetScale(largest_scale);
@@ -454,7 +455,7 @@ bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, c
             stream.write((char*)&type_hash, sizeof(type_hash));
 
             // write the block data
-            render_block->Write(stream);
+            ((jc3::IRenderBlock*)render_block)->Write(stream);
 
             // write the end of block checksum
             stream.write((char*)&RBM_END_OF_BLOCK, sizeof(RBM_END_OF_BLOCK));

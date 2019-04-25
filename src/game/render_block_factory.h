@@ -11,8 +11,8 @@ class RenderBlockFactory
     RenderBlockFactory()          = default;
     virtual ~RenderBlockFactory() = default;
 
-    static IRenderBlock*                   CreateRenderBlock(const uint32_t type);
-    static IRenderBlock*                   CreateRenderBlock(const std::string& name);
+    static IRenderBlock*                   CreateRenderBlock(const uint32_t type, bool jc4 = false);
+    static IRenderBlock*                   CreateRenderBlock(const std::string& name, bool jc4 = false);
     static const char*                     GetRenderBlockName(const uint32_t type);
     static const std::vector<const char*>& GetValidRenderBlocks();
 

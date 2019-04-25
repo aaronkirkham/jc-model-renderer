@@ -15,8 +15,8 @@
 #include "game/formats/avalanche_model_format.h"
 #include "game/formats/render_block_model.h"
 #include "game/formats/runtime_container.h"
+#include "game/irenderblock.h"
 #include "game/render_block_factory.h"
-#include "game/renderblocks/irenderblock.h"
 
 #include "import_export/avalanche_archive.h"
 #include "import_export/ddsc.h"
@@ -235,10 +235,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                                              auto& [vertices, indices, materials] =
                                                  std::any_cast<std::tuple<vertices_t, uint16s_t, materials_t>>(data);
 
-                                             render_block->SetData(&vertices, &indices, &materials);
-                                             render_block->Create();
+                                             /*render_block->SetData(&vertices, &indices, &materials);
+                                             render_block->Create();*/
 
-                                             Renderer::Get()->AddToRenderList(render_block);
+                                             // Renderer::Get()->AddToRenderList(render_block);
                                          });
                 }
 

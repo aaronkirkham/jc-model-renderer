@@ -1,5 +1,5 @@
 #include "renderer.h"
-#include "../game/renderblocks/irenderblock.h"
+#include "../game/irenderblock.h"
 #include "../window.h"
 #include "camera.h"
 #include "shader_manager.h"
@@ -25,15 +25,14 @@ Renderer::Renderer()
     m_RenderEvents.PreRender.connect([this](RenderContext_t* context) {
         std::lock_guard<decltype(m_RenderListMutex)> _lk{m_RenderListMutex};
         for (const auto& render_block : m_RenderList) {
-            // draw the model
             render_block->Setup(context);
 
             // update alpha test constants
-            SetPixelShaderConstants(m_AlphaTestConstants, 4, m_cbAlphaTestConsts);
+            if (!g_IsJC4Mode) {
+                SetPixelShaderConstants(m_AlphaTestConstants, 4, m_cbAlphaTestConsts);
+            }
 
             render_block->Draw(context);
-
-            // reset render states
             SetDefaultRenderStates();
         }
     });
@@ -203,7 +202,9 @@ bool Renderer::Render(const float delta_time)
     Camera::Get()->Update(&m_RenderContext);
 
     // update global constants
-    UpdateGlobalConstants();
+    if (!g_IsJC4Mode) {
+        UpdateGlobalConstants();
+    }
 
     // g buffer
     {
