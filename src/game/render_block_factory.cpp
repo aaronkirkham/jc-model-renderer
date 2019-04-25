@@ -1,51 +1,64 @@
 #include "render_block_factory.h"
-#include "renderblocks/renderblockbuildingjc3.h"
-#include "renderblocks/renderblockcarlight.h"
-#include "renderblocks/renderblockcarpaintmm.h"
-#include "renderblocks/renderblockcharacter.h"
-#include "renderblocks/renderblockcharacterskin.h"
-#include "renderblocks/renderblockgeneral.h"
-#include "renderblocks/renderblockgeneraljc3.h"
-#include "renderblocks/renderblockgeneralmkiii.h"
-#include "renderblocks/renderblocklandmark.h"
-#include "renderblocks/renderblockprop.h"
-#include "renderblocks/renderblockwindow.h"
+
+#include "jc3/renderblocks/renderblockbuildingjc3.h"
+#include "jc3/renderblocks/renderblockcarlight.h"
+#include "jc3/renderblocks/renderblockcarpaintmm.h"
+#include "jc3/renderblocks/renderblockcharacter.h"
+#include "jc3/renderblocks/renderblockcharacterskin.h"
+#include "jc3/renderblocks/renderblockgeneral.h"
+#include "jc3/renderblocks/renderblockgeneraljc3.h"
+#include "jc3/renderblocks/renderblockgeneralmkiii.h"
+#include "jc3/renderblocks/renderblocklandmark.h"
+#include "jc3/renderblocks/renderblockprop.h"
+#include "jc3/renderblocks/renderblockwindow.h"
+
+#include "jc4/renderblocks/renderblockcharacter.h"
 
 #include "hashlittle.h"
 
-IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type)
+extern bool g_IsJC4Mode;
+
+IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type, bool jc4)
 {
-    switch (type) {
-        case RB_BUILDINGJC3:
-            return new RenderBlockBuildingJC3;
-        case RB_CARLIGHT:
-            return new RenderBlockCarLight;
-        case RB_CARPAINTMM:
-            return new RenderBlockCarPaintMM;
-        case RB_CHARACTER:
-            return new RenderBlockCharacter;
-        case RB_CHARACTERSKIN:
-            return new RenderBlockCharacterSkin;
-        case RB_GENERAL:
-            return new RenderBlockGeneral;
-        case RB_GENERALJC3:
-            return new RenderBlockGeneralJC3;
-        case RB_GENERALMKIII:
-            return new RenderBlockGeneralMkIII;
-        case RB_LANDMARK:
-            return new RenderBlockLandmark;
-        case RB_PROP:
-            return new RenderBlockProp;
-        case RB_WINDOW:
-            return new RenderBlockWindow;
+    if (jc4) {
+        switch (type) {
+            case RB_CHARACTER:
+            case RB_CHARACTERSKIN:
+                return new jc4::RenderBlockCharacter;
+        }
+    } else {
+        switch (type) {
+            case RB_BUILDINGJC3:
+                return new jc3::RenderBlockBuildingJC3;
+            case RB_CARLIGHT:
+                return new jc3::RenderBlockCarLight;
+            case RB_CARPAINTMM:
+                return new jc3::RenderBlockCarPaintMM;
+            case RB_CHARACTER:
+                return new jc3::RenderBlockCharacter;
+            case RB_CHARACTERSKIN:
+                return new jc3::RenderBlockCharacterSkin;
+            case RB_GENERAL:
+                return new jc3::RenderBlockGeneral;
+            case RB_GENERALJC3:
+                return new jc3::RenderBlockGeneralJC3;
+            case RB_GENERALMKIII:
+                return new jc3::RenderBlockGeneralMkIII;
+            case RB_LANDMARK:
+                return new jc3::RenderBlockLandmark;
+            case RB_PROP:
+                return new jc3::RenderBlockProp;
+            case RB_WINDOW:
+                return new jc3::RenderBlockWindow;
+        }
     }
 
     return nullptr;
 }
 
-IRenderBlock* RenderBlockFactory::CreateRenderBlock(const std::string& name)
+IRenderBlock* RenderBlockFactory::CreateRenderBlock(const std::string& name, bool jc4)
 {
-    return CreateRenderBlock(hashlittle(name.c_str()));
+    return CreateRenderBlock(hashlittle(name.c_str()), jc4);
 }
 
 const char* RenderBlockFactory::GetRenderBlockName(const uint32_t type)

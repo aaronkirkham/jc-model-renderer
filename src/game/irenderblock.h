@@ -1,19 +1,149 @@
 #pragma once
 
-#include "../../graphics/imgui/fonts/fontawesome5_icons.h"
-#include "../../graphics/imgui/imgui_buttondropdown.h"
-#include "../../graphics/imgui/imgui_disabled.h"
-#include "../../graphics/renderer.h"
-#include "../../graphics/shader_manager.h"
-#include "../../graphics/texture_manager.h"
-#include "../../graphics/types.h"
-#include "../../graphics/ui.h"
-#include "../types.h"
+#include "../graphics/imgui/fonts/fontawesome5_icons.h"
+#include "../graphics/imgui/imgui_buttondropdown.h"
+#include "../graphics/imgui/imgui_disabled.h"
+#include "../graphics/renderer.h"
+#include "../graphics/shader_manager.h"
+#include "../graphics/texture_manager.h"
+#include "../graphics/types.h"
+#include "../graphics/ui.h"
+#include "types.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+class IRenderBlock
+{
+  protected:
+    bool                                  m_Visible           = true;
+    float                                 m_ScaleModifier     = 1.0f;
+    VertexBuffer_t*                       m_VertexBuffer      = nullptr;
+    IndexBuffer_t*                        m_IndexBuffer       = nullptr;
+    std::shared_ptr<VertexShader_t>       m_VertexShader      = nullptr;
+    std::shared_ptr<PixelShader_t>        m_PixelShader       = nullptr;
+    VertexDeclaration_t*                  m_VertexDeclaration = nullptr;
+    SamplerState_t*                       m_SamplerState      = nullptr;
+    std::vector<std::shared_ptr<Texture>> m_Textures;
+
+  public:
+    IRenderBlock() = default;
+    virtual ~IRenderBlock()
+    {
+        Renderer::Get()->DestroyBuffer(m_VertexBuffer);
+        Renderer::Get()->DestroyBuffer(m_IndexBuffer);
+        Renderer::Get()->DestroyVertexDeclaration(m_VertexDeclaration);
+        Renderer::Get()->DestroySamplerState(m_SamplerState);
+    }
+
+    virtual const char* GetTypeName()       = 0;
+    virtual uint32_t    GetTypeHash() const = 0;
+
+    virtual bool IsOpaque() = 0;
+
+    virtual void Setup(RenderContext_t* context)
+    {
+        if (!m_Visible || !m_VertexShader || !m_PixelShader || !m_VertexDeclaration || !m_VertexBuffer) {
+            return;
+        }
+
+        // enable the vertex and pixel shaders
+        context->m_DeviceContext->VSSetShader(m_VertexShader->m_Shader, nullptr, 0);
+        context->m_DeviceContext->PSSetShader(m_PixelShader->m_Shader, nullptr, 0);
+
+        // set the input layout
+        context->m_DeviceContext->IASetInputLayout(m_VertexDeclaration->m_Layout);
+
+        // set the vertex buffer
+        context->m_Renderer->SetVertexStream(m_VertexBuffer, 0);
+
+        // set the topology
+        context->m_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    }
+
+    virtual void Draw(RenderContext_t* context)
+    {
+        if (!m_Visible) {
+            return;
+        }
+
+        if (m_IndexBuffer) {
+            context->m_Renderer->DrawIndexed(0, m_IndexBuffer->m_ElementCount, m_IndexBuffer);
+        } else {
+            context->m_Renderer->Draw(0, (m_VertexBuffer->m_ElementCount / 3));
+        }
+    }
+
+    virtual void DrawContextMenu() = 0;
+    virtual void DrawUI()          = 0;
+
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) = 0;
+    virtual std::tuple<vertices_t, uint16s_t> GetData()                                    = 0;
+
+    inline void BindTexture(int32_t texture_index, int32_t slot, SamplerState_t* sampler = nullptr)
+    {
+        if (texture_index >= m_Textures.size()) {
+            return;
+        }
+
+        const auto& texture = m_Textures[texture_index];
+        if (texture && texture->IsLoaded()) {
+            texture->Use(slot, sampler);
+        }
+    }
+
+    inline void BindTexture(int32_t texture_index, SamplerState_t* sampler = nullptr)
+    {
+        return BindTexture(texture_index, texture_index, sampler);
+    }
+
+    inline void AllocateTextureSlots(int32_t count)
+    {
+        m_Textures.resize(count);
+    }
+
+    inline void SetTexture(int32_t texture_index, std::shared_ptr<Texture> texture)
+    {
+        m_Textures[texture_index] = texture;
+    }
+
+    inline void DrawUI_Texture(const std::string& title, uint32_t texture_slot)
+    {
+        if (texture_slot >= m_Textures.size()) {
+            return;
+        }
+
+        UI::Get()->RenderBlockTexture(this, title, m_Textures[texture_slot]);
+    }
+
+    virtual bool IsVisible() const
+    {
+        return m_Visible;
+    }
+
+    virtual float GetScale() const
+    {
+        return m_ScaleModifier;
+    }
+
+    virtual VertexBuffer_t* GetVertexBuffer()
+    {
+        return m_VertexBuffer;
+    }
+
+    virtual IndexBuffer_t* GetIndexBuffer()
+    {
+        return m_IndexBuffer;
+    }
+
+    virtual const std::vector<std::shared_ptr<Texture>>& GetTextures()
+    {
+        return m_Textures;
+    }
+};
+
+#if 0
 class RenderBlockModel;
 class IRenderBlock
 {
@@ -319,3 +449,4 @@ class IRenderBlock
         UI::Get()->RenderBlockTexture(this, title, m_Textures[texture_slot]);
     }
 };
+#endif

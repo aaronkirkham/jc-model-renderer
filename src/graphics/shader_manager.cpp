@@ -143,9 +143,9 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
     // look for the correct member
     const auto& vertex_shaders = m_ShaderBundle->GetMember("VertexShaders");
     for (const auto& member : vertex_shaders->m_Members) {
-        const auto& shader_name = m_ShaderBundle->GetMember(member.get(), "Name")->m_StringData;
+        const auto& shader_name = member->GetMember("Name")->As<std::string>();
         if (shader_name == name) {
-            const auto& shader_data = m_ShaderBundle->GetMember(member.get(), "BinaryData")->m_Data;
+            const auto& shader_data = member->GetMember("BinaryData")->As<std::vector<uint8_t>>();
 
             auto shader    = std::make_shared<VertexShader_t>();
             shader->m_Code = shader_data;
@@ -191,9 +191,9 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
     // look for the correct member
     const auto& fragment_shaders = m_ShaderBundle->GetMember("FragmentShaders");
     for (const auto& member : fragment_shaders->m_Members) {
-        const auto& shader_name = m_ShaderBundle->GetMember(member.get(), "Name")->m_StringData;
+        const auto& shader_name = member->GetMember("Name")->As<std::string>();
         if (shader_name == name) {
-            const auto& shader_data = m_ShaderBundle->GetMember(member.get(), "BinaryData")->m_Data;
+            const auto& shader_data = member->GetMember("BinaryData")->As<std::vector<uint8_t>>();
 
             auto shader    = std::make_shared<PixelShader_t>();
             shader->m_Code = shader_data;

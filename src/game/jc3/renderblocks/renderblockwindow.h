@@ -34,6 +34,8 @@ struct Window {
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
+namespace jc3
+{
 class RenderBlockWindow : public IRenderBlock
 {
   private:
@@ -173,32 +175,6 @@ class RenderBlockWindow : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
-    {
-        //
-    }
-
-    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
-    {
-        using namespace jc::Vertex;
-
-        vertices_t vertices;
-        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
-
-        const auto& vb = m_VertexBuffer->CastData<UnpackedVertexPosition2UV>();
-        vertices.reserve(vb.size());
-
-        for (const auto& vertex : vb) {
-            vertex_t v;
-            v.pos    = {vertex.x, vertex.y, vertex.z};
-            v.uv     = {vertex.u0, vertex.v0};
-            v.normal = unpack_normal(vertex.n);
-            vertices.emplace_back(std::move(v));
-        }
-
-        return {vertices, indices};
-    }
-
     virtual void Setup(RenderContext_t* context) override final
     {
         if (!m_Visible)
@@ -304,17 +280,44 @@ class RenderBlockWindow : public IRenderBlock
         ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
         ImGui::Columns(3, nullptr, false);
         {
-            IRenderBlock::DrawTexture("DiffuseMap", 0);
+            IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
 
             if (!(m_Block.attributes.flags & SIMPLE)) {
-                IRenderBlock::DrawTexture("NormalMap", 1);
-                IRenderBlock::DrawTexture("PropertyMap", 2);
+                IRenderBlock::DrawUI_Texture("NormalMap", 1);
+                IRenderBlock::DrawUI_Texture("PropertyMap", 2);
             }
 
             // damage
-            IRenderBlock::DrawTexture("DamagePointNormalMap", 3);
-            IRenderBlock::DrawTexture("DamagePointPropertyMap", 4);
+            IRenderBlock::DrawUI_Texture("DamagePointNormalMap", 3);
+            IRenderBlock::DrawUI_Texture("DamagePointPropertyMap", 4);
         }
         ImGui::EndColumns();
     }
+
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
+    {
+        //
+    }
+
+    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
+    {
+        using namespace jc::Vertex;
+
+        vertices_t vertices;
+        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
+
+        const auto& vb = m_VertexBuffer->CastData<UnpackedVertexPosition2UV>();
+        vertices.reserve(vb.size());
+
+        for (const auto& vertex : vb) {
+            vertex_t v;
+            v.pos    = {vertex.x, vertex.y, vertex.z};
+            v.uv     = {vertex.u0, vertex.v0};
+            v.normal = unpack_normal(vertex.n);
+            vertices.emplace_back(std::move(v));
+        }
+
+        return {vertices, indices};
+    }
 };
+} // namespace jc3

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <any>
 #include <filesystem>
 #include <memory>
 #include <queue>
@@ -19,32 +20,37 @@ static constexpr const char* ADF_TYPE_NAMES[12] = {"uint8",  "int8",  "uint16", 
 class AdfInstanceMemberInfo
 {
   public:
+    int64_t                                             m_Id   = -1;
     std::string                                         m_Name = "";
     jc::AvalancheDataFormat::TypeDefinitionType         m_Type;
     AdfTypeDefinition*                                  m_TypeDef = nullptr;
-    jc::AvalancheDataFormat::TypeMemberHash             m_DataType;
-    FileBuffer                                          m_Data;
-    std::string                                         m_StringData;
+    jc::AvalancheDataFormat::TypeMemberHash             m_TypeHash;
+    std::any                                            m_Data;
     std::vector<std::unique_ptr<AdfInstanceMemberInfo>> m_Members;
     uint32_t                                            m_ExpectedElementCount = 0;
     int64_t                                             m_Offset               = 0;
     int64_t                                             m_FileOffset           = 0;
     AdfInstanceInfo*                                    m_Adf                  = nullptr;
+    bool                                                m_IsReferenceToId      = false;
 
     AdfInstanceMemberInfo() = default;
-    AdfInstanceMemberInfo(const std::string& name, AdfTypeDefinition* type, int64_t offset, AdfInstanceInfo* adf,
-                          uint32_t expected_element_count);
-    AdfInstanceMemberInfo(const std::string& name, AdfTypeDefinition* type, int64_t offset, AdfInstanceInfo* adf);
-    AdfInstanceMemberInfo(const std::string& name, jc::AvalancheDataFormat::TypeMemberHash type, int64_t offset,
+    AdfInstanceMemberInfo(int64_t id, const std::string& name, AdfTypeDefinition* type, AdfInstanceInfo* adf);
+    AdfInstanceMemberInfo(int64_t id, const std::string& name, AdfTypeDefinition* type, int64_t offset,
+                          AdfInstanceInfo* adf, uint32_t expected_element_count);
+    AdfInstanceMemberInfo(int64_t id, const std::string& name, AdfTypeDefinition* type, int64_t offset,
                           AdfInstanceInfo* adf);
-    AdfInstanceMemberInfo(const std::string& name, AdfTypeDefinition* type, int64_t offset, AdfInstanceInfo* adf,
-                          jc::AvalancheDataFormat::Enum* enum_data);
+    AdfInstanceMemberInfo(int64_t id, const std::string& name, jc::AvalancheDataFormat::TypeMemberHash type,
+                          int64_t offset, AdfInstanceInfo* adf);
+    AdfInstanceMemberInfo(int64_t id, const std::string& name, AdfTypeDefinition* type, int64_t offset,
+                          AdfInstanceInfo* adf, jc::AvalancheDataFormat::Enum* enum_data);
     virtual ~AdfInstanceMemberInfo() = default;
 
-    template <typename T> T GetData()
+    template <typename T> T As()
     {
-        return CastBuffer<T>(&m_Data)[0];
+        return std::any_cast<T>(m_Data);
     }
+
+    AdfInstanceMemberInfo* GetMember(const std::string& name);
 };
 
 class AdfInstanceInfo
@@ -137,10 +143,15 @@ class AvalancheDataFormat : public Factory<AvalancheDataFormat>
 
     bool Parse(const FileBuffer& data);
 
-    static void FileReadCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);
+    static void ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);
+    static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path);
 
     AdfTypeDefinition* GetTypeDefinition(jc::AvalancheDataFormat::TypeMemberHash type_hash);
 
     AdfInstanceMemberInfo* GetMember(const std::string& name);
-    AdfInstanceMemberInfo* GetMember(AdfInstanceMemberInfo* info, const std::string& name);
+
+	const std::vector<std::unique_ptr<AdfInstanceInfo>>& GetInstanceInfos()
+    {
+        return m_InstanceInfos;
+    }
 };

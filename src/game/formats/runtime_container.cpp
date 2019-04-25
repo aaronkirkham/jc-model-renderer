@@ -357,8 +357,7 @@ void WriteNode(std::ofstream& stream, RuntimeContainer* node, std::unordered_map
 
 bool RuntimeContainer::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path)
 {
-    const auto rc = RuntimeContainer::get(filename.string());
-    if (rc) {
+    if (auto rc = RuntimeContainer::get(filename.string())) {
         using namespace jc::RuntimeContainer;
 
         std::ofstream stream(path, std::ios::binary);

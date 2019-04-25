@@ -24,6 +24,8 @@ struct CharacterSkin {
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
+namespace jc3
+{
 class RenderBlockCharacterSkin : public IRenderBlock
 {
   private:
@@ -308,58 +310,6 @@ class RenderBlockCharacterSkin : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
-    {
-        //
-    }
-
-    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
-    {
-        using namespace jc::Vertex;
-        using namespace jc::Vertex::RenderBlockCharacter;
-
-        vertices_t vertices;
-        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
-
-        switch (m_Stride) {
-            // 4bones1uv, 4bones2uvs, 4bones3uvs
-            case 0:
-            case 1:
-            case 2: {
-                // TODO: once multiple UVs are supported, change this!
-                const auto& vb = m_VertexBuffer->CastData<Packed4Bones1UV>();
-                vertices.reserve(vb.size());
-                for (const auto& vertex : vb) {
-                    vertex_t v{};
-                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
-                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
-                    vertices.emplace_back(std::move(v));
-                }
-
-                break;
-            }
-
-            // 8bones1uv, 8bones2uvs, 8bones3uvs
-            case 3:
-            case 4:
-            case 5: {
-                // TODO: once multiple UVs are supported, change this!
-                const auto& vb = m_VertexBuffer->CastData<Packed8Bones1UV>();
-                vertices.reserve(vb.size());
-                for (const auto& vertex : vb) {
-                    vertex_t v{};
-                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
-                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
-                    vertices.emplace_back(std::move(v));
-                }
-
-                break;
-            }
-        }
-
-        return {vertices, indices};
-    }
-
     virtual void Setup(RenderContext_t* context) override final
     {
         if (!m_Visible)
@@ -438,27 +388,79 @@ class RenderBlockCharacterSkin : public IRenderBlock
     virtual void DrawUI() override final
     {
         ImGui::Text(ICON_FA_COGS "  Attributes");
-
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
 
         // Textures
         ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
         ImGui::Columns(3, nullptr, false);
         {
-            IRenderBlock::DrawTexture("DiffuseMap", 0);
-            IRenderBlock::DrawTexture("NormalMap", 1);
-            IRenderBlock::DrawTexture("PropertiesMap", 2);
-            IRenderBlock::DrawTexture("DetailDiffuseMap", 3);
-            IRenderBlock::DrawTexture("DetailNormalMap", 4);
+            IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
+            IRenderBlock::DrawUI_Texture("NormalMap", 1);
+            IRenderBlock::DrawUI_Texture("PropertiesMap", 2);
+            IRenderBlock::DrawUI_Texture("DetailDiffuseMap", 3);
+            IRenderBlock::DrawUI_Texture("DetailNormalMap", 4);
 
             if (m_Block.attributes.flags & USE_FEATURE_MAP) {
-                IRenderBlock::DrawTexture("FeatureMap", 7);
+                IRenderBlock::DrawUI_Texture("FeatureMap", 7);
             }
 
             if (m_Block.attributes.flags & USE_WRINKLE_MAP) {
-                IRenderBlock::DrawTexture("WrinkleMap", 8);
+                IRenderBlock::DrawUI_Texture("WrinkleMap", 8);
             }
         }
         ImGui::EndColumns();
     }
+
+	virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
+    {
+        //
+    }
+
+    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
+    {
+        using namespace jc::Vertex;
+        using namespace jc::Vertex::RenderBlockCharacter;
+
+        vertices_t vertices;
+        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
+
+        switch (m_Stride) {
+            // 4bones1uv, 4bones2uvs, 4bones3uvs
+            case 0:
+            case 1:
+            case 2: {
+                // TODO: once multiple UVs are supported, change this!
+                const auto& vb = m_VertexBuffer->CastData<Packed4Bones1UV>();
+                vertices.reserve(vb.size());
+                for (const auto& vertex : vb) {
+                    vertex_t v{};
+                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
+                    vertices.emplace_back(std::move(v));
+                }
+
+                break;
+            }
+
+            // 8bones1uv, 8bones2uvs, 8bones3uvs
+            case 3:
+            case 4:
+            case 5: {
+                // TODO: once multiple UVs are supported, change this!
+                const auto& vb = m_VertexBuffer->CastData<Packed8Bones1UV>();
+                vertices.reserve(vb.size());
+                for (const auto& vertex : vb) {
+                    vertex_t v{};
+                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
+                    vertices.emplace_back(std::move(v));
+                }
+
+                break;
+            }
+        }
+
+        return {vertices, indices};
+    }
 };
+} // namespace jc3

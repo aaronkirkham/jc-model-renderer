@@ -3,8 +3,8 @@
 #include "avalanche_data_format.h"
 
 #include "../file_loader.h"
+#include "../jc4/renderblocks/irenderblock.h"
 #include "../render_block_factory.h"
-#include "../renderblocks/irenderblock.h"
 
 #include "../../graphics/renderer.h"
 #include "../../window.h"
@@ -74,7 +74,7 @@ void AvalancheModelFormat::Parse(const FileBuffer& data, ParseCallback_t callbac
     __debugbreak();*/
 
     const auto instance  = m_ModelAdf->GetMember("instance"); // TODO: not all models have this name.
-    const auto materials = m_ModelAdf->GetMember(instance, "Materials");
+    const auto materials = instance->GetMember("Materials");
 
     for (const auto& member : materials->m_Members) {
         auto mesh = std::make_unique<AMFMesh>(member.get(), this);
@@ -82,7 +82,7 @@ void AvalancheModelFormat::Parse(const FileBuffer& data, ParseCallback_t callbac
     }
 
     // read the mesh file
-    const auto& meshc_filename = instance->m_Members[0]->m_StringData;
+    const auto& meshc_filename = instance->GetMember("Mesh")->As<std::string>();
     LOG_INFO("Loading model mesh: \"{}\"", meshc_filename);
     FileLoader::Get()->ReadFile(meshc_filename, [&, callback, meshc_filename](bool success, FileBuffer data) {
         if (success) {
@@ -93,7 +93,7 @@ void AvalancheModelFormat::Parse(const FileBuffer& data, ParseCallback_t callbac
             }
 
             // get the high LOD mesh name (remove the leading "intermediate" path)
-            auto hrmesh_filename = m_MeshAdf->GetMember("HighLodPath")->m_StringData;
+            auto hrmesh_filename = m_MeshAdf->GetMember("HighLodPath")->As<std::string>();
             if (hrmesh_filename.find_first_of("intermediate/") == 0) {
                 hrmesh_filename = hrmesh_filename.erase(0, 13);
             }
@@ -135,7 +135,7 @@ bool AvalancheModelFormat::ParseMeshBuffers()
         if (adf) {
             if (const auto member = adf->GetMember(name)) {
                 for (const auto& buffer : member->m_Members) {
-                    to->emplace_back(buffer->m_Members[0]->m_Data);
+                    to->emplace_back(buffer->GetMember("Data")->As<std::vector<uint8_t>>());
                 }
             }
         }
@@ -149,10 +149,11 @@ bool AvalancheModelFormat::ParseMeshBuffers()
 
     // get the highest resolution LOD available
     const auto lod_groups = m_MeshAdf->GetMember("LodGroups");
-    const auto meshes     = m_MeshAdf->GetMember(lod_groups->m_Members.back().get(), "Meshes");
+    const auto meshes     = lod_groups->m_Members.back()->GetMember("Meshes");
     for (const auto& mesh : meshes->m_Members) {
-        const auto mesh_type_id = m_MeshAdf->GetMember(mesh.get(), "MeshTypeId")->m_StringData;
-        const auto sub_mesh_id  = m_MeshAdf->GetMember(mesh.get(), "SubMeshId")->m_StringData;
+        const auto& mesh_type_id = mesh->GetMember("MeshTypeId")->As<std::string>();
+        const auto  sub_mesh     = mesh->GetMember("SubMeshes")->GetMember("SubMeshes[0]");
+        const auto& sub_mesh_id  = sub_mesh->GetMember("SubMeshId")->As<std::string>();
 
         LOG_INFO("Mesh: {} ({})", sub_mesh_id, mesh_type_id);
 
@@ -162,10 +163,10 @@ bool AvalancheModelFormat::ParseMeshBuffers()
         });
 
         if (find_it != m_Meshes.end()) {
-            const auto vertex_buffer_index = m_MeshAdf->GetMember(mesh.get(), "VertexBufferIndices")->m_Data[0];
+            const auto vertex_buffer_index = mesh->GetMember("VertexBufferIndices")->As<std::vector<uint8_t>>()[0];
             auto&      vertex_buffer       = vertex_buffers.at(vertex_buffer_index);
 
-            const auto index_buffer_index = m_MeshAdf->GetMember(mesh.get(), "IndexBufferIndex")->m_Data[0];
+            const auto index_buffer_index = mesh->GetMember("IndexBufferIndex")->As<uint8_t>();
             auto&      index_buffer       = index_buffers.at(index_buffer_index);
 
             LOG_INFO(" - VertexBufferIndex={}, IndexBufferIndex={}", vertex_buffer_index, index_buffer_index);
@@ -182,20 +183,19 @@ AMFMesh::AMFMesh(AdfInstanceMemberInfo* info, AvalancheModelFormat* parent)
     : m_Info(info)
     , m_Parent(parent)
 {
-    const auto model_adf = parent->GetModelAdf();
-    m_Name               = model_adf->GetMember(info, "Name")->m_StringData;
-    m_RenderBlockId      = model_adf->GetMember(info, "RenderBlockId")->m_StringData;
+    m_Name          = info->GetMember("Name")->As<std::string>();
+    m_RenderBlockId = info->GetMember("RenderBlockId")->As<std::string>();
 
     LOG_INFO("{} ({})", m_Name, m_RenderBlockId);
 
-    m_RenderBlock = RenderBlockFactory::CreateRenderBlock(m_RenderBlockId);
+    m_RenderBlock = RenderBlockFactory::CreateRenderBlock(m_RenderBlockId, true);
     assert(m_RenderBlock != nullptr);
 
     // load textures
-    const auto textures = model_adf->GetMember(info, "Textures");
+    const auto& textures = info->GetMember("Textures");
     m_RenderBlock->AllocateTextureSlots(textures->m_Members.size());
     for (auto i = 0; i < textures->m_Members.size(); ++i) {
-        auto texture = TextureManager::Get()->GetTexture(textures->m_Members[i]->m_StringData);
+        auto texture = TextureManager::Get()->GetTexture(textures->m_Members[i]->As<std::string>());
         m_RenderBlock->SetTexture(i, texture);
     }
 }
@@ -203,19 +203,17 @@ AMFMesh::AMFMesh(AdfInstanceMemberInfo* info, AvalancheModelFormat* parent)
 AMFMesh::~AMFMesh()
 {
     Renderer::Get()->RemoveFromRenderList(m_RenderBlock);
-    // SAFE_DELETE(m_RenderBlock);
+    SAFE_DELETE(m_RenderBlock);
 }
-
-#include "game/renderblocks/renderblockcharacter.h"
 
 void AMFMesh::LoadBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, FileBuffer* indices)
 {
     const auto mesh_adf = m_Parent->GetMeshAdf();
 
     // parse vertex buffer
-    const auto vertex_count         = mesh_adf->GetMember(info, "VertexCount")->GetData<uint32_t>();
-    const auto vertex_buffer_stride = mesh_adf->GetMember(info, "VertexStreamStrides")->m_Data[0];
-    const auto vertex_buffer_offset = mesh_adf->GetMember(info, "VertexStreamOffsets")->GetData<uint32_t>();
+    const auto vertex_count         = info->GetMember("VertexCount")->As<uint32_t>();
+    const auto vertex_buffer_stride = info->GetMember("VertexStreamStrides")->As<std::vector<uint8_t>>()[0];
+    const auto vertex_buffer_offset = info->GetMember("VertexStreamOffsets")->As<std::vector<uint32_t>>()[0];
 
     LOG_INFO(" - VertexCount={}, VertexStreamStrides={}, VertexStreamOffsets={}", vertex_count, vertex_buffer_stride,
              vertex_buffer_offset);
@@ -228,9 +226,9 @@ void AMFMesh::LoadBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, Fil
               std::back_inserter(vertex_buffer));
 
     // parse index buffer
-    const auto index_count         = mesh_adf->GetMember(info, "IndexCount")->GetData<uint32_t>();
-    const auto index_buffer_stride = mesh_adf->GetMember(info, "IndexBufferStride")->m_Data[0];
-    const auto index_buffer_offset = mesh_adf->GetMember(info, "IndexBufferOffset")->m_Data[0];
+    const auto index_count         = info->GetMember("IndexCount")->As<uint32_t>();
+    const auto index_buffer_stride = info->GetMember("IndexBufferStride")->As<uint8_t>();
+    const auto index_buffer_offset = info->GetMember("IndexBufferOffset")->As<uint32_t>();
 
     LOG_INFO(" - IndexCount={}, IndexBufferStride={}, IndexBufferOffset={}", index_count, index_buffer_stride,
              index_buffer_offset);
@@ -242,10 +240,9 @@ void AMFMesh::LoadBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, Fil
               indices->begin() + index_buffer_offset + (index_count * index_buffer_stride),
               std::back_inserter(index_buffer));
 
-    if (m_RenderBlockId == "Character") {
-        ((RenderBlockCharacter*)m_RenderBlock)->CreateBuffers(&vertex_buffer, &index_buffer);
-        Renderer::Get()->AddToRenderList(m_RenderBlock);
-    }
+    // init the render block
+    ((jc4::IRenderBlock*)m_RenderBlock)->Create(&vertex_buffer, &index_buffer);
+    Renderer::Get()->AddToRenderList(m_RenderBlock);
 
 #ifdef DEBUG
 #if 0

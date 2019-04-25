@@ -7,7 +7,7 @@
 
 #include "../game/file_loader.h"
 #include "../game/formats/render_block_model.h"
-#include "../game/renderblocks/irenderblock.h"
+#include "../game/irenderblock.h"
 
 namespace import_export
 {
@@ -238,10 +238,9 @@ class Wavefront_Obj : public IImportExporter
     }
 
     void WriteModelFile(const std::filesystem::path& filename, const std::filesystem::path& path,
-                        ::RenderBlockModel* model)
+                        const std::vector<IRenderBlock*>& render_blocks)
     {
-        std::filesystem::path       mtl_path      = path / (filename.stem().string() + ".mtl");
-        const auto&                 render_blocks = model->GetRenderBlocks();
+        std::filesystem::path       mtl_path = path / (filename.stem().string() + ".mtl");
         std::map<uint32_t, int32_t> _seen;
         uint32_t                    _num_vertices = 0;
 
@@ -372,21 +371,42 @@ class Wavefront_Obj : public IImportExporter
             std::filesystem::create_directory(path);
         }
 
-        auto model = ::RenderBlockModel::get(filename.string());
-        if (model) {
-            WriteModelFile(filename, path, model.get());
-            callback(true);
-        } else {
-            FileLoader::Get()->ReadFile(filename, [&, filename, path, callback](bool success, FileBuffer data) {
-                if (success) {
-                    auto model = std::make_unique<::RenderBlockModel>(filename);
-                    if (model->ParseRBM(data, false)) {
-                        WriteModelFile(filename, path, model.get());
+        if (filename.extension() == ".rbm") {
+            auto model = ::RenderBlockModel::get(filename.string());
+            if (model) {
+                WriteModelFile(filename, path, model->GetRenderBlocks());
+                callback(true);
+            } else {
+                FileLoader::Get()->ReadFile(filename, [&, filename, path, callback](bool success, FileBuffer data) {
+                    if (success) {
+                        auto model = std::make_unique<::RenderBlockModel>(filename);
+                        if (model->ParseRBM(data, false)) {
+                            WriteModelFile(filename, path, model->GetRenderBlocks());
+                        }
                     }
-                }
 
-                callback(success);
-            });
+                    callback(success);
+                });
+            }
+        } else {
+            auto model = ::AvalancheModelFormat::get(filename.string());
+            if (model) {
+                WriteModelFile(filename, path, model->GetRenderBlocks());
+                callback(true);
+            } else {
+                FileLoader::Get()->ReadFile(filename, [&, filename, path, callback](bool success, FileBuffer data) {
+                    if (success) {
+                        auto model = std::make_unique<::AvalancheModelFormat>(filename);
+                        model->Parse(data, [&, filename, path, callback](bool success) {
+                            if (success) {
+                                WriteModelFile(filename, path, model->GetRenderBlocks());
+                            }
+
+                            callback(success);
+                        });
+                    }
+                });
+            }
         }
     }
 };

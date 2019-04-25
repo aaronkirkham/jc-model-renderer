@@ -8,9 +8,9 @@
 #include "formats/stream_archive.h"
 #include "types.h"
 
-using ReadFileCallback = std::function<void(bool success, FileBuffer data)>;
-using FileTypeCallback = std::function<void(const std::filesystem::path& filename, FileBuffer data, bool external)>;
-using FileSaveCallback = std::function<bool(const std::filesystem::path& filename, const std::filesystem::path& path)>;
+using ReadFileResultCallback = std::function<void(bool success, FileBuffer data)>;
+using FileReadHandler = std::function<void(const std::filesystem::path& filename, FileBuffer data, bool external)>;
+using FileSaveHandler = std::function<bool(const std::filesystem::path& filename, const std::filesystem::path& path)>;
 using ReadArchiveCallback    = std::function<void(std::unique_ptr<StreamArchive_t>)>;
 using DictionaryLookupResult = std::tuple<std::string, std::string, uint32_t>;
 
@@ -62,13 +62,13 @@ class FileLoader : public Singleton<FileLoader>
     std::unordered_map<uint32_t, std::pair<std::filesystem::path, std::vector<std::string>>> m_Dictionary;
 
     // file types
-    std::unordered_map<std::string, std::vector<FileTypeCallback>> m_FileTypeCallbacks;
-    std::unordered_map<std::string, std::vector<FileSaveCallback>> m_SaveFileCallbacks;
+    std::unordered_map<std::string, std::vector<FileReadHandler>> m_FileReadHandlers;
+    std::unordered_map<std::string, std::vector<FileSaveHandler>> m_FileSaveHandlers;
 
     // batch reading
-    std::unordered_map<std::string, std::unordered_map<uint32_t, std::vector<ReadFileCallback>>> m_Batches;
-    std::unordered_map<std::string, std::vector<ReadFileCallback>>                               m_PathBatches;
-    std::recursive_mutex                                                                         m_BatchesMutex;
+    std::unordered_map<std::string, std::unordered_map<uint32_t, std::vector<ReadFileResultCallback>>> m_Batches;
+    std::unordered_map<std::string, std::vector<ReadFileResultCallback>>                               m_PathBatches;
+    std::recursive_mutex                                                                               m_BatchesMutex;
 
     std::unique_ptr<StreamArchive_t> ParseStreamArchive(const FileBuffer* sarc_buffer,
                                                         FileBuffer*       toc_buffer = nullptr);
@@ -82,8 +82,8 @@ class FileLoader : public Singleton<FileLoader>
     void Init();
     void Shutdown();
 
-    void ReadFile(const std::filesystem::path& filename, ReadFileCallback callback, uint8_t flags = 0) noexcept;
-    void ReadFileBatched(const std::filesystem::path& filename, ReadFileCallback callback) noexcept;
+    void ReadFile(const std::filesystem::path& filename, ReadFileResultCallback callback, uint8_t flags = 0) noexcept;
+    void ReadFileBatched(const std::filesystem::path& filename, ReadFileResultCallback callback) noexcept;
     void RunFileBatches() noexcept;
 
     void ReadFileFromDisk(const std::filesystem::path& filename) noexcept;
@@ -113,7 +113,7 @@ class FileLoader : public Singleton<FileLoader>
     bool WriteTOC(const std::filesystem::path& filename, StreamArchive_t* archive) noexcept;
 
     // textures
-    void ReadTexture(const std::filesystem::path& filename, ReadFileCallback callback) noexcept;
+    void ReadTexture(const std::filesystem::path& filename, ReadFileResultCallback callback) noexcept;
     bool ReadAVTX(FileBuffer* data, FileBuffer* outData) noexcept;
     void ReadHMDDSC(FileBuffer* data, FileBuffer* outData) noexcept;
     bool WriteAVTX(Texture* texture, FileBuffer* outData) noexcept;
@@ -137,6 +137,6 @@ class FileLoader : public Singleton<FileLoader>
     }
 
     // file callbacks
-    void RegisterReadCallback(const std::vector<std::string>& extensions, FileTypeCallback fn);
-    void RegisterSaveCallback(const std::vector<std::string>& extensions, FileSaveCallback fn);
+    void RegisterReadCallback(const std::vector<std::string>& extensions, FileReadHandler fn);
+    void RegisterSaveCallback(const std::vector<std::string>& extensions, FileSaveHandler fn);
 };

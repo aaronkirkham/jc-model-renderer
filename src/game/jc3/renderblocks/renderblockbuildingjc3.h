@@ -18,6 +18,8 @@ struct BuildingJC3 {
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
+namespace jc3
+{
 class RenderBlockBuildingJC3 : public IRenderBlock
 {
   private:
@@ -119,16 +121,6 @@ class RenderBlockBuildingJC3 : public IRenderBlock
         //
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
-    {
-        //
-    }
-
-    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
-    {
-        return {};
-    }
-
     virtual void Setup(RenderContext_t* context) override final
     {
         if (!m_Visible)
@@ -147,6 +139,16 @@ class RenderBlockBuildingJC3 : public IRenderBlock
     }
 
     virtual void DrawContextMenu() override final {}
-
     virtual void DrawUI() override final {}
+
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
+    {
+        //
+    }
+
+    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
+    {
+        return {};
+    }
 };
+} // namespace jc3

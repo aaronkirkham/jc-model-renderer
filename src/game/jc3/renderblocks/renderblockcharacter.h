@@ -2,6 +2,8 @@
 
 #include "irenderblock.h"
 
+extern bool g_IsJC4Mode;
+
 #pragma pack(push, 1)
 struct CharacterAttributes {
     uint32_t  flags;
@@ -33,7 +35,9 @@ struct Character {
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
 
-class RenderBlockCharacter : public IRenderBlock
+namespace jc3
+{
+class RenderBlockCharacter : public jc3::IRenderBlock
 {
   private:
     enum {
@@ -73,9 +77,9 @@ class RenderBlockCharacter : public IRenderBlock
 
     jc::RenderBlocks::Character      m_Block;
     std::vector<jc::CSkinBatch>      m_SkinBatches;
-    ConstantBuffer_t*                m_VertexShaderConstants   = nullptr;
-    std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = {nullptr};
-    int32_t                          m_Stride                  = 0;
+    ConstantBuffer_t*                m_VertexShaderConstants = nullptr;
+    std::array<ConstantBuffer_t*, 2> m_PixelShaderConstants  = {nullptr};
+    int32_t                          m_Stride                = 0;
 
   public:
     RenderBlockCharacter() = default;
@@ -88,8 +92,8 @@ class RenderBlockCharacter : public IRenderBlock
 
         // destroy shader constants
         Renderer::Get()->DestroyBuffer(m_VertexShaderConstants);
-        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
-        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[1]);
+        Renderer::Get()->DestroyBuffer(m_PixelShaderConstants[0]);
+        Renderer::Get()->DestroyBuffer(m_PixelShaderConstants[1]);
     }
 
     virtual const char* GetTypeName() override final
@@ -121,23 +125,6 @@ class RenderBlockCharacter : public IRenderBlock
         m_Block.attributes.scale = 1.0f;
 
         Create();
-
-        /*uint32_t stride_1 = sizeof(jc::Vertex::PackedVertexPosition);
-        uint32_t stride_2 = sizeof(jc::Vertex::GeneralShortPacked);
-
-        m_VertexBuffer =
-            Renderer::Get()->CreateBuffer(vertex->data(), vertex->size() / stride_1, stride_1, VERTEX_BUFFER);
-        m_VertexBufferData =
-            Renderer::Get()->CreateBuffer(data->data(), data->size() / stride_2, stride_2, VERTEX_BUFFER);
-        m_IndexBuffer = Renderer::Get()->CreateBuffer(index->data(), index->size() / sizeof(uint16_t), sizeof(uint16_t),
-                                                      INDEX_BUFFER);
-
-        m_Block                             = {};
-        m_Block.attributes.packed.format    = 1;
-        m_Block.attributes.packed.scale     = 1.0f;
-        m_Block.attributes.packed.uv0Extent = {1.0f, 1.0f};
-
-        Create();*/
     }
 
     virtual void Create() override final
@@ -284,18 +271,18 @@ class RenderBlockCharacter : public IRenderBlock
         // create the constant buffer
         m_VertexShaderConstants =
             Renderer::Get()->CreateConstantBuffer(m_cbLocalConsts, "RenderBlockCharacter cbLocalConsts");
-        m_FragmentShaderConstants[0] =
+        m_PixelShaderConstants[0] =
             Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockCharacter cbInstanceConsts");
-        m_FragmentShaderConstants[1] =
+        m_PixelShaderConstants[1] =
             Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockCharacter cbMaterialConsts");
+
+        // reset fragment shader material consts
+        memset(&m_cbMaterialConsts, 0, sizeof(m_cbMaterialConsts));
 
         // identity the palette data
         for (int i = 0; i < 70; ++i) {
             m_cbLocalConsts.MatrixPalette[i] = glm::mat3x4(1);
         }
-
-        // reset fragment shader material consts
-        memset(&m_cbMaterialConsts, 0, sizeof(m_cbMaterialConsts));
 
         // create the sampler states
         {
@@ -361,58 +348,6 @@ class RenderBlockCharacter : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
-    {
-        //
-    }
-
-    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
-    {
-        using namespace jc::Vertex;
-        using namespace jc::Vertex::RenderBlockCharacter;
-
-        vertices_t vertices;
-        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
-
-        switch (m_Stride) {
-            // 4bones1uv, 4bones2uvs, 4bones3uvs
-            case 0:
-            case 1:
-            case 2: {
-                // TODO: once multiple UVs are supported, change this!
-                const auto& vb = m_VertexBuffer->CastData<Packed4Bones1UV>();
-                vertices.reserve(vb.size());
-                for (const auto& vertex : vb) {
-                    vertex_t v{};
-                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
-                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
-                    vertices.emplace_back(std::move(v));
-                }
-
-                break;
-            }
-
-            // 8bones1uv, 8bones2uvs, 8bones3uvs
-            case 3:
-            case 4:
-            case 5: {
-                // TODO: once multiple UVs are supported, change this!
-                const auto& vb = m_VertexBuffer->CastData<Packed8Bones1UV>();
-                vertices.reserve(vb.size());
-                for (const auto& vertex : vb) {
-                    vertex_t v{};
-                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
-                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
-                    vertices.emplace_back(std::move(v));
-                }
-
-                break;
-            }
-        }
-
-        return {vertices, indices};
-    }
-
     virtual void Setup(RenderContext_t* context) override final
     {
         if (!m_Visible)
@@ -423,25 +358,20 @@ class RenderBlockCharacter : public IRenderBlock
         const auto flags = m_Block.attributes.flags;
 
         // setup the constant buffer
-        {
-            static auto world = glm::mat4(1);
-
-            // set vertex shader constants
-            m_cbLocalConsts.World               = world;
-            m_cbLocalConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
-            m_cbLocalConsts.Scale               = glm::vec4(m_Block.attributes.scale * m_ScaleModifier);
-
-            // set fragment shader constants
-            //
-        }
+        static auto world = glm::mat4(1);
 
         // set the textures
         IRenderBlock::BindTexture(0, m_SamplerState);
 
-        // set the constant buffers
+        // set vertex shader constants
+        m_cbLocalConsts.World               = world;
+        m_cbLocalConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
+        m_cbLocalConsts.Scale               = glm::vec4(m_Block.attributes.scale * m_ScaleModifier);
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbLocalConsts);
-        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbInstanceConsts);
-        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts);
+
+        // set pixel shader constants
+        context->m_Renderer->SetPixelShaderConstants(m_PixelShaderConstants[0], 1, m_cbInstanceConsts);
+        context->m_Renderer->SetPixelShaderConstants(m_PixelShaderConstants[1], 2, m_cbMaterialConsts);
 
         // set the culling mode
         context->m_Renderer->SetCullMode((!(flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
@@ -517,11 +447,7 @@ class RenderBlockCharacter : public IRenderBlock
         if (!m_Visible)
             return;
 
-        if (m_SkinBatches.size() > 0) {
-            IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
-        } else {
-            IRenderBlock::Draw(context);
-        }
+        IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
     }
 
     virtual void DrawContextMenu() override final
@@ -539,8 +465,9 @@ class RenderBlockCharacter : public IRenderBlock
     virtual void DrawUI() override final
     {
         ImGui::Text(ICON_FA_COGS "  Attributes");
+        ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
 
-        if (ImGui::RadioButton("Gear", ((m_Block.attributes.flags & BODY_PART) == GEAR))) {}
+        /*if (ImGui::RadioButton("Gear", ((m_Block.attributes.flags & BODY_PART) == GEAR))) {}
 
         ImGui::SameLine();
 
@@ -548,9 +475,7 @@ class RenderBlockCharacter : public IRenderBlock
 
         ImGui::SameLine();
 
-        if (ImGui::RadioButton("Hair", ((m_Block.attributes.flags & BODY_PART) == HAIR))) {}
-
-        ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
+        if (ImGui::RadioButton("Hair", ((m_Block.attributes.flags & BODY_PART) == HAIR))) {}*/
 
         ImGui::SliderFloat4("Unknown #1", glm::value_ptr(m_cbInstanceConsts._unknown), 0, 1);
         ImGui::ColorEdit4("Diffuse Colour", glm::value_ptr(m_cbInstanceConsts.DiffuseColour));
@@ -562,34 +487,87 @@ class RenderBlockCharacter : public IRenderBlock
         {
             const auto flags = m_Block.attributes.flags;
 
-            IRenderBlock::DrawTexture("DiffuseMap", 0);
+            IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
 
             if ((flags & BODY_PART) == GEAR || (flags & BODY_PART) == HAIR) {
-                IRenderBlock::DrawTexture("NormalMap", 1);
-                IRenderBlock::DrawTexture("PropertiesMap", 2);
+                IRenderBlock::DrawUI_Texture("NormalMap", 1);
+                IRenderBlock::DrawUI_Texture("PropertiesMap", 2);
             }
 
             if ((flags & BODY_PART) == GEAR) {
-                IRenderBlock::DrawTexture("DetailDiffuseMap", 3);
-                IRenderBlock::DrawTexture("DetailNormalMap", 4);
+                IRenderBlock::DrawUI_Texture("DetailDiffuseMap", 3);
+                IRenderBlock::DrawUI_Texture("DetailNormalMap", 4);
 
                 if (m_Block.attributes.flags & USE_FEATURE_MAP) {
-                    IRenderBlock::DrawTexture("FeatureMap", 5);
+                    IRenderBlock::DrawUI_Texture("FeatureMap", 5);
                 }
 
                 if (m_Block.attributes.flags & USE_WRINKLE_MAP) {
-                    IRenderBlock::DrawTexture("WrinkleMap", 7);
+                    IRenderBlock::DrawUI_Texture("WrinkleMap", 7);
                 }
 
                 if (m_Block.attributes.flags & USE_CAMERA_LIGHTING) {
-                    IRenderBlock::DrawTexture("CameraMap", 8);
+                    IRenderBlock::DrawUI_Texture("CameraMap", 8);
                 }
 
-                IRenderBlock::DrawTexture("MetallicMap", 9);
+                IRenderBlock::DrawUI_Texture("MetallicMap", 9);
             } else if ((flags & BODY_PART) == EYES && flags & USE_EYE_REFLECTION) {
-                IRenderBlock::DrawTexture("ReflectionMap", 10);
+                IRenderBlock::DrawUI_Texture("ReflectionMap", 10);
             }
         }
         ImGui::EndColumns();
     }
+
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
+    {
+        //
+    }
+
+    virtual std::tuple<vertices_t, uint16s_t> GetData() override final
+    {
+        using namespace jc::Vertex;
+        using namespace jc::Vertex::RenderBlockCharacter;
+
+        vertices_t vertices;
+        uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
+
+        switch (m_Stride) {
+            // 4bones1uv, 4bones2uvs, 4bones3uvs
+            case 0:
+            case 1:
+            case 2: {
+                // TODO: once multiple UVs are supported, change this!
+                const auto& vb = m_VertexBuffer->CastData<Packed4Bones1UV>();
+                vertices.reserve(vb.size());
+                for (const auto& vertex : vb) {
+                    vertex_t v{};
+                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
+                    vertices.emplace_back(std::move(v));
+                }
+
+                break;
+            }
+
+            // 8bones1uv, 8bones2uvs, 8bones3uvs
+            case 3:
+            case 4:
+            case 5: {
+                // TODO: once multiple UVs are supported, change this!
+                const auto& vb = m_VertexBuffer->CastData<Packed8Bones1UV>();
+                vertices.reserve(vb.size());
+                for (const auto& vertex : vb) {
+                    vertex_t v{};
+                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
+                    vertices.emplace_back(std::move(v));
+                }
+
+                break;
+            }
+        }
+
+        return {vertices, indices};
+    }
 };
+} // namespace jc3
