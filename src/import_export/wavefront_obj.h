@@ -238,10 +238,9 @@ class Wavefront_Obj : public IImportExporter
     }
 
     void WriteModelFile(const std::filesystem::path& filename, const std::filesystem::path& path,
-                        ::RenderBlockModel* model)
+                        const std::vector<IRenderBlock*>& render_blocks)
     {
-        std::filesystem::path       mtl_path      = path / (filename.stem().string() + ".mtl");
-        const auto&                 render_blocks = model->GetRenderBlocks();
+        std::filesystem::path       mtl_path = path / (filename.stem().string() + ".mtl");
         std::map<uint32_t, int32_t> _seen;
         uint32_t                    _num_vertices = 0;
 
@@ -374,14 +373,14 @@ class Wavefront_Obj : public IImportExporter
 
         auto model = ::RenderBlockModel::get(filename.string());
         if (model) {
-            WriteModelFile(filename, path, model.get());
+            WriteModelFile(filename, path, model->GetRenderBlocks());
             callback(true);
         } else {
             FileLoader::Get()->ReadFile(filename, [&, filename, path, callback](bool success, FileBuffer data) {
                 if (success) {
                     auto model = std::make_unique<::RenderBlockModel>(filename);
                     if (model->ParseRBM(data, false)) {
-                        WriteModelFile(filename, path, model.get());
+                        WriteModelFile(filename, path, model->GetRenderBlocks());
                     }
                 }
 

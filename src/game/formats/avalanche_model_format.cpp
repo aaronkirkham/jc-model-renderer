@@ -243,7 +243,7 @@ void AMFMesh::LoadBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, Fil
               std::back_inserter(index_buffer));
 
     if (m_RenderBlockId == "Character" || m_RenderBlockId == "CharacterSkin") {
-        ((jc4::RenderBlockCharacter*)m_RenderBlock)->CreateBuffers(&vertex_buffer, &index_buffer);
+        // ((jc4::RenderBlockCharacter*)m_RenderBlock)->CreateBuffers(&vertex_buffer, &index_buffer);
         // Renderer::Get()->AddToRenderList(m_RenderBlock);
     }
 
