@@ -570,7 +570,7 @@ void RuntimeContainer::Load(const std::filesystem::path&                        
             auto result = FileLoader::Get()->ParseRuntimeContainer(filename, data);
             callback(result);
         } else {
-            LOG_ERROR("Failed to read runtime container \"{}\"", filename.string());
+            SPDLOG_ERROR("Failed to read runtime container \"{}\"", filename.string());
         }
     });
 }

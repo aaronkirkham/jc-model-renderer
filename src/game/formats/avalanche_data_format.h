@@ -32,18 +32,24 @@ class AdfInstanceMemberInfo
     int64_t                                             m_FileOffset           = 0;
     AdfInstanceInfo*                                    m_Adf                  = nullptr;
     bool                                                m_IsReferenceToId      = false;
+    uint32_t                                            m_BitIndex             = 0;
 
-    AdfInstanceMemberInfo() = default;
-    AdfInstanceMemberInfo(int64_t id, const std::string& name, AdfTypeDefinition* type, AdfInstanceInfo* adf);
-    AdfInstanceMemberInfo(int64_t id, const std::string& name, AdfTypeDefinition* type, int64_t offset,
-                          AdfInstanceInfo* adf, uint32_t expected_element_count);
-    AdfInstanceMemberInfo(int64_t id, const std::string& name, AdfTypeDefinition* type, int64_t offset,
-                          AdfInstanceInfo* adf);
-    AdfInstanceMemberInfo(int64_t id, const std::string& name, jc::AvalancheDataFormat::TypeMemberHash type,
-                          int64_t offset, AdfInstanceInfo* adf);
-    AdfInstanceMemberInfo(int64_t id, const std::string& name, AdfTypeDefinition* type, int64_t offset,
-                          AdfInstanceInfo* adf, jc::AvalancheDataFormat::Enum* enum_data);
+    AdfInstanceMemberInfo() = delete;
+    AdfInstanceMemberInfo(int64_t id, const std::string& name, AdfInstanceInfo* adf)
+        : m_Id(id)
+        , m_Name(name)
+        , m_Adf(adf)
+    {
+    }
     virtual ~AdfInstanceMemberInfo() = default;
+
+    void InitReference(AdfTypeDefinition* type, jc::AvalancheDataFormat::TypeMemberHash typehash);
+    void InitNonPrimitive(AdfTypeDefinition* type, jc::AvalancheDataFormat::TypeMemberHash typehash, int64_t offset,
+                          uint32_t element_count);
+    void InitPrimitive(jc::AvalancheDataFormat::TypeMemberHash typehash, int64_t offset);
+    void InitPointer(AdfTypeDefinition* type, int64_t offset);
+    void InitEnum(AdfTypeDefinition* type, int64_t offset);
+    void InitBitField(AdfTypeDefinition* type, int64_t offset, uint32_t bit_index);
 
     template <typename T> T As()
     {
@@ -62,8 +68,10 @@ class AdfInstanceInfo
     void MemberSetup_Array(AdfInstanceMemberInfo* info);
     void MemberSetup_StringHash(AdfInstanceMemberInfo* info);
 
-    void MemberSetupStructMember(AdfInstanceMemberInfo* info, jc::AvalancheDataFormat::TypeMemberHash type_hash,
-                                 const std::string& name, int64_t offset);
+    void MemberSetupStructMember(AdfInstanceMemberInfo*                      info,
+                                 jc::AvalancheDataFormat::MemeberDefinition* type_definition,
+                                 jc::AvalancheDataFormat::TypeMemberHash type_hash, const std::string& name,
+                                 int64_t offset);
 
   public:
     std::string                                         m_Name   = "";
@@ -73,25 +81,26 @@ class AdfInstanceInfo
     std::vector<std::unique_ptr<AdfInstanceMemberInfo>> m_Members;
     std::unordered_map<int64_t, AdfInstanceMemberInfo*> m_MemberOffsets;
     AvalancheDataFormat*                                m_Parent = nullptr;
-
-    FileBuffer m_Data;
-    uint64_t   m_DataOffset = 0;
+    FileBuffer                                          m_Data;
+    int64_t                                             m_DataReadOffset = 0;
 
     AdfInstanceInfo()          = default;
     virtual ~AdfInstanceInfo() = default;
 
     template <typename T> T ReadData()
     {
+        assert((m_DataReadOffset + sizeof(T)) <= m_Data.size());
+
         T result;
-        std::memcpy(&result, &m_Data[m_DataOffset], sizeof(T));
-        m_DataOffset += sizeof(T);
+        std::memcpy(&result, &m_Data[m_DataReadOffset], sizeof(T));
+        m_DataReadOffset += sizeof(T);
         return result;
     }
 
     std::string ReadString()
     {
-        char* next = reinterpret_cast<char*>(&m_Data[m_DataOffset]);
-        m_DataOffset += strlen(next);
+        char* next = reinterpret_cast<char*>(&m_Data[m_DataReadOffset]);
+        m_DataReadOffset += strlen(next);
         return std::string(next);
     }
 
@@ -150,7 +159,7 @@ class AvalancheDataFormat : public Factory<AvalancheDataFormat>
 
     AdfInstanceMemberInfo* GetMember(const std::string& name);
 
-	const std::vector<std::unique_ptr<AdfInstanceInfo>>& GetInstanceInfos()
+    const std::vector<std::unique_ptr<AdfInstanceInfo>>& GetInstanceInfos()
     {
         return m_InstanceInfos;
     }

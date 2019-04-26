@@ -49,7 +49,7 @@ bool RenderBlockModel::ParseLOD(const FileBuffer& data)
     std::string        line;
 
     while (std::getline(stream, line)) {
-        LOG_INFO(line);
+        SPDLOG_INFO(line);
     }
 
     return true;
@@ -67,13 +67,13 @@ bool RenderBlockModel::ParseRBM(const FileBuffer& data, bool add_to_render_list)
 
     // ensure the header magic is correct
     if (strncmp((char*)&header.m_Magic, "RBMDL", 5) != 0) {
-        LOG_ERROR("Invalid header magic.");
+        SPDLOG_ERROR("Invalid header magic.");
         parse_success = false;
         goto end;
     }
 
-    LOG_INFO("RBM v{}.{}.{}. NumberOfBlocks={}, Flags={}", header.m_VersionMajor, header.m_VersionMinor,
-             header.m_VersionRevision, header.m_NumberOfBlocks, header.m_Flags);
+    SPDLOG_INFO("RBM v{}.{}.{}. NumberOfBlocks={}, Flags={}", header.m_VersionMajor, header.m_VersionMinor,
+                header.m_VersionRevision, header.m_NumberOfBlocks, header.m_Flags);
 
     // ensure we can read the file version (TODO: when JC4 is released, check this)
     if (header.m_VersionMajor != 1 && header.m_VersionMinor != 16) {
@@ -115,15 +115,15 @@ bool RenderBlockModel::ParseRBM(const FileBuffer& data, bool add_to_render_list)
 
             // did we read the block correctly?
             if (checksum != RBM_END_OF_BLOCK) {
-                LOG_ERROR("Failed to read render block \"{}\" (checksum mismatch)",
-                          RenderBlockFactory::GetRenderBlockName(hash));
+                SPDLOG_ERROR("Failed to read render block \"{}\" (checksum mismatch)",
+                             RenderBlockFactory::GetRenderBlockName(hash));
                 parse_success = false;
                 break;
             }
 
             m_RenderBlocks.emplace_back(render_block);
         } else {
-            LOG_ERROR("Unknown render block \"{}\" (0x{:x})", RenderBlockFactory::GetRenderBlockName(hash), hash);
+            SPDLOG_ERROR("Unknown render block \"{}\" (0x{:x})", RenderBlockFactory::GetRenderBlockName(hash), hash);
 
             if (LoadingFromRuntimeContainer) {
                 std::stringstream error;
@@ -178,7 +178,7 @@ void RenderBlockModel::ParseAMF(const FileBuffer& data, ParseCallback_t callback
 {
     auto model_adf = AvalancheDataFormat::make(m_Filename);
     if (!model_adf->Parse(data)) {
-        LOG_ERROR("Failed to parse modelc ADF!");
+        SPDLOG_ERROR("Failed to parse modelc ADF!");
         return callback(false);
     }
 
@@ -192,7 +192,7 @@ void RenderBlockModel::ParseAMF(const FileBuffer& data, ParseCallback_t callback
     auto  materials       = model_adf->GetMember(inst, "Materials");
     auto& render_block_id = model_adf->GetMember(materials, "RenderBlockId")->m_StringData;
 
-    LOG_INFO("Creating render block \"{}\". Reading mesh: \"{}\"", render_block_id, mesh_name);
+    SPDLOG_INFO("Creating render block \"{}\". Reading mesh: \"{}\"", render_block_id, mesh_name);
 
     const auto render_block = RenderBlockFactory::CreateRenderBlock(render_block_id);
     if (render_block) {
@@ -204,7 +204,7 @@ void RenderBlockModel::ParseAMF(const FileBuffer& data, ParseCallback_t callback
         if (success) {
             auto mesh_adf = AvalancheDataFormat::make(mesh_name);
             if (!mesh_adf->Parse(data)) {
-                LOG_ERROR("Failed to parse meshc ADF");
+                SPDLOG_ERROR("Failed to parse meshc ADF");
                 return callback(false);
             }
 
@@ -223,18 +223,18 @@ void RenderBlockModel::ParseAMF(const FileBuffer& data, ParseCallback_t callback
                 AdfInstanceMemberInfo* hr_index_buffers  = nullptr;
 
                 if (success) {
-                    LOG_INFO("Using high resolution mesh! ({})", hrmesh_name);
+                    SPDLOG_INFO("Using high resolution mesh! ({})", hrmesh_name);
 
                     auto hrmesh_adf = AvalancheDataFormat::make(hrmesh_name);
                     if (!hrmesh_adf->Parse(hrmesh_data)) {
-                        LOG_ERROR("Failed to parse hrmeshc ADF");
+                        SPDLOG_ERROR("Failed to parse hrmeshc ADF");
                         return callback(false);
                     }
 
                     hr_vertex_buffers = hrmesh_adf->GetMember("VertexBuffers");
                     hr_index_buffers  = hrmesh_adf->GetMember("IndexBuffers");
                 } else {
-                    LOG_INFO("No high resolution mesh available. Using low resolution mesh. ({})", hrmesh_name);
+                    SPDLOG_INFO("No high resolution mesh available. Using low resolution mesh. ({})", hrmesh_name);
                 }
 
                 const auto result =
@@ -311,8 +311,8 @@ bool RenderBlockModel::ParseAMFMeshBuffers(AvalancheDataFormat* mesh_adf, AdfIns
         const auto  type    = mesh_adf->GetMember(mesh.get(), "MeshTypeId")->m_StringData;
         const auto& mesh_id = mesh_adf->GetMember(mesh.get(), "SubMeshId")->m_StringData;
 
-        LOG_INFO("Mesh: {}", mesh_id);
-        LOG_INFO(" - Type={}", type);
+        SPDLOG_INFO("Mesh: {}", mesh_id);
+        SPDLOG_INFO(" - Type={}", type);
 
         // vertex buffer
         const auto vertex_count         = mesh_adf->GetMember(mesh.get(), "VertexCount")->GetData<uint32_t>();
@@ -320,7 +320,7 @@ bool RenderBlockModel::ParseAMFMeshBuffers(AvalancheDataFormat* mesh_adf, AdfIns
         const auto vertex_buffer_stride = mesh_adf->GetMember(mesh.get(), "VertexStreamStrides")->m_Data[0];
         const auto vertex_buffer_offset = mesh_adf->GetMember(mesh.get(), "VertexStreamOffsets")->GetData<uint32_t>();
 
-        LOG_INFO(" - VertexCount={}, VertexBufferIndices={}, VertexStreamStrides={}, VertexStreamOffsets={}",
+        SPDLOG_INFO(" - VertexCount={}, VertexBufferIndices={}, VertexStreamStrides={}, VertexStreamOffsets={}",
                  vertex_count, vertex_buffer_index, vertex_buffer_stride, vertex_buffer_offset);
 
         const auto& vertex_buffer = vertex_buffers.at(vertex_buffer_index);
@@ -345,7 +345,7 @@ bool RenderBlockModel::ParseAMFMeshBuffers(AvalancheDataFormat* mesh_adf, AdfIns
         const auto index_buffer_stride = mesh_adf->GetMember(mesh.get(), "IndexBufferStride")->m_Data[0];
         const auto index_buffer_offset = mesh_adf->GetMember(mesh.get(), "IndexBufferOffset")->m_Data[0];
 
-        LOG_INFO(" - IndexCount={}, IndexBufferIndex={}, IndexBufferStride={}, IndexBufferOffset={}", index_count,
+        SPDLOG_INFO(" - IndexCount={}, IndexBufferIndex={}, IndexBufferStride={}, IndexBufferOffset={}", index_count,
                  index_buffer_index, index_buffer_stride, index_buffer_offset);
 
         const auto& index_buffer = CastBuffer<uint16_t>(&index_buffers.at(index_buffer_index));
@@ -472,7 +472,7 @@ void RenderBlockModel::Load(const std::filesystem::path& filename)
         if (success) {
             RenderBlockModel::ReadFileCallback(filename, std::move(data), false);
         } else {
-            LOG_ERROR("Failed to read model \"{}\"", filename.string());
+            SPDLOG_ERROR("Failed to read model \"{}\"", filename.string());
         }
     });
 }

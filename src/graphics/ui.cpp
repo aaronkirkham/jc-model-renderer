@@ -394,7 +394,8 @@ void UI::Render(RenderContext_t* context)
                                 m_ExportSettings.ShowExportSettings = false;
                                 UI::Get()->PopStatusText(status_text_id);
                                 if (!success) {
-                                    LOG_ERROR("Failed to export \"{}\"", m_ExportSettings.Filename.filename().string());
+                                    SPDLOG_ERROR("Failed to export \"{}\"",
+                                                 m_ExportSettings.Filename.filename().string());
                                     Window::Get()->ShowMessageBox(
                                         "Failed to export \"" + m_ExportSettings.Filename.filename().string() + "\".");
                                 }
@@ -1025,7 +1026,7 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
 
         // dragdrop payload
         if (const auto payload = UI::Get()->GetDropPayload(DragDropPayload_Texture)) {
-            LOG_INFO("DropPayload Texture: \"{}\"", title);
+            SPDLOG_INFO("DropPayload Texture: \"{}\"", title);
             std::filesystem::path payload_data(payload->data);
             texture->LoadFromFile(payload->data);
 

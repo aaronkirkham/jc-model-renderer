@@ -51,7 +51,7 @@ FileLoader::FileLoader()
                         fn(file, data, false);
                     }
                 } else {
-                    LOG_ERROR("(FileTreeItemSelected) Failed to load \"{}\"", file.string());
+                    SPDLOG_ERROR("(FileTreeItemSelected) Failed to load \"{}\"", file.string());
 
                     std::string error = "Failed to load \"" + file.filename().string() + "\".\n\n";
                     error += "Make sure you have selected the correct Just Cause directory.";
@@ -59,8 +59,8 @@ FileLoader::FileLoader()
                 }
             });
         } else {
-            LOG_ERROR("(FileTreeItemSelected) Unknown file type extension \"{}\" (\"{}\")", file.extension().string(),
-                      file.string());
+            SPDLOG_ERROR("(FileTreeItemSelected) Unknown file type extension \"{}\" (\"{}\")",
+                         file.extension().string(), file.string());
 
             std::string error = "Unable to read the \"" + file.extension().string() + "\" extension.\n\n";
             error += "Want to help? Check out our GitHub page for information on how to contribute.";
@@ -99,7 +99,7 @@ FileLoader::FileLoader()
                         }
                     }
 
-                    LOG_ERROR("(SaveFileRequest) Failed to save \"{}\"", file.filename().string());
+                    SPDLOG_ERROR("(SaveFileRequest) Failed to save \"{}\"", file.filename().string());
                     Window::Get()->ShowMessageBox("Failed to save \"" + file.filename().string() + "\".");
                 });
             }
@@ -116,7 +116,7 @@ FileLoader::FileLoader()
         Window::Get()->ShowFileSelection(
             "Select a file to import", filter.c_str(), importer->GetExportExtension(),
             [&, importer, callback](const std::filesystem::path& selected) {
-                LOG_INFO("(ImportFileRequest) Want to import file \"{}\"", selected.string());
+                SPDLOG_INFO("(ImportFileRequest) Want to import file \"{}\"", selected.string());
                 std::thread([&, importer, selected, callback] { importer->Import(selected, callback); }).detach();
             });
     });
@@ -143,7 +143,7 @@ FileLoader::FileLoader()
                             UI::Get()->PopStatusText(status_text_id);
 
                             if (!success) {
-                                LOG_ERROR("(ExportFileRequest) Failed to export \"{}\"", file.filename().string());
+                                SPDLOG_ERROR("(ExportFileRequest) Failed to export \"{}\"", file.filename().string());
                                 Window::Get()->ShowMessageBox("Failed to export \"" + file.filename().string() + "\".");
                             }
                         });
@@ -168,7 +168,7 @@ void FileLoader::Init()
         filename /= "oo2core_7_win64.dll";
 
         if (!std::filesystem::exists(filename)) {
-            LOG_ERROR("Can't find oo2core_7_win64.dll! ({})", filename.string());
+            SPDLOG_ERROR("Can't find oo2core_7_win64.dll! ({})", filename.string());
             Window::Get()->ShowMessageBox(
                 "Can't find oo2core_7_win64.dll.\n\nPlease make sure your Just Cause 4 directory is valid.",
                 MB_ICONERROR | MB_OK);
@@ -177,7 +177,7 @@ void FileLoader::Init()
 
         oo2core_7_win64 = LoadLibrary(filename.string().c_str());
         if (!oo2core_7_win64) {
-            LOG_ERROR("Failed to load oo2core_7_win64.dll! (ErrorCode={})", GetLastError());
+            SPDLOG_ERROR("Failed to load oo2core_7_win64.dll! (ErrorCode={})", GetLastError());
             std::string error = "Failed to load oo2core_7_win64.dll\n\nErrorCode=" + std::to_string(GetLastError());
             Window::Get()->ShowMessageBox(error, MB_ICONERROR | MB_OK);
             return;
@@ -225,7 +225,7 @@ void FileLoader::Init()
                 m_Dictionary[namehash] = std::make_pair(key, std::move(paths));
             }
         } catch (const std::exception& e) {
-            LOG_ERROR("Failed to load file list dictionary. ({})", e.what());
+            SPDLOG_ERROR("Failed to load file list dictionary. ({})", e.what());
 
             std::string error = "Failed to load file list dictionary. (";
             error += e.what();
@@ -289,14 +289,14 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultC
     }
 #ifdef DEBUG
     else if (archive && (entry.m_Offset == 0 || entry.m_Offset == -1)) {
-        LOG_INFO("\"{}\" exists in archive but has been patched. Will read the patch version instead.",
-                 filename.filename().string());
+        SPDLOG_INFO("\"{}\" exists in archive but has been patched. Will read the patch version instead.",
+                    filename.filename().string());
     }
 #endif
 
     // should we use file batching?
     if (UseBatches) {
-        LOG_TRACE("Using batches for \"{}\"", filename.string());
+        SPDLOG_TRACE("Using batches for \"{}\"", filename.string());
         return ReadFileBatched(filename, callback);
     }
 
@@ -338,7 +338,7 @@ void FileLoader::RunFileBatches() noexcept
             }
             // nothing found, callback
             else {
-                LOG_ERROR("Didn't find {}", path.first);
+                SPDLOG_ERROR("Didn't find {}", path.first);
                 for (const auto& callback : path.second) {
                     callback(false, {});
                 }
@@ -352,7 +352,7 @@ void FileLoader::RunFileBatches() noexcept
                 c += file.second.size();
             }
 
-            LOG_INFO("Will read {} files from \"{}\"", c, batch.first);
+            SPDLOG_INFO("Will read {} files from \"{}\"", c, batch.first);
         }
 #endif
 
@@ -372,29 +372,29 @@ void FileLoader::RunFileBatches() noexcept
 
             // ensure the tab file exists
             if (!std::filesystem::exists(tab_file)) {
-                LOG_ERROR("Can't find TAB file (\"{}\")", tab_file.string());
+                SPDLOG_ERROR("Can't find TAB file (\"{}\")", tab_file.string());
                 continue;
             }
 
             // ensure the arc file exists
             if (!std::filesystem::exists(arc_file)) {
-                LOG_ERROR("Can't find ARC file (\"{}\")", arc_file.string());
+                SPDLOG_ERROR("Can't find ARC file (\"{}\")", arc_file.string());
                 continue;
             }
 
-            std::vector<TabFileEntry>                            entries;
-            std::vector<jc::ArchiveTable::VfsTabCompressedBlock> blocks;
+            std::vector<TabFileEntry>                             entries;
+            std::vector<jc4::ArchiveTable::VfsTabCompressedBlock> blocks;
             if (ReadArchiveTable(tab_file, &entries, &blocks)) {
                 // open the arc file
                 std::ifstream stream(arc_file, std::ios::binary);
                 if (stream.fail()) {
-                    LOG_ERROR("Invalid ARC file stream!");
+                    SPDLOG_ERROR("Invalid ARC file stream!");
                     continue;
                 }
 
 #ifdef DEBUG
                 g_ArchiveLoadCount++;
-                LOG_INFO("Total archive load count: {}", g_ArchiveLoadCount);
+                SPDLOG_INFO("Total archive load count: {}", g_ArchiveLoadCount);
 #endif
 
                 // iterate over all the files
@@ -419,7 +419,7 @@ void FileLoader::RunFileBatches() noexcept
                             callback(true, std::move(buffer));
                         }
                     } else {
-                        LOG_ERROR("Didn't find {}", file.first);
+                        SPDLOG_ERROR("Didn't find {}", file.first);
 
                         for (const auto& callback : file.second) {
                             callback(false, {});
@@ -459,7 +459,7 @@ void FileLoader::ReadFileFromDisk(const std::filesystem::path& filename) noexcep
             fn(filename.filename(), data, true);
         }
     } else {
-        LOG_ERROR("Unknown file type extension \"{}\"", filename.filename().string());
+        SPDLOG_ERROR("Unknown file type extension \"{}\"", filename.filename().string());
 
         std::string error = "Unable to read the \"" + extension + "\" extension.\n\n";
         error += "Want to help? Check out our GitHub page for information on how to contribute.";
@@ -476,7 +476,7 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(const FileBuffer
 
     // ensure the header magic is correct
     if (strncmp(header.m_Magic, "SARC", 4) != 0) {
-        LOG_ERROR("Invalid header magic");
+        SPDLOG_ERROR("Invalid header magic");
         return nullptr;
     }
 
@@ -568,7 +568,7 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(const FileBuffer
                 std::find_if(result->m_Files.begin(), result->m_Files.end(),
                              [&](const StreamArchiveEntry_t& item) { return item.m_Filename == entry.m_Filename; });
             if (it == result->m_Files.end()) {
-                LOG_INFO("need to add {} from toc", entry.m_Filename);
+                SPDLOG_INFO("need to add {} from toc", entry.m_Filename);
 
                 result->m_Files.emplace_back(std::move(entry));
 
@@ -591,7 +591,7 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(const FileBuffer
 
 #ifdef DEBUG
     if (_num_toc_added_files > 0 || _num_toc_patched_files > 0) {
-        LOG_INFO("Added {}, patched {} files from TOC buffer", _num_toc_added_files, _num_toc_patched_files);
+        SPDLOG_INFO("Added {}, patched {} files from TOC buffer", _num_toc_added_files, _num_toc_patched_files);
     }
 #endif
 
@@ -612,7 +612,7 @@ void FileLoader::ReadStreamArchive(const std::filesystem::path& filename, const 
         char magic[4];
         std::memcpy(&magic, data->data(), sizeof(magic));
         if (!strncmp(magic, "AAF", 4)) {
-            LOG_INFO("Stream archive is compressed. Decompressing now...");
+            SPDLOG_INFO("Stream archive is compressed. Decompressing now...");
 
             FileBuffer buffer;
             if (DecompressArchiveFromStream(compressed_buffer, &buffer)) {
@@ -625,7 +625,7 @@ void FileLoader::ReadStreamArchive(const std::filesystem::path& filename, const 
                 return archive;
             }
 
-            LOG_ERROR("Failed to decompressed buffer.");
+            SPDLOG_ERROR("Failed to decompressed buffer.");
             return nullptr;
         }
 
@@ -670,7 +670,7 @@ void FileLoader::CompressArchive(std::ostream& stream, jc::AvalancheArchive::Hea
         auto decompressed_size = (uLong)chunk.m_UncompressedSize;
         auto compressed_size   = compressBound(decompressed_size);
 
-        LOG_INFO("m_DataSize={}, m_CompressedSize={}", chunk.m_DataSize, chunk.m_CompressedSize);
+        SPDLOG_INFO("m_DataSize={}, m_CompressedSize={}", chunk.m_DataSize, chunk.m_CompressedSize);
 
         FileBuffer result;
         result.reserve(compressed_size);
@@ -680,7 +680,7 @@ void FileLoader::CompressArchive(std::ostream& stream, jc::AvalancheArchive::Hea
         // store the compressed size
         chunk.m_CompressedSize =
             static_cast<uint32_t>(compressed_size) - 6; // remove the header and checksum from the total size
-        LOG_INFO("Actual compressed size: {}", chunk.m_CompressedSize);
+        SPDLOG_INFO("Actual compressed size: {}", chunk.m_CompressedSize);
 
         // calculate the distance to the 16-byte boundary after we write our data
         auto pos = static_cast<uint32_t>(stream.tellp()) + jc::AvalancheArchive::CHUNK_SIZE + chunk.m_CompressedSize;
@@ -688,7 +688,7 @@ void FileLoader::CompressArchive(std::ostream& stream, jc::AvalancheArchive::Hea
 
         // generate the data size
         chunk.m_DataSize = (jc::AvalancheArchive::CHUNK_SIZE + chunk.m_CompressedSize + padding);
-        LOG_INFO("data size: {}", chunk.m_DataSize);
+        SPDLOG_INFO("data size: {}", chunk.m_DataSize);
 
         // write the chunk
         stream.write((char*)&chunk.m_CompressedSize, sizeof(uint32_t));
@@ -700,7 +700,7 @@ void FileLoader::CompressArchive(std::ostream& stream, jc::AvalancheArchive::Hea
         stream.write((char*)result.data() + 2, chunk.m_CompressedSize);
 
         // write the padding
-        LOG_INFO("Writing {} bytes of padding", padding);
+        SPDLOG_INFO("Writing {} bytes of padding", padding);
         static uint32_t PADDING_BYTE = 0x30;
         for (decltype(padding) i = 0; i < padding; ++i) {
             stream.write((char*)&PADDING_BYTE, 1);
@@ -722,8 +722,8 @@ void FileLoader::CompressArchive(std::ostream& stream, StreamArchive_t* archive)
     header.m_UncompressedBufferSize = num_chunks > 1 ? max_chunk_size : archive->m_SARCBytes.size();
     header.m_ChunkCount             = num_chunks;
 
-    LOG_INFO("ChunkCount={}, TotalUncompressedSize={}, UncompressedBufferSize={}", header.m_ChunkCount,
-             header.m_TotalUncompressedSize, header.m_UncompressedBufferSize);
+    SPDLOG_INFO("ChunkCount={}, TotalUncompressedSize={}, UncompressedBufferSize={}", header.m_ChunkCount,
+                header.m_TotalUncompressedSize, header.m_UncompressedBufferSize);
 
     // generate the chunks
     std::vector<jc::AvalancheArchive::Chunk> chunks;
@@ -750,7 +750,7 @@ void FileLoader::CompressArchive(std::ostream& stream, StreamArchive_t* archive)
             chunk.m_BlockData        = block_data;
         }
 
-        LOG_INFO("AAF chunk #{}, UncompressedSize={}", i, chunk.m_UncompressedSize);
+        SPDLOG_INFO("AAF chunk #{}, UncompressedSize={}", i, chunk.m_UncompressedSize);
 
         chunks.emplace_back(std::move(chunk));
     }
@@ -766,12 +766,12 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
 
     // ensure the header magic is correct
     if (strncmp(header.m_Magic, "AAF", 4) != 0) {
-        LOG_ERROR("Invalid header magic");
+        SPDLOG_ERROR("Invalid header magic");
         return false;
     }
 
-    LOG_INFO("ChunkCount={}, TotalUncompressedSize={}, UncompressedBufferSize={}", header.m_ChunkCount,
-             header.m_TotalUncompressedSize, header.m_UncompressedBufferSize);
+    SPDLOG_INFO("ChunkCount={}, TotalUncompressedSize={}, UncompressedBufferSize={}", header.m_ChunkCount,
+                header.m_TotalUncompressedSize, header.m_UncompressedBufferSize);
 
     output->reserve(header.m_TotalUncompressedSize);
 
@@ -786,13 +786,13 @@ bool FileLoader::DecompressArchiveFromStream(std::istream& stream, FileBuffer* o
         stream.read((char*)&chunk.m_DataSize, sizeof(chunk.m_DataSize));
         stream.read((char*)&chunk.m_Magic, sizeof(chunk.m_Magic));
 
-        LOG_INFO("AAF chunk #{}, CompressedSize={}, UncompressedSize={}, DataSize={}", i, chunk.m_CompressedSize,
-                 chunk.m_UncompressedSize, chunk.m_DataSize);
+        SPDLOG_INFO("AAF chunk #{}, CompressedSize={}, UncompressedSize={}, DataSize={}", i, chunk.m_CompressedSize,
+                    chunk.m_UncompressedSize, chunk.m_DataSize);
 
         // make sure the block magic is correct
         if (chunk.m_Magic != 0x4D415745) {
             output->shrink_to_fit();
-            LOG_ERROR("Invalid chunk magic");
+            SPDLOG_ERROR("Invalid chunk magic");
             return false;
         }
 
@@ -868,7 +868,7 @@ static void DEBUG_TEXTURE_FLAGS(const jc::AvalancheTexture::Header* header)
 
         ss.seekp(-2, ss.cur);
         ss << ")";
-		LOG_INFO(ss.str());
+		SPDLOG_INFO(ss.str());
 
         // clang-format on
     }
@@ -930,7 +930,7 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResu
 
             // ensure the header magic is correct
             if (texture.m_Magic != 0x58545641) {
-                LOG_ERROR("Invalid header magic");
+                SPDLOG_ERROR("Invalid header magic");
                 return callback(false, {});
             }
 
@@ -1014,7 +1014,7 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResu
                     source_filename.replace_extension(".hmddsc");
                 }
 
-                LOG_INFO("Loading source: \"{}\".", source_filename.string());
+                SPDLOG_INFO("Loading source: \"{}\".", source_filename.string());
 
                 auto offset = texture.m_Streams[stream_index].m_Offset;
                 auto size   = texture.m_Streams[stream_index].m_Size;
@@ -1033,7 +1033,7 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResu
                 };
 
                 if (FileLoader::UseBatches) {
-                    LOG_INFO("Using batches for \"{}\"", source_filename.string());
+                    SPDLOG_INFO("Using batches for \"{}\"", source_filename.string());
                     FileLoader::Get()->ReadFileBatched(source_filename, cb);
                 } else {
                     FileLoader::Get()->ReadFile(source_filename, cb, ReadFileFlags_SkipTextureLoader);
@@ -1063,7 +1063,7 @@ bool FileLoader::ReadAVTX(FileBuffer* data, FileBuffer* outData) noexcept
 
     // ensure the header magic is correct
     if (texture.m_Magic != 0x58545641) {
-        LOG_ERROR("Invalid header magic");
+        SPDLOG_ERROR("Invalid header magic");
         return false;
     }
 
@@ -1187,11 +1187,11 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
 
     // ensure the header magic is correct
     if (strncmp(header.m_Magic, "RTPC", 4) != 0) {
-        LOG_ERROR("Invalid header magic");
+        SPDLOG_ERROR("Invalid header magic");
         return nullptr;
     }
 
-    LOG_INFO("RTPC v{}", header.m_Version);
+    SPDLOG_INFO("RTPC v{}", header.m_Version);
 
     // read the root node
     jc::RuntimeContainer::Node rootNode;
@@ -1385,13 +1385,13 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
 std::shared_ptr<AvalancheDataFormat> FileLoader::ReadAdf(const std::filesystem::path& filename) noexcept
 {
     if (!std::filesystem::exists(filename)) {
-        LOG_ERROR("Input file doesn't exist!");
+        SPDLOG_ERROR("Input file doesn't exist!");
         return nullptr;
     }
 
     std::ifstream stream(filename, std::ios::binary);
     if (stream.fail()) {
-        LOG_ERROR("Failed to open file stream!");
+        SPDLOG_ERROR("Failed to open file stream!");
         return nullptr;
     }
 
@@ -1405,7 +1405,7 @@ std::shared_ptr<AvalancheDataFormat> FileLoader::ReadAdf(const std::filesystem::
     // parse the adf file
     auto adf = AvalancheDataFormat::make(filename);
     if (!adf->Parse(data)) {
-        LOG_ERROR("Failed to parse ADF!");
+        SPDLOG_ERROR("Failed to parse ADF!");
         return nullptr;
     }
 
@@ -1439,11 +1439,11 @@ FileLoader::GetStreamArchiveFromFile(const std::filesystem::path& file, StreamAr
 }
 
 bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::vector<TabFileEntry>* output,
-                                  std::vector<jc::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept
+                                  std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept
 {
     std::ifstream stream(filename, std::ios::ate | std::ios::binary);
     if (stream.fail()) {
-        LOG_ERROR("Failed to open file stream!");
+        SPDLOG_ERROR("Failed to open file stream!");
         return false;
     }
 
@@ -1455,7 +1455,7 @@ bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::ve
         stream.read((char*)&header, sizeof(header));
 
         if (header.m_Magic != 0x424154) {
-            LOG_ERROR("Invalid header magic");
+            SPDLOG_ERROR("Invalid header magic");
             return false;
         }
 
@@ -1463,7 +1463,7 @@ bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::ve
         uint32_t _count = 0;
         stream.read((char*)&_count, sizeof(_count));
         output_blocks->resize(_count);
-        stream.read((char*)output_blocks->data(), (sizeof(jc::ArchiveTable::VfsTabCompressedBlock) * _count));
+        stream.read((char*)output_blocks->data(), (sizeof(jc4::ArchiveTable::VfsTabCompressedBlock) * _count));
 
         while (static_cast<int32_t>(stream.tellg()) + 20 <= length) {
             jc4::ArchiveTable::VfsTabEntry entry;
@@ -1478,7 +1478,7 @@ bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::ve
         stream.read((char*)&header, sizeof(header));
 
         if (header.m_Magic != 0x424154) {
-            LOG_ERROR("Invalid header magic");
+            SPDLOG_ERROR("Invalid header magic");
             return false;
         }
 
@@ -1501,15 +1501,15 @@ bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::ve
 }
 
 bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, const std::filesystem::path& filename,
-                                       TabFileEntry*                                         output,
-                                       std::vector<jc::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept
+                                       TabFileEntry*                                          output,
+                                       std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept
 {
     auto namehash = hashlittle(filename.generic_string().c_str());
     return ReadArchiveTableEntry(table, namehash, output, output_blocks);
 }
 
 bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, uint32_t name_hash, TabFileEntry* output,
-                                       std::vector<jc::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept
+                                       std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept
 {
     std::vector<TabFileEntry> entries;
     if (ReadArchiveTable(table, &entries, output_blocks)) {
@@ -1534,33 +1534,33 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
 
     // ensure the tab file exists
     if (!std::filesystem::exists(tab_file)) {
-        LOG_ERROR("Can't find TAB file (\"{}\")", tab_file.string());
+        SPDLOG_ERROR("Can't find TAB file (\"{}\")", tab_file.string());
         return false;
     }
 
     // ensure the arc file exists
     if (!std::filesystem::exists(arc_file)) {
-        LOG_ERROR("Can't find ARC file (\"{}\")", arc_file.string());
+        SPDLOG_ERROR("Can't find ARC file (\"{}\")", arc_file.string());
         return false;
     }
 
-    TabFileEntry                                         entry;
-    std::vector<jc::ArchiveTable::VfsTabCompressedBlock> blocks;
+    TabFileEntry                                          entry;
+    std::vector<jc4::ArchiveTable::VfsTabCompressedBlock> blocks;
     if (ReadArchiveTableEntry(tab_file, namehash, &entry, &blocks)) {
-        LOG_INFO("NameHash={}, Offset={}, CompressedSize={}, UncompressedSize={}, CompressionType={}, "
-                 "CompressedBlockIndex={}",
-                 namehash, entry.m_Offset, entry.m_CompressedSize, entry.m_UncompressedSize, entry.m_CompressionType,
-                 entry.m_CompressedBlockIndex);
+        SPDLOG_INFO("NameHash={}, Offset={}, CompressedSize={}, UncompressedSize={}, CompressionType={}, "
+                    "CompressedBlockIndex={}",
+                    namehash, entry.m_Offset, entry.m_CompressedSize, entry.m_UncompressedSize, entry.m_CompressionType,
+                    entry.m_CompressedBlockIndex);
 
         // read the arc file
         std::ifstream stream(arc_file, std::ios::ate | std::ios::binary);
         if (stream.fail()) {
-            LOG_ERROR("Failed to open file stream!");
+            SPDLOG_ERROR("Failed to open file stream!");
             return false;
         }
 
         g_ArchiveLoadCount++;
-        LOG_INFO("Current archive load count: {}", g_ArchiveLoadCount);
+        SPDLOG_INFO("Current archive load count: {}", g_ArchiveLoadCount);
 
         //
         stream.seekg(entry.m_Offset);
@@ -1568,11 +1568,11 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
         // file is compressed
         if (entry.m_CompressedSize != entry.m_UncompressedSize
             && entry.m_CompressionType != jc4::ArchiveTable::CompressionType_None) {
-            LOG_WARN("File is compressed with {}.",
-                     (static_cast<jc4::ArchiveTable::CompressionType>(entry.m_CompressionType)
-                              == jc4::ArchiveTable::CompressionType_Zlib
-                          ? "zlib"
-                          : "oodle"));
+            SPDLOG_WARN("File is compressed with {}.",
+                        (static_cast<jc4::ArchiveTable::CompressionType>(entry.m_CompressionType)
+                                 == jc4::ArchiveTable::CompressionType_Zlib
+                             ? "zlib"
+                             : "oodle"));
 
             assert(entry.m_CompressionType == jc4::ArchiveTable::CompressionType_Oodle);
 
@@ -1589,10 +1589,10 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
                 uncompressed_buffer.resize(entry.m_UncompressedSize);
                 const auto size = oo2::OodleLZ_Decompress(&data, &uncompressed_buffer);
 
-                LOG_INFO("OodleLZ_Decompress={}", size);
+                SPDLOG_INFO("OodleLZ_Decompress={}", size);
 
                 if (size != entry.m_UncompressedSize) {
-                    LOG_ERROR("Failed to decompress the file.");
+                    SPDLOG_ERROR("Failed to decompress the file.");
                     return false;
                 }
 
@@ -1617,7 +1617,7 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
                         oo2::OodleLZ_Decompress(compressedBlock.data(), block.m_CompressedSize,
                                                 data.data() + total_uncompressed, block.m_UncompressedSize);
                     if (size != block.m_UncompressedSize) {
-                        LOG_ERROR("Failed to decompress the block.");
+                        SPDLOG_ERROR("Failed to decompress the block.");
                         return false;
                     }
 
@@ -1627,14 +1627,14 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
                     block_index++;
                 }
 
-                LOG_INFO("OodleLZ_Decompress={}", total_uncompressed);
+                SPDLOG_INFO("OodleLZ_Decompress={}", total_uncompressed);
 
                 *output = std::move(data);
                 return output->size() > 0;
             }
         } else {
             if (entry.m_CompressedSize == 0) {
-                LOG_ERROR("Archive entry doesn't contain a buffer size. Can't read from stream.");
+                SPDLOG_ERROR("Archive entry doesn't contain a buffer size. Can't read from stream.");
                 return false;
             }
 

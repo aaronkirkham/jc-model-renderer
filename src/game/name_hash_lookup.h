@@ -37,7 +37,7 @@ class NameHashLookup
                     LookupTable.insert(std::make_pair(namehash, it.value().get<std::string>()));
                 }
             } catch (const std::exception& e) {
-                LOG_ERROR("Failed to load lookup table. ({})", e.what());
+                SPDLOG_ERROR("Failed to load lookup table. ({})", e.what());
 
                 std::string error = "Failed to load namehash lookup table. (";
                 error += e.what();
@@ -45,8 +45,7 @@ class NameHashLookup
                 error += "Some features will be disabled.";
                 Window::Get()->ShowMessageBox(error);
             }
-        })
-            .detach();
+        }).detach();
     }
 
     static std::string GetName(const uint32_t name_hash)

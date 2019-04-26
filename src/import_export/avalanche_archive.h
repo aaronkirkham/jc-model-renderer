@@ -74,7 +74,7 @@ class AvalancheArchive : public IImportExporter
                 ExportFinishedCallback callback) override final
     {
         const auto& path = to / filename.stem();
-        LOG_INFO("Exporting archive to \"{}\"", path.string());
+        SPDLOG_INFO("Exporting archive to \"{}\"", path.string());
 
         auto archive = ::AvalancheArchive::get(filename.string());
         if (archive) {

@@ -4,6 +4,8 @@
 
 #include <fstream>
 
+#include <bitset>
+
 std::recursive_mutex                                     Factory<AvalancheDataFormat>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<AvalancheDataFormat>> Factory<AvalancheDataFormat>::Instances;
 
@@ -81,13 +83,13 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
 
     // ensure the header magic is correct "ADF"
     if (header.m_Magic != 0x41444620) {
-        LOG_ERROR("Invalid header magic.");
+        SPDLOG_ERROR("Invalid header magic.");
         return false;
     }
 
     // make sure it's the correct version
     if (header.m_Version != 4) {
-        LOG_ERROR("Unexpected ADF file version! (m_Version={})", header.m_Version);
+        SPDLOG_ERROR("Unexpected ADF file version! (m_Version={})", header.m_Version);
         return false;
     }
 
@@ -114,9 +116,9 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
         typeDef->m_Name       = m_Names[definition.m_NameIndex];
         typeDef->m_Definition = definition;
 
-        LOG_TRACE("TypeDef: \"{}\", m_Type=\"{}\", m_PrimitiveType={}, m_TypeHash={:x}", typeDef->m_Name,
-                  jc::AvalancheDataFormat::TypeDefinitionStr(definition.m_Type),
-                  static_cast<int32_t>(definition.m_PrimitiveType), static_cast<uint32_t>(definition.m_TypeHash));
+        SPDLOG_TRACE("TypeDef: \"{}\", m_Type=\"{}\", m_PrimitiveType={}, m_TypeHash={:x}", typeDef->m_Name,
+                     jc::AvalancheDataFormat::TypeDefinitionStr(definition.m_Type),
+                     static_cast<int32_t>(definition.m_PrimitiveType), static_cast<uint32_t>(definition.m_TypeHash));
 
         switch (definition.m_Type) {
             case jc::AvalancheDataFormat::TypeDefinitionType::Structure: {
@@ -127,22 +129,30 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
                 typeDef->m_Members.resize(count);
                 stream.read((char*)&typeDef->m_Members.front(),
                             sizeof(jc::AvalancheDataFormat::MemeberDefinition) * count);
-
                 break;
             }
 
             case jc::AvalancheDataFormat::TypeDefinitionType::Array:
             case jc::AvalancheDataFormat::TypeDefinitionType::InlineArray:
-            case jc::AvalancheDataFormat::TypeDefinitionType::Pointer:
             case jc::AvalancheDataFormat::TypeDefinitionType::StringHash: {
                 uint32_t count;
                 stream.read((char*)&count, sizeof(count));
                 break;
             }
 
+#ifdef DEBUG
+            case jc::AvalancheDataFormat::TypeDefinitionType::Pointer: {
+                uint32_t unknown;
+                stream.read((char*)&unknown, sizeof(unknown));
+
+                __debugbreak();
+                break;
+            }
+#endif
+
             case jc::AvalancheDataFormat::TypeDefinitionType::BitField: {
-                uint32_t count;
-                stream.read((char*)&count, sizeof(count));
+                uint32_t unknown;
+                stream.read((char*)&unknown, sizeof(unknown));
                 break;
             }
 
@@ -153,7 +163,6 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
                 // read enums
                 typeDef->m_Enums.resize(count);
                 stream.read((char*)&typeDef->m_Enums.front(), sizeof(jc::AvalancheDataFormat::Enum) * count);
-
                 break;
             }
 
@@ -200,10 +209,9 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
         instanceInfo->m_Data.resize(instance.m_Size);
         stream.seekg(instance.m_Offset);
         stream.read((char*)instanceInfo->m_Data.data(), instance.m_Size);
-        // instanceInfo->m_DataOffset = instance.m_Offset;
 
-        LOG_TRACE("Instance Name=\"{}\", m_Size={}, m_Type={}", m_Names[instance.m_NameIndex], instance.m_Size,
-                  jc::AvalancheDataFormat::TypeDefinitionStr(instanceInfo->m_Type->m_Definition.m_Type));
+        SPDLOG_TRACE("Instance Name=\"{}\", m_Size={}, m_Type={}", m_Names[instance.m_NameIndex], instance.m_Size,
+                     jc::AvalancheDataFormat::TypeDefinitionStr(instanceInfo->m_Type->m_Definition.m_Type));
 
         instanceInfo->ReadMembers();
         m_InstanceInfos.emplace_back(std::move(instanceInfo));
@@ -287,7 +295,10 @@ AdfInstanceMemberInfo* AvalancheDataFormat::GetMember(const std::string& name)
 void AdfInstanceInfo::ReadMembers()
 {
     m_Queue = {};
-    m_Members.emplace_back(std::make_unique<AdfInstanceMemberInfo>(0, m_Name, m_Type, 0, this, 0));
+
+    auto info = std::make_unique<AdfInstanceMemberInfo>(0, m_Name, this);
+    info->InitNonPrimitive(m_Type, jc::AvalancheDataFormat::TypeMemberHash::Int64, 0, 0);
+    m_Members.emplace_back(std::move(info));
 
     while (m_Queue.size() > 0) {
         const auto info = m_Queue.front();
@@ -320,19 +331,22 @@ void AdfInstanceInfo::MemberSetup(AdfInstanceMemberInfo* info)
 
 void AdfInstanceInfo::MemberSetup_Structure(AdfInstanceMemberInfo* info)
 {
-    for (const auto& member : info->m_TypeDef->m_Members) {
-        const auto& name = info->m_TypeDef->m_Parent->m_Names[member.m_NameIndex];
-        MemberSetupStructMember(info, member.m_TypeHash, name, info->m_Offset + member.m_Offset);
+    for (auto& member : info->m_TypeDef->m_Members) {
+        MemberSetupStructMember(info, &member, member.m_TypeHash,
+                                info->m_TypeDef->m_Parent->m_Names[member.m_NameIndex],
+                                info->m_Offset + member.m_Offset);
     }
 }
 
-void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*                  info,
-                                              jc::AvalancheDataFormat::TypeMemberHash type_hash,
+void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*                      info,
+                                              jc::AvalancheDataFormat::MemeberDefinition* type_definition,
+                                              jc::AvalancheDataFormat::TypeMemberHash     type_hash,
                                               const std::string& name, int64_t offset)
 {
     using namespace jc::AvalancheDataFormat;
 
-    info->m_Adf->m_DataOffset = offset;
+    info->m_Adf->m_DataReadOffset = offset;
+    auto new_info                 = std::make_unique<AdfInstanceMemberInfo>(-1, name, this);
 
     switch (type_hash) {
         case TypeMemberHash::Int8:
@@ -345,14 +359,14 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
         case TypeMemberHash::UInt64:
         case TypeMemberHash::Float:
         case TypeMemberHash::Double: {
-            auto new_info = std::make_unique<AdfInstanceMemberInfo>(-1, name, type_hash, offset, this);
+            new_info->InitPrimitive(type_hash, offset);
             info->m_Members.emplace_back(std::move(new_info));
             break;
         }
 
         case TypeMemberHash::String: {
-            auto dest_offset = info->m_Adf->ReadData<uint32_t>();
-            auto new_info    = std::make_unique<AdfInstanceMemberInfo>(-1, name, type_hash, dest_offset, this);
+            const auto dest_offset = info->m_Adf->ReadData<uint32_t>();
+            new_info->InitPrimitive(type_hash, dest_offset);
             info->m_Members.emplace_back(std::move(new_info));
             break;
         }
@@ -360,8 +374,8 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
         default: {
             const auto definition = info->m_TypeDef->m_Parent->GetTypeDefinition(type_hash);
             if (!definition) {
-                LOG_ERROR("Struct member \"{}\" - unknown type definition: {:x}", name,
-                          static_cast<uint32_t>(type_hash));
+                SPDLOG_ERROR("Struct member \"{}\" - unknown type definition: {:x}", name,
+                             static_cast<uint32_t>(type_hash));
                 break;
             }
 
@@ -369,22 +383,21 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
                 case TypeDefinitionType::InlineArray:
                 case TypeDefinitionType::Structure:
                 case TypeDefinitionType::StringHash: {
-                    auto new_info =
-                        std::make_unique<AdfInstanceMemberInfo>(-1, name, definition, info->m_Adf->m_DataOffset, this,
-                                                                definition->m_Definition.m_ArraySizeOrBitCount);
-                    new_info->m_TypeHash = type_hash;
+                    new_info->InitNonPrimitive(definition, type_hash, offset,
+                                               definition->m_Definition.m_ArraySizeOrBitCount);
                     info->m_Members.emplace_back(std::move(new_info));
                     break;
                 }
 
                 case TypeDefinitionType::Array: {
-                    auto dest_offset = info->m_Adf->ReadData<uint32_t>();
-                    info->m_Adf->m_DataOffset += 4;
-                    auto element_count = info->m_Adf->ReadData<int64_t>();
+                    const auto dest_offset   = info->m_Adf->ReadData<uint32_t>();
+                    const auto unknown       = info->m_Adf->ReadData<uint32_t>();
+                    const auto element_count = info->m_Adf->ReadData<int64_t>();
 
 #ifdef DEBUG
                     if (dest_offset == 0 && element_count == 0) {
                         __debugbreak();
+                        break;
                     }
 #endif
 
@@ -393,67 +406,73 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
                     if (find_it == m_MemberOffsets.end()) {
                         // use the last id
                         id = m_Members.size();
-
-                        auto new_info = std::make_unique<AdfInstanceMemberInfo>(id, name, definition, dest_offset, this,
-                                                                                element_count);
-                        new_info->m_TypeHash = type_hash;
+                        new_info->InitNonPrimitive(definition, type_hash, dest_offset, element_count);
 
                         /*uint32_t insert_index = id;
                         for (auto i = 0; i < m_Members.size(); ++i) {
                             if (dest_offset < m_Members[i]->m_Offset) {
                                 insert_index = i;
-                                LOG_INFO("Correct insert index should be {}", insert_index);
+                                SPDLOG_INFO("Correct insert index should be {}", insert_index);
                             }
                         }*/
 
                         m_MemberOffsets[dest_offset] = new_info.get();
-                        this->m_Members.emplace_back(std::move(new_info));
+                        m_Members.emplace_back(std::move(new_info));
                     } else {
                         id = (*find_it).second->m_Id;
-                        LOG_INFO("Member offset already exists. Using reference to id {}", id);
+                        SPDLOG_INFO("Member offset already exists. Using reference to id {}", id);
                     }
 
-                    auto ref_info        = std::make_unique<AdfInstanceMemberInfo>(id, name, definition, this);
-                    ref_info->m_TypeHash = type_hash;
+                    auto ref_info = std::make_unique<AdfInstanceMemberInfo>(id, name, this);
+                    ref_info->InitReference(definition, type_hash);
                     info->m_Members.emplace_back(std::move(ref_info));
                     break;
                 }
 
                 case TypeDefinitionType::Pointer: {
-                    LOG_WARN("Struct member \"{}\" is a pointer", name);
+                    SPDLOG_WARN("Struct member \"{}\" is a pointer", name);
+#ifdef DEBUG
+                    __debugbreak();
+#endif
 
-                    auto new_info = std::make_unique<AdfInstanceMemberInfo>(-1, name, definition, offset, this);
+                    new_info->InitPointer(definition, offset);
                     info->m_Members.emplace_back(std::move(new_info));
                     break;
                 }
 
                 case TypeDefinitionType::BitField: {
-                    LOG_WARN("Struct member \"{}\" is a bitfield", name);
-                    // m_ArraySizeOrBitCount
+                    new_info->InitBitField(definition, offset, type_definition->m_BitIndex);
+                    info->m_Members.emplace_back(std::move(new_info));
                     break;
                 }
 
                 case TypeDefinitionType::Enumeration: {
-                    auto  enum_index = info->m_Adf->ReadData<uint32_t>();
-                    auto& enum_data  = definition->m_Enums[enum_index];
-
-                    auto new_info =
-                        std::make_unique<AdfInstanceMemberInfo>(-1, name, definition, offset, this, &enum_data);
+                    new_info->InitEnum(definition, offset);
                     info->m_Members.emplace_back(std::move(new_info));
                     break;
                 }
 
                 case TypeDefinitionType::Deferred: {
-                    LOG_WARN("Struct member \"{}\" is a deferred pointer-reference at {}", name, offset);
+                    const auto unknown   = info->m_Adf->ReadData<uint32_t>();
+                    const auto unknown2  = info->m_Adf->ReadData<uint32_t>();
+                    const auto type_hash = info->m_Adf->ReadData<uint32_t>();
 
-                    auto new_info = std::make_unique<AdfInstanceMemberInfo>(-1, name, definition, offset, this);
-                    info->m_Members.emplace_back(std::move(new_info));
+                    const auto member_def =
+                        info->m_TypeDef->m_Parent->GetTypeDefinition(static_cast<TypeMemberHash>(type_hash));
+                    if (member_def) {
+                        // TODO: we should really keep a reference instanceinfo, for later when we write back to a file.
+
+                        new_info->InitPointer(member_def, offset);
+                        info->m_Members.emplace_back(std::move(new_info));
+                    } else {
+                        SPDLOG_ERROR("Unable to find typedef for type {:x}", type_hash);
+                    }
                     break;
                 }
 
                 default: {
-                    LOG_TRACE("Struct member \"{}\" is {}", name,
-                              static_cast<int32_t>(definition->m_Definition.m_Type));
+                    SPDLOG_TRACE("Struct member \"{}\" is {}", name,
+                                 static_cast<int32_t>(definition->m_Definition.m_Type));
 #ifdef DEBUG
                     __debugbreak();
 #endif
@@ -473,13 +492,13 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
     assert(info);
     assert(info->m_TypeDef);
 
-    const auto& definition  = info->m_TypeDef->m_Definition;
-    const auto  elementType = info->m_TypeDef->m_Parent->GetTypeDefinition(definition.m_ElementTypeHash);
+    auto&      definition  = info->m_TypeDef->m_Definition;
+    const auto elementType = info->m_TypeDef->m_Parent->GetTypeDefinition(definition.m_ElementTypeHash);
 
     if (!elementType) {
-        LOG_ERROR("Couldn't find a type definition for \"{}\" m_ElementTypeHash={:x}",
-                  info->m_Adf->m_Parent->m_Names[definition.m_NameIndex],
-                  static_cast<uint32_t>(definition.m_ElementTypeHash));
+        SPDLOG_ERROR("Couldn't find a type definition for \"{}\" m_ElementTypeHash={:x}",
+                     info->m_Adf->m_Parent->m_Names[definition.m_NameIndex],
+                     static_cast<uint32_t>(definition.m_ElementTypeHash));
 
 #ifdef DEBUG
         __debugbreak();
@@ -553,7 +572,7 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
         }
 
         case TypeMemberHash::Deferred: {
-            LOG_WARN("Array element is a deferred pointer-reference.");
+            SPDLOG_WARN("Array element is a deferred pointer-reference.");
 #ifdef DEBUG
             __debugbreak();
 #endif
@@ -563,7 +582,7 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
         default: {
             for (uint32_t i = 0; i < info->m_ExpectedElementCount; ++i) {
                 const auto name = info->m_Name + "[" + std::to_string(i) + "]";
-                MemberSetupStructMember(info, definition.m_ElementTypeHash, name,
+                MemberSetupStructMember(info, nullptr, definition.m_ElementTypeHash, name,
                                         (info->m_Offset + (elementType->m_Definition.m_Size * i)));
             }
 
@@ -574,146 +593,142 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
 
 void AdfInstanceInfo::MemberSetup_StringHash(AdfInstanceMemberInfo* info)
 {
-    info->m_Adf->m_DataOffset = info->m_Offset;
-    const auto  hash          = info->m_Adf->ReadData<uint32_t>();
-    const auto& string_hashes = info->m_Adf->m_Parent->m_StringHashes;
+    info->m_Adf->m_DataReadOffset = info->m_Offset;
+    const auto  hash              = info->m_Adf->ReadData<uint32_t>();
+    const auto& string_hashes     = info->m_Adf->m_Parent->m_StringHashes;
 
     auto it = std::find_if(string_hashes.begin(), string_hashes.end(),
                            [&](const std::pair<uint32_t, std::string>& value) { return value.first == hash; });
 
     if (it != string_hashes.end()) {
         info->m_Data = (*it).second;
-        LOG_TRACE("StringHash value: \"{}\" ({:x})", (*it).second, hash);
+        SPDLOG_TRACE("StringHash value: \"{}\" ({:x})", (*it).second, hash);
     }
 }
 
-// reference constructor
-AdfInstanceMemberInfo::AdfInstanceMemberInfo(int64_t id, const std::string& name, AdfTypeDefinition* type,
-                                             AdfInstanceInfo* adf)
+void AdfInstanceMemberInfo::InitReference(AdfTypeDefinition* type, jc::AvalancheDataFormat::TypeMemberHash typehash)
 {
-    m_Id              = id;
-    m_Name            = name;
     m_Type            = type->m_Definition.m_Type;
     m_TypeDef         = type;
-    m_Adf             = adf;
+    m_TypeHash        = typehash;
     m_IsReferenceToId = true;
 }
 
-// non-primitive constructor
-AdfInstanceMemberInfo::AdfInstanceMemberInfo(int64_t id, const std::string& name, AdfTypeDefinition* type,
-                                             int64_t offset, AdfInstanceInfo* adf, uint32_t expected_element_count)
+void AdfInstanceMemberInfo::InitNonPrimitive(AdfTypeDefinition* type, jc::AvalancheDataFormat::TypeMemberHash typehash,
+                                             int64_t offset, uint32_t element_count)
 {
-    m_Id                   = id;
-    m_Name                 = name;
     m_Type                 = type->m_Definition.m_Type;
     m_TypeDef              = type;
+    m_TypeHash             = typehash;
     m_Offset               = offset;
-    m_FileOffset           = offset + adf->m_Offset;
-    m_Adf                  = adf;
-    m_ExpectedElementCount = expected_element_count;
+    m_FileOffset           = (m_Adf->m_Offset + offset);
+    m_ExpectedElementCount = element_count;
 
-    adf->MemberSetup(this);
+    m_Adf->MemberSetup(this);
 }
 
-// pointer constructor
-AdfInstanceMemberInfo::AdfInstanceMemberInfo(int64_t id, const std::string& name, AdfTypeDefinition* type,
-                                             int64_t offset, AdfInstanceInfo* adf)
+void AdfInstanceMemberInfo::InitPrimitive(jc::AvalancheDataFormat::TypeMemberHash typehash, int64_t offset)
 {
-    m_Id         = id;
-    m_Name       = name;
-    m_Type       = jc::AvalancheDataFormat::TypeDefinitionType::Deferred;
-    m_TypeDef    = type;
-    m_TypeHash   = jc::AvalancheDataFormat::TypeMemberHash::Deferred;
-    m_Offset     = offset;
-    m_FileOffset = offset + adf->m_Offset;
-    m_Adf        = adf;
-
-    adf->m_DataOffset = offset;
-    const auto value  = adf->ReadData<uint32_t>();
-
-    LOG_INFO("Deferred pointer-reference read: {}", value);
-}
-
-// primitive constructor
-AdfInstanceMemberInfo::AdfInstanceMemberInfo(int64_t id, const std::string& name,
-                                             jc::AvalancheDataFormat::TypeMemberHash type, int64_t offset,
-                                             AdfInstanceInfo* adf)
-{
-    m_Id         = id;
-    m_Name       = name;
     m_Type       = jc::AvalancheDataFormat::TypeDefinitionType::Primitive;
-    m_TypeHash   = type;
+    m_TypeHash   = typehash;
     m_Offset     = offset;
-    m_FileOffset = offset + adf->m_Offset;
-    m_Adf        = adf;
+    m_FileOffset = (m_Adf->m_Offset + offset);
 
     using namespace jc::AvalancheDataFormat;
 
-    adf->m_DataOffset = offset;
-    switch (type) {
+    m_Adf->m_DataReadOffset = offset;
+    switch (typehash) {
         case TypeMemberHash::Int8:
         case TypeMemberHash::UInt8: {
-            m_Data = adf->ReadData<uint8_t>();
+            m_Data = m_Adf->ReadData<uint8_t>();
             break;
         }
 
         case TypeMemberHash::Int16:
         case TypeMemberHash::UInt16: {
-            m_Data = adf->ReadData<uint16_t>();
+            m_Data = m_Adf->ReadData<uint16_t>();
             break;
         }
 
         case TypeMemberHash::Int32:
         case TypeMemberHash::UInt32: {
-            m_Data = adf->ReadData<uint32_t>();
+            m_Data = m_Adf->ReadData<uint32_t>();
             break;
         }
 
         case TypeMemberHash::Int64:
         case TypeMemberHash::UInt64: {
-            m_Data = adf->ReadData<uint64_t>();
+            m_Data = m_Adf->ReadData<uint64_t>();
             break;
         }
 
         case TypeMemberHash::Float: {
-            m_Data = adf->ReadData<float>();
+            m_Data = m_Adf->ReadData<float>();
             break;
         }
 
         case TypeMemberHash::Double: {
-            m_Data = adf->ReadData<double>();
+            m_Data = m_Adf->ReadData<double>();
             break;
         }
 
         case TypeMemberHash::String: {
-            m_Data = adf->ReadString();
+            m_Data = m_Adf->ReadString();
             break;
         }
     }
 }
 
-// enum constructor
-AdfInstanceMemberInfo::AdfInstanceMemberInfo(int64_t id, const std::string& name, AdfTypeDefinition* type,
-                                             int64_t offset, AdfInstanceInfo* adf,
-                                             jc::AvalancheDataFormat::Enum* enum_data)
+void AdfInstanceMemberInfo::InitPointer(AdfTypeDefinition* type, int64_t offset)
 {
-    m_Id         = id;
-    m_Name       = name;
+    m_Type       = jc::AvalancheDataFormat::TypeDefinitionType::Deferred;
+    m_TypeDef    = type;
+    m_TypeHash   = jc::AvalancheDataFormat::TypeMemberHash::Deferred;
+    m_Offset     = offset;
+    m_FileOffset = (m_Adf->m_Offset + offset);
+
+    m_Adf->MemberSetup(this);
+}
+
+void AdfInstanceMemberInfo::InitEnum(AdfTypeDefinition* type, int64_t offset)
+{
     m_Type       = type->m_Definition.m_Type;
     m_TypeDef    = type;
+    m_TypeHash   = type->m_Definition.m_TypeHash;
     m_Offset     = offset;
-    m_FileOffset = offset + adf->m_Offset;
-    m_Adf        = adf;
+    m_FileOffset = (m_Adf->m_Offset + offset);
+
+    // read the enum index and get the data
+    const auto  enum_index = m_Adf->ReadData<uint32_t>();
+    const auto& enum_data  = type->m_Enums[enum_index];
 
     // init enum member data
-    auto member        = std::make_unique<AdfInstanceMemberInfo>();
-    member->m_Name     = adf->m_Parent->m_Names[enum_data->m_NameIndex];
+    auto member = std::make_unique<AdfInstanceMemberInfo>(-1, m_Adf->m_Parent->m_Names[enum_data.m_NameIndex], m_Adf);
     member->m_Type     = jc::AvalancheDataFormat::TypeDefinitionType::Primitive;
     member->m_TypeHash = jc::AvalancheDataFormat::TypeMemberHash::Int32;
-    member->m_Adf      = adf;
-    member->m_Data     = enum_data->m_Value;
+    member->m_Data     = enum_data.m_Value;
 
     m_Members.emplace_back(std::move(member));
+}
+
+void AdfInstanceMemberInfo::InitBitField(AdfTypeDefinition* type, int64_t offset, uint32_t bit_index)
+{
+    m_Type       = type->m_Definition.m_Type;
+    m_TypeDef    = type;
+    m_TypeHash   = type->m_Definition.m_TypeHash;
+    m_Offset     = offset;
+    m_FileOffset = (m_Adf->m_Offset + offset);
+    m_BitIndex   = bit_index;
+
+    // TODO: handle cases when these are false.
+    assert(type->m_Definition.m_ArraySizeOrBitCount == 1);
+    assert(type->m_Definition.m_PrimitiveType == jc::AvalancheDataFormat::PrimitiveType::Unsigned);
+
+    auto value    = m_Adf->ReadData<uint64_t>();
+    auto bitfield = std::bitset<64>(value);
+    m_Data        = bitfield.test(bit_index);
+
+    SPDLOG_INFO("Value={}, BitIndex={}, Bit={}", value, bit_index, bitfield.test(bit_index) ? "True" : "False");
 }
 
 AdfInstanceMemberInfo* AdfInstanceMemberInfo::GetMember(const std::string& name)

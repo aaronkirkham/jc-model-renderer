@@ -98,7 +98,7 @@ void ShaderManager::Init()
                 auto                     cb = reflector->GetConstantBufferByIndex(i);
                 cb->GetDesc(&buffer_desc);
 
-                LOG_INFO(buffer_desc.Name);
+                SPDLOG_INFO(buffer_desc.Name);
             }
 #endif
         }
@@ -136,7 +136,7 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
 
     // ensure the shader bundle is loaded
     if (!m_ShaderBundle) {
-        LOG_ERROR("Can't create vertex shader because shader bundle isn't loaded!");
+        SPDLOG_ERROR("Can't create vertex shader because shader bundle isn't loaded!");
         return nullptr;
     }
 
@@ -164,7 +164,7 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
             }
 
             m_VertexShaders[key] = std::move(shader);
-            LOG_INFO("Cached vertex shader \"{}\"", name);
+            SPDLOG_INFO("Cached vertex shader \"{}\"", name);
             return m_VertexShaders[key];
         }
     }
@@ -184,7 +184,7 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
 
     // ensure the shader bundle is loaded
     if (!m_ShaderBundle) {
-        LOG_ERROR("Can't create pixel shader because shader bundle isn't loaded!");
+        SPDLOG_ERROR("Can't create pixel shader because shader bundle isn't loaded!");
         return nullptr;
     }
 
@@ -212,7 +212,7 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
             }
 
             m_PixelShaders[key] = std::move(shader);
-            LOG_INFO("Cached pixel shader \"{}\"", name);
+            SPDLOG_INFO("Cached pixel shader \"{}\"", name);
             return m_PixelShaders[key];
         }
     }

@@ -90,12 +90,12 @@ class FileLoader : public Singleton<FileLoader>
 
     // archives
     bool ReadArchiveTable(const std::filesystem::path& filename, std::vector<TabFileEntry>* output,
-                          std::vector<jc::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept;
+                          std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept;
     bool ReadArchiveTableEntry(const std::filesystem::path& table, const std::filesystem::path& filename,
-                               TabFileEntry*                                         output,
-                               std::vector<jc::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept;
+                               TabFileEntry*                                          output,
+                               std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept;
     bool ReadArchiveTableEntry(const std::filesystem::path& table, uint32_t name_hash, TabFileEntry* output,
-                               std::vector<jc::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept;
+                               std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept;
     bool ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash,
                              FileBuffer* output) noexcept;
 

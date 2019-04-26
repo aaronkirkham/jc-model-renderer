@@ -84,10 +84,10 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path&
         FileLoader::Get()->ReadTexture(filename, [&, key, filename](bool success, FileBuffer data) {
 #ifdef DEBUG
             if (!success) {
-                LOG_ERROR("Failed to read texture \"{}\"", filename.string());
+                SPDLOG_ERROR("Failed to read texture \"{}\"", filename.string());
             } else if (!HasTexture(filename)) {
-                LOG_WARN("Read texture, but it no longer exists in TextureManager cache. (probably deleted before "
-                         "loading finished)");
+                SPDLOG_WARN("Read texture, but it no longer exists in TextureManager cache. (probably deleted before "
+                            "loading finished)");
             }
 #endif
 
@@ -126,7 +126,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path&
     if (flags & TextureCreateFlags_CreateIfNotExists) {
         m_Textures[key] = std::make_shared<Texture>(filename);
         if (!m_Textures[key]->LoadFromBuffer(buffer)) {
-            LOG_ERROR("Failed to load texture from buffer!");
+            SPDLOG_ERROR("Failed to load texture from buffer!");
         }
 
         if ((flags & TextureCreateFlags_IsUIRenderable) && !IsPreviewingTexture(m_Textures[key])) {
@@ -179,7 +179,7 @@ void TextureManager::Flush()
 
 #ifdef DEBUG
     if (_flush_count > 0) {
-        LOG_INFO("Deleted {} unused textures", _flush_count);
+        SPDLOG_INFO("Deleted {} unused textures", _flush_count);
     }
 #endif
 }

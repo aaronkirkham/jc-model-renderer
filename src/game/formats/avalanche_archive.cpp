@@ -62,7 +62,7 @@ void AvalancheArchive::AddDirectory(const std::filesystem::path& filename, const
 
         std::ifstream stream(filename, std::ios::binary);
         if (stream.fail()) {
-            LOG_ERROR("Failed to open file stream!");
+            SPDLOG_ERROR("Failed to open file stream!");
 #ifdef DEBUG
             __debugbreak();
 #endif
@@ -117,7 +117,7 @@ bool AvalancheArchive::SaveFileCallback(const std::filesystem::path& filename, c
 
             // TODO: only write toc if it was loaded with it
             if (archive->m_StreamArchive->m_UsingTOC && !toc_result) {
-                LOG_ERROR("Failed to write TOC!");
+                SPDLOG_ERROR("Failed to write TOC!");
             }
 
             // generate the .ee

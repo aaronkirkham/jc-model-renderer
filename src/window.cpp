@@ -75,9 +75,11 @@ bool Window::Initialise(const HINSTANCE& instance)
         SetConsoleTitle("Debug Console");
     }
 
-    // spdlog::set_level(spdlog::level::trace);
-    spdlog::set_pattern("[%H:%M:%S] [%^%l%$] %v");
+#if SPDLOG_ACTIVE_LEVEL <= SPDLOG_LEVEL_TRACE
+    spdlog::set_level(spdlog::level::trace);
+#endif
 
+    spdlog::set_pattern("[%^%l%$] [%!] %v");
     m_Log = spdlog::stdout_color_mt("console");
 #endif
 
@@ -329,7 +331,7 @@ void Window::SelectJustCauseDirectory(bool override_mode, bool jc3_mode)
                                     : "Please select your Just Cause 3 install folder";
 
     static auto OnSelected = [&](const std::filesystem::path& selected) {
-        LOG_INFO("Selected directory: \"{}\"", selected.string());
+        SPDLOG_INFO("Selected directory: \"{}\"", selected.string());
 
         std::filesystem::path exe_path = selected;
         exe_path /= (is_jc4_mode ? "JustCause4.exe" : "JustCause3.exe");
@@ -389,7 +391,7 @@ void Window::CheckForUpdates(bool show_no_update_messagebox)
                 }
             }
         } catch (...) {
-            LOG_ERROR("Failed to check for updates");
+            SPDLOG_ERROR("Failed to check for updates");
         }
     }).detach();
 }

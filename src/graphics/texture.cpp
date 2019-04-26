@@ -28,7 +28,7 @@ bool Texture::LoadFromBuffer(FileBuffer* buffer)
 
 #ifdef DEBUG
     if (m_SRV || m_Texture) {
-        LOG_INFO("Deleting existing texture before creating new one...");
+        SPDLOG_INFO("Deleting existing texture before creating new one...");
     }
 #endif
 
@@ -61,7 +61,7 @@ bool Texture::LoadFromBuffer(FileBuffer* buffer)
     m_Buffer = *buffer;
 
     if (FAILED(result)) {
-        LOG_ERROR("Failed to create texture \"{}\"", m_Filename.filename().string());
+        SPDLOG_ERROR("Failed to create texture \"{}\"", m_Filename.filename().string());
         return false;
     }
 
@@ -72,7 +72,7 @@ bool Texture::LoadFromFile(const std::filesystem::path& filename)
 {
     std::ifstream stream(filename, std::ios::binary);
     if (stream.fail()) {
-        LOG_ERROR("Failed to create texture from file \"{}\"", filename.filename().string());
+        SPDLOG_ERROR("Failed to create texture from file \"{}\"", filename.filename().string());
         Window::Get()->ShowMessageBox("Failed to open texture \"" + filename.generic_string() + "\".");
         return false;
     }
@@ -83,7 +83,7 @@ bool Texture::LoadFromFile(const std::filesystem::path& filename)
     buffer.resize(size);
     stream.read((char*)buffer.data(), size);
 
-    LOG_INFO("Read {} bytes from \"{}\"", size, filename.filename().string());
+    SPDLOG_INFO("Read {} bytes from \"{}\"", size, filename.filename().string());
 
     auto result = LoadFromBuffer(&buffer);
     stream.close();

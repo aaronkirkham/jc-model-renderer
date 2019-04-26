@@ -1,7 +1,7 @@
 #pragma once
 
-#include <sstream>
 #include <filesystem>
+#include <sstream>
 
 #include "drop_target.h"
 #include "singleton.h"
@@ -10,25 +10,15 @@
 #include <ksignals.h>
 
 #ifdef DEBUG
-#include <spdlog/spdlog.h>
+#define SPDLOG_ACTIVE_LEVEL 1
 #endif
+
+#include <spdlog/spdlog.h>
 
 #ifdef DEBUG
 static constexpr auto g_WindowName = "Just Cause Model Renderer (DEBUG)";
 #else
 static constexpr auto g_WindowName = "Just Cause Model Renderer";
-#endif
-
-#ifdef DEBUG
-#define LOG_TRACE(...) Window::Get()->GetLog()->trace("[{}] {}", __FUNCTION__, fmt::format(__VA_ARGS__))
-#define LOG_INFO(...) Window::Get()->GetLog()->info("[{}] {}", __FUNCTION__, fmt::format(__VA_ARGS__))
-#define LOG_WARN(...) Window::Get()->GetLog()->warn("[{}] {}", __FUNCTION__, fmt::format(__VA_ARGS__))
-#define LOG_ERROR(...) Window::Get()->GetLog()->error("[{}] {}", __FUNCTION__, fmt::format(__VA_ARGS__))
-#else
-#define LOG_TRACE(...)
-#define LOG_INFO(...)
-#define LOG_WARN(...)
-#define LOG_ERROR(...)
 #endif
 
 struct WindowEvents {

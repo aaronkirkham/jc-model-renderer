@@ -45,6 +45,13 @@ namespace ArchiveTable
         uint16_t                 m_Version;
         std::vector<VfsTabEntry> m_Entries;
     };
+
+    struct VfsTabCompressedBlock {
+        uint32_t m_CompressedSize;
+        uint32_t m_UncompressedSize;
+    };
+
+    static_assert(sizeof(VfsTabCompressedBlock) == 0x8, "JC4 VfsTabCompressedBlock alignment is wrong!");
 }; // namespace ArchiveTable
 }; // namespace jc4
 #pragma pack(pop)

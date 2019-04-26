@@ -283,16 +283,6 @@ namespace Vertex
     }
 }; // namespace Vertex
 
-namespace ArchiveTable
-{
-    struct VfsTabCompressedBlock {
-        uint32_t m_CompressedSize;
-        uint32_t m_UncompressedSize;
-    };
-
-    static_assert(sizeof(VfsTabCompressedBlock) == 0x8, "JC4 VfsTabCompressedBlock alignment is wrong!");
-}; // namespace ArchiveTable
-
 namespace AvalancheTexture
 {
     enum Flags : uint32_t {
@@ -556,9 +546,10 @@ namespace AvalancheDataFormat
     struct MemeberDefinition {
         int64_t        m_NameIndex;
         TypeMemberHash m_TypeHash;
-        uint32_t       m_Size;
-        uint32_t       m_Offset;
-        uint32_t       m_DefaultType;
+        uint32_t       m_Alignment;
+        uint32_t       m_Offset : 24;
+        uint32_t       m_BitIndex : 8;
+        uint32_t       m_Flags;
         uint64_t       m_DefaultValue;
     };
 

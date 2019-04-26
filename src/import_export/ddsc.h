@@ -37,7 +37,7 @@ class DDSC : public IImportExporter
 
     void Import(const std::filesystem::path& filename, ImportFinishedCallback callback) override final
     {
-        LOG_INFO("Importing \"{}\"", filename.string());
+        SPDLOG_INFO("Importing \"{}\"", filename.string());
 
         if (!std::filesystem::exists(filename)) {
             return callback(false, filename, 0);
@@ -63,7 +63,7 @@ class DDSC : public IImportExporter
     {
         auto& path = to / filename.stem();
         path += GetExportExtension();
-        LOG_INFO("Exporting texture to \"{}\"", path.string());
+        SPDLOG_INFO("Exporting texture to \"{}\"", path.string());
 
         FileLoader::Get()->ReadFile(filename, [&, path, callback](bool success, FileBuffer data) {
             if (success) {

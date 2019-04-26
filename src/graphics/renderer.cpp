@@ -728,7 +728,7 @@ VertexDeclaration_t* Renderer::CreateVertexDeclaration(const D3D11_INPUT_ELEMENT
                                                        VertexShader_t* shader, const char* debugName)
 {
     if (!shader) {
-        LOG_ERROR("Can't create vertex declaration because vertex shader is nullptr!");
+        SPDLOG_ERROR("Can't create vertex declaration because vertex shader is nullptr!");
         return nullptr;
     }
 

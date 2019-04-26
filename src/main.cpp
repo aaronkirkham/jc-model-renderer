@@ -79,7 +79,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
     const auto& jc_directory = Window::Get()->GetJustCauseDirectory();
     if (Window::Get()->Initialise(hInstance)) {
-        LOG_INFO("Just Cause directory: \"{}\"", jc_directory.string());
+        SPDLOG_INFO("Just Cause directory: \"{}\"", jc_directory.string());
 
         // do we need to select the install directory manually?
         if (jc_directory.empty() || !std::filesystem::exists(jc_directory)) {
@@ -100,7 +100,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     continue;
                 }
 
-                if (GetAsyncKeyState(VK_F1) & 1) {
+                if (GetAsyncKeyState(VK_F1)) {
                     std::filesystem::path filename = "editor/entities/characters/main_characters/sheldon.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                         auto archive = AvalancheArchive::make(filename, data);

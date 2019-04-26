@@ -98,7 +98,7 @@ class Wavefront_Obj : public IImportExporter
 
     void Import(const std::filesystem::path& filename, ImportFinishedCallback callback) override final
     {
-        LOG_INFO("Importing \"{}\"", filename.string());
+        SPDLOG_INFO("Importing \"{}\"", filename.string());
 
         if (!std::filesystem::exists(filename)) {
             return callback(false, filename, 0);

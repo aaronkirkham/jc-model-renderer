@@ -36,7 +36,7 @@ void AvalancheModelFormat::ReadFileCallback(const std::filesystem::path& filenam
 
 bool AvalancheModelFormat::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path)
 {
-    LOG_ERROR("NOT IMPLEMENTED!");
+    SPDLOG_ERROR("NOT IMPLEMENTED!");
     return false;
 }
 
@@ -48,7 +48,7 @@ void AvalancheModelFormat::Load(const std::filesystem::path& filename)
         if (success) {
             AvalancheModelFormat::ReadFileCallback(filename, std::move(data), false);
         } else {
-            LOG_INFO("Failed to read model \"{}\"", filename.generic_string());
+            SPDLOG_INFO("Failed to read model \"{}\"", filename.generic_string());
         }
     });
 }
@@ -65,11 +65,10 @@ void AvalancheModelFormat::Parse(const FileBuffer& data, ParseCallback_t callbac
 
     m_ModelAdf = AvalancheDataFormat::make(m_Filename);
     if (!m_ModelAdf->Parse(data)) {
-        LOG_ERROR("Failed to parse modelc ADF! ({})", m_Filename.generic_string());
+        SPDLOG_ERROR("Failed to parse modelc ADF! ({})", m_Filename.generic_string());
         return callback(false);
     }
 
-    //
     /*auto character_skin_constants = m_ModelAdf->GetMember("CharacterSkinConstants");
     __debugbreak();*/
 
@@ -84,12 +83,12 @@ void AvalancheModelFormat::Parse(const FileBuffer& data, ParseCallback_t callbac
 
     // read the mesh file
     const auto& meshc_filename = instance->GetMember("Mesh")->As<std::string>();
-    LOG_INFO("Loading model mesh: \"{}\"", meshc_filename);
+    SPDLOG_INFO("Loading model mesh: \"{}\"", meshc_filename);
     FileLoader::Get()->ReadFile(meshc_filename, [&, callback, meshc_filename](bool success, FileBuffer data) {
         if (success) {
             m_MeshAdf = AvalancheDataFormat::make(meshc_filename);
             if (!m_MeshAdf->Parse(data)) {
-                LOG_ERROR("Failed to parse meshc ADF! ({})", meshc_filename);
+                SPDLOG_ERROR("Failed to parse meshc ADF! ({})", meshc_filename);
                 return callback(false);
             }
 
@@ -104,13 +103,14 @@ void AvalancheModelFormat::Parse(const FileBuffer& data, ParseCallback_t callbac
                 if (success) {
                     m_HighResMeshAdf = AvalancheDataFormat::make(hrmesh_filename);
                     if (!m_HighResMeshAdf->Parse(data)) {
-                        LOG_ERROR("Failed to parse hrmeshc ADF! ({})", hrmesh_filename);
+                        SPDLOG_ERROR("Failed to parse hrmeshc ADF! ({})", hrmesh_filename);
                         return callback(false);
                     }
 
-                    LOG_INFO("Will use high resolution mesh! ({})", hrmesh_filename);
+                    SPDLOG_INFO("Will use high resolution mesh! ({})", hrmesh_filename);
                 } else {
-                    LOG_INFO("No high resolution mesh available. Using low resolution instead. ({})", hrmesh_filename);
+                    SPDLOG_INFO("No high resolution mesh available. Using low resolution instead. ({})",
+                                hrmesh_filename);
                 }
 
                 return callback(ParseMeshBuffers());
@@ -122,7 +122,7 @@ void AvalancheModelFormat::Parse(const FileBuffer& data, ParseCallback_t callbac
 bool AvalancheModelFormat::ParseMeshBuffers()
 {
     if (!m_ModelAdf || !m_MeshAdf) {
-        LOG_ERROR("Can't parse mesh buffers without loading model/mesh first.");
+        SPDLOG_ERROR("Can't parse mesh buffers without loading model/mesh first.");
 #ifdef DEBUG
         __debugbreak();
 #endif
@@ -161,9 +161,9 @@ bool AvalancheModelFormat::ParseMeshBuffers()
         const auto& bbox_min     = bounding_box->GetMember("Min")->As<std::vector<float>>();
         const auto& bbox_max     = bounding_box->GetMember("Max")->As<std::vector<float>>();
 
-        LOG_INFO("Mesh: {} ({})", sub_mesh_id, mesh_type_id);
-        LOG_INFO(" - BoundingBox: Min={} {} {}, Max={} {} {}", bbox_min[0], bbox_min[1], bbox_min[2], bbox_max[0],
-                 bbox_max[1], bbox_max[2]);
+        SPDLOG_INFO("Mesh: {} ({})", sub_mesh_id, mesh_type_id);
+        SPDLOG_INFO(" - BoundingBox: Min={} {} {}, Max={} {} {}", bbox_min[0], bbox_min[1], bbox_min[2], bbox_max[0],
+                    bbox_max[1], bbox_max[2]);
 
         // TODO: this is bad. sheldon has 2 hair meshes with the same name!
         const auto find_it = std::find_if(m_Meshes.begin(), m_Meshes.end(), [&](const std::unique_ptr<AMFMesh>& value) {
@@ -177,7 +177,7 @@ bool AvalancheModelFormat::ParseMeshBuffers()
             const auto index_buffer_index = mesh->GetMember("IndexBufferIndex")->As<uint8_t>();
             auto&      index_buffer       = index_buffers.at(index_buffer_index);
 
-            LOG_INFO(" - VertexBufferIndex={}, IndexBufferIndex={}", vertex_buffer_index, index_buffer_index);
+            SPDLOG_INFO(" - VertexBufferIndex={}, IndexBufferIndex={}", vertex_buffer_index, index_buffer_index);
 
             // init
             (*find_it)->InitBuffers(mesh.get(), &vertex_buffer, &index_buffer);
@@ -195,7 +195,7 @@ AMFMesh::AMFMesh(AdfInstanceMemberInfo* info, AvalancheModelFormat* parent)
     m_Name          = info->GetMember("Name")->As<std::string>();
     m_RenderBlockId = info->GetMember("RenderBlockId")->As<std::string>();
 
-    LOG_INFO("{} ({})", m_Name, m_RenderBlockId);
+    SPDLOG_INFO("{} ({})", m_Name, m_RenderBlockId);
 
     m_RenderBlock = RenderBlockFactory::CreateRenderBlock(m_RenderBlockId, true);
     assert(m_RenderBlock != nullptr);
@@ -224,8 +224,8 @@ void AMFMesh::InitBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, Fil
     const auto vertex_buffer_stride = info->GetMember("VertexStreamStrides")->As<std::vector<uint8_t>>()[0];
     const auto vertex_buffer_offset = info->GetMember("VertexStreamOffsets")->As<std::vector<uint32_t>>()[0];
 
-    LOG_INFO(" - VertexCount={}, VertexStreamStrides={}, VertexStreamOffsets={}", vertex_count, vertex_buffer_stride,
-             vertex_buffer_offset);
+    SPDLOG_INFO(" - VertexCount={}, VertexStreamStrides={}, VertexStreamOffsets={}", vertex_count, vertex_buffer_stride,
+                vertex_buffer_offset);
 
     // copy the vertex buffer
     std::vector<uint8_t> vertex_buffer;
@@ -239,8 +239,8 @@ void AMFMesh::InitBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, Fil
     const auto index_buffer_stride = info->GetMember("IndexBufferStride")->As<uint8_t>();
     const auto index_buffer_offset = info->GetMember("IndexBufferOffset")->As<uint32_t>();
 
-    LOG_INFO(" - IndexCount={}, IndexBufferStride={}, IndexBufferOffset={}", index_count, index_buffer_stride,
-             index_buffer_offset);
+    SPDLOG_INFO(" - IndexCount={}, IndexBufferStride={}, IndexBufferOffset={}", index_count, index_buffer_stride,
+                index_buffer_offset);
 
     // copy the index buffer
     std::vector<uint8_t> index_buffer;
