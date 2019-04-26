@@ -73,7 +73,8 @@ void AvalancheModelFormat::Parse(const FileBuffer& data, ParseCallback_t callbac
     /*auto character_skin_constants = m_ModelAdf->GetMember("CharacterSkinConstants");
     __debugbreak();*/
 
-    const auto instance  = m_ModelAdf->GetMember("instance"); // TODO: not all models have this name.
+    const auto instance = m_ModelAdf->GetMember("instance"); // TODO: not all models have this name.
+    assert(instance != nullptr);
     const auto materials = instance->GetMember("Materials");
 
     for (const auto& member : materials->m_Members) {
@@ -155,7 +156,14 @@ bool AvalancheModelFormat::ParseMeshBuffers()
         const auto  sub_mesh     = mesh->GetMember("SubMeshes")->GetMember("SubMeshes[0]");
         const auto& sub_mesh_id  = sub_mesh->GetMember("SubMeshId")->As<std::string>();
 
+        // get the bounding box
+        const auto  bounding_box = sub_mesh->GetMember("BoundingBox");
+        const auto& bbox_min     = bounding_box->GetMember("Min")->As<std::vector<float>>();
+        const auto& bbox_max     = bounding_box->GetMember("Max")->As<std::vector<float>>();
+
         LOG_INFO("Mesh: {} ({})", sub_mesh_id, mesh_type_id);
+        LOG_INFO(" - BoundingBox: Min={} {} {}, Max={} {} {}", bbox_min[0], bbox_min[1], bbox_min[2], bbox_max[0],
+                 bbox_max[1], bbox_max[2]);
 
         // TODO: this is bad. sheldon has 2 hair meshes with the same name!
         const auto find_it = std::find_if(m_Meshes.begin(), m_Meshes.end(), [&](const std::unique_ptr<AMFMesh>& value) {
@@ -171,8 +179,9 @@ bool AvalancheModelFormat::ParseMeshBuffers()
 
             LOG_INFO(" - VertexBufferIndex={}, IndexBufferIndex={}", vertex_buffer_index, index_buffer_index);
 
-            // load the mesh buffers
-            (*find_it)->LoadBuffers(mesh.get(), &vertex_buffer, &index_buffer);
+            // init
+            (*find_it)->InitBuffers(mesh.get(), &vertex_buffer, &index_buffer);
+            (*find_it)->SetBoundingBox(BoundingBox{&bbox_min.front(), &bbox_max.front()});
         }
     }
 
@@ -206,7 +215,7 @@ AMFMesh::~AMFMesh()
     SAFE_DELETE(m_RenderBlock);
 }
 
-void AMFMesh::LoadBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, FileBuffer* indices)
+void AMFMesh::InitBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, FileBuffer* indices)
 {
     const auto mesh_adf = m_Parent->GetMeshAdf();
 
@@ -243,34 +252,4 @@ void AMFMesh::LoadBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, Fil
     // init the render block
     ((jc4::IRenderBlock*)m_RenderBlock)->Create(&vertex_buffer, &index_buffer);
     Renderer::Get()->AddToRenderList(m_RenderBlock);
-
-#ifdef DEBUG
-#if 0
-    {
-        std::ofstream stream("C:/users/aaron/desktop/" + m_Name + ".obj");
-
-        // TODO: need to cast to the correct types depending on the VertexStreamStrides (MeshTypeId for correct type
-        // name) and IndexBufferStride
-
-        // dump vertices
-        auto& packed_vertices = CastBuffer<jc::Vertex::RenderBlockCharacter::Packed4Bones1UV>(&vertex_buffer);
-        for (const auto& vertex : packed_vertices) {
-            float x = jc::Vertex::unpack(vertex.x);
-            float y = jc::Vertex::unpack(vertex.y);
-            float z = jc::Vertex::unpack(vertex.z);
-            stream << "v " << x << " " << y << " " << z << std::endl;
-        }
-
-        // dump indices
-        auto& unpacked_indices = CastBuffer<uint16_t>(&index_buffer);
-        for (auto i = 0; i < unpacked_indices.size(); i += 3) {
-            int32_t index[3] = {unpacked_indices[i] + 1, unpacked_indices[i + 1] + 1, unpacked_indices[i + 2] + 1};
-
-            stream << "f " << index[0] << " " << index[1] << " " << index[2] << std::endl;
-        }
-
-        stream.close();
-    }
-#endif
-#endif
 }

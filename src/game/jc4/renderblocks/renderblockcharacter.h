@@ -237,7 +237,11 @@ class RenderBlockCharacter : public IRenderBlock
         ImGui::EndColumns();
     }
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final {}
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
+    {
+        //
+    }
+
     virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
         using namespace jc::Vertex;
@@ -246,9 +250,9 @@ class RenderBlockCharacter : public IRenderBlock
         vertices_t vertices;
         uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
 
-		// TODO: use the correct stride, when we load it correctly!
+        // TODO: use the correct stride, when we load it correctly!
 
-		const auto& vb = m_VertexBuffer->CastData<Packed4Bones1UV>();
+        const auto& vb = m_VertexBuffer->CastData<Packed4Bones1UV>();
         vertices.reserve(vb.size());
         for (const auto& vertex : vb) {
             vertex_t v{};

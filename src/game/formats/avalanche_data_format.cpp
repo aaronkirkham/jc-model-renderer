@@ -493,6 +493,7 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
             std::vector<uint8_t> buffer;
             buffer.resize(info->m_ExpectedElementCount);
             std::memcpy((char*)&buffer.front(), &m_Data[info->m_Offset], buffer.size());
+
             info->m_Data     = std::move(buffer);
             info->m_TypeHash = definition.m_ElementTypeHash;
             break;
@@ -500,48 +501,53 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
 
         case TypeMemberHash::Int16:
         case TypeMemberHash::UInt16: {
-            std::vector<uint16_t> buffer;
+            std::vector<uint8_t> buffer;
             buffer.resize(sizeof(uint16_t) * info->m_ExpectedElementCount);
             std::memcpy((char*)&buffer.front(), &m_Data[info->m_Offset], buffer.size());
-            info->m_Data     = std::move(buffer);
+
+            info->m_Data     = CastBuffer<uint16_t>(&buffer);
             info->m_TypeHash = definition.m_ElementTypeHash;
             break;
         }
 
         case TypeMemberHash::Int32:
         case TypeMemberHash::UInt32: {
-            std::vector<uint32_t> buffer;
+            std::vector<uint8_t> buffer;
             buffer.resize(sizeof(uint32_t) * info->m_ExpectedElementCount);
             std::memcpy((char*)&buffer.front(), &m_Data[info->m_Offset], buffer.size());
-            info->m_Data     = std::move(buffer);
+
+            info->m_Data     = CastBuffer<uint32_t>(&buffer);
             info->m_TypeHash = definition.m_ElementTypeHash;
             break;
         }
 
         case TypeMemberHash::Int64:
         case TypeMemberHash::UInt64: {
-            std::vector<uint64_t> buffer;
+            std::vector<uint8_t> buffer;
             buffer.resize(sizeof(uint64_t) * info->m_ExpectedElementCount);
             std::memcpy((char*)&buffer.front(), &m_Data[info->m_Offset], buffer.size());
-            info->m_Data     = std::move(buffer);
+
+            info->m_Data     = CastBuffer<uint64_t>(&buffer);
             info->m_TypeHash = definition.m_ElementTypeHash;
             break;
         }
 
         case TypeMemberHash::Float: {
-            std::vector<float> buffer;
+            std::vector<uint8_t> buffer;
             buffer.resize(sizeof(float) * info->m_ExpectedElementCount);
             std::memcpy((char*)&buffer.front(), &m_Data[info->m_Offset], buffer.size());
-            info->m_Data     = std::move(buffer);
+
+            info->m_Data     = CastBuffer<float>(&buffer);
             info->m_TypeHash = definition.m_ElementTypeHash;
             break;
         }
 
         case TypeMemberHash::Double: {
-            std::vector<double> buffer;
+            std::vector<uint8_t> buffer;
             buffer.resize(sizeof(double) * info->m_ExpectedElementCount);
             std::memcpy((char*)&buffer.front(), &m_Data[info->m_Offset], buffer.size());
-            info->m_Data     = std::move(buffer);
+
+            info->m_Data     = CastBuffer<double>(&buffer);
             info->m_TypeHash = definition.m_ElementTypeHash;
             break;
         }

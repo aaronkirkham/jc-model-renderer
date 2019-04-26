@@ -297,42 +297,44 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         ImportExportManager::Get()->Register(new import_export::DDSC);
         ImportExportManager::Get()->Register(new import_export::AvalancheArchive);
 
-        //
+        // draw gizmos
         Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {
-        // std::lock_guard<std::recursive_mutex> _lk{ RenderBlockModel::InstancesMutex };
+            static auto white = glm::vec4{1, 1, 1, 0.6};
+            static auto red   = glm::vec4{1, 0, 0, 1};
 
-#if 0
-            ImGui::SetNextWindowBgAlpha(0.0f);
-            ImGui::Begin("Model Manager", nullptr, (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs));
-            {
-                const auto& window_size = Window::Get()->GetSize();
-
-                uint32_t vertices = 0;
-                uint32_t indices = 0;
-                uint32_t triangles = 0;
-
-                for (const auto& model : RenderBlockModel::Instances) {
-                    for (const auto& block : model.second->GetRenderBlocks()) {
-                        if (!block->IsVisible() || !block->GetVertexBuffer() || !block->GetIndexBuffer()) {
-                            continue;
+            if (g_IsJC4Mode) {
+                for (const auto& model : AvalancheModelFormat::Instances) {
+                    // bounding boxes
+                    if (g_DrawBoundingBoxes) {
+                        for (const auto& mesh : model.second->GetMeshes()) {
+                            UI::Get()->DrawBoundingBox(*mesh->GetBoundingBox(), red);
                         }
-
-                        auto index_count = block->GetIndexBuffer()->m_ElementCount;
-
-                        vertices += block->GetVertexBuffer()->m_ElementCount;
-                        indices += index_count;
-                        triangles += (index_count / 3);
                     }
                 }
+            } else {
+                // TODO: move the RenderBlockModel::DrawGizmos stuff in here.
+                for (const auto& model : RenderBlockModel::Instances) {
+                    const auto bounding_box = model.second->GetBoundingBox();
 
-                ImGui::SetWindowPos({ 10, (window_size.y - 35) });
-                ImGui::Text("Models: %d, Vertices: %d, Indices: %d, Triangles: %d, Textures: %d, Shaders: %d", RenderBlockModel::Instances.size(), vertices, indices, triangles, TextureManager::Get()->GetCacheSize(), ShaderManager::Get()->GetCacheSize());
-            }
-            ImGui::End();
-#endif
-            // draw gizmos
-            for (const auto& model : RenderBlockModel::Instances) {
-                model.second->DrawGizmos();
+                    // model labels
+                    if (g_ShowModelLabels) {
+                        UI::Get()->DrawText(model.second->GetFileName(), bounding_box->GetCenter(), white, true);
+                    }
+
+                    // bounding boxes
+                    if (g_DrawBoundingBoxes) {
+                        UI::Get()->DrawBoundingBox(*bounding_box, red);
+
+                        // auto mouse_pos = Input::Get()->GetMouseWorldPosition();
+
+                        // Ray   ray(mouse_pos, {0, 0, 1});
+                        // float distance = 0.0f;
+                        // auto  intersects = m_BoundingBox.Intersect(ray, &distance);
+
+                        // DebugRenderer::Get()->DrawBBox(m_BoundingBox.GetMin(), m_BoundingBox.GetMax(), intersects ?
+                        // green : red);
+                    }
+                }
             }
         });
 

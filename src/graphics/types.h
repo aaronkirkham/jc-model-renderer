@@ -125,6 +125,12 @@ struct BoundingBox {
     {
     }
 
+    BoundingBox(const float* min, const float* max)
+        : m_Min({min[0], min[1], min[2]})
+        , m_Max({max[0], max[1], max[2]})
+    {
+    }
+
     inline void SetScale(const float scale)
     {
         m_Scale = scale;

@@ -1,7 +1,9 @@
 #include "camera.h"
-#include "../game/formats/render_block_model.h"
 #include "../window.h"
 #include "types.h"
+
+#include "../game/formats/avalanche_model_format.h"
+#include "../game/formats/render_block_model.h"
 
 #include <imgui.h>
 
@@ -85,7 +87,7 @@ glm::vec3 Camera::ScreenToWorld(const glm::vec2& screen)
     return world;
 }
 
-void Camera::FocusOn(RenderBlockModel* model)
+void Camera::FocusOn(BoundingBox* box)
 {
     // TODO: make better, doesn't work well in every situation
     // and some times doesn't zoom in far enough!
@@ -93,12 +95,12 @@ void Camera::FocusOn(RenderBlockModel* model)
     // We should look at the current camera rotation and zoom to the
     // side of the bounding box we are facing.
 
-    assert(model);
+    assert(box);
 
 #undef max
 
     // calculate how far we need to translate to get the model in view
-    const auto& dimensions = model->GetBoundingBox()->GetSize();
+    const auto& dimensions = box->GetSize();
     const float distance =
         ((glm::max(glm::max(dimensions.x, dimensions.y), dimensions.z) / 2) / glm::sin(glm::radians(m_FOV) / 2));
 

@@ -170,10 +170,24 @@ void UI::Render(RenderContext_t* context)
 
             // camera
             if (ImGui::BeginMenu(ICON_FA_CAMERA "  Camera")) {
-                if (ImGui::BeginMenu("Focus On", RenderBlockModel::Instances.size() != 0)) {
+                if (ImGui::BeginMenu("Focus On", (RenderBlockModel::Instances.size() > 0
+                                                  || AvalancheModelFormat::Instances.size() > 0))) {
                     for (const auto& model : RenderBlockModel::Instances) {
                         if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
-                            Camera::Get()->FocusOn(model.second.get());
+                            Camera::Get()->FocusOn(model.second->GetBoundingBox());
+                        }
+                    }
+
+                    // TODO: generate a bounding box for the whole model, instead of using the sub-mesh boxes.
+                    for (const auto& model : AvalancheModelFormat::Instances) {
+                        /*if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
+                            Camera::Get()->FocusOn(model.second->GetBoundingBox());
+                        }*/
+
+                        for (const auto& mesh : model.second->GetMeshes()) {
+                            if (ImGui::MenuItem(mesh->GetName().c_str())) {
+                                Camera::Get()->FocusOn(mesh->GetBoundingBox());
+                            }
                         }
                     }
 

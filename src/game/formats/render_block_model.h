@@ -45,8 +45,6 @@ class RenderBlockModel : public Factory<RenderBlockModel>
     inline static bool                     LoadingFromRuntimeContainer = false;
     inline static std::vector<std::string> SuppressedWarnings;
 
-    void DrawGizmos();
-
     std::vector<IRenderBlock*>& GetRenderBlocks()
     {
         return m_RenderBlocks;

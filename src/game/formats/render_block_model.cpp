@@ -91,7 +91,7 @@ bool RenderBlockModel::ParseRBM(const FileBuffer& data, bool add_to_render_list)
 
     // focus on the bounding box
     if (RenderBlockModel::Instances.size() == 1) {
-        Camera::Get()->FocusOn(this);
+        Camera::Get()->FocusOn(&m_BoundingBox);
     }
 
     // use file batches
@@ -376,10 +376,11 @@ bool RenderBlockModel::ParseAMFMeshBuffers(AvalancheDataFormat* mesh_adf, AdfIns
 }
 #endif
 
+#if 0
 void RenderBlockModel::DrawGizmos()
 {
     auto largest_scale = 0.0f;
-    /*for (auto& render_block : m_RenderBlocks) {
+    for (auto& render_block : m_RenderBlocks) {
         if (render_block->IsVisible()) {
             const auto scale = render_block->GetScale();
 
@@ -388,33 +389,12 @@ void RenderBlockModel::DrawGizmos()
                 largest_scale = scale;
             }
         }
-    }*/
+    }
 
     // hack to fix GetCenter
     m_BoundingBox.SetScale(largest_scale);
-
-    // draw filename label
-    if (g_ShowModelLabels) {
-        static auto white = glm::vec4{1, 1, 1, 0.6};
-        UI::Get()->DrawText(m_Filename.filename().string(), m_BoundingBox.GetCenter(), white, true);
-    }
-
-    // draw bounding boxes
-    if (g_DrawBoundingBoxes) {
-        // auto mouse_pos = Input::Get()->GetMouseWorldPosition();
-
-        // Ray   ray(mouse_pos, {0, 0, 1});
-        // float distance = 0.0f;
-        // auto  intersects = m_BoundingBox.Intersect(ray, &distance);
-
-        static auto red = glm::vec4{1, 0, 0, 1};
-        // static auto green = glm::vec4{0, 1, 0, 1};
-
-        UI::Get()->DrawBoundingBox(m_BoundingBox, red);
-
-        // DebugRenderer::Get()->DrawBBox(m_BoundingBox.GetMin(), m_BoundingBox.GetMax(), intersects ? green : red);
-    }
 }
+#endif
 
 void RenderBlockModel::ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external)
 {

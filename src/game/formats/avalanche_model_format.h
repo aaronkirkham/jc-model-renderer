@@ -20,12 +20,13 @@ class AMFMesh
     std::string            m_Name          = "";
     std::string            m_RenderBlockId = "";
     IRenderBlock*          m_RenderBlock   = nullptr;
+    BoundingBox            m_BoundingBox;
 
   public:
     AMFMesh(AdfInstanceMemberInfo* info, AvalancheModelFormat* parent);
     virtual ~AMFMesh();
 
-    void LoadBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, FileBuffer* indices);
+    void InitBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, FileBuffer* indices);
 
     const std::string& GetName()
     {
@@ -35,6 +36,16 @@ class AMFMesh
     IRenderBlock* GetRenderBlock()
     {
         return m_RenderBlock;
+    }
+
+    void SetBoundingBox(const BoundingBox& box)
+    {
+        m_BoundingBox = box;
+    }
+
+    BoundingBox* GetBoundingBox()
+    {
+        return &m_BoundingBox;
     }
 };
 
@@ -50,6 +61,7 @@ class AvalancheModelFormat : public Factory<AvalancheModelFormat>
     std::shared_ptr<AvalancheDataFormat> m_HighResMeshAdf;
 
     std::vector<std::unique_ptr<AMFMesh>> m_Meshes;
+    BoundingBox                           m_BoundingBox;
 
   public:
     AvalancheModelFormat(const std::filesystem::path& filename);
@@ -114,5 +126,10 @@ class AvalancheModelFormat : public Factory<AvalancheModelFormat>
         }
 
         return result;
+    }
+
+    BoundingBox* GetBoundingBox()
+    {
+        return &m_BoundingBox;
     }
 };

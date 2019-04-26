@@ -5,6 +5,7 @@
 #include <singleton.h>
 
 struct RenderContext_t;
+struct BoundingBox;
 class RenderBlockModel;
 
 class Camera : public Singleton<Camera>
@@ -33,7 +34,7 @@ class Camera : public Singleton<Camera>
     glm::vec2 WorldToScreen(const glm::vec3& world);
     glm::vec3 ScreenToWorld(const glm::vec2& screen);
 
-    void                              FocusOn(RenderBlockModel* model);
+    void                              FocusOn(BoundingBox* box);
     std::shared_ptr<RenderBlockModel> Pick(const glm::vec2& mouse);
 
     void OnMousePress(int32_t button, bool is_button_down, const glm::vec2& position);
