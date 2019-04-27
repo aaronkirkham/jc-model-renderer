@@ -242,6 +242,56 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                                          });
                 }
 
+                if (GetAsyncKeyState(VK_F10)) {
+                    /*std::filesystem::path filename = "terrain/jc3/patches/patch_09_00_00.streampatch";
+                    FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
+                        if (success) {
+                            const auto adf = AvalancheDataFormat::make(filename);
+                            if (adf->Parse(data)) {
+                                __debugbreak();
+                            }
+                        } else {
+                            __debugbreak();
+                        }
+                    });*/
+
+                    /*std::filesystem::path filename =
+                        "editor/entities/jc_vehicles/01_land/v0401_car_mugello_racingsupercar/"
+                        "v0401_car_mugello_racingsupercar_civilian_01.ee";
+                    FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
+                        if (success) {
+                            auto archive = AvalancheArchive::make(filename, data);
+                            while (!archive->GetStreamArchive()) {
+                                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                            }
+
+                            std::filesystem::path vmodc =
+                    "models/jc_vehicles/01_land/v0401_car_mugello_racingsupercar/"
+                                                          "racingsupercar_vehicle_parts.vmodc";
+                            FileLoader::Get()->ReadFile(vmodc, [&, vmodc](bool success, FileBuffer data) {
+                                if (success) {
+                                    const auto adf = AvalancheDataFormat::make(vmodc);
+                                    if (adf->Parse(data)) {
+                                        __debugbreak();
+                                    }
+                                }
+                            });
+                        }
+                    });*/
+
+                    std::filesystem::path filename = "editor/entities/characters/main_characters/rico.epe_adf";
+                    FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
+                        if (success) {
+                            const auto adf = AvalancheDataFormat::make(filename);
+                            if (adf->Parse(data)) {
+                                __debugbreak();
+                            }
+                        } else {
+                            __debugbreak();
+                        }
+                    });
+                }
+
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         }).detach();
@@ -331,8 +381,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         // float distance = 0.0f;
                         // auto  intersects = m_BoundingBox.Intersect(ray, &distance);
 
-                        // DebugRenderer::Get()->DrawBBox(m_BoundingBox.GetMin(), m_BoundingBox.GetMax(), intersects ?
-                        // green : red);
+                        // DebugRenderer::Get()->DrawBBox(m_BoundingBox.GetMin(), m_BoundingBox.GetMax(), intersects
+                        // ? green : red);
                     }
                 }
             }

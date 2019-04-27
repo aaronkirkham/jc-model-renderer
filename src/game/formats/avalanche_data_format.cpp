@@ -9,16 +9,12 @@
 std::recursive_mutex                                     Factory<AvalancheDataFormat>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<AvalancheDataFormat>> Factory<AvalancheDataFormat>::Instances;
 
-AvalancheDataFormat::AvalancheDataFormat(const std::filesystem::path& file)
+AvalancheDataFormat::AvalancheDataFormat(const std::filesystem::path& file, bool add_built_in_types)
     : m_File(file)
 {
-    AddBuiltInTypes();
-}
-
-AvalancheDataFormat::AvalancheDataFormat(const std::filesystem::path& filename, const FileBuffer& buffer)
-    : m_File(filename)
-{
-    AddBuiltInTypes();
+    if (add_built_in_types) {
+        AddBuiltInTypes();
+    }
 }
 
 void AvalancheDataFormat::AddBuiltInTypes()
@@ -76,6 +72,9 @@ void AvalancheDataFormat::AddBuiltInType(jc::AvalancheDataFormat::TypeDefinition
 
 bool AvalancheDataFormat::Parse(const FileBuffer& data)
 {
+    // add type libraries
+    LoadTypeLibraries();
+
     std::istringstream stream(std::string{(char*)data.data(), data.size()});
 
     jc::AvalancheDataFormat::Header header;
@@ -223,6 +222,44 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
     return true;
 }
 
+void AvalancheDataFormat::LoadTypeLibraries()
+{
+    SPDLOG_DEBUG(m_File.filename().extension().string());
+
+    const auto& extension = m_File.filename().extension();
+    if (extension == ".blo_adf" || extension == ".flo_adf" || extension == ".epe_adf") {
+        SPDLOG_INFO("Type is blo/flo/epe. Loading type libraries...");
+
+        // clang-format off
+		FileBuffer buffer = {
+			0x20, 0x46, 0x44, 0x41, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00, 0xD0, 0x00, 0x00, 0x00, 0xFC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x4C, 0x6F, 0x63, 0x61, 0x74, 0x69, 0x6F, 0x6E, 0x47, 0x61, 0x6D, 0x65, 0x4F, 0x62, 0x6A, 0x65,
+			0x63, 0x74, 0x41, 0x64, 0x66, 0x2E, 0x61, 0x64, 0x66, 0x20, 0x69, 0x6E, 0x20, 0x20, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0xD5, 0xD7, 0x33, 0xE1,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0xED, 0x88, 0xFE, 0xDE,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00,
+			0x08, 0x00, 0x00, 0x00, 0xD4, 0xD9, 0x12, 0x6F, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xD5, 0xD7, 0x33, 0xE1, 0x08, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x08, 0x19, 0x05, 0x41, 0x5B, 0x76, 0x6F, 0x69, 0x64, 0x2A, 0x5D, 0x00, 0x4C, 0x6F, 0x63, 0x61,
+			0x74, 0x69, 0x6F, 0x6E, 0x47, 0x61, 0x6D, 0x65, 0x4F, 0x62, 0x6A, 0x65, 0x63, 0x74, 0x41, 0x64,
+			0x66, 0x44, 0x61, 0x74, 0x61, 0x00, 0x49, 0x74, 0x65, 0x6D, 0x73, 0x00,
+		};
+        // clang-format on
+
+        auto adf = AvalancheDataFormat::make("blo_flo_epe.adf_typelibrary");
+        if (adf->Parse(buffer)) {
+            m_TypeLibraries.emplace_back(std::move(adf));
+        } else {
+            SPDLOG_ERROR("Failed to parse type library!");
+        }
+    }
+}
+
 void AvalancheDataFormat::ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external)
 {
     if (auto adf = AvalancheDataFormat::make(filename)) {
@@ -272,6 +309,13 @@ AdfTypeDefinition* AvalancheDataFormat::GetTypeDefinition(jc::AvalancheDataForma
                            });
 
     if (it == m_TypeDefinitions.end()) {
+        // if we didn't find anything, search for the type in the type libraries
+        for (const auto& library : m_TypeLibraries) {
+            if (const auto type = library->GetTypeDefinition(type_hash)) {
+                return type;
+            }
+        }
+
         return nullptr;
     }
 
@@ -572,7 +616,18 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
         }
 
         case TypeMemberHash::Deferred: {
-            SPDLOG_WARN("Array element is a deferred pointer-reference.");
+            const auto unknown   = info->m_Adf->ReadData<uint32_t>();
+            const auto unknown2  = info->m_Adf->ReadData<uint32_t>();
+            const auto type_hash = info->m_Adf->ReadData<uint32_t>();
+
+            SPDLOG_WARN("Array element is a deferred pointer-reference at {}.", info->m_Offset);
+            SPDLOG_INFO("unknown={}, unknown2={}, type_hash={:x}", unknown, unknown2, type_hash);
+
+            const auto member_def =
+                info->m_TypeDef->m_Parent->GetTypeDefinition(static_cast<TypeMemberHash>(type_hash));
+
+            const auto member_def2 = info->m_Adf->m_Parent->GetTypeDefinition(static_cast<TypeMemberHash>(type_hash));
+
 #ifdef DEBUG
             __debugbreak();
 #endif
@@ -721,8 +776,8 @@ void AdfInstanceMemberInfo::InitBitField(AdfTypeDefinition* type, int64_t offset
     m_BitIndex   = bit_index;
 
     // TODO: handle cases when these are false.
-    assert(type->m_Definition.m_ArraySizeOrBitCount == 1);
-    assert(type->m_Definition.m_PrimitiveType == jc::AvalancheDataFormat::PrimitiveType::Unsigned);
+    // assert(type->m_Definition.m_ArraySizeOrBitCount == 1);
+    // assert(type->m_Definition.m_PrimitiveType == jc::AvalancheDataFormat::PrimitiveType::Unsigned);
 
     auto value    = m_Adf->ReadData<uint64_t>();
     auto bitfield = std::bitset<64>(value);

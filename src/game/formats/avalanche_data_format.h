@@ -135,14 +135,16 @@ class AvalancheDataFormat : public Factory<AvalancheDataFormat>
     std::vector<std::unique_ptr<AdfTypeDefinition>> m_TypeDefinitions;
     std::vector<std::unique_ptr<AdfInstanceInfo>>   m_InstanceInfos;
 
+    // type libraries
+    std::vector<std::shared_ptr<AvalancheDataFormat>> m_TypeLibraries;
+
     void AddBuiltInTypes();
     void AddBuiltInType(jc::AvalancheDataFormat::TypeDefinitionType type,
                         jc::AvalancheDataFormat::PrimitiveType primitive_type, uint32_t size, uint32_t type_index,
                         uint16_t flags);
 
   public:
-    AvalancheDataFormat(const std::filesystem::path& file);
-    AvalancheDataFormat(const std::filesystem::path& filename, const FileBuffer& buffer);
+    AvalancheDataFormat(const std::filesystem::path& file, bool add_built_in_types = true);
     virtual ~AvalancheDataFormat() = default;
 
     virtual std::string GetFactoryKey() const
@@ -151,6 +153,7 @@ class AvalancheDataFormat : public Factory<AvalancheDataFormat>
     }
 
     bool Parse(const FileBuffer& data);
+    void LoadTypeLibraries();
 
     static void ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);
     static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path);
