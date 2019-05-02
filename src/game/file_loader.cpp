@@ -33,9 +33,6 @@ std::unordered_map<uint32_t, std::string> NameHashLookup::LookupTable;
 
 FileLoader::FileLoader()
 {
-    // init
-    Init();
-
     // init the namehash lookup table
     NameHashLookup::Init();
 

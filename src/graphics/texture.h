@@ -18,6 +18,7 @@ class Texture
 
   public:
     Texture(const std::filesystem::path& filename);
+    Texture(const std::filesystem::path& filename, FileBuffer* buffer);
     virtual ~Texture();
 
     bool LoadFromBuffer(FileBuffer* buffer);

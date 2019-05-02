@@ -51,7 +51,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         return false;
     };
 
-    g_IsJC4Mode         = Settings::Get()->GetValue<bool>("jc4_mode", false);
     g_DrawBoundingBoxes = Settings::Get()->GetValue<bool>("draw_bounding_boxes", false);
     g_ShowModelLabels   = Settings::Get()->GetValue<bool>("show_model_labels", false);
 
@@ -77,19 +76,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
     }
 #endif
 
-    const auto& jc_directory = Window::Get()->GetJustCauseDirectory();
     if (Window::Get()->Initialise(hInstance)) {
-        SPDLOG_INFO("Just Cause directory: \"{}\"", jc_directory.string());
-
-        // do we need to select the install directory manually?
-        if (jc_directory.empty() || !std::filesystem::exists(jc_directory)) {
-            Window::Get()->SelectJustCauseDirectory();
-        }
-
 #ifndef DEBUG
         // check for any updates
         Window::Get()->CheckForUpdates();
 #endif
+
+        // show game selection window
+        UI::Get()->ShowGameSelection();
 
 #if 1
         // input thread
@@ -387,9 +381,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 }
             }
         });
-
-        //
-        ShaderManager::Get()->Init();
 
         // run!
         Window::Get()->Run();

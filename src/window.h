@@ -91,10 +91,12 @@ class Window : public Singleton<Window>
     void    ShowFolderSelection(const std::string& title, std::function<void(const std::filesystem::path&)> fn_selected,
                                 std::function<void()> fn_cancelled = {});
 
-    void                  SwitchMode(bool jc3_mode);
+    void                  SwitchMode(bool jc4_mode);
     void                  SelectJustCauseDirectory(bool override_mode = false, bool jc3_mode = true);
     std::filesystem::path GetJustCauseDirectory();
     void                  CheckForUpdates(bool show_no_update_messagebox = false);
+
+    bool LoadInternalResource(int32_t resource_id, std::vector<uint8_t>* out_buffer);
 
     const HWND& GetHwnd() const
     {

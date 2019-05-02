@@ -63,6 +63,16 @@ UI::UI()
 
     // reset scene mouse state
     Window::Get()->Events().FocusLost.connect([&] { m_SceneMouseState.fill(false); });
+
+    // load game selection icons
+    FileBuffer buffer;
+    if (Window::Get()->LoadInternalResource(101, &buffer)) {
+        m_GameSelectionIcons[0] = std::make_unique<Texture>("jc3-icon.dds", &buffer);
+    }
+
+    if (Window::Get()->LoadInternalResource(102, &buffer)) {
+        m_GameSelectionIcons[1] = std::make_unique<Texture>("jc4-icon.dds", &buffer);
+    }
 }
 
 void UI::Render(RenderContext_t* context)
@@ -100,19 +110,8 @@ void UI::Render(RenderContext_t* context)
 
         // file
         if (ImGui::BeginMenu("File")) {
-            // temp game selection.
-            if (ImGui::BeginMenu("Select Game")) {
-                // TODO: only enabled if we are not loading anything
-
-                if (ImGui::MenuItem("Just Cause 3", nullptr, g_IsJC4Mode == false)) {
-                    Window::Get()->SwitchMode(true);
-                }
-
-                if (ImGui::MenuItem("Just Cause 4", nullptr, g_IsJC4Mode == true)) {
-                    Window::Get()->SwitchMode(false);
-                }
-
-                ImGui::EndMenu();
+            if (ImGui::MenuItem(ICON_FA_GAMEPAD "  Select Game")) {
+                ShowGameSelection();
             }
 
             if (ImGui::MenuItem(ICON_FA_COG "  Settings")) {
@@ -627,6 +626,39 @@ void UI::Render(RenderContext_t* context)
             it = RuntimeContainer::Instances.erase(it);
         } else
             ++it;
+    }
+
+    // game selection
+    {
+        if (m_ShowGameSelection) {
+            ImGui::OpenPopup("Game Selection");
+        }
+
+        if (ImGui::BeginPopupModal("Game Selection", nullptr,
+                                   (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse
+                                    | ImGuiWindowFlags_AlwaysAutoResize))) {
+            const ImVec2 image_size{48, 48};
+
+            // just cause 3
+            if (m_GameSelectionIcons[0] ? ImGui::ImageButton(m_GameSelectionIcons[0]->GetSRV(), image_size)
+                                        : ImGui::Button("Just Cause 3")) {
+                Window::Get()->SwitchMode(false);
+                m_ShowGameSelection = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::SameLine();
+
+            // just cause 4
+            if (m_GameSelectionIcons[1] ? ImGui::ImageButton(m_GameSelectionIcons[1]->GetSRV(), image_size)
+                                        : ImGui::Button("Just Cause 4")) {
+                Window::Get()->SwitchMode(true);
+                m_ShowGameSelection = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
     }
 }
 

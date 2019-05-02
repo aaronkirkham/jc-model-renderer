@@ -14,6 +14,13 @@ Texture::Texture(const std::filesystem::path& filename)
 {
 }
 
+Texture::Texture(const std::filesystem::path& filename, FileBuffer* buffer)
+    : m_Filename(filename)
+    , m_NameHash(hashlittle(m_Filename.generic_string().c_str()))
+{
+    LoadFromBuffer(buffer);
+}
+
 Texture::~Texture()
 {
     SAFE_RELEASE(m_SRV);

@@ -63,6 +63,8 @@ class UI : public Singleton<UI>
     std::array<bool, 2>                        m_SceneMouseState      = {false};
     bool                                       m_IsDragDrop           = false;
     std::string                                m_DragDropPayload;
+    bool                                       m_ShowGameSelection  = true;
+    std::array<std::unique_ptr<Texture>, 2>    m_GameSelectionIcons = {nullptr};
 
     struct {
         bool                  ShowExportSettings = false;
@@ -119,4 +121,9 @@ class UI : public Singleton<UI>
 #undef DrawText
     void DrawText(const std::string& text, const glm::vec3& position, const glm::vec4& colour, bool center);
     void DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour);
+
+    inline void ShowGameSelection()
+    {
+        m_ShowGameSelection = true;
+    }
 };

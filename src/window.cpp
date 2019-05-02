@@ -12,6 +12,7 @@
 #include "window.h"
 
 #include "game/formats/avalanche_archive.h"
+#include "game/formats/avalanche_model_format.h"
 #include "game/formats/render_block_model.h"
 #include "game/formats/runtime_container.h"
 
@@ -293,31 +294,31 @@ void Window::ShowFolderSelection(const std::string&                             
     }
 }
 
-void Window::SwitchMode(bool jc3_mode)
+void Window::SwitchMode(bool jc4_mode)
 {
     // TODO: check if we are idle.
     // nothing should be loading at this point.
 
-    g_IsJC4Mode = !jc3_mode;
+    g_IsJC4Mode = jc4_mode;
 
     // select the directory for the current game
     const auto& jc_directory = GetJustCauseDirectory();
-    if (jc_directory.empty()) {
+    SPDLOG_INFO("Just Cause directory: \"{}\"", jc_directory.string());
+    if (jc_directory.empty() || !std::filesystem::exists(jc_directory)) {
         SelectJustCauseDirectory();
     }
 
-    // reset
+    // reset factories
     AvalancheDataFormat::Instances.clear();
     RuntimeContainer::Instances.clear();
     RenderBlockModel::Instances.clear();
     AvalancheArchive::Instances.clear();
+    AvalancheModelFormat::Instances.clear();
 
     // reload managers
     TextureManager::Get()->Empty();
     ShaderManager::Get()->Init();
     FileLoader::Get()->Init();
-
-    Settings::Get()->SetValue<bool>("jc4_mode", g_IsJC4Mode);
 }
 
 void Window::SelectJustCauseDirectory(bool override_mode, bool jc3_mode)
@@ -394,4 +395,25 @@ void Window::CheckForUpdates(bool show_no_update_messagebox)
             SPDLOG_ERROR("Failed to check for updates");
         }
     }).detach();
+}
+
+bool Window::LoadInternalResource(int32_t resource_id, std::vector<uint8_t>* out_buffer)
+{
+
+    const auto handle = GetModuleHandle(nullptr);
+    const auto rc     = FindResource(handle, MAKEINTRESOURCE(resource_id), RT_RCDATA);
+    if (rc == nullptr) {
+        SPDLOG_ERROR("FindResource failed.");
+        return false;
+    }
+
+    const auto data = LoadResource(handle, rc);
+    if (data == nullptr) {
+        SPDLOG_ERROR("LoadResource failed.");
+        return false;
+    }
+
+    const auto resource = LockResource(data);
+    *out_buffer         = {(char*)resource, (char*)resource + SizeofResource(handle, rc)};
+    return true;
 }
