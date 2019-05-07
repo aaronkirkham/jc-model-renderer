@@ -81,7 +81,11 @@ class UI : public Singleton<UI>
     float       m_SceneWidth    = 0.0f;
     float       m_SidebarWidth  = MIN_SIDEBAR_WIDTH;
 
-    void RenderFileTreeView();
+    void RenderMenuBar();
+
+    void RenderSceneView(const glm::vec2& window_size);
+    void RenderFileTreeView(const glm::vec2& window_size);
+
     void RenderModelsTab_RBM();
     void RenderModelsTab_AMF();
 

@@ -319,6 +319,8 @@ void Window::SwitchMode(bool jc4_mode)
     TextureManager::Get()->Empty();
     ShaderManager::Get()->Init();
     FileLoader::Get()->Init();
+
+    UI::Get()->SwitchToTab(TreeViewTab_FileExplorer);
 }
 
 void Window::SelectJustCauseDirectory(bool override_mode, bool jc3_mode)

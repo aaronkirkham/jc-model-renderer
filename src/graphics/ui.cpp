@@ -6,6 +6,7 @@
 #include "imgui/fonts/fontawesome5_icons.h"
 #include "imgui/imgui_rotate.h"
 #include "imgui/imgui_tabscrollcontent.h"
+#include "imgui/imgui_textalign.h"
 #include "renderer.h"
 #include "texture_manager.h"
 #include "ui.h"
@@ -79,6 +80,42 @@ void UI::Render(RenderContext_t* context)
 {
     const auto& window_size = Window::Get()->GetSize();
 
+    if (m_ShowGameSelection) {
+        ImGui::OpenPopup("Game Selection");
+
+        if (ImGui::BeginPopupModal("Game Selection", nullptr,
+                                   (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
+                                    | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize
+                                    | ImGuiWindowFlags_NoBackground))) {
+            static const ImVec2 image_size{64, 64};
+
+            ImGuiCustom::TextAligned(ImGuiTextAlign_Center, "Select Game Version");
+
+            // just cause 3
+            if (m_GameSelectionIcons[0] ? ImGui::ImageButton(m_GameSelectionIcons[0]->GetSRV(), image_size)
+                                        : ImGui::Button("Just Cause 3")) {
+                Window::Get()->SwitchMode(false);
+                m_ShowGameSelection = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::SameLine();
+
+            // just cause 4
+            if (m_GameSelectionIcons[1] ? ImGui::ImageButton(m_GameSelectionIcons[1]->GetSRV(), image_size)
+                                        : ImGui::Button("Just Cause 4")) {
+                Window::Get()->SwitchMode(true);
+                m_ShowGameSelection = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+
+        // return. we don't want to render any other UI when game selection is visible
+        return;
+    }
+
     // handle external drag drop payloads
     if (m_IsDragDrop && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern)) {
         // only set the payload if we have no data already set
@@ -104,174 +141,7 @@ void UI::Render(RenderContext_t* context)
         ImGui::EndDragDropSource();
     }
 
-    // main menu bar
-    if (ImGui::BeginMainMenuBar()) {
-        m_MainMenuBarHeight = ImGui::GetWindowHeight();
-
-        // file
-        if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem(ICON_FA_GAMEPAD "  Select Game")) {
-                ShowGameSelection();
-            }
-
-            if (ImGui::MenuItem(ICON_FA_COG "  Settings")) {
-                g_ShowSettingsWindow = !g_ShowSettingsWindow;
-            }
-
-            if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit")) {
-                Window::Get()->BeginShutdown();
-            }
-
-            ImGui::EndMenu();
-        }
-
-        // create
-#ifdef ENABLE_ASSET_CREATOR
-        if (ImGui::BeginMenu("Create")) {
-            if (ImGui::MenuItem("Avalanche Archive", ".ee")) {
-                AvalancheArchive::make("new.ee");
-            }
-
-            if (ImGui::MenuItem("Render Block Model", ".rbm", nullptr, !g_IsJC4Mode)) {
-                RenderBlockModel::make("new.rbm");
-            }
-
-            if (ImGui::MenuItem("Texture", ".ddsc")) {
-                m_NewTextureSettings.Texture      = nullptr;
-                m_NewTextureSettings.ShowSettings = true;
-            }
-
-            ImGui::EndMenu();
-        }
-#endif
-
-        // renderer
-        if (ImGui::BeginMenu("Renderer")) {
-            if (ImGui::BeginMenu(ICON_FA_EYE "  Visualize")) {
-                if (ImGui::MenuItem("Diffuse", nullptr, m_CurrentActiveGBuffer == 0)) {
-                    m_CurrentActiveGBuffer = 0;
-                }
-
-                if (ImGui::MenuItem("Normal", nullptr, m_CurrentActiveGBuffer == 1)) {
-                    m_CurrentActiveGBuffer = 1;
-                }
-
-                if (ImGui::MenuItem("Properties", nullptr, m_CurrentActiveGBuffer == 2)) {
-                    m_CurrentActiveGBuffer = 2;
-                }
-
-                if (ImGui::MenuItem("PropertiesEx", nullptr, m_CurrentActiveGBuffer == 3)) {
-                    m_CurrentActiveGBuffer = 3;
-                }
-
-                ImGui::EndMenu();
-            }
-
-            // camera
-            if (ImGui::BeginMenu(ICON_FA_CAMERA "  Camera")) {
-                if (ImGui::BeginMenu("Focus On", (RenderBlockModel::Instances.size() > 0
-                                                  || AvalancheModelFormat::Instances.size() > 0))) {
-                    for (const auto& model : RenderBlockModel::Instances) {
-                        if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
-                            Camera::Get()->FocusOn(model.second->GetBoundingBox());
-                        }
-                    }
-
-                    // TODO: generate a bounding box for the whole model, instead of using the sub-mesh boxes.
-                    for (const auto& model : AvalancheModelFormat::Instances) {
-                        /*if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
-                            Camera::Get()->FocusOn(model.second->GetBoundingBox());
-                        }*/
-
-                        for (const auto& mesh : model.second->GetMeshes()) {
-                            if (ImGui::MenuItem(mesh->GetName().c_str())) {
-                                Camera::Get()->FocusOn(mesh->GetBoundingBox());
-                            }
-                        }
-                    }
-
-                    ImGui::EndMenu();
-                }
-
-                ImGui::EndMenu();
-            }
-
-            static bool wireframe = false;
-            if (ImGui::MenuItem(ICON_FA_SHAPES "  Wireframe", nullptr, wireframe)) {
-                wireframe = !wireframe;
-                Renderer::Get()->SetFillMode(wireframe ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID);
-            }
-
-            if (ImGui::MenuItem(ICON_FA_VECTOR_SQUARE "  Show Bounding Boxes", nullptr, g_DrawBoundingBoxes)) {
-                g_DrawBoundingBoxes = !g_DrawBoundingBoxes;
-                Settings::Get()->SetValue("draw_bounding_boxes", g_DrawBoundingBoxes);
-            }
-
-            if (ImGui::MenuItem(ICON_FA_FONT "  Show Model Labels", nullptr, g_ShowModelLabels)) {
-                g_ShowModelLabels = !g_ShowModelLabels;
-                Settings::Get()->SetValue("show_model_labels", g_ShowModelLabels);
-            }
-
-            if (ImGui::BeginMenu(ICON_FA_EYE_DROPPER "  Background")) {
-                auto clear_colour = Renderer::Get()->GetClearColour();
-                if (ImGui::ColorPicker3("Colour", glm::value_ptr(clear_colour))) {
-                    Renderer::Get()->SetClearColour(clear_colour);
-                }
-
-                if (ImGui::Button("Reset To Default")) {
-                    Renderer::Get()->SetClearColour(g_DefaultClearColour);
-                }
-
-                ImGui::EndMenu();
-            }
-
-            ImGui::EndMenu();
-        }
-
-        // tools
-        if (ImGui::BeginMenu("Tools")) {
-            if (ImGui::MenuItem("Name Hash Generator")) {
-                g_ShowNameHashWindow = !g_ShowNameHashWindow;
-            }
-
-            ImGui::EndMenu();
-        }
-
-        // help
-        if (ImGui::BeginMenu("Help")) {
-            if (ImGui::MenuItem(ICON_FA_INFO_CIRCLE "  About")) {
-                g_ShowAboutWindow = !g_ShowAboutWindow;
-            }
-
-            if (ImGui::MenuItem(ICON_FA_SYNC "  Check for updates", nullptr, false, g_CheckForUpdatesEnabled)) {
-                Window::Get()->CheckForUpdates(true);
-            }
-
-            if (ImGui::MenuItem(ICON_FA_EXTERNAL_LINK_ALT "  View on GitHub")) {
-                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc-model-renderer", nullptr, nullptr,
-                              SW_SHOWNORMAL);
-            }
-
-            if (ImGui::MenuItem(ICON_FA_BUG "  Report a Bug")) {
-                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc-model-renderer/issues/new", nullptr,
-                              nullptr, SW_SHOWNORMAL);
-            }
-
-            ImGui::EndMenu();
-        }
-
-        // fps counter
-        {
-            static char buffer[16];
-            sprintf_s(buffer, sizeof(buffer), "%.01f fps", ImGui::GetIO().Framerate);
-
-            const auto& text_size = ImGui::CalcTextSize(buffer);
-            ImGui::SameLine(ImGui::GetWindowWidth() - text_size.x - 20);
-            ImGui::TextColored(ImVec4(1, 1, 1, .5), buffer);
-        }
-
-        ImGui::EndMainMenuBar();
-    }
+    RenderMenuBar();
 
     // settings modal
     {
@@ -508,82 +378,8 @@ void UI::Render(RenderContext_t* context)
         ImGui::End();
     }
 
-    // gbuffer view
-    {
-        ImGui::SetNextWindowPos({0, m_MainMenuBarHeight});
-        ImGui::SetNextWindowSize({window_size.x - m_SidebarWidth, window_size.y - m_MainMenuBarHeight});
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0, 0});
-
-        const auto result =
-            ImGui::Begin("Scene", nullptr,
-                         (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
-                          | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus));
-
-        ImGui::PopStyleVar();
-        if (result) {
-            const auto& size = ImGui::GetWindowSize();
-            m_SceneWidth     = size.x;
-
-            // update camera projection if needed
-            Camera::Get()->UpdateViewport({size.x, size.y});
-
-            // render gbuffer texture
-            ImGui::Image(Renderer::Get()->GetGBufferSRV(m_CurrentActiveGBuffer), ImGui::GetWindowSize());
-
-            // drag drop target
-            if (const auto payload = UI::Get()->GetDropPayload()) {
-                FileLoader::Get()->ReadFileFromDisk(payload->data);
-            }
-
-            m_SceneDrawList = ImGui::GetWindowDrawList();
-
-            // handle input
-            {
-                const auto& io        = ImGui::GetIO();
-                const auto& mouse_pos = glm::vec2(io.MousePos.x, io.MousePos.y);
-
-                // because we manually toggle the mouse down when drag/dropping from an external source, we need
-                // to check this or the camera will be moved
-                if (!UI::Get()->IsDragDropping()) {
-                    // handle mouse press
-                    for (int i = 0; i < 2; ++i) {
-                        if (ImGui::IsMouseDown(i)) {
-                            if (!m_SceneMouseState[i] && ImGui::IsItemHovered()) {
-                                m_SceneMouseState[i] = true;
-                                Camera::Get()->OnMousePress(i, true, mouse_pos);
-                            }
-                            // handle mouse move
-                            else if (m_SceneMouseState[i]) {
-                                Camera::Get()->OnMouseMove({-io.MouseDelta.x, -io.MouseDelta.y});
-                            }
-                        }
-                        // handle mouse release
-                        else if (m_SceneMouseState[i]) {
-                            m_SceneMouseState[i] = false;
-                            Camera::Get()->OnMousePress(i, false, mouse_pos);
-                        }
-                    }
-
-                    // handle mouse scroll
-                    if (io.MouseWheel != 0 && ImGui::IsItemHovered()) {
-                        Camera::Get()->OnMouseScroll(io.MouseWheel);
-                    }
-                }
-
-#if 0
-                const auto render_block = Camera::Get()->Pick(mouse_pos);
-                if (render_block) {
-                    ImGui::SetTooltip(render_block->GetFileName().c_str());
-                }
-#endif
-            }
-        }
-
-        ImGui::End();
-    }
-
-    // file tree view
-    RenderFileTreeView();
+    RenderSceneView(window_size);
+    RenderFileTreeView(window_size);
 
     // Status
     ImGui::SetNextWindowBgAlpha(0.0f);
@@ -627,46 +423,255 @@ void UI::Render(RenderContext_t* context)
         } else
             ++it;
     }
+}
 
-    // game selection
-    {
-        if (m_ShowGameSelection) {
-            ImGui::OpenPopup("Game Selection");
-        }
+void UI::RenderMenuBar()
+{
+    if (ImGui::BeginMainMenuBar()) {
+        m_MainMenuBarHeight = ImGui::GetWindowHeight();
 
-        if (ImGui::BeginPopupModal("Game Selection", nullptr,
-                                   (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse
-                                    | ImGuiWindowFlags_AlwaysAutoResize))) {
-            const ImVec2 image_size{48, 48};
-
-            // just cause 3
-            if (m_GameSelectionIcons[0] ? ImGui::ImageButton(m_GameSelectionIcons[0]->GetSRV(), image_size)
-                                        : ImGui::Button("Just Cause 3")) {
-                Window::Get()->SwitchMode(false);
-                m_ShowGameSelection = false;
-                ImGui::CloseCurrentPopup();
+        // file
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem(ICON_FA_GAMEPAD "  Select Game")) {
+                ShowGameSelection();
             }
 
-            ImGui::SameLine();
-
-            // just cause 4
-            if (m_GameSelectionIcons[1] ? ImGui::ImageButton(m_GameSelectionIcons[1]->GetSRV(), image_size)
-                                        : ImGui::Button("Just Cause 4")) {
-                Window::Get()->SwitchMode(true);
-                m_ShowGameSelection = false;
-                ImGui::CloseCurrentPopup();
+            if (ImGui::MenuItem(ICON_FA_COG "  Settings")) {
+                g_ShowSettingsWindow = !g_ShowSettingsWindow;
             }
 
-            ImGui::EndPopup();
+            if (ImGui::MenuItem(ICON_FA_WINDOW_CLOSE "  Exit")) {
+                Window::Get()->BeginShutdown();
+            }
+
+            ImGui::EndMenu();
         }
+
+        // create
+#ifdef ENABLE_ASSET_CREATOR
+        if (ImGui::BeginMenu("Create")) {
+            if (ImGui::MenuItem("Avalanche Archive", ".ee")) {
+                AvalancheArchive::make("new.ee");
+            }
+
+            if (ImGui::MenuItem("Render Block Model", ".rbm", nullptr, !g_IsJC4Mode)) {
+                RenderBlockModel::make("new.rbm");
+            }
+
+            if (ImGui::MenuItem("Texture", ".ddsc")) {
+                m_NewTextureSettings.Texture      = nullptr;
+                m_NewTextureSettings.ShowSettings = true;
+            }
+
+            ImGui::EndMenu();
+        }
+#endif
+
+        // renderer
+        if (ImGui::BeginMenu("Renderer")) {
+            if (ImGui::BeginMenu(ICON_FA_EYE "  Visualize")) {
+                if (ImGui::MenuItem("Diffuse", nullptr, m_CurrentActiveGBuffer == 0)) {
+                    m_CurrentActiveGBuffer = 0;
+                }
+
+                if (ImGui::MenuItem("Normal", nullptr, m_CurrentActiveGBuffer == 1)) {
+                    m_CurrentActiveGBuffer = 1;
+                }
+
+                if (ImGui::MenuItem("Properties", nullptr, m_CurrentActiveGBuffer == 2)) {
+                    m_CurrentActiveGBuffer = 2;
+                }
+
+                if (ImGui::MenuItem("PropertiesEx", nullptr, m_CurrentActiveGBuffer == 3)) {
+                    m_CurrentActiveGBuffer = 3;
+                }
+
+                ImGui::EndMenu();
+            }
+
+            // camera
+            if (ImGui::BeginMenu(ICON_FA_CAMERA "  Camera")) {
+                if (ImGui::BeginMenu("Focus On", (RenderBlockModel::Instances.size() > 0
+                                                  || AvalancheModelFormat::Instances.size() > 0))) {
+                    for (const auto& model : RenderBlockModel::Instances) {
+                        if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
+                            Camera::Get()->FocusOn(model.second->GetBoundingBox());
+                        }
+                    }
+
+                    // TODO: generate a bounding box for the whole model, instead of using the sub-mesh boxes.
+                    for (const auto& model : AvalancheModelFormat::Instances) {
+                        /*if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
+                            Camera::Get()->FocusOn(model.second->GetBoundingBox());
+                        }*/
+
+                        for (const auto& mesh : model.second->GetMeshes()) {
+                            if (ImGui::MenuItem(mesh->GetName().c_str())) {
+                                Camera::Get()->FocusOn(mesh->GetBoundingBox());
+                            }
+                        }
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                ImGui::EndMenu();
+            }
+
+            static bool wireframe = false;
+            if (ImGui::MenuItem(ICON_FA_SHAPES "  Wireframe", nullptr, wireframe)) {
+                wireframe = !wireframe;
+                Renderer::Get()->SetFillMode(wireframe ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID);
+            }
+
+            if (ImGui::MenuItem(ICON_FA_VECTOR_SQUARE "  Show Bounding Boxes", nullptr, g_DrawBoundingBoxes)) {
+                g_DrawBoundingBoxes = !g_DrawBoundingBoxes;
+                Settings::Get()->SetValue("draw_bounding_boxes", g_DrawBoundingBoxes);
+            }
+
+            if (ImGui::MenuItem(ICON_FA_FONT "  Show Model Labels", nullptr, g_ShowModelLabels)) {
+                g_ShowModelLabels = !g_ShowModelLabels;
+                Settings::Get()->SetValue("show_model_labels", g_ShowModelLabels);
+            }
+
+            if (ImGui::BeginMenu(ICON_FA_EYE_DROPPER "  Background")) {
+                auto clear_colour = Renderer::Get()->GetClearColour();
+                if (ImGui::ColorPicker3("Colour", glm::value_ptr(clear_colour))) {
+                    Renderer::Get()->SetClearColour(clear_colour);
+                }
+
+                if (ImGui::Button("Reset To Default")) {
+                    Renderer::Get()->SetClearColour(g_DefaultClearColour);
+                }
+
+                ImGui::EndMenu();
+            }
+
+            ImGui::EndMenu();
+        }
+
+        // tools
+        if (ImGui::BeginMenu("Tools")) {
+            if (ImGui::MenuItem("Name Hash Generator")) {
+                g_ShowNameHashWindow = !g_ShowNameHashWindow;
+            }
+
+            ImGui::EndMenu();
+        }
+
+        // help
+        if (ImGui::BeginMenu("Help")) {
+            if (ImGui::MenuItem(ICON_FA_INFO_CIRCLE "  About")) {
+                g_ShowAboutWindow = !g_ShowAboutWindow;
+            }
+
+            if (ImGui::MenuItem(ICON_FA_SYNC "  Check for updates", nullptr, false, g_CheckForUpdatesEnabled)) {
+                Window::Get()->CheckForUpdates(true);
+            }
+
+            if (ImGui::MenuItem(ICON_FA_EXTERNAL_LINK_ALT "  View on GitHub")) {
+                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc-model-renderer", nullptr, nullptr,
+                              SW_SHOWNORMAL);
+            }
+
+            if (ImGui::MenuItem(ICON_FA_BUG "  Report a Bug")) {
+                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc-model-renderer/issues/new", nullptr,
+                              nullptr, SW_SHOWNORMAL);
+            }
+
+            ImGui::EndMenu();
+        }
+
+        // fps counter
+        {
+            static char buffer[16];
+            sprintf_s(buffer, sizeof(buffer), "%.01f fps", ImGui::GetIO().Framerate);
+
+            const auto& text_size = ImGui::CalcTextSize(buffer);
+            ImGui::SameLine(ImGui::GetWindowWidth() - text_size.x - 20);
+            ImGui::TextColored(ImVec4(1, 1, 1, .5), buffer);
+        }
+
+        ImGui::EndMainMenuBar();
     }
 }
 
-// TODO: move the texture view stuff into here.
-void UI::RenderFileTreeView()
+void UI::RenderSceneView(const glm::vec2& window_size)
 {
-    const auto& window_size = Window::Get()->GetSize();
+    ImGui::SetNextWindowPos({0, m_MainMenuBarHeight});
+    ImGui::SetNextWindowSize({window_size.x - m_SidebarWidth, window_size.y - m_MainMenuBarHeight});
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0, 0});
 
+    const auto result = ImGui::Begin("Scene", nullptr,
+                                     (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
+                                      | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus));
+
+    ImGui::PopStyleVar();
+    if (result) {
+        const auto& size = ImGui::GetWindowSize();
+        m_SceneWidth     = size.x;
+
+        // update camera projection if needed
+        Camera::Get()->UpdateViewport({size.x, size.y});
+
+        // render gbuffer texture
+        ImGui::Image(Renderer::Get()->GetGBufferSRV(m_CurrentActiveGBuffer), ImGui::GetWindowSize());
+
+        // drag drop target
+        if (const auto payload = UI::Get()->GetDropPayload()) {
+            FileLoader::Get()->ReadFileFromDisk(payload->data);
+        }
+
+        m_SceneDrawList = ImGui::GetWindowDrawList();
+
+        // handle input
+        {
+            const auto& io        = ImGui::GetIO();
+            const auto& mouse_pos = glm::vec2(io.MousePos.x, io.MousePos.y);
+
+            // because we manually toggle the mouse down when drag/dropping from an external source, we need
+            // to check this or the camera will be moved
+            if (!UI::Get()->IsDragDropping()) {
+                // handle mouse press
+                for (int i = 0; i < 2; ++i) {
+                    if (ImGui::IsMouseDown(i)) {
+                        if (!m_SceneMouseState[i] && ImGui::IsItemHovered()) {
+                            m_SceneMouseState[i] = true;
+                            Camera::Get()->OnMousePress(i, true, mouse_pos);
+                        }
+                        // handle mouse move
+                        else if (m_SceneMouseState[i]) {
+                            Camera::Get()->OnMouseMove({-io.MouseDelta.x, -io.MouseDelta.y});
+                        }
+                    }
+                    // handle mouse release
+                    else if (m_SceneMouseState[i]) {
+                        m_SceneMouseState[i] = false;
+                        Camera::Get()->OnMousePress(i, false, mouse_pos);
+                    }
+                }
+
+                // handle mouse scroll
+                if (io.MouseWheel != 0 && ImGui::IsItemHovered()) {
+                    Camera::Get()->OnMouseScroll(io.MouseWheel);
+                }
+            }
+
+#if 0
+            const auto render_block = Camera::Get()->Pick(mouse_pos);
+            if (render_block) {
+                ImGui::SetTooltip(render_block->GetFileName().c_str());
+            }
+#endif
+        }
+    }
+
+    ImGui::End();
+}
+
+// TODO: move the texture view stuff into here.
+void UI::RenderFileTreeView(const glm::vec2& window_size)
+{
     // render the archive directory list
     ImGui::SetNextWindowBgAlpha(1.0f);
     ImGui::SetNextWindowPos({m_SceneWidth, m_MainMenuBarHeight});
