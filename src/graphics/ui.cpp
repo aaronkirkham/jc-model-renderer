@@ -739,15 +739,6 @@ void UI::RenderFileTreeView(const glm::vec2& window_size)
                             archive->Add(file, file.parent_path());
                         }
                     }
-#if 0
-                    if (ImGui::BeginDragDropTarget()) {
-                        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_ADD_FILE")) {
-                            archive->AddDirectory(_dragdrop_filename, _dragdrop_filename.parent_path());
-                        }
-
-                        ImGui::EndDragDropTarget();
-                    }
-#endif
 
                     // context menu
                     RenderContextMenu(archive->GetFilePath(), 0, ContextMenuFlags_Archive);
@@ -1085,15 +1076,17 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
         // dragdrop payload
         if (const auto payload = UI::Get()->GetDropPayload(DragDropPayload_Texture)) {
             SPDLOG_INFO("DropPayload Texture: \"{}\"", title);
-            /*std::filesystem::path payload_data(payload->data);
-            texture->LoadFromFile(payload->data);*/
+            assert(payload->data.size() != 0);
+
+            const auto& texture_filename = payload->data[0];
+            texture->LoadFromFile(texture_filename);
 
 #if 0
             // generate the new file path
             const auto parent = render_block->GetParent();
             if (parent) {
                 auto filename = parent->GetPath().parent_path();
-                filename /= "textures" / payload_data.filename();
+                filename /= "textures" / texture_filename.filename();
 
                 // update the texture name
                 texture->SetFileName(filename);
