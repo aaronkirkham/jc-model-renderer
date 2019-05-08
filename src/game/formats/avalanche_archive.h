@@ -15,6 +15,8 @@ class AvalancheArchive : public Factory<AvalancheArchive>
     std::unique_ptr<DirectoryList>   m_FileList          = nullptr;
     bool                             m_HasUnsavedChanged = false;
 
+    void AddFile(const std::filesystem::path& filename, const FileBuffer& data);
+
   public:
     AvalancheArchive(const std::filesystem::path& filename);
     AvalancheArchive(const std::filesystem::path& filename, const FileBuffer& buffer, bool external = false);
@@ -25,8 +27,7 @@ class AvalancheArchive : public Factory<AvalancheArchive>
         return m_File.string();
     }
 
-    void AddFile(const std::filesystem::path& filename, const FileBuffer& data);
-    void AddDirectory(const std::filesystem::path& filename, const std::filesystem::path& root = "");
+    void Add(const std::filesystem::path& filename, const std::filesystem::path& root = "");
     bool HasFile(const std::filesystem::path& filename);
 
     static void ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);

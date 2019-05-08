@@ -25,16 +25,23 @@ HRESULT DropTarget::DragEnter(IDataObject* data_object, DWORD key_stae, POINTL c
     FORMATETC fmte = {CF_HDROP, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
     STGMEDIUM stgm;
     if (SUCCEEDED(data_object->GetData(&fmte, &stgm))) {
-        const auto drop = reinterpret_cast<HDROP>(stgm.hGlobal);
+        const auto drop      = reinterpret_cast<HDROP>(stgm.hGlobal);
+        const auto num_files = DragQueryFile(drop, -1, NULL, NULL);
 
-        char file[MAX_PATH] = {0};
-        DragQueryFile(drop, 0, file, MAX_PATH);
+        std::vector<std::filesystem::path> files;
+        files.reserve(num_files);
+
+        for (uint32_t i = 0; i < num_files; ++i) {
+            char file_path[MAX_PATH] = {0};
+            DragQueryFile(drop, i, file_path, MAX_PATH);
+
+            files.emplace_back(std::move(file_path));
+        }
 
         m_TimeSinceDragEnter = clock::now();
         m_BringToFront       = true;
 
-        Window::Get()->Events().DragEnter(file);
-
+        Window::Get()->Events().DragEnter(files);
         ReleaseStgMedium(&stgm);
     }
 

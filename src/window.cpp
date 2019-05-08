@@ -401,7 +401,6 @@ void Window::CheckForUpdates(bool show_no_update_messagebox)
 
 bool Window::LoadInternalResource(int32_t resource_id, std::vector<uint8_t>* out_buffer)
 {
-
     const auto handle = GetModuleHandle(nullptr);
     const auto rc     = FindResource(handle, MAKEINTRESOURCE(resource_id), RT_RCDATA);
     if (rc == nullptr) {

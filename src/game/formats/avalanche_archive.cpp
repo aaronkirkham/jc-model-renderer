@@ -49,17 +49,16 @@ void AvalancheArchive::AddFile(const std::filesystem::path& filename, const File
     m_HasUnsavedChanged = true;
 }
 
-void AvalancheArchive::AddDirectory(const std::filesystem::path& filename, const std::filesystem::path& root)
+void AvalancheArchive::Add(const std::filesystem::path& filename, const std::filesystem::path& root)
 {
     // TODO: only add files which are a supported format
     // generic textures, models, etc
 
     if (std::filesystem::is_directory(filename)) {
         for (const auto& f : std::filesystem::directory_iterator(filename)) {
-            AddDirectory(f.path(), root);
+            Add(f.path(), root);
         }
     } else {
-
         std::ifstream stream(filename, std::ios::binary);
         if (stream.fail()) {
             SPDLOG_ERROR("Failed to open file stream!");

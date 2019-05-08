@@ -38,13 +38,14 @@ enum TreeViewTab {
 };
 
 enum DragDropPayloadType {
-    DragDropPayload_Unknown = 1,
+    DragDropPayload_Unknown = 0,
     DragDropPayload_Texture,
+    DragDropPayload_Multi,
 };
 
 struct DragDropPayload {
-    DragDropPayloadType type;
-    const char*         data;
+    DragDropPayloadType                type;
+    std::vector<std::filesystem::path> data;
 };
 
 using ContextMenuCallback               = std::function<void(const std::filesystem::path& filename)>;
@@ -53,18 +54,20 @@ static constexpr auto MIN_SIDEBAR_WIDTH = 400.0f;
 class UI : public Singleton<UI>
 {
   private:
-    UIEvents                                   m_UIEvents;
-    float                                      m_MainMenuBarHeight = 0.0f;
-    std::recursive_mutex                       m_StatusTextsMutex;
-    std::map<uint64_t, std::string>            m_StatusTexts;
-    std::map<std::string, ContextMenuCallback> m_ContextMenuCallbacks;
-    TreeViewTab                                m_TabToSwitch          = TreeViewTab_FileExplorer;
-    uint8_t                                    m_CurrentActiveGBuffer = 0;
-    std::array<bool, 2>                        m_SceneMouseState      = {false};
-    bool                                       m_IsDragDrop           = false;
-    std::string                                m_DragDropPayload;
-    bool                                       m_ShowGameSelection  = true;
-    std::array<std::unique_ptr<Texture>, 2>    m_GameSelectionIcons = {nullptr};
+    UIEvents                                      m_UIEvents;
+    float                                         m_MainMenuBarHeight = 0.0f;
+    std::recursive_mutex                          m_StatusTextsMutex;
+    std::map<uint64_t, std::string>               m_StatusTexts;
+    std::map<std::string, ContextMenuCallback>    m_ContextMenuCallbacks;
+    TreeViewTab                                   m_TabToSwitch          = TreeViewTab_FileExplorer;
+    uint8_t                                       m_CurrentActiveGBuffer = 0;
+    std::array<bool, 2>                           m_SceneMouseState      = {false};
+    bool                                          m_IsDragDrop           = false;
+    std::vector<std::filesystem::path>            m_CurrentDragDropPayload;
+    std::string                                   m_CurrentDragDropPayloadTooltip = "";
+    bool                                          m_ShowGameSelection             = true;
+    std::array<std::unique_ptr<Texture>, 2>       m_GameSelectionIcons            = {nullptr};
+    std::vector<std::unique_ptr<DragDropPayload>> m_DragDropPayloads;
 
     struct {
         bool                  ShowExportSettings = false;
