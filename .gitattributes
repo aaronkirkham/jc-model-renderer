@@ -1,2 +1,3 @@
 *.h linguist-language=cpp
-assets/shaders/* linguist-documentation
+assets/jc3/shaders/* linguist-documentation
+assets/jc4/shaders/* linguist-documentation
