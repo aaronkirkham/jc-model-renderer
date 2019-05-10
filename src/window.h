@@ -22,12 +22,12 @@ static constexpr auto g_WindowName = "Just Cause Model Renderer";
 #endif
 
 struct WindowEvents {
-    ksignals::Event<void(const glm::vec2& size)>                    SizeChanged;
-    ksignals::Event<void()>                                         FocusLost;
-    ksignals::Event<void()>                                         FocusGained;
-    ksignals::Event<void(std::vector<std::filesystem::path> files)> DragEnter;
-    ksignals::Event<void()>                                         DragLeave;
-    ksignals::Event<void()>                                         DragDropped;
+    ksignals::Event<void(const glm::vec2& size)>                           SizeChanged;
+    ksignals::Event<void()>                                                FocusLost;
+    ksignals::Event<void()>                                                FocusGained;
+    ksignals::Event<void(const std::vector<std::filesystem::path>& files)> DragEnter;
+    ksignals::Event<void()>                                                DragLeave;
+    ksignals::Event<void()>                                                DragDropped;
 };
 
 class Window : public Singleton<Window>

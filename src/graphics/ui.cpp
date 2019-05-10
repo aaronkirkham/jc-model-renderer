@@ -12,6 +12,7 @@
 #include "ui.h"
 
 #include "../settings.h"
+#include "../util.h"
 #include "../version.h"
 #include "../window.h"
 
@@ -48,17 +49,33 @@ static bool g_CheckForUpdatesEnabled = true;
 
 UI::UI()
 {
-    Window::Get()->Events().DragEnter.connect([&](std::vector<std::filesystem::path> files) {
-        m_IsDragDrop                    = true;
-        m_CurrentDragDropPayloadTooltip = "";
-        m_CurrentDragDropPayload        = std::move(files);
-        ImGui::GetIO().MouseDown[0]     = true;
+    Window::Get()->Events().DragEnter.connect([&](const std::vector<std::filesystem::path>& files) {
+        m_IsDragDrop                = true;
+        ImGui::GetIO().MouseDown[0] = true;
+
+        assert(files.size() > 0);
+
+        if (files.size() > 1) {
+            m_DragDropPayload.type = DragDropPayload_Multi;
+            m_DragDropTooltip      = std::to_string(files.size()) + " items";
+        } else {
+            const auto& file  = files.at(0);
+            m_DragDropTooltip = file.string();
+
+            // textures
+            if (file.extension() == ".dds" || file.extension() == ".ddsc" || file.extension() == ".hmddsc"
+                || file.extension() == ".atx1" || file.extension() == ".atx2") {
+                m_DragDropPayload.type = DragDropPayload_Texture;
+            }
+        }
+
+        m_DragDropPayload.data = std::move(files);
     });
 
     static const auto ResetDragDrop = [&] {
-        m_IsDragDrop                    = false;
-        m_CurrentDragDropPayloadTooltip = "";
-        ImGui::GetIO().MouseDown[0]     = false;
+        m_IsDragDrop                = false;
+        m_DragDropTooltip           = "";
+        ImGui::GetIO().MouseDown[0] = false;
     };
 
     Window::Get()->Events().DragLeave.connect(ResetDragDrop);
@@ -123,31 +140,11 @@ void UI::Render(RenderContext_t* context)
         // only set the payload if we have no data already set
         const auto _drag_drop_payload = ImGui::GetDragDropPayload();
         if (_drag_drop_payload->Data == nullptr) {
-            const auto payload = new DragDropPayload{DragDropPayload_Unknown};
-
-            if (m_CurrentDragDropPayload.size() > 1) {
-                payload->type                   = DragDropPayload_Multi;
-                m_CurrentDragDropPayloadTooltip = std::to_string(m_CurrentDragDropPayload.size()) + " items";
-
-            } else if (m_CurrentDragDropPayload.size() != 0) {
-                const auto& extension           = m_CurrentDragDropPayload[0].extension();
-                m_CurrentDragDropPayloadTooltip = m_CurrentDragDropPayload[0].string();
-
-                // textures
-                if (extension == ".dds" || extension == ".ddsc" || extension == ".hmddsc" || extension == ".atx1"
-                    || extension == ".atx2") {
-                    payload->type = DragDropPayload_Texture;
-                }
-            }
-
-            payload->data = std::move(m_CurrentDragDropPayload);
-            m_DragDropPayloads.emplace_back(payload);
-
-            const auto id = (m_DragDropPayloads.size() - 1);
-            ImGui::SetDragDropPayload((const char*)&payload->type, (void*)&id, sizeof(id), ImGuiCond_Once);
+            static const auto data = 0x1;
+            ImGui::SetDragDropPayload((const char*)&m_DragDropPayload.type, (void*)&data, sizeof(data), ImGuiCond_Once);
         }
 
-        ImGui::Text(m_CurrentDragDropPayloadTooltip.c_str());
+        ImGui::Text(m_DragDropTooltip.c_str());
         ImGui::EndDragDropSource();
     }
 
@@ -634,8 +631,6 @@ void UI::RenderSceneView(const glm::vec2& window_size)
                     FileLoader::Get()->ReadFileFromDisk(file);
                 }
             }
-
-            // TODO: clean up drop payload. need to delete
         }
 
         m_SceneDrawList = ImGui::GetWindowDrawList();
@@ -1076,7 +1071,7 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
         // dragdrop payload
         if (const auto payload = UI::Get()->GetDropPayload(DragDropPayload_Texture)) {
             SPDLOG_INFO("DropPayload Texture: \"{}\"", title);
-            assert(payload->data.size() != 0);
+            assert(payload->data.size() > 0);
 
             const auto& texture_filename = payload->data[0];
             texture->LoadFromFile(texture_filename);
@@ -1130,8 +1125,7 @@ DragDropPayload* UI::GetDropPayload()
         const ImGuiPayload* payload = ImGui::GetDragDropPayload();
         if (payload && payload->Data != nullptr && payload->DataFrameCount != -1) {
             if (const ImGuiPayload* accepted_payload = ImGui::AcceptDragDropPayload(payload->DataType)) {
-                const auto id = reinterpret_cast<unsigned long*>(accepted_payload->Data);
-                result        = m_DragDropPayloads.at(*id).get();
+                result = &m_DragDropPayload;
             }
         }
 
@@ -1146,8 +1140,7 @@ DragDropPayload* UI::GetDropPayload(DragDropPayloadType type)
     DragDropPayload* result = nullptr;
     if (ImGui::BeginDragDropTarget()) {
         if (const ImGuiPayload* accepted_payload = ImGui::AcceptDragDropPayload((const char*)&type)) {
-            const auto id = reinterpret_cast<unsigned long*>(accepted_payload->Data);
-            result        = m_DragDropPayloads.at(*id).get();
+            result = &m_DragDropPayload;
         }
 
         ImGui::EndDragDropTarget();

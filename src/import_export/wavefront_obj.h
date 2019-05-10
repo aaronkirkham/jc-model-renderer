@@ -2,6 +2,7 @@
 
 #include "iimportexporter.h"
 
+#include "../util.h"
 #include "../version.h"
 #include "../window.h"
 
@@ -118,24 +119,6 @@ class Wavefront_Obj : public IImportExporter
         std::vector<glm::vec3>             _temp_normals;
         std::map<std::string, std::string> _temp_materials;
 
-        static auto split = [](std::string str, char delim) {
-            std::vector<std::string> result;
-            size_t                   prev_pos = 0;
-            size_t                   pos      = 0;
-
-            while ((pos = str.find(delim, pos)) != std::string::npos) {
-                auto part = str.substr(prev_pos, (pos - prev_pos));
-                prev_pos  = ++pos;
-
-                result.emplace_back(part);
-            }
-
-            result.emplace_back(str.substr(prev_pos, (pos - prev_pos)));
-            return result;
-        };
-
-        static auto safe_stoi = [](std::string str) { return str.length() > 0 ? std::stoi(str) : -1; };
-
         std::string line;
         while (std::getline(stream, line)) {
             if (line[0] == '#') {
@@ -190,24 +173,24 @@ class Wavefront_Obj : public IImportExporter
             else if (type == "f") {
                 auto face = line.substr(2, line.length());
 
-                auto parts = split(face, ' ');
+                auto parts = util::split(face, " ");
                 for (const auto& part : parts) {
-                    auto part_indices = split(part, '/');
+                    auto part_indices = util::split(part, "/");
 
                     int32_t pos_idx = -1, uv_idx = -1, nrm_idx = -1;
 
                     // pos
                     const auto num_part_indices = part_indices.size();
                     if (num_part_indices > 0) {
-                        pos_idx = safe_stoi(part_indices[0]);
+                        pos_idx = util::stoi_s(part_indices[0]);
 
                         // pos, uv
                         if (num_part_indices > 1) {
-                            uv_idx = safe_stoi(part_indices[1]);
+                            uv_idx = util::stoi_s(part_indices[1]);
 
                             // pos, uv, normal
                             if (num_part_indices > 2) {
-                                nrm_idx = safe_stoi(part_indices[2]);
+                                nrm_idx = util::stoi_s(part_indices[2]);
                             }
                         }
                     }

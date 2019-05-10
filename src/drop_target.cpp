@@ -41,7 +41,7 @@ HRESULT DropTarget::DragEnter(IDataObject* data_object, DWORD key_stae, POINTL c
         m_TimeSinceDragEnter = clock::now();
         m_BringToFront       = true;
 
-        Window::Get()->Events().DragEnter(files);
+        Window::Get()->Events().DragEnter(std::move(files));
         ReleaseStgMedium(&stgm);
     }
 
