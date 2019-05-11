@@ -356,14 +356,14 @@ namespace AvalancheTexture
 
 namespace StreamArchive
 {
-    struct SARCHeader {
+    struct Header {
         uint32_t m_MagicLength = 4;
         char     m_Magic[4]    = {'S', 'A', 'R', 'C'};
         uint32_t m_Version     = 2;
         uint32_t m_Size        = 0;
     };
 
-    static_assert(sizeof(SARCHeader) == 0x10, "SARCHeader alignment is wrong!");
+    static_assert(sizeof(Header) == 0x10, "StreamArchive header alignment is wrong!");
 }; // namespace StreamArchive
 
 namespace AvalancheArchive

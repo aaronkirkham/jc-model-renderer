@@ -36,6 +36,16 @@ FileLoader::FileLoader()
     // init the namehash lookup table
     NameHashLookup::Init();
 
+    // load ADF type libraries
+    FileBuffer buffer;
+    if (Window::Get()->LoadInternalResource(103, &buffer)) {
+        FileBuffer         sarc_buffer;
+        std::istringstream compressed_buffer(std::string{(char*)buffer.data(), buffer.size()});
+        if (DecompressArchiveFromStream(compressed_buffer, &sarc_buffer)) {
+            m_AdfTypeLibraries = ParseStreamArchive(&sarc_buffer);
+        }
+    }
+
     // TODO: move the events to a better location?
 
     // trigger the file type callbacks
@@ -468,7 +478,7 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(const FileBuffer
 {
     std::istringstream stream(std::string{(char*)sarc_buffer->data(), sarc_buffer->size()});
 
-    jc::StreamArchive::SARCHeader header;
+    jc::StreamArchive::Header header;
     stream.read((char*)&header, sizeof(header));
 
     // ensure the header magic is correct
@@ -477,9 +487,10 @@ std::unique_ptr<StreamArchive_t> FileLoader::ParseStreamArchive(const FileBuffer
         return nullptr;
     }
 
-    auto result        = std::make_unique<StreamArchive_t>();
-    result->m_Header   = header;
-    result->m_UsingTOC = (toc_buffer != nullptr);
+    auto result         = std::make_unique<StreamArchive_t>();
+    result->m_Header    = header;
+    result->m_SARCBytes = *sarc_buffer;
+    result->m_UsingTOC  = (toc_buffer != nullptr);
 
     // jc4
     if (header.m_Version == 3) {
@@ -615,8 +626,7 @@ void FileLoader::ReadStreamArchive(const std::filesystem::path& filename, const 
             if (DecompressArchiveFromStream(compressed_buffer, &buffer)) {
                 auto archive = ParseStreamArchive(&buffer, toc_buffer);
                 if (archive) {
-                    archive->m_Filename  = filename;
-                    archive->m_SARCBytes = std::move(buffer);
+                    archive->m_Filename = filename;
                 }
 
                 return archive;
@@ -628,8 +638,7 @@ void FileLoader::ReadStreamArchive(const std::filesystem::path& filename, const 
 
         auto archive = ParseStreamArchive(data, toc_buffer);
         if (archive) {
-            archive->m_Filename  = filename;
-            archive->m_SARCBytes = std::move(*data);
+            archive->m_Filename = filename;
         }
 
         return archive;

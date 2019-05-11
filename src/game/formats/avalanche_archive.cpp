@@ -4,6 +4,7 @@
 #include "../../graphics/ui.h"
 #include "../../window.h"
 #include "../file_loader.h"
+#include "../hashlittle.h"
 
 std::recursive_mutex                                  Factory<AvalancheArchive>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<AvalancheArchive>> Factory<AvalancheArchive>::Instances;

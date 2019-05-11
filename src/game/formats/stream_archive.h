@@ -15,7 +15,7 @@ struct StreamArchiveEntry_t {
 
 struct StreamArchive_t {
     std::filesystem::path             m_Filename = "";
-    jc::StreamArchive::SARCHeader     m_Header;
+    jc::StreamArchive::Header         m_Header;
     std::vector<uint8_t>              m_SARCBytes;
     std::vector<StreamArchiveEntry_t> m_Files;
     bool                              m_UsingTOC = false;
@@ -59,7 +59,7 @@ struct StreamArchive_t {
         assert(entry);
 
         std::vector<uint8_t> temp_buffer;
-        uint64_t             pos = sizeof(jc::StreamArchive::SARCHeader);
+        uint64_t             pos = sizeof(jc::StreamArchive::Header);
 
         // calculate the header and data size
         uint32_t header_size = 0;
@@ -82,7 +82,7 @@ struct StreamArchive_t {
         std::memcpy(temp_buffer.data(), &m_Header, sizeof(m_Header));
 
         // update all entries
-        uint32_t current_data_offset = sizeof(jc::StreamArchive::SARCHeader) + m_Header.m_Size;
+        uint32_t current_data_offset = sizeof(jc::StreamArchive::Header) + m_Header.m_Size;
         for (auto& _entry : m_Files) {
             const bool _is_the_file = _entry.m_Filename == filename;
             const auto data_offset  = _entry.m_Offset != 0 ? current_data_offset : 0;
@@ -131,15 +131,27 @@ struct StreamArchive_t {
                != m_Files.end();
     }
 
+    std::vector<uint8_t> GetEntryBuffer(const std::string& filename)
+    {
+        const auto it = std::find_if(m_Files.begin(), m_Files.end(),
+                                     [&](const StreamArchiveEntry_t& entry) { return entry.m_Filename == filename; });
+        if (it == m_Files.end()) {
+            return {};
+        }
+
+        const auto start = m_SARCBytes.begin() + (*it).m_Offset;
+        const auto end   = start + (*it).m_Size;
+        return {start, end};
+    }
+
     std::vector<uint8_t> GetEntryBuffer(const StreamArchiveEntry_t& entry)
     {
         assert(entry.m_Offset != 0 && entry.m_Offset != -1);
         assert((entry.m_Offset + entry.m_Size) <= m_SARCBytes.size());
 
-        auto start = m_SARCBytes.begin() + entry.m_Offset;
-        auto end   = start + entry.m_Size;
-
-        return std::vector<uint8_t>(start, end);
+        const auto start = m_SARCBytes.begin() + entry.m_Offset;
+        const auto end   = start + entry.m_Size;
+        return {start, end};
     }
 
     template <typename T> size_t sarc_copy(FileBuffer* buffer, uint64_t offset, T& val)

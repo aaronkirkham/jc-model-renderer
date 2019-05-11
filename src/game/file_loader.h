@@ -70,6 +70,8 @@ class FileLoader : public Singleton<FileLoader>
     std::unordered_map<std::string, std::vector<ReadFileResultCallback>>                               m_PathBatches;
     std::recursive_mutex                                                                               m_BatchesMutex;
 
+    std::unique_ptr<StreamArchive_t> m_AdfTypeLibraries;
+
     std::unique_ptr<StreamArchive_t> ParseStreamArchive(const FileBuffer* sarc_buffer,
                                                         FileBuffer*       toc_buffer = nullptr);
 
@@ -122,7 +124,7 @@ class FileLoader : public Singleton<FileLoader>
     std::shared_ptr<RuntimeContainer> ParseRuntimeContainer(const std::filesystem::path& filename,
                                                             const FileBuffer&            buffer) noexcept;
 
-    // shader bundles
+    // adf
     std::shared_ptr<AvalancheDataFormat> ReadAdf(const std::filesystem::path& filename) noexcept;
 
     // dictionary lookup
@@ -134,6 +136,11 @@ class FileLoader : public Singleton<FileLoader>
     DirectoryList* GetDirectoryList()
     {
         return m_FileList.get();
+    }
+
+    StreamArchive_t* GetAdfTypeLibraries()
+    {
+        return m_AdfTypeLibraries.get();
     }
 
     // file callbacks
