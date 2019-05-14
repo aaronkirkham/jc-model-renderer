@@ -1,4 +1,6 @@
 #include "avalanche_data_format.h"
+#include "avalanche_archive.h"
+
 #include "../../window.h"
 #include "../file_loader.h"
 #include "../hashlittle.h"
@@ -92,6 +94,8 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
         return false;
     }
 
+    // std::ofstream dump_filenames("C:/users/aaron/desktop/dumped_adf_names.txt", std::ios::app);
+
     // read names
     std::vector<uint8_t> name_lengths;
     name_lengths.resize(header.m_StringCount);
@@ -102,7 +106,11 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
         stream.read(name.get(), name_lengths[i] + 1);
 
         m_Names.emplace_back(name.get());
+
+        // dump_filenames << m_Names.back() << std::endl;
     }
+
+    // dump_filenames.close();
 
     // read type definitions
     stream.seekg(header.m_TypeOffset);
@@ -139,15 +147,15 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
                 break;
             }
 
-#ifdef DEBUG
             case jc::AvalancheDataFormat::TypeDefinitionType::Pointer: {
                 uint32_t unknown;
                 stream.read((char*)&unknown, sizeof(unknown));
 
+#ifdef DEBUG
                 __debugbreak();
+#endif
                 break;
             }
-#endif
 
             case jc::AvalancheDataFormat::TypeDefinitionType::BitField: {
                 uint32_t unknown;
@@ -224,8 +232,6 @@ bool AvalancheDataFormat::Parse(const FileBuffer& data)
 
 void AvalancheDataFormat::LoadTypeLibraries()
 {
-    SPDLOG_DEBUG(m_File.filename().extension().string());
-
     static auto ReadTypeLibrary = [](const std::filesystem::path& filename) {
         const auto buffer = FileLoader::Get()->GetAdfTypeLibraries()->GetEntryBuffer(filename.string());
         assert(buffer.size() > 0);
@@ -381,6 +387,10 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
     info->m_Adf->m_DataReadOffset = offset;
     auto new_info                 = std::make_unique<AdfInstanceMemberInfo>(-1, name, this);
 
+    /*if (name == "HealthDecreasedEvents") {
+        __debugbreak();
+    }*/
+
     switch (type_hash) {
         case TypeMemberHash::Int8:
         case TypeMemberHash::UInt8:
@@ -423,16 +433,23 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
                 }
 
                 case TypeDefinitionType::Array: {
-                    const auto dest_offset   = info->m_Adf->ReadData<uint32_t>();
-                    const auto unknown       = info->m_Adf->ReadData<uint32_t>();
+                    const auto dest_offset   = info->m_Adf->ReadData<int32_t>();
+                    const auto unknown       = info->m_Adf->ReadData<int32_t>();
                     const auto element_count = info->m_Adf->ReadData<int64_t>();
 
 #ifdef DEBUG
-                    if (dest_offset == 0 && element_count == 0) {
-                        __debugbreak();
+                    if (dest_offset == 0x3f800000) {
+                        // __debugbreak();
                         break;
                     }
 #endif
+
+                    if (dest_offset == 0 && element_count == 0) {
+                        auto ref_info = std::make_unique<AdfInstanceMemberInfo>(-1, name, this);
+                        ref_info->InitReference(definition, type_hash);
+                        info->m_Members.emplace_back(std::move(ref_info));
+                        break;
+                    }
 
                     int64_t    id;
                     const auto find_it = m_MemberOffsets.find(dest_offset);
@@ -490,8 +507,16 @@ void AdfInstanceInfo::MemberSetupStructMember(AdfInstanceMemberInfo*            
                     const auto unknown2  = info->m_Adf->ReadData<uint32_t>();
                     const auto type_hash = info->m_Adf->ReadData<uint32_t>();
 
-                    const auto member_def =
+                    SPDLOG_WARN("Struct element is a deferred pointer-reference at {}.", info->m_Offset);
+                    SPDLOG_INFO("unknown={}, unknown2={}, type_hash={:x}", unknown, unknown2, type_hash);
+
+                    auto member_def =
                         info->m_TypeDef->m_Parent->GetTypeDefinition(static_cast<TypeMemberHash>(type_hash));
+                    if (!member_def) {
+                        SPDLOG_INFO("Searching in type libraries for member definition {:x}", type_hash);
+                        member_def = info->m_Adf->m_Parent->GetTypeDefinition(static_cast<TypeMemberHash>(type_hash));
+                    }
+
                     if (member_def) {
                         // TODO: we should really keep a reference instanceinfo, for later when we write back to a file.
 
@@ -538,6 +563,8 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
 #endif
         return;
     }
+
+    assert(info->m_Offset < static_cast<int64_t>(m_Data.size()));
 
     switch (definition.m_ElementTypeHash) {
         case TypeMemberHash::Int8:
@@ -605,6 +632,7 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
         }
 
         case TypeMemberHash::Deferred: {
+#if 0
             const auto unknown   = info->m_Adf->ReadData<uint32_t>();
             const auto unknown2  = info->m_Adf->ReadData<uint32_t>();
             const auto type_hash = info->m_Adf->ReadData<uint32_t>();
@@ -612,10 +640,35 @@ void AdfInstanceInfo::MemberSetup_Array(AdfInstanceMemberInfo* info)
             SPDLOG_WARN("Array element is a deferred pointer-reference at {}.", info->m_Offset);
             SPDLOG_INFO("unknown={}, unknown2={}, type_hash={:x}", unknown, unknown2, type_hash);
 
-            const auto member_def =
-                info->m_TypeDef->m_Parent->GetTypeDefinition(static_cast<TypeMemberHash>(type_hash));
+            auto member_def = info->m_TypeDef->m_Parent->GetTypeDefinition(static_cast<TypeMemberHash>(type_hash));
+            if (!member_def) {
+                SPDLOG_INFO("Searching in type libraries for member definition {:x}", type_hash);
+                member_def = info->m_Adf->m_Parent->GetTypeDefinition(static_cast<TypeMemberHash>(type_hash));
+            }
 
-            const auto member_def2 = info->m_Adf->m_Parent->GetTypeDefinition(static_cast<TypeMemberHash>(type_hash));
+            if (member_def) {
+                SPDLOG_INFO("name={}", member_def->m_Name);
+
+                for (uint32_t i = 0; i < info->m_ExpectedElementCount; ++i) {
+                    const auto name = member_def->m_Name + "[" + std::to_string(i) + "]";
+                    MemberSetupStructMember(info, nullptr, definition.m_ElementTypeHash, name,
+                                            (info->m_Offset + (elementType->m_Definition.m_Size * i)));
+                }
+            }
+#endif
+
+            /*const auto unknown   = info->m_Adf->ReadData<uint32_t>();
+            const auto unknown2  = info->m_Adf->ReadData<uint32_t>();
+            const auto type_hash = info->m_Adf->ReadData<uint32_t>();
+
+            SPDLOG_WARN("Array element is a deferred pointer-reference at {}.", info->m_Offset);
+            SPDLOG_WARN("unknown={}, unknown2={}, type_hash={:x}", unknown, unknown2, type_hash);*/
+
+            for (uint32_t i = 0; i < info->m_ExpectedElementCount; ++i) {
+                const auto name = info->m_Name + "[" + std::to_string(i) + "]";
+                MemberSetupStructMember(info, nullptr, definition.m_ElementTypeHash, name,
+                                        (info->m_Offset + (elementType->m_Definition.m_Size * i)));
+            }
 
 #ifdef DEBUG
             __debugbreak();

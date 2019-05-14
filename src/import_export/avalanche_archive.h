@@ -38,8 +38,9 @@ class AvalancheArchive : public IImportExporter
 
     void WriteArchiveFiles(const std::filesystem::path& path, ::AvalancheArchive* archive)
     {
-        assert(archive);
-        assert(archive->GetStreamArchive());
+        if (!archive) {
+            return;
+        }
 
         // create the directory if we need to
         if (!std::filesystem::exists(path)) {
@@ -47,12 +48,11 @@ class AvalancheArchive : public IImportExporter
         }
 
         // write files
-        const auto sarc = archive->GetStreamArchive();
-        for (const auto& entry : sarc->m_Files) {
+        for (const auto& entry : archive->GetEntries()) {
             const auto& file_path = path / entry.m_Filename;
 
             if (entry.m_Offset != 0 && entry.m_Offset != -1) {
-                const auto& buffer = sarc->GetEntryBuffer(entry);
+                const auto& buffer = archive->GetEntryBuffer(entry);
                 WriteBufferToFile(file_path, &buffer);
             } else {
                 auto [directory, archive, namehash] = FileLoader::Get()->LocateFileInDictionary(entry.m_Filename);

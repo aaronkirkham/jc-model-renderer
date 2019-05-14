@@ -3,15 +3,12 @@
 #include <functional>
 
 #include "directory_list.h"
-
 #include "formats/avalanche_data_format.h"
-#include "formats/stream_archive.h"
 #include "types.h"
 
 using ReadFileResultCallback = std::function<void(bool success, FileBuffer data)>;
 using FileReadHandler = std::function<void(const std::filesystem::path& filename, FileBuffer data, bool external)>;
 using FileSaveHandler = std::function<bool(const std::filesystem::path& filename, const std::filesystem::path& path)>;
-using ReadArchiveCallback    = std::function<void(std::unique_ptr<StreamArchive_t>)>;
 using DictionaryLookupResult = std::tuple<std::string, std::string, uint32_t>;
 
 enum ReadFileFlags : uint8_t {
@@ -52,6 +49,7 @@ struct TabFileEntry {
 };
 
 class RuntimeContainer;
+struct ArchiveEntry_t;
 class FileLoader : public Singleton<FileLoader>
 {
   private:
@@ -70,10 +68,7 @@ class FileLoader : public Singleton<FileLoader>
     std::unordered_map<std::string, std::vector<ReadFileResultCallback>>                               m_PathBatches;
     std::recursive_mutex                                                                               m_BatchesMutex;
 
-    std::unique_ptr<StreamArchive_t> m_AdfTypeLibraries;
-
-    std::unique_ptr<StreamArchive_t> ParseStreamArchive(const FileBuffer* sarc_buffer,
-                                                        FileBuffer*       toc_buffer = nullptr);
+    std::unique_ptr<AvalancheArchive> m_AdfTypeLibraries;
 
   public:
     inline static bool UseBatches = false;
@@ -102,17 +97,8 @@ class FileLoader : public Singleton<FileLoader>
                              FileBuffer* output) noexcept;
 
     // stream archive
-    void ReadStreamArchive(const std::filesystem::path& filename, const FileBuffer& buffer, bool external_source,
-                           ReadArchiveCallback callback) noexcept;
-    void CompressArchive(std::ostream& stream, jc::AvalancheArchive::Header* header,
-                         std::vector<jc::AvalancheArchive::Chunk>* chunks) noexcept;
-    void CompressArchive(std::ostream& stream, StreamArchive_t* archive) noexcept;
-    bool DecompressArchiveFromStream(std::istream& stream, FileBuffer* output) noexcept;
-    std::tuple<StreamArchive_t*, StreamArchiveEntry_t>
-    GetStreamArchiveFromFile(const std::filesystem::path& file, StreamArchive_t* archive = nullptr) noexcept;
-
-    // toc
-    bool WriteTOC(const std::filesystem::path& filename, StreamArchive_t* archive) noexcept;
+    std::tuple<AvalancheArchive*, ArchiveEntry_t>
+    GetStreamArchiveFromFile(const std::filesystem::path& file, AvalancheArchive* archive = nullptr) noexcept;
 
     // textures
     void ReadTexture(const std::filesystem::path& filename, ReadFileResultCallback callback) noexcept;
@@ -138,7 +124,7 @@ class FileLoader : public Singleton<FileLoader>
         return m_FileList.get();
     }
 
-    StreamArchive_t* GetAdfTypeLibraries()
+    AvalancheArchive* GetAdfTypeLibraries()
     {
         return m_AdfTypeLibraries.get();
     }

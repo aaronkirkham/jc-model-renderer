@@ -97,29 +97,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 if (GetAsyncKeyState(VK_F1)) {
                     std::filesystem::path filename = "editor/entities/characters/main_characters/sheldon.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
-                        auto archive = AvalancheArchive::make(filename, data);
-                        while (!archive->GetStreamArchive()) {
-                            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                        }
-
-                        std::filesystem::path model =
-                            "models/characters/main_characters/sheldon/sheldon_body_002.modelc";
-                        AvalancheModelFormat::Load(model);
+                        const auto archive = AvalancheArchive::make(filename);
+                        archive->Parse(data, [&](bool success) {
+                            std::filesystem::path model =
+                                "models/characters/main_characters/sheldon/sheldon_body_002.modelc";
+                            AvalancheModelFormat::Load(model);
+                        });
                     });
                 }
 
                 if (GetAsyncKeyState(VK_F2) & 1) {
                     std::filesystem::path filename = "editor/entities/gameobjects/main_character.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
-                        if (success) {
-                            auto archive = AvalancheArchive::make(filename, data);
-                            while (!archive->GetStreamArchive()) {
-                                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                            }
-
+                        const auto archive = AvalancheArchive::make(filename);
+                        archive->Parse(data, [&](bool success) {
                             std::filesystem::path rbm = "models/jc_characters/main_characters/rico/rico_body_lod1.rbm";
                             RenderBlockModel::Load(rbm);
-                        }
+                        });
                     });
                 }
 
@@ -127,16 +121,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     std::filesystem::path filename =
                         "editor/entities/jc_weapons/02_two_handed/w141_rpg_uvk_13/w141_rpg_uvk_13.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
-                        if (success) {
-                            auto archive = AvalancheArchive::make(filename, data);
-                            while (!archive->GetStreamArchive()) {
-                                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                            }
-
+                        const auto archive = AvalancheArchive::make(filename);
+                        archive->Parse(data, [&](bool success) {
                             std::filesystem::path rbm = "models/jc_weapons/02_two_handed/w141_rpg_uvk_13/"
                                                         "w141_rpg_uvk_13_base_body_lod1.rbm";
                             RenderBlockModel::Load(rbm);
-                        }
+                        });
                     });
                 }
 
@@ -145,17 +135,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         "editor/entities/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/"
                         "v0405_car_mugello_moderncircuitracer_civilian_01.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
-                        if (success) {
-                            auto archive = AvalancheArchive::make(filename, data);
-                            while (!archive->GetStreamArchive()) {
-                                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                            }
-
+                        const auto archive = AvalancheArchive::make(filename);
+                        archive->Parse(data, [&](bool success) {
                             std::filesystem::path rbm =
                                 "models/jc_vehicles/01_land/v0405_car_mugello_moderncircuitracer/"
                                 "moderncircuitracer_body_lod1.rbm";
                             RenderBlockModel::Load(rbm);
-                        }
+                        });
                     });
                 }
 
@@ -164,17 +150,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/"
                         "v4602_plane_urga_fighterbomber_debug.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
-                        if (success) {
-                            auto archive = AvalancheArchive::make(filename, data);
-                            while (!archive->GetStreamArchive()) {
-                                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                            }
-
+                        const auto archive = AvalancheArchive::make(filename);
+                        archive->Parse(data, [&](bool success) {
                             std::filesystem::path epe =
                                 "editor/entities/jc_vehicles/02_air/v4602_plane_urga_fighterbomber/"
                                 "v4602_plane_urga_fighterbomber_debug.epe";
-                            auto rc = RuntimeContainer::get(epe.string());
-
+                            const auto rc = RuntimeContainer::get(epe.string());
                             if (rc) {
                                 RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
                             } else {
@@ -182,7 +163,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                                     RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
                                 });
                             }
-                        }
+                        });
                     });
                 }
 
@@ -190,16 +171,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     std::filesystem::path filename = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/"
                                                      "v0803_car_na_monstertruck_civilian_01.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
-                        if (success) {
-                            auto archive = AvalancheArchive::make(filename, data);
-                            while (!archive->GetStreamArchive()) {
-                                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                            }
-
+                        const auto archive = AvalancheArchive::make(filename);
+                        archive->Parse(data, [&](bool success) {
                             std::filesystem::path epe = "editor/entities/jc_vehicles/01_land/v0803_car_na_monstertruck/"
                                                         "v0803_car_na_monstertruck_civilian_01.epe";
-                            auto rc = RuntimeContainer::get(epe.string());
-
+                            const auto rc = RuntimeContainer::get(epe.string());
                             if (rc) {
                                 RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
                             } else {
@@ -207,7 +183,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                                     RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
                                 });
                             }
-                        }
+                        });
                     });
                 }
 
@@ -278,6 +254,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         if (success) {
                             const auto adf = AvalancheDataFormat::make(filename);
                             if (adf->Parse(data)) {
+                                const auto health = adf->GetMember("Health");
+                                if (health) {
+                                    auto val = health->As<int16_t>();
+                                    __debugbreak();
+                                }
+
                                 __debugbreak();
                             }
                         } else {

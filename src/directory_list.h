@@ -3,8 +3,6 @@
 #include <filesystem>
 #include <json.hpp>
 
-#include "game/formats/stream_archive.h"
-
 #include "graphics/imgui/fonts/fontawesome5_icons.h"
 #include "graphics/ui.h"
 
@@ -73,17 +71,6 @@ class DirectoryList
 
             for (auto it = tree->begin(); it != tree->end(); ++it) {
                 split(it.key(), m_Structure);
-            }
-        }
-    }
-
-    void Parse(StreamArchive_t* archive)
-    {
-        if (archive) {
-            m_Structure.clear();
-
-            for (auto& file : archive->m_Files) {
-                split(file.m_Filename, m_Structure);
             }
         }
     }
