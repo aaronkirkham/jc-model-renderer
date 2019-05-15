@@ -127,7 +127,11 @@ bool AvalancheArchive::SaveFileCallback(const std::filesystem::path& filename, c
 void AvalancheArchive::Parse(const FileBuffer& buffer, ParseCallback_t callback)
 {
     if (buffer.size() == 0) {
-        return callback(false);
+        if (callback) {
+            callback(false);
+        }
+
+        return;
     }
 
     // do we need to decompress the AAF?
@@ -156,7 +160,11 @@ void AvalancheArchive::ParseSARC(const FileBuffer& buffer, ParseCallback_t callb
     // ensure the header magic is correct
     if (strncmp(header.m_Magic, "SARC", 4) != 0) {
         SPDLOG_ERROR("Invalid header magic");
-        return callback(false);
+        if (callback) {
+            callback(false);
+        }
+
+        return;
     }
 
     // copy the buffer (needed to read entries from it later)
