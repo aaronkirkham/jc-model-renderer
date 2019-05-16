@@ -63,6 +63,21 @@ void AvalancheModelFormat::Parse(const FileBuffer& data, ParseCallback_t callbac
     //	.meshc		= contains all mesh information, and low resolution buffers
     //	.hrmeshc	= only high resolution buffers
 
+    m_ModelAdf = AvalancheDataFormat::make(m_Filename, data);
+
+    SAmfModel* amf_model = nullptr;
+
+    jc::AvalancheDataFormat::SInstanceInfo instance_info;
+    m_ModelAdf->GetInstance(0, &instance_info);
+    m_ModelAdf->ReadInstance(instance_info.m_NameHash, 0xF7C20A69, (void**)&amf_model);
+
+	const auto mesh_filename = m_ModelAdf->HashLookup(amf_model->m_Mesh);
+
+	__debugbreak();
+
+#if 0
+    
+
     m_ModelAdf = AvalancheDataFormat::make(m_Filename);
     if (!m_ModelAdf->Parse(data)) {
         SPDLOG_ERROR("Failed to parse modelc ADF! ({})", m_Filename.generic_string());
@@ -117,6 +132,7 @@ void AvalancheModelFormat::Parse(const FileBuffer& data, ParseCallback_t callbac
             });
         }
     });
+#endif
 }
 
 bool AvalancheModelFormat::ParseMeshBuffers()
@@ -129,6 +145,7 @@ bool AvalancheModelFormat::ParseMeshBuffers()
         return false;
     }
 
+#if 0
     std::vector<FileBuffer> vertex_buffers;
     std::vector<FileBuffer> index_buffers;
 
@@ -184,14 +201,15 @@ bool AvalancheModelFormat::ParseMeshBuffers()
             (*find_it)->SetBoundingBox(BoundingBox{&bbox_min.front(), &bbox_max.front()});
         }
     }
+#endif
 
     return true;
 }
 
-AMFMesh::AMFMesh(AdfInstanceMemberInfo* info, AvalancheModelFormat* parent)
-    : m_Info(info)
-    , m_Parent(parent)
+AMFMesh::AMFMesh(AvalancheModelFormat* parent)
+    : m_Parent(parent)
 {
+#if 0
     m_Name          = info->GetMember("Name")->As<std::string>();
     m_RenderBlockId = info->GetMember("RenderBlockId")->As<std::string>();
 
@@ -207,6 +225,7 @@ AMFMesh::AMFMesh(AdfInstanceMemberInfo* info, AvalancheModelFormat* parent)
         auto texture = TextureManager::Get()->GetTexture(textures->m_Members[i]->As<std::string>());
         m_RenderBlock->SetTexture(i, texture);
     }
+#endif
 }
 
 AMFMesh::~AMFMesh()
@@ -215,8 +234,9 @@ AMFMesh::~AMFMesh()
     SAFE_DELETE(m_RenderBlock);
 }
 
-void AMFMesh::InitBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, FileBuffer* indices)
+void AMFMesh::InitBuffers(FileBuffer* vertices, FileBuffer* indices)
 {
+#if 0
     const auto mesh_adf = m_Parent->GetMeshAdf();
 
     // parse vertex buffer
@@ -252,4 +272,5 @@ void AMFMesh::InitBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, Fil
     // init the render block
     ((jc4::IRenderBlock*)m_RenderBlock)->Create(&vertex_buffer, &index_buffer);
     Renderer::Get()->AddToRenderList(m_RenderBlock);
+#endif
 }

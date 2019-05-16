@@ -25,6 +25,12 @@ void ShaderManager::Init()
 
     std::thread([&, filename = std::move(filename), status_text_id] {
         m_ShaderBundle = FileLoader::Get()->ReadAdf(filename);
+
+        // read the shader bundle data
+        jc::AvalancheDataFormat::SInstanceInfo instance_info;
+        m_ShaderBundle->GetInstance(0, &instance_info);
+        m_ShaderBundle->ReadInstance(instance_info.m_NameHash, 0xF2923B32, (void**)&m_ShaderLibrary);
+
         UI::Get()->PopStatusText(status_text_id);
 
         // exit now if the shader bundle wasn't loaded
@@ -135,36 +141,34 @@ std::shared_ptr<VertexShader_t> ShaderManager::GetVertexShader(const std::string
     }
 
     // ensure the shader bundle is loaded
-    if (!m_ShaderBundle) {
+    if (!m_ShaderBundle || !m_ShaderLibrary) {
         SPDLOG_ERROR("Can't create vertex shader because shader bundle isn't loaded!");
         return nullptr;
     }
 
-    // look for the correct member
-    const auto& vertex_shaders = m_ShaderBundle->GetMember("VertexShaders");
-    for (const auto& member : vertex_shaders->m_Members) {
-        const auto& shader_name = member->GetMember("Name")->As<std::string>();
-        if (shader_name == name) {
-            const auto& shader_data = member->GetMember("BinaryData")->As<std::vector<uint8_t>>();
+    // find the shader in the library
+    for (uint32_t i = 0; i < m_ShaderLibrary->m_VertexShaders.m_Count; ++i) {
+        const auto shader = m_ShaderLibrary->m_VertexShaders.m_Data[i];
+        if (name == shader.m_Name) {
+            auto vs    = std::make_shared<VertexShader_t>();
+            vs->m_Code = shader.m_BinaryData.m_Data;
+            vs->m_Size = shader.m_BinaryData.m_Count;
 
-            auto shader    = std::make_shared<VertexShader_t>();
-            shader->m_Code = shader_data;
-            shader->m_Size = shader_data.size();
-
-            auto result = Renderer::Get()->GetDevice()->CreateVertexShader(shader->m_Code.data(), shader->m_Size,
-                                                                           nullptr, &shader->m_Shader);
-            assert(SUCCEEDED(result));
-
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
-            D3D_SET_OBJECT_NAME_A(shader->m_Shader, name.c_str());
-#endif
-
+            const auto result = Renderer::Get()->GetDevice()->CreateVertexShader(
+                shader.m_BinaryData.m_Data, shader.m_BinaryData.m_Count, nullptr, &vs->m_Shader);
             if (FAILED(result)) {
+#ifdef DEBUG
+                SPDLOG_ERROR("Failed to create vertex shader!");
+                __debugbreak();
+#endif
                 return nullptr;
             }
 
-            m_VertexShaders[key] = std::move(shader);
-            SPDLOG_INFO("Cached vertex shader \"{}\"", name);
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+            D3D_SET_OBJECT_NAME_A(vs->m_Shader, name.c_str());
+#endif
+
+            m_VertexShaders[key] = std::move(vs);
             return m_VertexShaders[key];
         }
     }
@@ -183,36 +187,34 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
     }
 
     // ensure the shader bundle is loaded
-    if (!m_ShaderBundle) {
+    if (!m_ShaderBundle || !m_ShaderLibrary) {
         SPDLOG_ERROR("Can't create pixel shader because shader bundle isn't loaded!");
         return nullptr;
     }
 
-    // look for the correct member
-    const auto& fragment_shaders = m_ShaderBundle->GetMember("FragmentShaders");
-    for (const auto& member : fragment_shaders->m_Members) {
-        const auto& shader_name = member->GetMember("Name")->As<std::string>();
-        if (shader_name == name) {
-            const auto& shader_data = member->GetMember("BinaryData")->As<std::vector<uint8_t>>();
+    // find the shader in the library
+    for (uint32_t i = 0; i < m_ShaderLibrary->m_FragmentShaders.m_Count; ++i) {
+        const auto shader = m_ShaderLibrary->m_FragmentShaders.m_Data[i];
+        if (name == shader.m_Name) {
+            auto ps    = std::make_shared<PixelShader_t>();
+            ps->m_Code = shader.m_BinaryData.m_Data;
+            ps->m_Size = shader.m_BinaryData.m_Count;
 
-            auto shader    = std::make_shared<PixelShader_t>();
-            shader->m_Code = shader_data;
-            shader->m_Size = shader_data.size();
-
-            auto result = Renderer::Get()->GetDevice()->CreatePixelShader(shader->m_Code.data(), shader->m_Size,
-                                                                          nullptr, &shader->m_Shader);
-            assert(SUCCEEDED(result));
-
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
-            D3D_SET_OBJECT_NAME_A(shader->m_Shader, name.c_str());
-#endif
-
+            const auto result = Renderer::Get()->GetDevice()->CreatePixelShader(
+                shader.m_BinaryData.m_Data, shader.m_BinaryData.m_Count, nullptr, &ps->m_Shader);
             if (FAILED(result)) {
+#ifdef DEBUG
+                SPDLOG_ERROR("Failed to create pixel shader!");
+                __debugbreak();
+#endif
                 return nullptr;
             }
 
-            m_PixelShaders[key] = std::move(shader);
-            SPDLOG_INFO("Cached pixel shader \"{}\"", name);
+#ifdef RENDERER_REPORT_LIVE_OBJECTS
+            D3D_SET_OBJECT_NAME_A(vs->m_Shader, name.c_str());
+#endif
+
+            m_PixelShaders[key] = std::move(ps);
             return m_PixelShaders[key];
         }
     }

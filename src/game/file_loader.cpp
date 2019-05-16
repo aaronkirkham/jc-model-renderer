@@ -1022,12 +1022,7 @@ std::shared_ptr<AvalancheDataFormat> FileLoader::ReadAdf(const std::filesystem::
     stream.close();
 
     // parse the adf file
-    auto adf = AvalancheDataFormat::make(filename);
-    if (!adf->Parse(data)) {
-        SPDLOG_ERROR("Failed to parse ADF!");
-        return nullptr;
-    }
-
+    const auto adf = AvalancheDataFormat::make(filename, data);
     return std::move(adf);
 }
 

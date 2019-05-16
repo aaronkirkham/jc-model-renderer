@@ -189,15 +189,13 @@ void AvalancheArchive::ParseSARC(const FileBuffer& buffer, ParseCallback_t callb
         assert(stream.tellg() == data_offset);
 
         while (stream.tellg() < header.m_Size) {
-            uint32_t unknown, file_offset, uncompressed_size, namehash, unknown2;
+            uint32_t name_offset, file_offset, uncompressed_size, namehash, extension_hash;
 
-            stream.read((char*)&unknown, sizeof(uint32_t));
+            stream.read((char*)&name_offset, sizeof(uint32_t));
             stream.read((char*)&file_offset, sizeof(uint32_t));
             stream.read((char*)&uncompressed_size, sizeof(uint32_t));
             stream.read((char*)&namehash, sizeof(uint32_t));
-            stream.read((char*)&unknown2, sizeof(uint32_t));
-
-            SPDLOG_INFO("Unknown={}, Unknown2={}", unknown, unknown2);
+            stream.read((char*)&extension_hash, sizeof(uint32_t));
 
             ArchiveEntry_t entry{};
             entry.m_Filename = filenames[namehash];

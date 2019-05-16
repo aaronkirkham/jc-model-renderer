@@ -10,7 +10,6 @@ static constexpr auto RBM_END_OF_BLOCK = 0x89ABCDEF;
 class AvalancheArchive;
 class RuntimeContainer;
 class AvalancheDataFormat;
-class AdfInstanceMemberInfo;
 class IRenderBlock;
 
 class RenderBlockModel : public Factory<RenderBlockModel>

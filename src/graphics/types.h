@@ -82,8 +82,8 @@ struct VertexShader_t {
     }
 
     ID3D11VertexShader* m_Shader = nullptr;
-    FileBuffer          m_Code;
-    uint64_t            m_Size = 0;
+    uint8_t*            m_Code   = nullptr;
+    uint64_t            m_Size   = 0;
 };
 
 struct PixelShader_t {
@@ -96,8 +96,8 @@ struct PixelShader_t {
     }
 
     ID3D11PixelShader* m_Shader = nullptr;
-    FileBuffer         m_Code;
-    uint64_t           m_Size = 0;
+    uint8_t*           m_Code   = nullptr;
+    uint64_t           m_Size   = 0;
 };
 
 struct VertexDeclaration_t {

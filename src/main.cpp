@@ -252,7 +252,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     std::filesystem::path filename = "editor/entities/characters/main_characters/rico.epe_adf";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                         if (success) {
-                            const auto adf = AvalancheDataFormat::make(filename);
+                            const auto adf = AvalancheDataFormat::make(filename, data);
+#if 0
                             if (adf->Parse(data)) {
                                 const auto health = adf->GetMember("Health");
                                 if (health) {
@@ -262,6 +263,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
                                 __debugbreak();
                             }
+#endif
                         } else {
                             __debugbreak();
                         }

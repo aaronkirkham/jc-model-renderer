@@ -7,6 +7,7 @@ namespace jc4
 class RenderBlockCharacter : public IRenderBlock
 {
   private:
+#pragma pack(push, 1)
     struct cbLocalConsts {
         glm::mat4 WorldViewProjection;
         glm::mat4 World;
@@ -22,13 +23,29 @@ class RenderBlockCharacter : public IRenderBlock
         glm::vec4 Scale = glm::vec4(1, 1, 1, 1);
     } m_cbInstanceConsts;
 
-    struct cbUnknownCB1 {
-        glm::vec4 Unknown       = {0, 0, 0, 0};
-        glm::vec4 SnowFactor    = glm::vec4(0, 0, 0, 0); // this is really just a float with 12 bytes of padding
-        glm::vec4 Unknown2[5]   = {{0, 0, 0, 0}};
-        glm::vec4 DiffuseColour = glm::vec4(0, 0, 0, 1);
-        glm::vec4 Unknown3[4]   = {{0, 0, 0, 0}};
-    } m_cbUnknownCB1;
+    struct cbDefaultConstants {
+        float     DirtFactor    = 0;
+        float     WetFactor     = 0;
+        float     LodFade       = 0;
+        float     AlphaFade     = 0;
+        float     SnowFactor    = 0;
+        float     _unknown[4]   = {0};
+        int32_t   UseDetail     = 0;
+        int32_t   UseDecal      = 0;
+        int32_t   UseTint       = 0;
+        int32_t   UseSoftTint   = 0;
+        float     _unknown2[15] = {0};
+        glm::vec4 DebugColor    = {0, 0, 0, 1};
+        glm::vec4 TintColor1    = {0, 0, 0, 0};
+        glm::vec4 TintColor2    = {0, 0, 0, 0};
+        glm::vec4 TintColor3    = {0, 0, 0, 0};
+        float     AlphaTestRef  = 0.5f;
+        float     _unknown3[3]  = {0};
+        char      FurConsts[32] = {0};
+    } m_cbDefaultConstants;
+
+    struct cbHairConstants {
+    } m_cbHairConstants;
 
     struct cbUnknownCB4 {
         glm::vec4 Unknown[5];
@@ -37,6 +54,7 @@ class RenderBlockCharacter : public IRenderBlock
     struct cbUnknownCB6 {
         glm::vec4 Unknown[46];
     } m_cbUnknownCB6;
+#pragma pack(pop)
 
     std::array<ConstantBuffer_t*, 3> m_VertexShaderConstants = {nullptr};
     std::array<ConstantBuffer_t*, 3> m_PixelShaderConstants  = {nullptr};
@@ -121,7 +139,7 @@ class RenderBlockCharacter : public IRenderBlock
 
         // create pixel shader constants
         m_PixelShaderConstants[0] =
-            Renderer::Get()->CreateConstantBuffer(m_cbUnknownCB1, "RenderBlockCharacter cbUnknownCB1");
+            Renderer::Get()->CreateConstantBuffer(m_cbDefaultConstants, "RenderBlockCharacter cbDefaultConstants");
         m_PixelShaderConstants[1] =
             Renderer::Get()->CreateConstantBuffer(m_cbUnknownCB4, "RenderBlockCharacter cbUnknownCB4");
         m_PixelShaderConstants[2] =
@@ -169,7 +187,7 @@ class RenderBlockCharacter : public IRenderBlock
         context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[2], 4, m_cbInstanceConsts);
 
         // set pixel shader constants
-        context->m_Renderer->SetPixelShaderConstants(m_PixelShaderConstants[0], 1, m_cbUnknownCB1);
+        context->m_Renderer->SetPixelShaderConstants(m_PixelShaderConstants[0], 1, m_cbDefaultConstants);
         context->m_Renderer->SetPixelShaderConstants(m_PixelShaderConstants[1], 4, m_cbUnknownCB4);
         context->m_Renderer->SetPixelShaderConstants(m_PixelShaderConstants[2], 6, m_cbUnknownCB6);
 
@@ -186,21 +204,20 @@ class RenderBlockCharacter : public IRenderBlock
         ImGui::Text(ICON_FA_COGS "  Attributes");
         ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
 
-        if (ImGui::CollapsingHeader("cbUnknownCB1")) {
-            /*ImGui::SliderFloat4("cb1_0", glm::value_ptr(m_cbUnknownCB1.Unknown[0]), 0.0f, 1.0f);*/
-            ImGui::SliderFloat("Snow Factor", glm::value_ptr(m_cbUnknownCB1.SnowFactor), 0.0f, 1.0f);
-            /*ImGui::SliderFloat4("cb1_2", glm::value_ptr(m_cbUnknownCB1.Unknown[2]), 0.0f, 1.0f);
-            ImGui::SliderFloat4("cb1_3", glm::value_ptr(m_cbUnknownCB1.Unknown[3]), 0.0f, 1.0f);
-            ImGui::SliderFloat4("cb1_4", glm::value_ptr(m_cbUnknownCB1.Unknown[4]), 0.0f, 1.0f);
-            ImGui::SliderFloat4("cb1_5", glm::value_ptr(m_cbUnknownCB1.Unknown[5]), 0.0f, 1.0f);
-            ImGui::SliderFloat4("cb1_6", glm::value_ptr(m_cbUnknownCB1.Unknown[6]), 0.0f, 1.0f);*/
-            ImGui::ColorEdit4("Diffuse Colour", glm::value_ptr(m_cbUnknownCB1.DiffuseColour));
-            /*ImGui::SliderFloat4("cb1_8", glm::value_ptr(m_cbUnknownCB1.Unknown[8]), 0.0f, 1.0f);
-            ImGui::SliderFloat4("cb1_9", glm::value_ptr(m_cbUnknownCB1.Unknown[9]), 0.0f, 1.0f);
-            ImGui::SliderFloat4("cb1_10", glm::value_ptr(m_cbUnknownCB1.Unknown[10]), 0.0f, 1.0f);
-            ImGui::SliderFloat4("cb1_11", glm::value_ptr(m_cbUnknownCB1.Unknown[11]), 0.0f, 1.0f);*/
+        if (ImGui::CollapsingHeader("cbDefaultConstants")) {
+            ImGui::SliderFloat("Dirt Factor", &m_cbDefaultConstants.DirtFactor, 0.0f, 1.0f);
+            ImGui::SliderFloat("Wet Factor", &m_cbDefaultConstants.WetFactor, 0.0f, 1.0f);
+            ImGui::SliderFloat("Lod Fade", &m_cbDefaultConstants.LodFade, 0.0f, 1.0f);
+            ImGui::SliderFloat("Alpha Fade", &m_cbDefaultConstants.AlphaFade, 0.0f, 1.0f);
+            ImGui::SliderFloat("Snow Factor", &m_cbDefaultConstants.SnowFactor, 0.0f, 1.0f);
+            ImGui::ColorEdit4("Debug Color", glm::value_ptr(m_cbDefaultConstants.DebugColor));
+            ImGui::ColorEdit4("Tint Color 1", glm::value_ptr(m_cbDefaultConstants.TintColor1));
+            ImGui::ColorEdit4("Tint Color 2", glm::value_ptr(m_cbDefaultConstants.TintColor2));
+            ImGui::ColorEdit4("Tint Color 3", glm::value_ptr(m_cbDefaultConstants.TintColor3));
+            ImGui::SliderFloat("Alpha Test Ref", &m_cbDefaultConstants.AlphaTestRef, 0.0f, 1.0f);
         }
 
+#if 0
         if (ImGui::CollapsingHeader("cbUnknownCB4")) {
             ImGui::SliderFloat4("cb4_0", glm::value_ptr(m_cbUnknownCB4.Unknown[0]), 0.0f, 1.0f);
             ImGui::SliderFloat4("cb4_1", glm::value_ptr(m_cbUnknownCB4.Unknown[1]), 0.0f, 1.0f);
@@ -224,6 +241,7 @@ class RenderBlockCharacter : public IRenderBlock
             ImGui::SliderFloat4("cb6_10", glm::value_ptr(m_cbUnknownCB6.Unknown[10]), 0.0f, 1.0f);
             ImGui::SliderFloat4("cb6_11", glm::value_ptr(m_cbUnknownCB6.Unknown[11]), 0.0f, 1.0f);
         }
+#endif
 
         // Textures
         ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");

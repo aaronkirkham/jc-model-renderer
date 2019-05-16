@@ -6,27 +6,47 @@
 #include "../../factory.h"
 #include "../../graphics/types.h"
 
+#include "../types.h"
+
 class AvalancheArchive;
 class AvalancheDataFormat;
-
-class AdfInstanceMemberInfo;
 class AvalancheModelFormat;
 class IRenderBlock;
+
+#pragma pack(push, 8)
+struct SAmfMaterial {
+    uint32_t           m_Name;
+    uint32_t           m_RenderBlockId;
+    SAdfDeferredPtr    m_Attributes;
+    AdfArray<uint32_t> m_Textures;
+};
+
+struct SAmfModel {
+    uint32_t               m_Mesh;
+    AdfArray<uint8_t>      m_LodSlots;
+    uint32_t               m_MemoryTag;
+    float                  m_LodFactor;
+    AdfArray<SAmfMaterial> m_Materials;
+};
+
+static_assert(sizeof(SAmfMaterial) == 0x28, "SAmfMaterial alignment is wrong!");
+static_assert(sizeof(SAmfModel) == 0x30, "SAmfModel alignment is wrong!");
+#pragma pack(pop)
+
 class AMFMesh
 {
   private:
-    AdfInstanceMemberInfo* m_Info          = nullptr;
-    AvalancheModelFormat*  m_Parent        = nullptr;
-    std::string            m_Name          = "";
-    std::string            m_RenderBlockId = "";
-    IRenderBlock*          m_RenderBlock   = nullptr;
-    BoundingBox            m_BoundingBox;
+    AvalancheModelFormat* m_Parent        = nullptr;
+    std::string           m_Name          = "";
+    std::string           m_RenderBlockId = "";
+    IRenderBlock*         m_RenderBlock   = nullptr;
+    BoundingBox           m_BoundingBox;
 
   public:
-    AMFMesh(AdfInstanceMemberInfo* info, AvalancheModelFormat* parent);
+    AMFMesh(AvalancheModelFormat* parent);
     virtual ~AMFMesh();
 
-    void InitBuffers(AdfInstanceMemberInfo* info, FileBuffer* vertices, FileBuffer* indices);
+    void InitBuffers(FileBuffer* vertices, FileBuffer* indices);
 
     const std::string& GetName()
     {

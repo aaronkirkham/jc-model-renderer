@@ -7,6 +7,21 @@
 #include "jc3/types.h"
 #include "jc4/types.h"
 
+#pragma pack(push, 8)
+template <typename T> struct AdfArray {
+    T*       m_Data;
+    uint32_t m_Count;
+};
+
+struct SAdfDeferredPtr {
+    void*    m_Ptr;
+    uint32_t m_Type;
+};
+
+static_assert(sizeof(AdfArray<void>) == 0x10, "AdfArray alignment is wrong!");
+static_assert(sizeof(SAdfDeferredPtr) == 0x10, "SAdfDeferredPtr alignment is wrong!");
+#pragma pack(pop)
+
 #pragma pack(push, 1)
 namespace jc
 {
@@ -452,6 +467,150 @@ namespace RuntimeContainer
 
 namespace AvalancheDataFormat
 {
+    enum class EAdfType : uint32_t {
+        Primitive   = 0,
+        Structure   = 1,
+        Pointer     = 2,
+        Array       = 3,
+        InlineArray = 4,
+        String      = 5,
+        Unknown     = 6,
+        BitField    = 7,
+        Enumeration = 8,
+        StringHash  = 9,
+        Deferred    = 10,
+    };
+
+    enum class ScalarType : uint16_t {
+        Signed   = 0,
+        Unsigned = 1,
+        Float    = 2,
+    };
+
+    struct HeaderV2 {
+        uint32_t m_Magic = 0x41444620; // "ADF "
+        uint32_t m_Version;
+        uint32_t m_InstanceCount;
+        uint32_t m_FirstInstanceOffset;
+        uint32_t m_TypeCount;
+        uint32_t m_FirstTypeOffset;
+    };
+
+    struct HeaderV3 : HeaderV2 {
+        uint32_t m_StringHashCount;
+        uint32_t m_FirstStringHashOffset;
+    };
+
+    struct Header : HeaderV3 {
+        uint32_t    m_StringCount;
+        uint32_t    m_FirstStringDataOffset;
+        uint32_t    m_FileSize;
+        uint32_t    unknown;
+        uint32_t    m_Flags;
+        uint32_t    m_IncludedLibraries;
+        char        gap38[8];
+        const char* m_Description;
+    };
+
+    static_assert(sizeof(HeaderV3) == 0x20, "AvalancheDataFormat HeaderV3 alignment is wrong.");
+    static_assert(sizeof(HeaderV2) == 0x18, "AvalancheDataFormat HeaderV2 alignment is wrong.");
+    static_assert(sizeof(Header) == 0x48, "AvalancheDataFormat Header alignment is wrong.");
+
+    struct Type {
+        EAdfType   m_AdfType;
+        uint32_t   m_Size;
+        uint32_t   m_Align;
+        uint32_t   m_TypeHash;
+        uint64_t   m_Name;
+        uint16_t   m_Flags;
+        ScalarType m_ScalarType;
+        uint32_t   m_SubTypeHash;
+        uint32_t   m_ArraySizeOrBitCount;
+        uint32_t   m_MemberCount;
+    };
+
+    struct TypeV3 {
+        EAdfType   m_AdfType;
+        uint32_t   m_Size;
+        uint32_t   m_Align;
+        uint32_t   m_TypeHash;
+        char       m_Name[64];
+        uint16_t   m_Flags;
+        ScalarType m_ScalarType;
+        uint32_t   m_SubTypeHash;
+        uint32_t   m_ArraySizeOrBitCount;
+        uint32_t   m_MemberCount;
+    };
+
+    static_assert(sizeof(Type) == 0x28, "AvalancheDataFormat Type alignment is wrong.");
+    static_assert(sizeof(TypeV3) == 0x60, "AvalancheDataFormat TypeV3 alignment is wrong.");
+
+    struct Instance {
+        uint32_t m_NameHash;
+        uint32_t m_TypeHash;
+        uint32_t m_PayloadOffset;
+        uint32_t m_PayloadSize;
+        uint64_t m_Name;
+    };
+
+    struct InstanceV3 {
+        uint32_t m_NameHash;
+        uint32_t m_TypeHash;
+        uint32_t m_PayloadOffset;
+        uint32_t m_PayloadSize;
+        char     m_Name[32];
+    };
+
+    static_assert(sizeof(Instance) == 0x18, "AvalancheDataFormat Instance alignment is wrong.");
+    static_assert(sizeof(InstanceV3) == 0x30, "AvalancheDataFormat InstanceV3 alignment is wrong.");
+
+    struct Member {
+        uint64_t m_Name;
+        uint32_t m_TypeHash;
+        uint32_t m_Align;
+        uint32_t m_Offset : 24;
+        uint32_t m_BitOffset : 8;
+        uint32_t m_Flags;
+        uint64_t m_DefaultValue;
+    };
+
+    struct MemberV3 {
+        char     m_Name[32];
+        uint32_t m_TypeHash;
+        uint32_t m_Align;
+        uint32_t m_Offset : 24;
+        uint32_t m_BitOffset : 8;
+        uint32_t m_Flags;
+        uint64_t m_DefaultValue;
+    };
+
+    static_assert(sizeof(Member) == 0x20, "AvalancheDataFormat Member alignment is wrong.");
+    static_assert(sizeof(MemberV3) == 0x38, "AvalancheDataFormat MemberV3 alignment is wrong.");
+
+    struct Enum {
+        uint64_t m_Name;
+        int32_t  m_Value;
+    };
+
+    struct EnumV3 {
+        char    m_Name[96];
+        int32_t m_Value;
+    };
+
+    static_assert(sizeof(Enum) == 0xC, "AvalancheDataFormat Enum alignment is wrong.");
+    static_assert(sizeof(EnumV3) == 0x64, "AvalancheDataFormat EnumV3 alignment is wrong.");
+
+    struct SInstanceInfo {
+        uint32_t    m_NameHash;
+        uint32_t    m_TypeHash;
+        const char* m_Name;
+        const void* m_Instance;
+        uint32_t    m_InstanceSize;
+    };
+
+    static_assert(sizeof(SInstanceInfo) == 0x1C, "SInstanceInfo alignment is wrong.");
+
+#if 0
     struct Header {
         uint32_t    m_Magic            = 0x41444620; // "ADF "
         uint32_t    m_Version          = 4;
@@ -571,6 +730,7 @@ namespace AvalancheDataFormat
     static_assert(sizeof(MemeberDefinition) == 0x20, "AvalancheDataFormat MemeberDefinition alignment is wrong!");
     static_assert(sizeof(InstanceInfo) == 0x18, "AvalancheDataFormat InstanceInfo alignment is wrong!");
     static_assert(sizeof(Enum) == 0xC, "AvalancheDataFormat Enum alignment is wrong!");
+#endif
 } // namespace AvalancheDataFormat
 
 template <typename T> inline static T ALIGN_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))

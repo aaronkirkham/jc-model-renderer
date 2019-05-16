@@ -733,11 +733,23 @@ VertexDeclaration_t* Renderer::CreateVertexDeclaration(const D3D11_INPUT_ELEMENT
     }
 
     auto declaration = new VertexDeclaration_t;
-    assert(declaration);
+    if (!declaration) {
+#ifdef DEBUG
+        SPDLOG_ERROR("Failed to create VertexDeclaration_t instance!");
+        __debugbreak();
+#endif
+        return nullptr;
+    }
 
-    auto result =
-        m_Device->CreateInputLayout(layout, count, shader->m_Code.data(), shader->m_Size, &declaration->m_Layout);
-    assert(SUCCEEDED(result));
+    const auto result =
+        m_Device->CreateInputLayout(layout, count, shader->m_Code, shader->m_Size, &declaration->m_Layout);
+    if (FAILED(result)) {
+#ifdef DEBUG
+        SPDLOG_ERROR("Failed to create input layout!");
+        __debugbreak();
+#endif
+        return nullptr;
+    }
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
     D3D_SET_OBJECT_NAME_A(declaration->m_Layout, debugName);
