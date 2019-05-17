@@ -6,6 +6,7 @@
 #include "../../factory.h"
 #include "../../graphics/types.h"
 
+#include "../jc4/types.h"
 #include "../types.h"
 
 class AvalancheArchive;
@@ -14,6 +15,13 @@ class AvalancheModelFormat;
 class IRenderBlock;
 
 #pragma pack(push, 8)
+struct SAmfBoundingBox {
+    float m_Min[3];
+    float m_Max[3];
+};
+
+static_assert(sizeof(SAmfBoundingBox) == 0x18, "SAmfBoundingBox alignment is wrong!");
+
 struct SAmfMaterial {
     uint32_t           m_Name;
     uint32_t           m_RenderBlockId;
@@ -31,43 +39,73 @@ struct SAmfModel {
 
 static_assert(sizeof(SAmfMaterial) == 0x28, "SAmfMaterial alignment is wrong!");
 static_assert(sizeof(SAmfModel) == 0x30, "SAmfModel alignment is wrong!");
-#pragma pack(pop)
 
-class AMFMesh
-{
-  private:
-    AvalancheModelFormat* m_Parent        = nullptr;
-    std::string           m_Name          = "";
-    std::string           m_RenderBlockId = "";
-    IRenderBlock*         m_RenderBlock   = nullptr;
-    BoundingBox           m_BoundingBox;
-
-  public:
-    AMFMesh(AvalancheModelFormat* parent);
-    virtual ~AMFMesh();
-
-    void InitBuffers(FileBuffer* vertices, FileBuffer* indices);
-
-    const std::string& GetName()
-    {
-        return m_Name;
-    }
-
-    IRenderBlock* GetRenderBlock()
-    {
-        return m_RenderBlock;
-    }
-
-    void SetBoundingBox(const BoundingBox& box)
-    {
-        m_BoundingBox = box;
-    }
-
-    BoundingBox* GetBoundingBox()
-    {
-        return &m_BoundingBox;
-    }
+struct SAmfSubMesh {
+    uint32_t        m_SubMeshId;
+    uint32_t        m_IndexCount;
+    uint32_t        m_IndexStreamOffset;
+    SAmfBoundingBox m_BoundingBox;
 };
+
+struct SAmfStreamAttribute {
+    jc4::EAmfUsage  m_Usage;
+    jc4::EAmfFormat m_Format;
+    char            m_StreamIndex;
+    char            m_StreamOffset;
+    char            m_StreamStride;
+    char            m_PackingData[8];
+};
+
+struct SAmfMesh {
+    uint32_t                      m_MeshTypeId;
+    uint32_t                      m_IndexCount;
+    uint32_t                      m_VertexCount;
+    int8_t                        m_IndexBufferIndex;
+    int8_t                        m_IndexBufferStride;
+    uint32_t                      m_IndexBufferOffset;
+    AdfArray<int8_t>              m_VertexBufferIndices;
+    AdfArray<int8_t>              m_VertexStreamStrides;
+    AdfArray<int32_t>             m_VertexStreamOffsets;
+    float                         m_TextureDensities[3];
+    SAdfDeferredPtr               m_MeshProperties;
+    AdfArray<int16_t>             m_BoneIndexLookup;
+    AdfArray<SAmfSubMesh>         m_SubMeshes;
+    AdfArray<SAmfStreamAttribute> m_StreamAttributes;
+};
+
+static_assert(sizeof(SAmfSubMesh) == 0x24, "SAmfSubMesh alignment is wrong!");
+static_assert(sizeof(SAmfStreamAttribute) == 0x14, "SAmfStreamAttribute alignment is wrong!");
+static_assert(sizeof(SAmfMesh) == 0x98, "SAmfMesh alignment is wrong!");
+
+struct SAmfLodGroup {
+    uint32_t           m_LODIndex;
+    AdfArray<SAmfMesh> m_Meshes;
+};
+
+struct SAmfMeshHeader {
+    SAmfBoundingBox        m_BoundingBox;
+    uint32_t               m_MemoryTag;
+    AdfArray<SAmfLodGroup> m_LodGroups;
+    uint32_t               m_HighLodPath;
+};
+
+static_assert(sizeof(SAmfLodGroup) == 0x18, "SAmfLodGroup alignment is wrong!");
+static_assert(sizeof(SAmfMeshHeader) == 0x38, "SAmfMeshHeader alignment is wrong!");
+
+struct SAmfBuffer {
+    AdfArray<int8_t> m_Data;
+    int8_t           m_CreateSRV : 1;
+};
+
+struct SAmfMeshBuffers {
+    uint32_t             m_MemoryTag;
+    AdfArray<SAmfBuffer> m_IndexBuffers;
+    AdfArray<SAmfBuffer> m_VertexBuffers;
+};
+
+static_assert(sizeof(SAmfBuffer) == 0x18, "SAmfBuffer alignment is wrong!");
+static_assert(sizeof(SAmfMeshBuffers) == 0x28, "SAmfMeshBuffers alignment is wrong!");
+#pragma pack(pop)
 
 class AvalancheModelFormat : public Factory<AvalancheModelFormat>
 {
@@ -80,12 +118,17 @@ class AvalancheModelFormat : public Factory<AvalancheModelFormat>
     std::shared_ptr<AvalancheDataFormat> m_MeshAdf;
     std::shared_ptr<AvalancheDataFormat> m_HighResMeshAdf;
 
-    std::vector<std::unique_ptr<AMFMesh>> m_Meshes;
-    BoundingBox                           m_BoundingBox;
+    SAmfModel*       m_AmfModel        = nullptr;
+    SAmfMeshHeader*  m_AmfMeshHeader   = nullptr;
+    SAmfMeshBuffers* m_LowMeshBuffers  = nullptr;
+    SAmfMeshBuffers* m_HighMeshBuffers = nullptr;
+
+    std::vector<IRenderBlock*> m_RenderBlocks;
+    BoundingBox                m_BoundingBox;
 
   public:
     AvalancheModelFormat(const std::filesystem::path& filename);
-    virtual ~AvalancheModelFormat() = default;
+    virtual ~AvalancheModelFormat();
 
     virtual std::string GetFactoryKey() const
     {
@@ -131,21 +174,9 @@ class AvalancheModelFormat : public Factory<AvalancheModelFormat>
         return m_HighResMeshAdf.get();
     }
 
-    const std::vector<std::unique_ptr<AMFMesh>>& GetMeshes()
+    const std::vector<IRenderBlock*>& GetRenderBlocks()
     {
-        return m_Meshes;
-    }
-
-    std::vector<IRenderBlock*> GetRenderBlocks()
-    {
-        std::vector<IRenderBlock*> result;
-        result.reserve(m_Meshes.size());
-
-        for (const auto& mesh : m_Meshes) {
-            result.emplace_back(mesh->GetRenderBlock());
-        }
-
-        return result;
+        return m_RenderBlocks;
     }
 
     BoundingBox* GetBoundingBox()

@@ -4,6 +4,82 @@
 
 namespace jc4
 {
+
+static constexpr uint32_t CHARACTER_CONSTANTS      = 0x25970695;
+static constexpr uint32_t CHARACTER_EYES_CONSTANTS = 0x1BAC0639;
+static constexpr uint32_t CHARACTER_HAIR_CONSTANTS = 0x342303CE;
+static constexpr uint32_t CHARACTER_SKIN_CONSTANTS = 0xD8749464;
+
+#pragma pack(push, 8)
+struct SCharacterConstants {
+    float    m_DetailTilingFactorUV[2];
+    float    m_DecalBlendFactors[2];
+    float    m_RoughnessModulator;
+    float    m_MetallicModulator;
+    float    m_DielectricReflectance;
+    float    m_DiffuseRoughness;
+    float    m_SpecularAniso;
+    float    m_Transmission;
+    float    m_EmissiveIntensity;
+    float    m_DirtFactor;
+    uint32_t m_DoubleSided : 1;
+    uint32_t m_AlphaTest : 1;
+    uint32_t m_AlphaBlending : 1;
+    uint32_t m_UseDetail : 1;
+    uint32_t m_UseDecal : 1;
+    uint32_t m_UseTint : 1;
+    uint32_t m_UseTintSoftBlend : 1;
+    uint32_t m_UseWrinkleMap : 1;
+    uint32_t m_UseCustomEmissiveHue : 1;
+    uint32_t m_UseMPMChannelInput : 1;
+    uint32_t m_UseCustomDiffuseRoughness : 1;
+    uint32_t m_UseSpecularAniso : 1;
+    uint32_t m_UseTransmission : 1;
+};
+
+struct SEyeGlossConstants {
+    float    m_EyeGlossiness;
+    float    m_EyeSpecularIntensity;
+    float    m_EyeReflectIntensity;
+    float    m_EyeReflectThreshold;
+    float    m_EyeGlossShadowIntensity;
+    uint16_t m_CustomEyeReflectionCube : 1;
+};
+
+struct SHairConstants {
+    float    m_RoughnessModulator;
+    float    m_SpecularMultiplier;
+    float    m_ScatteringMultiplier;
+    float    m_ShiftFactor;
+    float    m_DielectricReflectance;
+    uint16_t m_DoubleSided : 1;
+    uint16_t m_AlphaTest : 1;
+    uint16_t m_AlphaBlending : 1;
+};
+
+struct SCharacterSkinConstants {
+    float    m_DetailTilingFactorUV[2];
+    float    m_RoughnessModulator;
+    float    m_TransmissionModulator;
+    float    m_DiffuseRoughness;
+    float    m_Transmission;
+    float    m_DirtFactor;
+    float    m_FurLength;
+    float    m_FurThickness;
+    float    m_FurRoughness;
+    float    m_FurGravity;
+    float    m_FurSize;
+    uint16_t m_DoubleSided : 1;
+    uint16_t m_UseAlphaMask : 1;
+    uint16_t m_UseWrinkleMap : 1;
+    uint16_t m_UseFur : 1;
+    uint16_t m_UseMPMChannelInput : 1;
+    uint16_t m_UseCustomDiffuseRoughness : 1;
+    uint16_t m_UseTransmission : 1;
+    uint16_t m_HeadMaterial : 1;
+};
+#pragma pack(pop)
+
 class RenderBlockCharacter : public IRenderBlock
 {
   private:
@@ -96,17 +172,54 @@ class RenderBlockCharacter : public IRenderBlock
         return true;
     }
 
-    virtual void Create(FileBuffer* vertices, FileBuffer* indices) override final
+    virtual void Load(SAdfDeferredPtr* constants) override final
+    {
+#if 0
+        SCharacterAttribute attributes{};
+
+        if (constants->m_Type == CHARACTER_CONSTANTS) {
+            auto character_constants = (SCharacterConstants*)constants->m_Ptr;
+            __debugbreak();
+        } else if (constants->m_Type == CHARACTER_EYES_CONSTANTS) {
+            auto eye_constants = (SEyeGlossConstants*)constants->m_Ptr;
+
+            attributes.m_Flags = 0x10000;
+            /*v14->attributes.flags = (*(_eye_consts + 10) & 1 | 0x200) << 7;*/
+            attributes.m_EyeGlossiness           = eye_constants->m_EyeGlossiness;
+            attributes.m_EyeSpecularIntensity    = eye_constants->m_EyeSpecularIntensity;
+            attributes.m_EyeReflectIntensity     = eye_constants->m_EyeReflectIntensity;
+            attributes.m_EyeReflectThreshold     = eye_constants->m_EyeReflectThreshold;
+            attributes.m_EyeGlossShadowIntensity = eye_constants->m_EyeGlossShadowIntensity;
+
+            __debugbreak();
+        } else if (constants->m_Type == CHARACTER_HAIR_CONSTANTS) {
+            auto hair_constants = (SHairConstants*)constants->m_Ptr;
+
+            attributes.m_Flags = 0x20000;
+
+            __debugbreak();
+        } else if (constants->m_Type == CHARACTER_SKIN_CONSTANTS) {
+            auto skin_constants = (SCharacterSkinConstants*)constants->m_Ptr;
+
+            attributes.m_DirtFactor = skin_constants->m_DirtFactor;
+            attributes.m_FurLength  = skin_constants->m_FurLength;
+            attributes.m_FurGravity = skin_constants->m_FurGravity;
+
+            __debugbreak();
+        }
+#endif
+    }
+
+    virtual void Create(IBuffer_t* vertex_buffer, IBuffer_t* index_buffer) override final
     {
         using namespace jc::Vertex::RenderBlockCharacter;
 
-        // TODO: use the correct buffer strides from the meshc.
+        m_VertexBuffer = vertex_buffer;
+        m_IndexBuffer  = index_buffer;
 
-        // init buffers
-        m_VertexBuffer = Renderer::Get()->CreateBuffer(vertices->data(), (vertices->size() / sizeof(Packed4Bones1UV)),
-                                                       sizeof(Packed4Bones1UV), VERTEX_BUFFER);
-        m_IndexBuffer  = Renderer::Get()->CreateBuffer(indices->data(), (indices->size() / sizeof(uint16_t)),
-                                                      sizeof(uint16_t), INDEX_BUFFER);
+#ifdef DEBUG
+        assert(vertex_buffer->m_ElementStride == sizeof(Packed4Bones1UV));
+#endif
 
         // TODO: get stride! (we should pass IBuffer_t* to the Create() function and read the element stride from it)
         {

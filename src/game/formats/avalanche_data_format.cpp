@@ -93,24 +93,30 @@ void AvalancheDataFormat::ReadInstance(uint32_t name_hash, uint32_t type_hash, v
         return;
     }
 
-    const auto instance_buffer  = &m_Buffer[header_out.m_FirstInstanceOffset];
-    auto       current_instance = (Instance*)instance_buffer;
+    // find the instance
+    Instance* current_instance = nullptr;
+    auto      instance_buffer  = &m_Buffer[header_out.m_FirstInstanceOffset];
     for (uint32_t i = 0; i < header_out.m_InstanceCount; ++i) {
-        if (current_instance->m_NameHash == name_hash) {
+        current_instance = (Instance*)instance_buffer;
+        if (current_instance->m_NameHash == name_hash && current_instance->m_TypeHash == type_hash) {
             break;
         }
 
-        current_instance += ((header_out.m_Version > 3) ? sizeof(Instance) : sizeof(InstanceV3));
+        instance_buffer += ((header_out.m_Version > 3) ? sizeof(Instance) : sizeof(InstanceV3));
     }
 
-    if (current_instance->m_NameHash != name_hash) {
+    if (!current_instance) {
+#ifdef DEBUG
+        SPDLOG_ERROR("Can't find instance with name hash {:x} and type hash {:x}", name_hash, type_hash);
+        __debugbreak();
+#endif
         return;
     }
 
     const auto type = FindType(current_instance->m_TypeHash);
     const auto name = m_Strings[current_instance->m_Name];
 
-    SPDLOG_INFO("Reading instance {}...", name);
+    SPDLOG_INFO("Reading instance \"{}\"...", name);
 
     auto payload = &m_Buffer[current_instance->m_PayloadOffset];
 
@@ -240,7 +246,7 @@ void AvalancheDataFormat::ParseTypes(const char* data, uint64_t data_size)
                 goto NEXT_TYPE;
             }
 
-            SPDLOG_INFO("Adding type \"{}\"...", name);
+            SPDLOG_TRACE("Adding type \"{}\"...", name);
 
             // copy the type (and members)
             {

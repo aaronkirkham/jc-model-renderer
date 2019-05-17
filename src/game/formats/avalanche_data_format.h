@@ -16,12 +16,11 @@ static constexpr const char* ADF_BUILTIN_TYPE_NAMES[12] = {"uint8",  "int8",  "u
 class AvalancheDataFormat : public Factory<AvalancheDataFormat>
 {
   private:
-    std::filesystem::path                           m_Filename;
-    FileBuffer                                      m_Buffer;
-    std::vector<jc::AvalancheDataFormat::Type*>     m_Types;
-    std::vector<jc::AvalancheDataFormat::Instance*> m_Instances;
-    std::vector<const char*>                        m_Strings;
-    std::map<uint32_t, const char*>                 m_StringHashes;
+    std::filesystem::path                       m_Filename;
+    FileBuffer                                  m_Buffer;
+    std::vector<jc::AvalancheDataFormat::Type*> m_Types;
+    std::vector<const char*>                    m_Strings;
+    std::map<uint32_t, const char*>             m_StringHashes;
 
     void        AddBuiltInType(jc::AvalancheDataFormat::EAdfType type, jc::AvalancheDataFormat::ScalarType scalar_type,
                                uint32_t size, uint32_t type_index, uint16_t flags);

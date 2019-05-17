@@ -24,6 +24,8 @@
 #include "../game/irenderblock.h"
 #include "../game/render_block_factory.h"
 
+#include "../game/jc4/renderblocks/irenderblock.h"
+
 #include "../game/hashlittle.h"
 
 #include "../import_export/import_export_manager.h"
@@ -512,9 +514,10 @@ void UI::RenderMenuBar()
                             Camera::Get()->FocusOn(model.second->GetBoundingBox());
                         }*/
 
-                        for (const auto& mesh : model.second->GetMeshes()) {
-                            if (ImGui::MenuItem(mesh->GetName().c_str())) {
-                                Camera::Get()->FocusOn(mesh->GetBoundingBox());
+                        for (const auto& render_block : model.second->GetRenderBlocks()) {
+                            const auto& name = ((jc4::IRenderBlock*)render_block)->m_Name;
+                            if (ImGui::MenuItem(name)) {
+                                // Camera::Get()->FocusOn(mesh->GetBoundingBox());
                             }
                         }
                     }
@@ -917,24 +920,24 @@ void UI::RenderModelsTab_AMF()
             RenderContextMenu(filename_with_path);
 
             if (open) {
-                const auto& meshes = (*it).second->GetMeshes();
+                const auto& render_blocks = (*it).second->GetRenderBlocks();
 
-                if (meshes.size() == 0) {
+                if (render_blocks.size() == 0) {
                     static auto red = ImVec4{1, 0, 0, 1};
                     ImGui::TextColored(red, "This model doesn't have any Render Blocks!");
                 }
 
                 uint32_t index = 0;
-                for (const auto& mesh : meshes) {
+                for (const auto& render_block : render_blocks) {
                     // unique id
-                    std::string label(mesh->GetName());
+                    std::string label(((jc4::IRenderBlock*)render_block)->m_Name);
                     label.append("##" + filename + "-" + std::to_string(index));
 
                     // current block header
                     const auto tree_open = ImGui::TreeNode(label.c_str());
                     if (tree_open) {
                         // draw model attributes ui
-                        mesh->GetRenderBlock()->DrawUI();
+                        render_block->DrawUI();
 
                         ImGui::TreePop();
                     }
