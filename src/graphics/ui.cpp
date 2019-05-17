@@ -631,7 +631,7 @@ void UI::RenderSceneView(const glm::vec2& window_size)
         if (const auto payload = UI::Get()->GetDropPayload()) {
             for (const auto& file : payload->data) {
                 if (!std::filesystem::is_directory(file)) {
-                    FileLoader::Get()->ReadFileFromDisk(file);
+                    FileLoader::Get()->ReadFileFromDiskAndRunHandlers(file);
                 }
             }
         }

@@ -29,7 +29,6 @@ class AvalancheDataFormat : public Factory<AvalancheDataFormat>
     bool        ParseHeader(jc::AvalancheDataFormat::Header* data, uint64_t data_size,
                             jc::AvalancheDataFormat::Header* header_out, bool* byte_swap_out);
     const char* GetInstanceNameFromStrings(const char* string_lengths, const char* strings, uint64_t string_index);
-    // const char* GetStringFromHash(const char* string_hashes, uint32_t string_hash_count, uint64_t hash);
     jc::AvalancheDataFormat::Type* FindType(uint32_t type_hash);
 
   public:

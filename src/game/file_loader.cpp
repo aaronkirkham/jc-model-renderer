@@ -440,27 +440,43 @@ void FileLoader::RunFileBatches() noexcept
     }).detach();
 }
 
-void FileLoader::ReadFileFromDisk(const std::filesystem::path& filename) noexcept
+void FileLoader::ReadFileFromDisk(const std::filesystem::path& filename, ReadFileResultCallback callback)
+{
+    std::thread([&, filename, callback] {
+        if (!std::filesystem::exists(filename)) {
+            SPDLOG_ERROR("Input file doesn't exists. \"{}\"", filename.string());
+            return callback(false, {});
+        }
+
+        std::ifstream stream(filename, std::ios::binary);
+        if (stream.fail()) {
+            SPDLOG_ERROR("Failed to create file stream!");
+            return callback(false, {});
+        }
+
+        // read the file
+        const auto size = std::filesystem::file_size(filename);
+        FileBuffer buffer(size);
+        stream.read((char*)buffer.data(), size);
+        stream.close();
+
+        return callback(true, std::move(buffer));
+    }).detach();
+}
+
+void FileLoader::ReadFileFromDiskAndRunHandlers(const std::filesystem::path& filename)
 {
     const auto& extension = filename.extension().string();
 
     // do we have a registered callback for this file type?
     if (m_FileReadHandlers.find(extension) != m_FileReadHandlers.end()) {
-        const auto size = std::filesystem::file_size(filename);
-
-        FileBuffer data;
-        data.resize(size);
-
-        // read the file
-        std::ifstream stream(filename, std::ios::binary);
-        assert(!stream.fail());
-        stream.read((char*)data.data(), size);
-        stream.close();
-
-        // run the callback handlers
-        for (const auto& fn : m_FileReadHandlers[extension]) {
-            fn(filename.filename(), data, true);
-        }
+        ReadFileFromDisk(filename, [&, filename, extension](bool success, FileBuffer data) {
+            if (success) {
+                for (const auto& fn : m_FileReadHandlers[extension]) {
+                    fn(filename.filename(), std::move(data), true);
+                }
+            }
+        });
     } else {
         SPDLOG_ERROR("Unknown file type extension \"{}\"", filename.filename().string());
 
@@ -999,31 +1015,6 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
     root_container->GenerateBetterNames();
 
     return root_container;
-}
-
-std::shared_ptr<AvalancheDataFormat> FileLoader::ReadAdf(const std::filesystem::path& filename) noexcept
-{
-    if (!std::filesystem::exists(filename)) {
-        SPDLOG_ERROR("Input file doesn't exist!");
-        return nullptr;
-    }
-
-    std::ifstream stream(filename, std::ios::binary);
-    if (stream.fail()) {
-        SPDLOG_ERROR("Failed to open file stream!");
-        return nullptr;
-    }
-
-    const auto size = std::filesystem::file_size(filename);
-
-    FileBuffer data;
-    data.resize(size);
-    stream.read((char*)data.data(), size);
-    stream.close();
-
-    // parse the adf file
-    const auto adf = AvalancheDataFormat::make(filename, data);
-    return std::move(adf);
 }
 
 std::tuple<AvalancheArchive*, ArchiveEntry_t> FileLoader::GetStreamArchiveFromFile(const std::filesystem::path& file,

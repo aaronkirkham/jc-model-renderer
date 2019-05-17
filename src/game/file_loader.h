@@ -83,7 +83,8 @@ class FileLoader : public Singleton<FileLoader>
     void ReadFileBatched(const std::filesystem::path& filename, ReadFileResultCallback callback) noexcept;
     void RunFileBatches() noexcept;
 
-    void ReadFileFromDisk(const std::filesystem::path& filename) noexcept;
+    void ReadFileFromDisk(const std::filesystem::path& filename, ReadFileResultCallback callback);
+    void ReadFileFromDiskAndRunHandlers(const std::filesystem::path& filename);
 
     // archives
     bool ReadArchiveTable(const std::filesystem::path& filename, std::vector<TabFileEntry>* output,
@@ -109,9 +110,6 @@ class FileLoader : public Singleton<FileLoader>
     // runtime containers
     std::shared_ptr<RuntimeContainer> ParseRuntimeContainer(const std::filesystem::path& filename,
                                                             const FileBuffer&            buffer) noexcept;
-
-    // adf
-    std::shared_ptr<AvalancheDataFormat> ReadAdf(const std::filesystem::path& filename) noexcept;
 
     // dictionary lookup
     inline bool            HasFileInDictionary(uint32_t name_hash) noexcept;
