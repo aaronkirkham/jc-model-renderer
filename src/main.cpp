@@ -334,9 +334,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 for (const auto& model : AvalancheModelFormat::Instances) {
                     // bounding boxes
                     if (g_DrawBoundingBoxes) {
-                        for (const auto& mesh : model.second->GetMeshes()) {
-                            UI::Get()->DrawBoundingBox(*mesh->GetBoundingBox(), red);
-                        }
+                        UI::Get()->DrawBoundingBox(*model.second->GetBoundingBox(), red);
                     }
                 }
             } else {

@@ -4,7 +4,6 @@
 
 namespace jc4
 {
-
 static constexpr uint32_t CHARACTER_CONSTANTS      = 0x25970695;
 static constexpr uint32_t CHARACTER_EYES_CONSTANTS = 0x1BAC0639;
 static constexpr uint32_t CHARACTER_HAIR_CONSTANTS = 0x342303CE;
