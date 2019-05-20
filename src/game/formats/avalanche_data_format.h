@@ -19,21 +19,22 @@ class AvalancheDataFormat : public Factory<AvalancheDataFormat>
     std::filesystem::path                       m_Filename;
     FileBuffer                                  m_Buffer;
     std::vector<jc::AvalancheDataFormat::Type*> m_Types;
-    std::vector<const char*>                    m_Strings;
-    std::map<uint32_t, const char*>             m_StringHashes;
+    std::vector<std::string>                    m_Strings;
+    std::map<uint32_t, std::string>             m_StringHashes;
 
     void        AddBuiltInType(jc::AvalancheDataFormat::EAdfType type, jc::AvalancheDataFormat::ScalarType scalar_type,
                                uint32_t size, uint32_t type_index, uint16_t flags);
     void        ParseTypes(const char* data, uint64_t data_size);
     void        LoadTypeLibraries();
     bool        ParseHeader(jc::AvalancheDataFormat::Header* data, uint64_t data_size,
-                            jc::AvalancheDataFormat::Header* header_out, bool* byte_swap_out);
+                            jc::AvalancheDataFormat::Header* header_out, bool* byte_swap_out,
+                            const char** description_out = nullptr);
     const char* GetInstanceNameFromStrings(const char* string_lengths, const char* strings, uint64_t string_index);
     jc::AvalancheDataFormat::Type* FindType(uint32_t type_hash);
 
   public:
     AvalancheDataFormat(const std::filesystem::path& file, const FileBuffer& buffer);
-    virtual ~AvalancheDataFormat() = default;
+    virtual ~AvalancheDataFormat();
 
     virtual std::string GetFactoryKey() const
     {
@@ -50,7 +51,7 @@ class AvalancheDataFormat : public Factory<AvalancheDataFormat>
             return "";
         }
 
-        return it->second;
+        return it->second.c_str();
     }
 
     static void ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);

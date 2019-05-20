@@ -37,6 +37,13 @@ AvalancheDataFormat::AvalancheDataFormat(const std::filesystem::path& filename, 
     LoadTypeLibraries();
 }
 
+AvalancheDataFormat::~AvalancheDataFormat()
+{
+    for (auto& type : m_Types) {
+        std::free(type);
+    }
+}
+
 void AvalancheDataFormat::GetInstance(uint32_t index, jc::AvalancheDataFormat::SInstanceInfo* instance_info)
 {
     using namespace jc::AvalancheDataFormat;
@@ -56,7 +63,7 @@ void AvalancheDataFormat::GetInstance(uint32_t index, jc::AvalancheDataFormat::S
 
     if (header_out.m_Version > 3) {
         instance = (Instance*)&m_Buffer[sizeof(Instance) * index + header_out.m_FirstInstanceOffset];
-        name     = m_Strings[instance->m_Name];
+        name     = m_Strings[instance->m_Name].c_str();
     } else {
 #ifdef _DEBUG
         __debugbreak();
@@ -124,16 +131,19 @@ void AvalancheDataFormat::ReadInstance(uint32_t name_hash, uint32_t type_hash, v
     const auto mem = std::malloc(current_instance->m_PayloadSize);
     std::memcpy(mem, payload, current_instance->m_PayloadSize);
 
-    // fix the relative offsets to the data
-    int64_t v70 = 0;
-    int64_t v72 = 0;
-    for (auto j = *(uint32_t*)&payload[current_instance->m_PayloadSize]; j;
-         *(uint64_t*)((unsigned int)(v70 - 4) + (uint64_t)mem) = (uint64_t)mem + v72) {
-        v70 = (unsigned int)(j + v70);
-        j   = *(uint32_t*)(v70 + (uint64_t)mem);
-        v72 = *(uint32_t*)((uint32_t)(v70 - 4) + (uint64_t)mem);
-        if ((uint32_t)v72 == 1)
+    // adjust the relative offsets
+    uint64_t current_offset = 0;
+    uint64_t v72            = 0;
+    for (auto size = *(uint32_t*)&payload[current_instance->m_PayloadSize]; size;
+         *(uint64_t*)((uint32_t)(current_offset - 4) + (uint64_t)mem) = (uint64_t)mem + v72) {
+
+        current_offset = (current_offset + size);
+        size           = *(uint32_t*)(current_offset + (uint64_t)mem);
+        v72            = *(uint32_t*)((uint32_t)(current_offset - 4) + (uint64_t)mem);
+
+        if (v72 == 1) {
             v72 = 0;
+        }
     }
 
     *out_instance = mem;
@@ -174,7 +184,7 @@ void AvalancheDataFormat::AddBuiltInType(jc::AvalancheDataFormat::EAdfType   typ
     def->m_Size                = size;
     def->m_Align               = alignment;
     def->m_TypeHash            = type_hash;
-    def->m_Name                = -1; // name;
+    def->m_Name                = -1;
     def->m_Flags               = flags;
     def->m_ScalarType          = scalar_type;
     def->m_SubTypeHash         = 0;
@@ -219,10 +229,10 @@ void AvalancheDataFormat::ParseTypes(const char* data, uint64_t data_size)
     uint32_t             idx = 0;
     for (uint32_t i = 0; i < header_out.m_StringCount; ++i) {
         const auto size = string_lens[i] + 1;
-        auto       name = new char[size];
-        strcpy_s(name, size, &strings_buffer[header_out.m_StringCount + idx]);
+        auto       name = std::unique_ptr<char[]>(new char[size]);
+        strcpy_s(name.get(), size, &strings_buffer[header_out.m_StringCount + idx]);
 
-        m_Strings.emplace_back(std::move(name));
+        m_Strings.emplace_back(name.get());
         idx += size;
     }
 
@@ -251,10 +261,10 @@ void AvalancheDataFormat::ParseTypes(const char* data, uint64_t data_size)
             // copy the type (and members)
             {
                 auto type = std::malloc(size);
-                memcpy(type, current_type, size);
+                std::memcpy(type, current_type, size);
 
                 const auto it = std::find_if(m_Strings.begin(), m_Strings.end(),
-                                             [&](const char* str) { return !strcmp(str, name); });
+                                             [name](const std::string& str) { return str == name; });
 
                 // adjust the type name index
                 const auto _cast_type = (Type*)type;
@@ -272,7 +282,7 @@ void AvalancheDataFormat::ParseTypes(const char* data, uint64_t data_size)
                         &data[header_out.m_FirstStringDataOffset],
                         &data[header_out.m_FirstStringDataOffset + header_out.m_StringCount], name_index);
                     const auto it = std::find_if(m_Strings.begin(), m_Strings.end(),
-                                                 [&](const char* string) { return !strcmp(string, name); });
+                                                 [name](const std::string& str) { return str == name; });
 
                     // update the new string index
                     *(uint64_t*)ptr = std::distance(m_Strings.begin(), it);
@@ -319,7 +329,8 @@ void AvalancheDataFormat::LoadTypeLibraries()
 }
 
 bool AvalancheDataFormat::ParseHeader(jc::AvalancheDataFormat::Header* data, uint64_t data_size,
-                                      jc::AvalancheDataFormat::Header* header_out, bool* byte_swap_out)
+                                      jc::AvalancheDataFormat::Header* header_out, bool* byte_swap_out,
+                                      const char** description_out)
 {
     if (data_size < 24) {
 #ifdef DEBUG
@@ -381,6 +392,10 @@ bool AvalancheDataFormat::ParseHeader(jc::AvalancheDataFormat::Header* data, uin
             header_out->m_Flags                 = data->m_Flags;
             header_out->m_IncludedLibraries     = data->m_IncludedLibraries;
             header_out->m_Description           = data->m_Description;
+
+            if (description_out && data->m_Description) {
+                *description_out = (const char*)&data->m_Description;
+            }
             return true;
         }
     }
