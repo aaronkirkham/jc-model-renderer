@@ -1,4 +1,4 @@
-; 163/504 (32%)
+; 180/523 (34%)
 ai/aisystem.aisystunec
 ai/aivision.aisystunec
 ai/awareness.aisystunec
@@ -13,6 +13,16 @@ climate/zone_0/vegetation_set_0.bin
 climate/zone_0/vegetation_types_0.bin
 effects/allflipbooks.flipbookc
 environment/base.environc
+environment/presets/alpine01.environc
+environment/presets/desert01.environc
+environment/presets/frontlines.environc
+environment/presets/illapa_core.environc
+environment/presets/pit_prison.environc
+environment/presets/rainforest01.environc
+environment/weather/interior01.environc
+environment/weather/sandstorm.environc
+environment/weather/thunderstorm.environc
+environment/weather/tornado.environc
 input/input.inputc
 input/keymap.inputc
 online/onlinestatistics.statisticsc
@@ -89,6 +99,10 @@ textures/color_curves/clut_alpine01.ddsc
 textures/color_curves/clut_desert01.ddsc
 textures/color_curves/clut_grasslands01.ddsc
 textures/color_curves/clut_rainforest01.ddsc
+textures/color_curves/color_correction_calibration_v01.ddsc
+textures/genericenvcube_dif.ddsc
+textures/lens_dirt.ddsc
+textures/roads/runway/runway_markings_01.ddsc
 textures/system/jet_cloak_normals.ddsc
 textures/system/jet_cloak_transition.ddsc
 textures/ui/load/24.ddsc
@@ -99,14 +113,16 @@ textures/ui/vehicle_icons/v018_car_monstertruck_civilian.ddsc
 textures/water/water_mod.ddsc
 ui/art.backer.popup.retract.ddsc
 ui/art.backer.popup.speed.ddsc
-ui/art.campaign.medium.illapa.ddsc
+ui/art.campaign.medium.homefront.ddsc
 ui/art.campaign.medium.sandstorm.ddsc
+ui/art.content_transition.garland.ddsc
 ui/art.location.type.natural.ddsc
 ui/art.playstation.ps4logo.ddsc
 ui/available_content.gfx
 ui/comm_link.gfx
 ui/comm_link_background.gfx
 ui/comm_map.gfx
+ui/comm_map_i6.ddsc
 ui/comm_navigation.gfx
 ui/comm_weapons.art.wpn_204_mortar_mounted.ddsc
 ui/comm_weapons.art.wpn_250_character_cannon_smallicon.ddsc
@@ -126,6 +142,7 @@ ui/hud_bottom_left.gfx
 ui/hud_bottom_middle.gfx
 ui/hud_bottom_middle_i33.ddsc
 ui/hud_center.gfx
+ui/hud_center_i1.ddsc
 ui/hud_objective.gfx
 ui/hud_poi.gfx
 ui/hud_preorder_wingsuit.gfx
