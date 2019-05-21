@@ -39,7 +39,7 @@ class IImportExporter
     virtual void Export(const std::filesystem::path& filename, const std::filesystem::path& to,
                         ExportFinishedCallback callback = {})                                        = 0;
 
-    bool WriteBufferToFile(const std::filesystem::path& file, const FileBuffer* buffer) noexcept
+    bool WriteBufferToFile(const std::filesystem::path& file, const FileBuffer* buffer)
     {
         // create the directories for the file
         std::filesystem::create_directories(file.parent_path());

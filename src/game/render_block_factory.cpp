@@ -12,16 +12,18 @@
 #include "jc3/renderblocks/renderblockprop.h"
 #include "jc3/renderblocks/renderblockwindow.h"
 
+#include "jc4/renderblocks/renderblockcarpaint.h"
 #include "jc4/renderblocks/renderblockcharacter.h"
 
 #include "hashlittle.h"
-
-extern bool g_IsJC4Mode;
 
 IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type, bool jc4)
 {
     if (jc4) {
         switch (type) {
+            case 0xCD931E75:
+                return new jc4::RenderBlockCarPaint;
+
             case RB_CHARACTER:
             case RB_CHARACTERSKIN:
                 return new jc4::RenderBlockCharacter;

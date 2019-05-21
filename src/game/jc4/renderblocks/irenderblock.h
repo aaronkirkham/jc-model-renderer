@@ -10,7 +10,7 @@ class IRenderBlock : public ::IRenderBlock
     // TODO: temp hack. do something else.
     const char* m_Name = "";
 
-    virtual void Load(SAdfDeferredPtr* constants)                          = 0;
-    virtual void Create(IBuffer_t* vertex_buffer, IBuffer_t* index_buffer) = 0;
+    virtual void Load(SAdfDeferredPtr* constants)                                                      = 0;
+    virtual void Create(const std::string& type_id, IBuffer_t* vertex_buffer, IBuffer_t* index_buffer) = 0;
 };
 } // namespace jc4

@@ -184,7 +184,9 @@ class RenderBlockCarPaintMM : public IRenderBlock
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(),
                                                                            "RenderBlockCarPaintMM (deform)");
         } else if (m_ShaderName == "carpaintmm_skinned") {
+#ifdef DEBUG
             __debugbreak();
+#endif
 
             /*
                 POSITION, 0, DXGI_FORMAT_R32G32B32_FLOAT, 		0, 0, 0, 0

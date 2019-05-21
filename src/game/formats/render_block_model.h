@@ -38,8 +38,8 @@ class RenderBlockModel : public Factory<RenderBlockModel>
     static void Load(const std::filesystem::path& filename);
     static void LoadFromRuntimeContainer(const std::filesystem::path& filename, std::shared_ptr<RuntimeContainer> rc);
 
-    bool ParseLOD(const FileBuffer& data);
-    bool ParseRBM(const FileBuffer& data, bool add_to_render_list = true);
+    bool ParseLOD(const FileBuffer& buffer);
+    bool ParseRBM(const FileBuffer& buffer, bool add_to_render_list = true);
 
     inline static bool                     LoadingFromRuntimeContainer = false;
     inline static std::vector<std::string> SuppressedWarnings;

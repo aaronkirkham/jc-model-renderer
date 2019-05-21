@@ -70,7 +70,7 @@ class IRenderBlock
 
         if (m_IndexBuffer) {
             context->m_Renderer->DrawIndexed(0, m_IndexBuffer->m_ElementCount, m_IndexBuffer);
-        } else {
+        } else if (m_VertexBuffer) {
             context->m_Renderer->Draw(0, (m_VertexBuffer->m_ElementCount / 3));
         }
     }

@@ -133,7 +133,7 @@ class RenderBlockCharacter : public jc3::IRenderBlock
             (m_Block.attributes.flags & BODY_PART) != HAIR ? "character" : "characterhair_msk");
 
         switch (m_Stride) {
-                // 4bones1uv
+                // Packed4Bones1UV
             case 0: {
                 m_VertexShader = ShaderManager::Get()->GetVertexShader("character");
 
@@ -149,12 +149,12 @@ class RenderBlockCharacter : public jc3::IRenderBlock
                 // clang-format on
 
                 // create the vertex declaration
-                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(),
-                                                                               "RenderBlockCharacter (4bones1uv)");
+                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(
+                    inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacter (Packed4Bones1UV)");
                 break;
             }
 
-                // 4bones2uvs
+                // Packed4Bones2UVs
             case 1: {
                 m_VertexShader = ShaderManager::Get()->GetVertexShader("character2uvs");
 
@@ -170,12 +170,12 @@ class RenderBlockCharacter : public jc3::IRenderBlock
                 // clang-format on
 
                 // create the vertex declaration
-                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(),
-                                                                               "RenderBlockCharacter (4bones2uvs)");
+                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(
+                    inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacter (Packed4Bones2UVs)");
                 break;
             }
 
-                // 4bones3uvs
+                // Packed4Bones3UVs
             case 2: {
                 m_VertexShader = ShaderManager::Get()->GetVertexShader("character3uvs");
 
@@ -192,12 +192,12 @@ class RenderBlockCharacter : public jc3::IRenderBlock
                 // clang-format on
 
                 // create the vertex declaration
-                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(),
-                                                                               "RenderBlockCharacter (4bones3uvs)");
+                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(
+                    inputDesc, 6, m_VertexShader.get(), "RenderBlockCharacter (Packed4Bones3UVs)");
                 break;
             }
 
-                // 8bones1uv
+                // Packed8Bones1UV
             case 3: {
                 m_VertexShader = ShaderManager::Get()->GetVertexShader("character8");
 
@@ -215,12 +215,12 @@ class RenderBlockCharacter : public jc3::IRenderBlock
                 // clang-format on
 
                 // create the vertex declaration
-                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(),
-                                                                               "RenderBlockCharacter (8bones1uv)");
+                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(
+                    inputDesc, 7, m_VertexShader.get(), "RenderBlockCharacter (Packed8Bones1UV)");
                 break;
             }
 
-                // 8bones2uvs
+                // Packed8Bones2UVs
             case 4: {
                 m_VertexShader = ShaderManager::Get()->GetVertexShader("character82uvs");
 
@@ -238,12 +238,12 @@ class RenderBlockCharacter : public jc3::IRenderBlock
                 // clang-format on
 
                 // create the vertex declaration
-                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(),
-                                                                               "RenderBlockCharacter (8bones3uvs)");
+                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(
+                    inputDesc, 7, m_VertexShader.get(), "RenderBlockCharacter (Packed8Bones2UVs)");
                 break;
             }
 
-                // 8bones3uvs
+                // Packed8Bones3UVs
             case 5: {
                 m_VertexShader = ShaderManager::Get()->GetVertexShader("character83uvs");
 
@@ -262,8 +262,8 @@ class RenderBlockCharacter : public jc3::IRenderBlock
                 // clang-format on
 
                 // create the vertex declaration
-                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 8, m_VertexShader.get(),
-                                                                               "RenderBlockCharacter (8bones3uvs)");
+                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(
+                    inputDesc, 8, m_VertexShader.get(), "RenderBlockCharacter (Packed8Bones3UVs)");
                 break;
             }
         }

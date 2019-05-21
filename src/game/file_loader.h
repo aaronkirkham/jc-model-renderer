@@ -79,43 +79,43 @@ class FileLoader : public Singleton<FileLoader>
     void Init();
     void Shutdown();
 
-    void ReadFile(const std::filesystem::path& filename, ReadFileResultCallback callback, uint8_t flags = 0) noexcept;
-    void ReadFileBatched(const std::filesystem::path& filename, ReadFileResultCallback callback) noexcept;
-    void RunFileBatches() noexcept;
+    void ReadFile(const std::filesystem::path& filename, ReadFileResultCallback callback, uint8_t flags = 0);
+    void ReadFileBatched(const std::filesystem::path& filename, ReadFileResultCallback callback);
+    void RunFileBatches();
 
     void ReadFileFromDisk(const std::filesystem::path& filename, ReadFileResultCallback callback);
     void ReadFileFromDiskAndRunHandlers(const std::filesystem::path& filename);
 
     // archives
     bool ReadArchiveTable(const std::filesystem::path& filename, std::vector<TabFileEntry>* output,
-                          std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept;
+                          std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks);
     bool ReadArchiveTableEntry(const std::filesystem::path& table, const std::filesystem::path& filename,
                                TabFileEntry*                                          output,
-                               std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept;
+                               std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks);
     bool ReadArchiveTableEntry(const std::filesystem::path& table, uint32_t name_hash, TabFileEntry* output,
-                               std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept;
+                               std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks);
     bool ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash,
-                             FileBuffer* output) noexcept;
+                             FileBuffer* output);
 
     // stream archive
-    std::tuple<AvalancheArchive*, ArchiveEntry_t>
-    GetStreamArchiveFromFile(const std::filesystem::path& file, AvalancheArchive* archive = nullptr) noexcept;
+    std::tuple<AvalancheArchive*, ArchiveEntry_t> GetStreamArchiveFromFile(const std::filesystem::path& file,
+                                                                           AvalancheArchive* archive = nullptr);
 
     // textures
-    void ReadTexture(const std::filesystem::path& filename, ReadFileResultCallback callback) noexcept;
-    bool ReadAVTX(FileBuffer* data, FileBuffer* outData) noexcept;
-    void ReadHMDDSC(FileBuffer* data, FileBuffer* outData) noexcept;
-    bool WriteAVTX(Texture* texture, FileBuffer* outData) noexcept;
+    void ReadTexture(const std::filesystem::path& filename, ReadFileResultCallback callback);
+    bool ReadAVTX(FileBuffer* data, FileBuffer* outData);
+    void ReadHMDDSC(FileBuffer* data, FileBuffer* outData);
+    bool WriteAVTX(Texture* texture, FileBuffer* outData);
 
     // runtime containers
     std::shared_ptr<RuntimeContainer> ParseRuntimeContainer(const std::filesystem::path& filename,
-                                                            const FileBuffer&            buffer) noexcept;
+                                                            const FileBuffer&            buffer);
 
     // dictionary lookup
-    inline bool            HasFileInDictionary(uint32_t name_hash) noexcept;
-    DictionaryLookupResult LocateFileInDictionary(const std::filesystem::path& filename) noexcept;
-    DictionaryLookupResult LocateFileInDictionary(uint32_t name_hash) noexcept;
-    DictionaryLookupResult LocateFileInDictionaryByPartOfName(const std::filesystem::path& filename) noexcept;
+    inline bool            HasFileInDictionary(uint32_t name_hash);
+    DictionaryLookupResult LocateFileInDictionary(const std::filesystem::path& filename);
+    DictionaryLookupResult LocateFileInDictionary(uint32_t name_hash);
+    DictionaryLookupResult LocateFileInDictionaryByPartOfName(const std::filesystem::path& filename);
 
     DirectoryList* GetDirectoryList()
     {

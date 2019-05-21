@@ -50,10 +50,10 @@ struct SAmfSubMesh {
 struct SAmfStreamAttribute {
     jc4::EAmfUsage  m_Usage;
     jc4::EAmfFormat m_Format;
-    char            m_StreamIndex;
-    char            m_StreamOffset;
-    char            m_StreamStride;
-    char            m_PackingData[8];
+    uint8_t         m_StreamIndex;
+    uint8_t         m_StreamOffset;
+    uint8_t         m_StreamStride;
+    uint8_t         m_PackingData[8];
 };
 
 struct SAmfMesh {

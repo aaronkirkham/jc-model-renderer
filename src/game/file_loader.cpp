@@ -21,6 +21,8 @@
 #include "../fnv1.h"
 #include "../settings.h"
 #include "hashlittle.h"
+#include "util.h"
+
 #include <zlib.h>
 
 // Credit to gibbed for most of the file formats
@@ -51,7 +53,7 @@ FileLoader::FileLoader()
             ReadFile(file, [&, file](bool success, FileBuffer data) {
                 if (success) {
                     for (const auto& fn : m_FileReadHandlers[file.extension().string()]) {
-                        fn(file, data, false);
+                        fn(file, std::move(data), false);
                     }
                 } else {
                     SPDLOG_ERROR("(FileTreeItemSelected) Failed to load \"{}\"", file.string());
@@ -256,8 +258,7 @@ void FileLoader::Shutdown()
     m_FileList = nullptr;
 }
 
-void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultCallback callback,
-                          uint8_t flags) noexcept
+void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultCallback callback, uint8_t flags)
 {
     uint64_t status_text_id = 0;
 
@@ -319,13 +320,13 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultC
     }).detach();
 }
 
-void FileLoader::ReadFileBatched(const std::filesystem::path& filename, ReadFileResultCallback callback) noexcept
+void FileLoader::ReadFileBatched(const std::filesystem::path& filename, ReadFileResultCallback callback)
 {
     std::lock_guard<std::recursive_mutex> _lk{m_BatchesMutex};
     m_PathBatches[filename.string()].emplace_back(callback);
 }
 
-void FileLoader::RunFileBatches() noexcept
+void FileLoader::RunFileBatches()
 {
     std::thread([&] {
         std::lock_guard<std::recursive_mutex> _lk{m_BatchesMutex};
@@ -509,7 +510,7 @@ static void DEBUG_TEXTURE_FLAGS(const jc::AvalancheTexture::Header* header)
     }
 }
 
-void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResultCallback callback) noexcept
+void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResultCallback callback)
 {
     FileLoader::Get()->ReadFile(
         filename,
@@ -557,7 +558,8 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResu
                 return callback(true, std::move(d));
             }
 
-            std::istringstream stream(std::string{(char*)data.data(), data.size()});
+            util::byte_array_buffer buf(data.data(), data.size());
+            std::istream            stream(&buf);
 
             // read the texture data
             jc::AvalancheTexture::Header texture;
@@ -688,9 +690,10 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResu
         ReadFileFlags_SkipTextureLoader);
 }
 
-bool FileLoader::ReadAVTX(FileBuffer* data, FileBuffer* outData) noexcept
+bool FileLoader::ReadAVTX(FileBuffer* data, FileBuffer* outData)
 {
-    std::istringstream stream(std::string{(char*)data->data(), data->size()});
+    util::byte_array_buffer buf(data->data(), data->size());
+    std::istream            stream(&buf);
 
     // read the texture data
     jc::AvalancheTexture::Header texture;
@@ -752,7 +755,7 @@ bool FileLoader::ReadAVTX(FileBuffer* data, FileBuffer* outData) noexcept
     return true;
 }
 
-void FileLoader::ReadHMDDSC(FileBuffer* data, FileBuffer* outData) noexcept
+void FileLoader::ReadHMDDSC(FileBuffer* data, FileBuffer* outData)
 {
     assert(data && data->size() > 0);
 
@@ -773,7 +776,7 @@ void FileLoader::ReadHMDDSC(FileBuffer* data, FileBuffer* outData) noexcept
     std::memcpy(&outData->front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER), data->data(), data->size());
 }
 
-bool FileLoader::WriteAVTX(Texture* texture, FileBuffer* outData) noexcept
+bool FileLoader::WriteAVTX(Texture* texture, FileBuffer* outData)
 {
     if (!texture || !texture->IsLoaded()) {
         return false;
@@ -812,9 +815,10 @@ bool FileLoader::WriteAVTX(Texture* texture, FileBuffer* outData) noexcept
 }
 
 std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::filesystem::path& filename,
-                                                                    const FileBuffer&            buffer) noexcept
+                                                                    const FileBuffer&            buffer)
 {
-    std::istringstream stream(std::string{(char*)buffer.data(), buffer.size()});
+    util::byte_array_buffer buf(buffer.data(), buffer.size());
+    std::istream            stream(&buf);
 
     // read the runtimer container header
     jc::RuntimeContainer::Header header;
@@ -1018,7 +1022,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
 }
 
 std::tuple<AvalancheArchive*, ArchiveEntry_t> FileLoader::GetStreamArchiveFromFile(const std::filesystem::path& file,
-                                                                                   AvalancheArchive* archive) noexcept
+                                                                                   AvalancheArchive*            archive)
 {
     if (archive) {
         for (const auto& entry : archive->GetEntries()) {
@@ -1041,7 +1045,7 @@ std::tuple<AvalancheArchive*, ArchiveEntry_t> FileLoader::GetStreamArchiveFromFi
 }
 
 bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::vector<TabFileEntry>* output,
-                                  std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept
+                                  std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks)
 {
     std::ifstream stream(filename, std::ios::ate | std::ios::binary);
     if (stream.fail()) {
@@ -1104,14 +1108,14 @@ bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::ve
 
 bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, const std::filesystem::path& filename,
                                        TabFileEntry*                                          output,
-                                       std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept
+                                       std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks)
 {
     auto namehash = hashlittle(filename.generic_string().c_str());
     return ReadArchiveTableEntry(table, namehash, output, output_blocks);
 }
 
 bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, uint32_t name_hash, TabFileEntry* output,
-                                       std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks) noexcept
+                                       std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks)
 {
     std::vector<TabFileEntry> entries;
     if (ReadArchiveTable(table, &entries, output_blocks)) {
@@ -1128,7 +1132,7 @@ bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, uint3
 }
 
 bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash,
-                                     FileBuffer* output) noexcept
+                                     FileBuffer* output)
 {
     std::filesystem::path jc_directory = Window::Get()->GetJustCauseDirectory();
     const auto            tab_file     = jc_directory / directory / (archive + ".tab");
@@ -1254,18 +1258,18 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
     return false;
 }
 
-bool FileLoader::HasFileInDictionary(uint32_t name_hash) noexcept
+bool FileLoader::HasFileInDictionary(uint32_t name_hash)
 {
     return m_Dictionary.find(name_hash) != m_Dictionary.end();
 }
 
-DictionaryLookupResult FileLoader::LocateFileInDictionary(const std::filesystem::path& filename) noexcept
+DictionaryLookupResult FileLoader::LocateFileInDictionary(const std::filesystem::path& filename)
 {
     auto name_hash = hashlittle(filename.generic_string().c_str());
     return LocateFileInDictionary(name_hash);
 }
 
-DictionaryLookupResult FileLoader::LocateFileInDictionary(uint32_t name_hash) noexcept
+DictionaryLookupResult FileLoader::LocateFileInDictionary(uint32_t name_hash)
 {
     auto it = m_Dictionary.find(name_hash);
     if (it == m_Dictionary.end()) {
@@ -1279,7 +1283,7 @@ DictionaryLookupResult FileLoader::LocateFileInDictionary(uint32_t name_hash) no
     return {path.substr(0, pos), path.substr(pos + 1, path.length()), file.first};
 }
 
-DictionaryLookupResult FileLoader::LocateFileInDictionaryByPartOfName(const std::filesystem::path& filename) noexcept
+DictionaryLookupResult FileLoader::LocateFileInDictionaryByPartOfName(const std::filesystem::path& filename)
 {
     const auto& _filename = filename.generic_string();
 

@@ -133,6 +133,7 @@ class RenderBlockCharacter : public IRenderBlock
 
     std::array<ConstantBuffer_t*, 3> m_VertexShaderConstants = {nullptr};
     std::array<ConstantBuffer_t*, 3> m_PixelShaderConstants  = {nullptr};
+    int32_t                          m_Stride                = 0;
 
   public:
     RenderBlockCharacter() = default;
@@ -209,20 +210,18 @@ class RenderBlockCharacter : public IRenderBlock
 #endif
     }
 
-    virtual void Create(IBuffer_t* vertex_buffer, IBuffer_t* index_buffer) override final
+    virtual void Create(const std::string& type_id, IBuffer_t* vertex_buffer, IBuffer_t* index_buffer) override final
     {
         using namespace jc::Vertex::RenderBlockCharacter;
 
         m_VertexBuffer = vertex_buffer;
         m_IndexBuffer  = index_buffer;
+        m_PixelShader  = ShaderManager::Get()->GetPixelShader("character");
 
-#ifdef DEBUG
-        assert(vertex_buffer->m_ElementStride == sizeof(Packed4Bones1UV));
-#endif
+        // CharacterMesh1UVMesh
+        if (type_id == "CharacterMesh1UVMesh") {
+            m_Stride = VertexStrides[0];
 
-        // TODO: get stride! (we should pass IBuffer_t* to the Create() function and read the element stride from it)
-        {
-            m_PixelShader  = ShaderManager::Get()->GetPixelShader("character");
             m_VertexShader = ShaderManager::Get()->GetVertexShader("character");
 
             // create the element input desc
@@ -237,8 +236,34 @@ class RenderBlockCharacter : public IRenderBlock
             // clang-format on
 
             // create the vertex declaration
-            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(),
-                                                                           "RenderBlockCharacter (4bones1uv)");
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(
+                inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacter (CharacterMesh1UVMesh)");
+        }
+        // CharacterMesh2UVMesh
+        else if (type_id == "CharacterMesh2UVMesh") {
+            m_Stride = VertexStrides[1];
+
+            m_VertexShader = ShaderManager::Get()->GetVertexShader("character2uvs");
+
+            // create the element input desc
+            // clang-format off
+            D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+                { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+                { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+            };
+            // clang-format on
+
+            // create the vertex declaration
+            m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(
+                inputDesc, 5, m_VertexShader.get(), "RenderBlockCharacter (CharacterMesh2UVMesh)");
+
+        } else {
+#ifdef DEBUG
+            __debugbreak();
+#endif
         }
 
         // create vertex shader constants
@@ -380,15 +405,25 @@ class RenderBlockCharacter : public IRenderBlock
         vertices_t vertices;
         uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
 
-        // TODO: use the correct stride, when we load it correctly!
+        switch (m_VertexBuffer->m_ElementStride) {
+            case sizeof(Packed4Bones1UV): {
+                const auto& vb = m_VertexBuffer->CastData<Packed4Bones1UV>();
+                vertices.reserve(vb.size());
+                for (const auto& vertex : vb) {
+                    vertex_t v{};
+                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
+                    vertices.emplace_back(std::move(v));
+                }
+                break;
+            }
 
-        const auto& vb = m_VertexBuffer->CastData<Packed4Bones1UV>();
-        vertices.reserve(vb.size());
-        for (const auto& vertex : vb) {
-            vertex_t v{};
-            v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
-            v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
-            vertices.emplace_back(std::move(v));
+#ifdef DEBUG
+            default: {
+                __debugbreak();
+                break;
+            }
+#endif
         }
 
         return {vertices, indices};

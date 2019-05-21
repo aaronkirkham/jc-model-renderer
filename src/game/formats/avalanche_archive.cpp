@@ -2,6 +2,7 @@
 #include "render_block_model.h"
 
 #include "../../graphics/ui.h"
+#include "../../util.h"
 #include "../../window.h"
 #include "../file_loader.h"
 #include "../hashlittle.h"
@@ -152,7 +153,8 @@ void AvalancheArchive::Parse(const FileBuffer& buffer, ParseCallback_t callback)
 
 void AvalancheArchive::ParseSARC(const FileBuffer& buffer, ParseCallback_t callback)
 {
-    std::istringstream stream(std::string{(char*)buffer.data(), buffer.size()});
+    util::byte_array_buffer buf(buffer.data(), buffer.size());
+    std::istream            stream(&buf);
 
     jc::StreamArchive::Header header;
     stream.read((char*)&header, sizeof(header));
@@ -269,7 +271,9 @@ void AvalancheArchive::ParseTOC(const FileBuffer& buffer)
     uint32_t num_patched = 0;
 #endif
 
-    std::istringstream stream(std::string{(char*)buffer.data(), buffer.size()});
+    util::byte_array_buffer buf(buffer.data(), buffer.size());
+    std::istream            stream(&buf);
+
     while (static_cast<size_t>(stream.tellg()) < buffer.size()) {
         uint32_t length;
         stream.read((char*)&length, sizeof(uint32_t));
@@ -448,7 +452,8 @@ void AvalancheArchive::Decompress(const FileBuffer& buffer, DecompressCallback_t
     assert(buffer.size() > 0);
 
     std::thread([&, buffer, callback] {
-        std::istringstream stream(std::string{(char*)buffer.data(), buffer.size()});
+        util::byte_array_buffer buf(buffer.data(), buffer.size());
+        std::istream            stream(&buf);
 
         // read the archive header
         Header header;
