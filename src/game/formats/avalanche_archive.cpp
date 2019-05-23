@@ -127,28 +127,30 @@ bool AvalancheArchive::SaveFileCallback(const std::filesystem::path& filename, c
 
 void AvalancheArchive::Parse(const FileBuffer& buffer, ParseCallback_t callback)
 {
-    if (buffer.size() == 0) {
-        if (callback) {
-            callback(false);
-        }
-
-        return;
-    }
-
-    // do we need to decompress the AAF?
-    char magic[4];
-    std::memcpy(&magic, buffer.data(), sizeof(magic));
-    if (!strncmp(magic, "AAF", 4)) {
-        Decompress(buffer, [&, callback](bool success, FileBuffer data) {
-            if (success) {
-                ParseSARC(std::move(data), callback);
-            } else if (callback) {
+    std::thread([&, buffer = std::move(buffer), callback] {
+        if (buffer.size() == 0) {
+            if (callback) {
                 callback(false);
             }
-        });
-    } else {
-        ParseSARC(std::move(buffer), callback);
-    }
+
+            return;
+        }
+
+        // do we need to decompress the AAF?
+        char magic[4];
+        std::memcpy(&magic, buffer.data(), sizeof(magic));
+        if (!strncmp(magic, "AAF", 4)) {
+            Decompress(buffer, [&, callback](bool success, FileBuffer data) {
+                if (success) {
+                    ParseSARC(std::move(data), callback);
+                } else if (callback) {
+                    callback(false);
+                }
+            });
+        } else {
+            ParseSARC(std::move(buffer), callback);
+        }
+    }).detach();
 }
 
 void AvalancheArchive::ParseSARC(const FileBuffer& buffer, ParseCallback_t callback)

@@ -10,7 +10,7 @@
 #include "../game/formats/render_block_model.h"
 #include "../game/irenderblock.h"
 
-namespace import_export
+namespace ImportExport
 {
 
 class Wavefront_Obj : public IImportExporter
@@ -30,7 +30,7 @@ class Wavefront_Obj : public IImportExporter
 
     ImportExportType GetType() override final
     {
-        return IE_TYPE_BOTH;
+        return ImportExportType_Both;
     }
 
     const char* GetName() override final
@@ -40,7 +40,7 @@ class Wavefront_Obj : public IImportExporter
 
     std::vector<const char*> GetImportExtension() override final
     {
-        return {".rbm", ".modelc", ".meshc", ".hrmeshc"};
+        return {".rbm", ".modelc"};
     }
 
     const char* GetExportExtension() override final
@@ -394,4 +394,4 @@ class Wavefront_Obj : public IImportExporter
     }
 };
 
-}; // namespace import_export
+}; // namespace ImportExport

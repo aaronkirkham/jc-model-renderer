@@ -22,8 +22,8 @@ workspace "jc-model-renderer"
 project "jc-model-renderer"
   kind "WindowedApp"
   defines "CPPHTTPLIB_ZLIB_SUPPORT"
-  dependson { "imgui", "zlib" }
-  links { "Advapi32", "Comdlg32", "d3d11", "D3DCompiler", "dxgi", "Gdi32", "Ole32", "Shell32", "ws2_32", "out/%{cfg.buildcfg}/imgui", "out/%{cfg.buildcfg}/zlib" }
+  dependson { "imgui", "zlib", "tinyxml2" }
+  links { "Advapi32", "Comdlg32", "d3d11", "D3DCompiler", "dxgi", "Gdi32", "Ole32", "Shell32", "ws2_32", "out/%{cfg.buildcfg}/imgui", "out/%{cfg.buildcfg}/zlib", "out/%{cfg.buildcfg}/tinyxml2" }
   files { "src/assets.rc", "src/**.h", "src/**.cpp" }
 
   includedirs {
@@ -34,7 +34,8 @@ project "jc-model-renderer"
     "vendor/json/single_include/nlohmann",
     "vendor/ksignals",
     "vendor/zlib",
-    "vendor/spdlog/include"
+    "vendor/spdlog/include",
+    "vendor/tinyxml2"
   }
 
   disablewarnings { "4244", "4267", "6031", "6262" }
@@ -68,3 +69,10 @@ project "zlib"
   files { "vendor/zlib/*.c", "vendor/zlib/*.h" }
   includedirs { "vendor/zlib" }
   disablewarnings { "4996", "4267" }
+
+-- tinyxml2
+project "tinyxml2"
+kind "StaticLib"
+files { "vendor/tinyxml2/*.cpp", "vendor/tinyxml2/*.h" }
+includedirs { "vendor/tinyxml2" }
+-- disablewarnings { "4996", "4267" }

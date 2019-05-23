@@ -18,9 +18,11 @@
 #include "game/irenderblock.h"
 #include "game/render_block_factory.h"
 
+#include "import_export/adf_to_xml.h"
 #include "import_export/avalanche_archive.h"
 #include "import_export/ddsc.h"
 #include "import_export/import_export_manager.h"
+#include "import_export/resource_bundle.h"
 #include "import_export/wavefront_obj.h"
 
 extern bool g_IsJC4Mode         = false;
@@ -321,9 +323,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         UI::Get()->RegisterContextMenuCallback({".epe"}, RuntimeContainer::ContextMenuUI);
 
         // register importers and exporters
-        ImportExportManager::Get()->Register(new import_export::Wavefront_Obj);
-        ImportExportManager::Get()->Register(new import_export::DDSC);
-        ImportExportManager::Get()->Register(new import_export::AvalancheArchive);
+        ImportExportManager::Get()->Register<ImportExport::Wavefront_Obj>();
+        ImportExportManager::Get()->Register<ImportExport::DDSC>();
+        ImportExportManager::Get()->Register<ImportExport::AvalancheArchive>();
+        ImportExportManager::Get()->Register<ImportExport::ADF2XML>();
+        ImportExportManager::Get()->Register<ImportExport::ResourceBundle>();
 
         // draw gizmos
         Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {
@@ -357,8 +361,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         // float distance = 0.0f;
                         // auto  intersects = m_BoundingBox.Intersect(ray, &distance);
 
-                        // DebugRenderer::Get()->DrawBBox(m_BoundingBox.GetMin(), m_BoundingBox.GetMax(), intersects
-                        // ? green : red);
+                        // DebugRenderer::Get()->DrawBBox(m_BoundingBox.GetMin(), m_BoundingBox.GetMax(),
+                        // intersects ? green : red);
                     }
                 }
             }

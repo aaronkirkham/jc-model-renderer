@@ -3,36 +3,34 @@
 #include <algorithm>
 #include <vector>
 
-#include "iimportexporter.h"
 #include "../singleton.h"
+#include "iimportexporter.h"
 
 class ImportExportManager : public Singleton<ImportExportManager>
 {
   private:
-    std::vector<IImportExporter*> m_Items;
+    std::vector<std::unique_ptr<IImportExporter>> m_Items;
 
   public:
     ImportExportManager()          = default;
     virtual ~ImportExportManager() = default;
 
-    void Register(IImportExporter* ie)
+    template <typename T, class... Args> void Register(Args&&... args)
     {
-        m_Items.emplace_back(ie);
+        m_Items.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
     }
 
     std::vector<IImportExporter*> GetImporters(const std::string& extension)
     {
         std::vector<IImportExporter*> result;
-        std::copy_if(m_Items.begin(), m_Items.end(), std::back_inserter(result), [&](IImportExporter* item) {
-            if (item->GetType() == IE_TYPE_IMPORTER || item->GetType() == IE_TYPE_BOTH) {
+        for (const auto& item : m_Items) {
+            if (item->GetType() == ImportExportType_Importer || item->GetType() == ImportExportType_Both) {
                 const auto& extensions = item->GetImportExtension();
                 if (std::find(extensions.begin(), extensions.end(), extension) != extensions.end()) {
-                    return true;
+                    result.emplace_back(item.get());
                 }
             }
-
-            return false;
-        });
+        }
 
         return result;
     }
@@ -40,16 +38,14 @@ class ImportExportManager : public Singleton<ImportExportManager>
     std::vector<IImportExporter*> GetExporters(const std::string& extension)
     {
         std::vector<IImportExporter*> result;
-        std::copy_if(m_Items.begin(), m_Items.end(), std::back_inserter(result), [&](IImportExporter* item) {
-            if (item->GetType() == IE_TYPE_EXPORTER || item->GetType() == IE_TYPE_BOTH) {
+        for (const auto& item : m_Items) {
+            if (item->GetType() == ImportExportType_Exporter || item->GetType() == ImportExportType_Both) {
                 const auto& extensions = item->GetImportExtension();
                 if (std::find(extensions.begin(), extensions.end(), extension) != extensions.end()) {
-                    return true;
+                    result.emplace_back(item.get());
                 }
             }
-
-            return false;
-        });
+        }
 
         return result;
     }

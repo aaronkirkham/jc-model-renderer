@@ -7,7 +7,7 @@
 #include "../game/file_loader.h"
 #include "../game/formats/avalanche_archive.h"
 
-namespace import_export
+namespace ImportExport
 {
 
 class AvalancheArchive : public IImportExporter
@@ -18,7 +18,7 @@ class AvalancheArchive : public IImportExporter
 
     ImportExportType GetType() override final
     {
-        return IE_TYPE_EXPORTER;
+        return ImportExportType_Exporter;
     }
 
     const char* GetName() override final
@@ -93,4 +93,4 @@ class AvalancheArchive : public IImportExporter
     }
 };
 
-}; // namespace import_export
+}; // namespace ImportExport

@@ -10,12 +10,9 @@
 #include "../../graphics/types.h"
 #include "../types.h"
 
-static constexpr const char* ADF_BUILTIN_TYPE_NAMES[12] = {"uint8",  "int8",  "uint16", "int16",  "uint32", "int32",
-                                                           "uint64", "int64", "float",  "double", "String", "void"};
-
 class AvalancheDataFormat : public Factory<AvalancheDataFormat>
 {
-  private:
+  public:
     std::filesystem::path                       m_Filename;
     FileBuffer                                  m_Buffer;
     std::vector<jc::AvalancheDataFormat::Type*> m_Types;
@@ -23,9 +20,10 @@ class AvalancheDataFormat : public Factory<AvalancheDataFormat>
     std::map<uint32_t, std::string>             m_StringHashes;
 
     void        AddBuiltInType(jc::AvalancheDataFormat::EAdfType type, jc::AvalancheDataFormat::ScalarType scalar_type,
-                               uint32_t size, uint32_t type_index, uint16_t flags);
+                               uint32_t size, const char* name, uint16_t flags);
     void        ParseTypes(const char* data, uint64_t data_size);
-    void        LoadTypeLibraries();
+    void        ReadTypeLibrary(const std::filesystem::path& filename);
+    void        ReadTypeLibrariesByExtension(const std::filesystem::path& extension);
     bool        ParseHeader(jc::AvalancheDataFormat::Header* data, uint64_t data_size,
                             jc::AvalancheDataFormat::Header* header_out, bool* byte_swap_out,
                             const char** description_out = nullptr);
@@ -56,4 +54,14 @@ class AvalancheDataFormat : public Factory<AvalancheDataFormat>
 
     static void ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);
     static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path);
+
+    const std::filesystem::path& GetFilename()
+    {
+        return m_Filename;
+    }
+
+    const FileBuffer& GetBuffer()
+    {
+        return m_Buffer;
+    }
 };

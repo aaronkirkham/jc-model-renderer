@@ -6,7 +6,7 @@
 
 #include "../game/file_loader.h"
 
-namespace import_export
+namespace ImportExport
 {
 
 class DDSC : public IImportExporter
@@ -17,7 +17,7 @@ class DDSC : public IImportExporter
 
     ImportExportType GetType() override final
     {
-        return IE_TYPE_BOTH;
+        return ImportExportType_Both;
     }
 
     const char* GetName() override final
@@ -75,4 +75,4 @@ class DDSC : public IImportExporter
     }
 };
 
-}; // namespace import_export
+}; // namespace ImportExport

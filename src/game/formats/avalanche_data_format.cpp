@@ -17,24 +17,26 @@ AvalancheDataFormat::AvalancheDataFormat(const std::filesystem::path& filename, 
 {
     using namespace jc::AvalancheDataFormat;
 
-    AddBuiltInType(EAdfType::Primitive, ScalarType::Unsigned, sizeof(uint8_t), 0, 3);
-    AddBuiltInType(EAdfType::Primitive, ScalarType::Signed, sizeof(int8_t), 1, 3);
-    AddBuiltInType(EAdfType::Primitive, ScalarType::Unsigned, sizeof(uint16_t), 2, 3);
-    AddBuiltInType(EAdfType::Primitive, ScalarType::Signed, sizeof(int16_t), 3, 3);
-    AddBuiltInType(EAdfType::Primitive, ScalarType::Unsigned, sizeof(uint32_t), 4, 3);
-    AddBuiltInType(EAdfType::Primitive, ScalarType::Signed, sizeof(int32_t), 5, 3);
-    AddBuiltInType(EAdfType::Primitive, ScalarType::Unsigned, sizeof(uint64_t), 6, 3);
-    AddBuiltInType(EAdfType::Primitive, ScalarType::Signed, sizeof(int64_t), 7, 3);
-    AddBuiltInType(EAdfType::Primitive, ScalarType::Float, sizeof(float), 8, 3);
-    AddBuiltInType(EAdfType::Primitive, ScalarType::Float, sizeof(double), 9, 3);
-    AddBuiltInType(EAdfType::String, ScalarType::Signed, 8, 10, 0);
-    AddBuiltInType(EAdfType::Deferred, ScalarType::Signed, 16, 11, 0);
+    AddBuiltInType(EAdfType::Primitive, ScalarType::Unsigned, sizeof(uint8_t), "uint8", 3);
+    AddBuiltInType(EAdfType::Primitive, ScalarType::Signed, sizeof(int8_t), "int8", 3);
+    AddBuiltInType(EAdfType::Primitive, ScalarType::Unsigned, sizeof(uint16_t), "uint16", 3);
+    AddBuiltInType(EAdfType::Primitive, ScalarType::Signed, sizeof(int16_t), "int16", 3);
+    AddBuiltInType(EAdfType::Primitive, ScalarType::Unsigned, sizeof(uint32_t), "uint32", 3);
+    AddBuiltInType(EAdfType::Primitive, ScalarType::Signed, sizeof(int32_t), "int32", 3);
+    AddBuiltInType(EAdfType::Primitive, ScalarType::Unsigned, sizeof(uint64_t), "uint64", 3);
+    AddBuiltInType(EAdfType::Primitive, ScalarType::Signed, sizeof(int64_t), "int64", 3);
+    AddBuiltInType(EAdfType::Primitive, ScalarType::Float, sizeof(float), "float", 3);
+    AddBuiltInType(EAdfType::Primitive, ScalarType::Float, sizeof(double), "double", 3);
+    AddBuiltInType(EAdfType::String, ScalarType::Signed, 8, "String", 0); // NOTE: keep capitalization
+    AddBuiltInType(EAdfType::Deferred, ScalarType::Signed, 16, "void", 0);
 
     // load internal types
     ParseTypes((const char*)m_Buffer.data(), m_Buffer.size());
 
     // load type libraries
-    LoadTypeLibraries();
+    if (filename.has_extension()) {
+        ReadTypeLibrariesByExtension(filename.extension());
+    }
 }
 
 AvalancheDataFormat::~AvalancheDataFormat()
@@ -163,14 +165,12 @@ bool AvalancheDataFormat::SaveFileCallback(const std::filesystem::path& filename
 
 void AvalancheDataFormat::AddBuiltInType(jc::AvalancheDataFormat::EAdfType   type,
                                          jc::AvalancheDataFormat::ScalarType scalar_type, uint32_t size,
-                                         uint32_t type_index, uint16_t flags)
+                                         const char* name, uint16_t flags)
 {
-    const auto name = ADF_BUILTIN_TYPE_NAMES[type_index];
+    char type_name[64];
+    snprintf(type_name, sizeof(type_name), "%s%u%u%u", name, static_cast<uint32_t>(type), size, size);
 
-    char str[64];
-    snprintf(str, sizeof(str), "%s%u%u%u", name, static_cast<uint32_t>(type), size, size);
-
-    auto type_hash = hashlittle(str);
+    auto type_hash = hashlittle(type_name);
     auto alignment = size;
 
     if (type == jc::AvalancheDataFormat::EAdfType::Deferred) {
@@ -199,7 +199,7 @@ void AvalancheDataFormat::ParseTypes(const char* data, uint64_t data_size)
 
     Header header_out{};
     bool   byte_swap_out;
-    if (!ParseHeader((Header*)m_Buffer.data(), m_Buffer.size(), &header_out, &byte_swap_out)) {
+    if (!ParseHeader((Header*)data, data_size, &header_out, &byte_swap_out)) {
 #ifdef DEBUG
         __debugbreak();
 #endif
@@ -301,31 +301,26 @@ void AvalancheDataFormat::ParseTypes(const char* data, uint64_t data_size)
     }
 }
 
-void AvalancheDataFormat::LoadTypeLibraries()
+void AvalancheDataFormat::ReadTypeLibrary(const std::filesystem::path& filename)
 {
-#if 0
-    static auto ReadTypeLibrary = [](const std::filesystem::path& filename) {
-        const auto buffer = FileLoader::Get()->GetAdfTypeLibraries()->GetEntryBuffer(filename.string());
-        assert(buffer.size() > 0);
-
-        auto adf = AvalancheDataFormat::make(filename);
-        adf->Parse(buffer);
-        return adf;
-    };
-
-    const auto& extension = m_File.filename().extension();
-    if (extension == ".blo_adf" || extension == ".flo_adf" || extension == ".epe_adf") {
-        SPDLOG_INFO("Type is blo/flo/epe. Loading type libraries...");
-
-        /*m_TypeLibraries.emplace_back(ReadTypeLibrary("blo-flo-epe/AttachedEffects.adf"));
-        m_TypeLibraries.emplace_back(ReadTypeLibrary("blo-flo-epe/Damageable.adf"));
-        m_TypeLibraries.emplace_back(ReadTypeLibrary("blo-flo-epe/DamageController.adf"));
-        m_TypeLibraries.emplace_back(ReadTypeLibrary("blo-flo-epe/LocationGameObjectAdf.adf"));
-        m_TypeLibraries.emplace_back(ReadTypeLibrary("blo-flo-epe/PhysicsGameObject.adf"));
-        m_TypeLibraries.emplace_back(ReadTypeLibrary("blo-flo-epe/RigidObject.adf"));
-        m_TypeLibraries.emplace_back(ReadTypeLibrary("blo-flo-epe/TargetSystem.adf"));*/
+    const auto buffer = FileLoader::Get()->GetAdfTypeLibraries()->GetEntryBuffer(filename.string());
+    if (buffer.size() > 0) {
+        ParseTypes((char*)buffer.data(), buffer.size());
     }
-#endif
+}
+
+void AvalancheDataFormat::ReadTypeLibrariesByExtension(const std::filesystem::path& extension)
+{
+    // epe adf
+    if (extension == ".epe_adf") {
+        ReadTypeLibrary("AttachedEffects.adf");
+        ReadTypeLibrary("Damageable.adf");
+        ReadTypeLibrary("DamageController.adf");
+        ReadTypeLibrary("LocationGameObjectAdf.adf");
+        ReadTypeLibrary("PhysicsGameObject.adf");
+        ReadTypeLibrary("RigidObject.adf");
+        ReadTypeLibrary("TargetSystem.adf");
+    }
 }
 
 bool AvalancheDataFormat::ParseHeader(jc::AvalancheDataFormat::Header* data, uint64_t data_size,

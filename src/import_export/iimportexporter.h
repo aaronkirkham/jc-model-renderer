@@ -7,7 +7,11 @@
 
 #include "../graphics/types.h"
 
-enum ImportExportType { IE_TYPE_IMPORTER = 0, IE_TYPE_EXPORTER, IE_TYPE_BOTH };
+enum ImportExportType {
+    ImportExportType_Importer = 0,
+    ImportExportType_Exporter = 1,
+    ImportExportType_Both     = 2,
+};
 
 using ImportFinishedCallback = std::function<void(bool, std::filesystem::path, std::any)>;
 using ExportFinishedCallback = std::function<void(bool)>;
