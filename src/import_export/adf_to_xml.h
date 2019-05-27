@@ -630,9 +630,11 @@ class ADF2XML : public IImportExporter
             adf->m_InternalStrings.begin(), adf->m_InternalStrings.end(), 0,
             [](int32_t accumulator, const std::string& str) { return accumulator + (str.length() + 1); });
 
+        // NOTE: +sizeof(uint32_t) as we write some unknown (padding?) value after the payload, the instance must be
+        // aligned correctly on the next 8 byte boundary
         const auto first_instance = instances.front();
         const auto first_instance_offset =
-            jc::ALIGN_TO_BOUNDARY(first_instance.m_PayloadOffset + first_instance.m_PayloadSize, 8);
+            jc::ALIGN_TO_BOUNDARY(first_instance.m_PayloadOffset + first_instance.m_PayloadSize + sizeof(uint32_t), 8);
 
         //
         const auto total_string_hashes      = static_cast<uint32_t>(adf->m_StringHashes.size());
