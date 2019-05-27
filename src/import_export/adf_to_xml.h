@@ -106,7 +106,7 @@ class ADF2XML : public IImportExporter
     std::vector<std::string> GetImportExtension() override final
     {
         // TODO: get a real list of all ADF extensions
-        return {".adf", ".epe_adf", ".vmodc", ".wtunec", ".modelc", ".meshc", ".hrmeshc"};
+        return {".blo_adf", ".flo_adf", ".epe_adf", ".vmodc", ".wtunec", ".modelc", ".meshc", ".hrmeshc"};
     }
 
     const char* GetExportName() override final
@@ -775,7 +775,7 @@ class ADF2XML : public IImportExporter
         m_StringRefs.clear();
         m_RefsToFix.clear();
 
-		auto new_filename = filename.parent_path() / adf_filename;
+        auto new_filename = filename.parent_path() / adf_filename;
         return callback(true, new_filename, adf->m_Buffer);
     }
 
@@ -897,6 +897,8 @@ class ADF2XML : public IImportExporter
 
                 const auto read_offset = *(uint32_t*)&payload[offset];
                 const auto count       = *(uint32_t*)&payload[offset + 8];
+
+                printer.PushAttribute("count", count);
 
                 // TODO: better support for binary data
 

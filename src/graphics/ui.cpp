@@ -62,7 +62,7 @@ UI::UI()
             m_DragDropTooltip      = std::to_string(files.size()) + " items";
         } else {
             const auto& file  = files.at(0);
-            m_DragDropTooltip = file.string();
+            m_DragDropTooltip = file.filename().string();
 
             // textures
             if (file.extension() == ".dds" || file.extension() == ".ddsc" || file.extension() == ".hmddsc"

@@ -320,8 +320,8 @@ void AvalancheDataFormat::ReadTypeLibrary(const std::filesystem::path& filename)
 
 void AvalancheDataFormat::ReadTypeLibrariesByExtension(const std::filesystem::path& extension)
 {
-    // epe adf
-    if (extension == ".epe_adf") {
+    // blo_adf, flo_adf, epe_adf
+    if (extension == ".blo_adf" || extension == ".flo_adf" || extension == ".epe_adf") {
         ReadTypeLibrary("AttachedEffects.adf");
         ReadTypeLibrary("Damageable.adf");
         ReadTypeLibrary("DamageController.adf");
