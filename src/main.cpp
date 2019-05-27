@@ -195,6 +195,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         FileLoader::Get()->WriteRuntimeContainer(rc.get());
                     });*/
 
+#if 0
                     const auto& importers = ImportExportManager::Get()->GetImporters(".rbm");
                     importers[0]->Import("C:/users/aaron/desktop/nanos cube/nanos.obj",
                                          [&](bool success, std::filesystem::path filename, std::any data) {
@@ -211,6 +212,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                                              render_block->Create();*/
 
                                              // Renderer::Get()->AddToRenderList(render_block);
+                                         });
+#endif
+
+                    const auto& importers = ImportExportManager::Get()->GetImporters(".adf");
+                    importers[0]->Import("C:/users/aaron/desktop/export.xml",
+                                         [](bool success, std::filesystem::path filename, std::any data) {
+                                             const auto adf = std::any_cast<std::shared_ptr<AvalancheDataFormat>>(data);
+
+                                             std::ofstream out_stream("C:/users/aaron/desktop/imported.bin",
+                                                                      std::ios::binary);
+                                             out_stream.write((char*)adf->m_Buffer.data(), adf->m_Buffer.size());
+                                             out_stream.close();
                                          });
                 }
 

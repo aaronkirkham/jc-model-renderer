@@ -31,7 +31,9 @@ AvalancheDataFormat::AvalancheDataFormat(const std::filesystem::path& filename, 
     AddBuiltInType(EAdfType::Deferred, ScalarType::Signed, 16, "void", 0);
 
     // load internal types
-    ParseTypes((const char*)m_Buffer.data(), m_Buffer.size());
+    if (m_Buffer.size() > 0) {
+        ParseTypes((const char*)m_Buffer.data(), m_Buffer.size());
+    }
 
     // load type libraries
     if (filename.has_extension()) {
@@ -193,7 +195,7 @@ void AvalancheDataFormat::AddBuiltInType(jc::AvalancheDataFormat::EAdfType   typ
     m_Types.emplace_back(std::move(def));
 }
 
-void AvalancheDataFormat::ParseTypes(const char* data, uint64_t data_size)
+void AvalancheDataFormat::ParseTypes(const char* data, uint64_t data_size, bool is_internal_types)
 {
     using namespace jc::AvalancheDataFormat;
 
@@ -233,6 +235,13 @@ void AvalancheDataFormat::ParseTypes(const char* data, uint64_t data_size)
         strcpy_s(name.get(), size, &strings_buffer[header_out.m_StringCount + idx]);
 
         m_Strings.emplace_back(name.get());
+
+        // keep a list of strings which are only available in the internal types.
+        // NOTE: this is for later when we want to export
+        if (is_internal_types) {
+            m_InternalStrings.emplace_back(name.get());
+        }
+
         idx += size;
     }
 

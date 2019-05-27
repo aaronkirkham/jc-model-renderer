@@ -733,7 +733,7 @@ namespace AvalancheDataFormat
 #endif
 } // namespace AvalancheDataFormat
 
-template <typename T> inline static T ALIGN_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
+template <typename T> inline static T ALIGN_TO_BOUNDARY(T value, uint32_t alignment = sizeof(uint32_t))
 {
     if ((value % alignment) != 0) {
         return (value + (alignment - (value % alignment)));
@@ -742,7 +742,7 @@ template <typename T> inline static T ALIGN_TO_BOUNDARY(T& value, uint32_t align
     return value;
 }
 
-template <typename T> inline static uint32_t DISTANCE_TO_BOUNDARY(T& value, uint32_t alignment = sizeof(uint32_t))
+template <typename T> inline static uint32_t DISTANCE_TO_BOUNDARY(T value, uint32_t alignment = sizeof(uint32_t))
 {
     if ((value % alignment) != 0) {
         return (alignment - (value % alignment));

@@ -415,7 +415,7 @@ void UI::Render(RenderContext_t* context)
     }
     ImGui::End();
 
-    // render runtime container stuff
+    // runtime container editor
     for (auto it = RuntimeContainer::Instances.begin(); it != RuntimeContainer::Instances.end();) {
         std::string title = "Runtime Container Editor - " + (*it).second->GetFileName().filename().string();
 

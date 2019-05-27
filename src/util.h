@@ -116,6 +116,15 @@ static std::string join(const std::vector<std::string>& strings, const std::stri
     return out;
 }
 
+static void replace(std::string& data, const char* search, const char* replace)
+{
+    size_t pos = data.find(search);
+    while (pos != std::string::npos) {
+        data.replace(pos, strlen(search), replace);
+        pos = data.find(search, pos + strlen(replace));
+    }
+}
+
 static int32_t stoi_s(const std::string& str)
 {
     if (str.length() == 0) {
