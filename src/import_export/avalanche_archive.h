@@ -21,14 +21,19 @@ class AvalancheArchive : public IImportExporter
         return ImportExportType_Exporter;
     }
 
-    const char* GetName() override final
+    const char* GetImportName() override final
     {
-        return "Avalanche Archive";
+        return "Avalanche Archive Format";
     }
 
-    std::vector<const char*> GetImportExtension() override final
+    std::vector<std::string> GetImportExtension() override final
     {
         return {".ee", ".bl", ".nl", ".fl"};
+    }
+
+    const char* GetExportName() override final
+    {
+        return "Avalanche Archive";
     }
 
     const char* GetExportExtension() override final

@@ -23,6 +23,7 @@
 #include "import_export/ddsc.h"
 #include "import_export/import_export_manager.h"
 #include "import_export/resource_bundle.h"
+#include "import_export/rtpc_to_xml.h"
 #include "import_export/wavefront_obj.h"
 
 extern bool g_IsJC4Mode         = false;
@@ -196,7 +197,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     });*/
 
 #if 0
-                    const auto& importers = ImportExportManager::Get()->GetImporters(".rbm");
+                    const auto& importers = ImportExportManager::Get()->GetImportersFor(".rbm");
                     importers[0]->Import("C:/users/aaron/desktop/nanos cube/nanos.obj",
                                          [&](bool success, std::filesystem::path filename, std::any data) {
                                              const auto rbm = RenderBlockModel::make("nanos.rbm");
@@ -215,7 +216,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                                          });
 #endif
 
-                    const auto& importers = ImportExportManager::Get()->GetImporters(".adf");
+                    const auto& importers = ImportExportManager::Get()->GetImportersFor(".adf");
                     importers[0]->Import("C:/users/aaron/desktop/export.xml",
                                          [](bool success, std::filesystem::path filename, std::any data) {
                                              const auto adf = std::any_cast<std::shared_ptr<AvalancheDataFormat>>(data);
@@ -341,6 +342,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         ImportExportManager::Get()->Register<ImportExport::AvalancheArchive>();
         ImportExportManager::Get()->Register<ImportExport::ADF2XML>();
         ImportExportManager::Get()->Register<ImportExport::ResourceBundle>();
+        ImportExportManager::Get()->Register<ImportExport::RTPC2XML>();
 
         // draw gizmos
         Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {

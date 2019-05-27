@@ -24,8 +24,9 @@ class IImportExporter
     virtual ~IImportExporter() = default;
 
     virtual ImportExportType         GetType()            = 0;
-    virtual const char*              GetName()            = 0;
-    virtual std::vector<const char*> GetImportExtension() = 0;
+    virtual const char*              GetImportName()      = 0;
+    virtual std::vector<std::string> GetImportExtension() = 0;
+    virtual const char*              GetExportName()      = 0;
     virtual const char*              GetExportExtension() = 0;
 
     virtual bool HasSettingsUI()
@@ -36,6 +37,11 @@ class IImportExporter
     virtual bool DrawSettingsUI()
     {
         return true;
+    }
+
+    virtual bool IsDragDropImportable()
+    {
+        return false;
     }
 
     // NOTE: callback can be nullptr! remember to check this correctly in overrides of this function!

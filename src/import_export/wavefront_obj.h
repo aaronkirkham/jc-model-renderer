@@ -33,14 +33,19 @@ class Wavefront_Obj : public IImportExporter
         return ImportExportType_Both;
     }
 
-    const char* GetName() override final
+    const char* GetImportName() override final
     {
-        return "Wavefront";
+        return "Avalanche Model Format";
     }
 
-    std::vector<const char*> GetImportExtension() override final
+    std::vector<std::string> GetImportExtension() override final
     {
         return {".rbm", ".modelc"};
+    }
+
+    const char* GetExportName() override final
+    {
+        return "Wavefront";
     }
 
     const char* GetExportExtension() override final

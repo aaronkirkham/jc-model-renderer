@@ -332,9 +332,9 @@ void UI::Render(RenderContext_t* context)
 
                     // import from
                     if (ImGuiCustom::BeginButtonDropDown("Import Texture From")) {
-                        const auto& importers = ImportExportManager::Get()->GetImporters(".ddsc");
+                        const auto& importers = ImportExportManager::Get()->GetImportersFor(".ddsc");
                         for (const auto& importer : importers) {
-                            if (ImGui::MenuItem(importer->GetName(), importer->GetExportExtension())) {
+                            if (ImGui::MenuItem(importer->GetExportName(), importer->GetExportExtension())) {
                                 UI::Events().ImportFileRequest(
                                     importer, [&](bool success, std::filesystem::path filename, std::any data) {
                                         if (success) {
@@ -385,6 +385,60 @@ void UI::Render(RenderContext_t* context)
             ImGui::EndColumns();
         }
         ImGui::End();
+    }
+
+    // select importer
+    {
+        static bool             importer_settings_open = m_SelectImporterSettings.ShowImporterSettings;
+        static IImportExporter* importer_to_use        = nullptr;
+        if (m_SelectImporterSettings.ShowImporterSettings) {
+            ImGui::OpenPopup("Select Importer");
+            importer_settings_open = true;
+        }
+
+        if (ImGui::BeginPopupModal("Select Importer", &importer_settings_open,
+                                   (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse
+                                    | ImGuiWindowFlags_AlwaysAutoResize))) {
+
+            ImGui::Text("The file type you're trying to import has multiple importers available.");
+            ImGui::Text("Please select the format you wish to import into.\n\n");
+            ImGui::Text("Filename: %s", m_SelectImporterSettings.Filename.filename().string().c_str());
+
+            ImGuiWindow* window = ImGui::GetCurrentWindowRead();
+            ImGui::PushItemWidth(window->Size.x - (window->WindowPadding.x * 2));
+
+            if (ImGui::BeginCombo("##select-importer-combo", "Select Importer")) {
+                for (const auto& importer : m_SelectImporterSettings.Importers) {
+                    const auto selected = ImGui::Selectable(importer->GetImportName());
+
+                    if (ImGui::IsItemHovered()) {
+                        const auto& exts = util::join(importer->GetImportExtension(), ", ");
+                        ImGui::SetTooltip(exts.c_str());
+                    }
+
+                    if (selected) {
+                        importer_settings_open = false;
+                        importer_to_use        = importer;
+                    }
+                }
+
+                ImGui::EndCombo();
+            }
+
+            ImGui::EndPopup();
+        }
+
+        // reset after popup is closed
+        if (!importer_settings_open && m_SelectImporterSettings.ShowImporterSettings) {
+            if (importer_to_use) {
+                importer_to_use->Import(m_SelectImporterSettings.Filename, m_SelectImporterSettings.Callback);
+                importer_to_use = nullptr;
+            }
+
+            m_SelectImporterSettings.ShowImporterSettings = false;
+            m_SelectImporterSettings.Filename             = "";
+            m_SelectImporterSettings.Importers.clear();
+        }
     }
 
     RenderSceneView(window_size);
@@ -855,9 +909,9 @@ void UI::RenderModelsTab_RBM()
                             ImGui::TextColored(red, "This Render Block doesn't have any mesh!");
 
                             if (ImGuiCustom::BeginButtonDropDown("Import Mesh From")) {
-                                const auto& importers = ImportExportManager::Get()->GetImporters(".rbm");
+                                const auto& importers = ImportExportManager::Get()->GetImportersFor(".rbm");
                                 for (const auto& importer : importers) {
-                                    if (ImGui::MenuItem(importer->GetName(), importer->GetExportExtension())) {
+                                    if (ImGui::MenuItem(importer->GetExportName(), importer->GetExportExtension())) {
                                         UI::Events().ImportFileRequest(
                                             importer, [&](bool success, std::filesystem::path filename, std::any data) {
                                                 auto& [vertices, indices, materials] =
@@ -997,13 +1051,13 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
         }
 
         // exporters
-        const auto& exporters = ImportExportManager::Get()->GetExporters(filename.extension().string());
+        const auto& exporters = ImportExportManager::Get()->GetExportersFor(filename.extension().string());
         if (exporters.size() > 0) {
             ImGui::Separator();
 
             if (ImGui::BeginMenu(ICON_FA_MINUS_CIRCLE "  Export", (exporters.size() > 0))) {
                 for (const auto& exporter : exporters) {
-                    if (ImGui::MenuItem(exporter->GetName(), exporter->GetExportExtension())) {
+                    if (ImGui::MenuItem(exporter->GetExportName(), exporter->GetExportExtension())) {
                         if (exporter->HasSettingsUI()) {
                             m_ExportSettings.Exporter           = exporter;
                             m_ExportSettings.Filename           = filename;

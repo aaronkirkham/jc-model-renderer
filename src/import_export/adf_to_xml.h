@@ -98,20 +98,30 @@ class ADF2XML : public IImportExporter
         return ImportExportType_Both;
     }
 
-    const char* GetName() override final
+    const char* GetImportName() override final
     {
-        return "XML";
+        return "Avalanche Data Format";
     }
 
-    std::vector<const char*> GetImportExtension() override final
+    std::vector<std::string> GetImportExtension() override final
     {
-        // TODO: get a real list of all ADF types
-        return {".adf", ".epe_adf", ".vmodc", ".wtunec", ".meshc", ".hrmeshc", ".modelc"};
+        // TODO: get a real list of all ADF extensions
+        return {".adf", ".epe_adf", ".vmodc", ".wtunec", ".modelc", ".meshc", ".hrmeshc"};
+    }
+
+    const char* GetExportName() override final
+    {
+        return "XML";
     }
 
     const char* GetExportExtension() override final
     {
         return ".xml";
+    }
+
+    bool IsDragDropImportable() override final
+    {
+        return true;
     }
 
     uint32_t XmlReadInstance(::AvalancheDataFormat* adf, tinyxml2::XMLElement* el,
@@ -479,7 +489,11 @@ class ADF2XML : public IImportExporter
         doc.LoadFile(filename.string().c_str());
 
         const auto root = doc.FirstChildElement("adf");
-        assert(root != nullptr);
+        if (!root) {
+            SPDLOG_ERROR("Couldn't find the root adf element.");
+            return callback(false, filename, 0);
+        }
+
         const auto extension = root->Attribute("extension");
         const auto version   = root->UnsignedAttribute("version");
         const auto flags     = root->UnsignedAttribute("flags");
@@ -488,7 +502,10 @@ class ADF2XML : public IImportExporter
         std::string library      = library_attr ? library_attr : "";
         util::replace(library, ", ", "\n");
 
-        assert(version == 4);
+        if (version != 4) {
+            SPDLOG_ERROR("Unexpected adf version.");
+            return callback(false, filename, 0);
+        }
 
         // create adf
         // NOTE: this will load type libraries for us
@@ -758,7 +775,8 @@ class ADF2XML : public IImportExporter
         m_StringRefs.clear();
         m_RefsToFix.clear();
 
-        return callback(true, filename, adf);
+		auto new_filename = filename.parent_path() / adf_filename;
+        return callback(true, new_filename, adf->m_Buffer);
     }
 
     void XmlWriteInstance(::AvalancheDataFormat* adf, tinyxml2::XMLPrinter& printer,

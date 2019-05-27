@@ -21,14 +21,19 @@ class ResourceBundle : public IImportExporter
         return ImportExportType_Both;
     }
 
-    const char* GetName() override final
+    const char* GetImportName() override final
     {
         return "Resource Bundle";
     }
 
-    std::vector<const char*> GetImportExtension() override final
+    std::vector<std::string> GetImportExtension() override final
     {
         return {".resourcebundle"};
+    }
+
+    const char* GetExportName() override final
+    {
+        return "Resource Bundle";
     }
 
     const char* GetExportExtension() override final

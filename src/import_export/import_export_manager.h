@@ -20,7 +20,8 @@ class ImportExportManager : public Singleton<ImportExportManager>
         m_Items.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
     }
 
-    std::vector<IImportExporter*> GetImporters(const std::string& extension)
+    // Get a list of importers for a given extension
+    std::vector<IImportExporter*> GetImportersFor(const std::string& extension)
     {
         std::vector<IImportExporter*> result;
         for (const auto& item : m_Items) {
@@ -35,7 +36,25 @@ class ImportExportManager : public Singleton<ImportExportManager>
         return result;
     }
 
-    std::vector<IImportExporter*> GetExporters(const std::string& extension)
+    // Get a list of importers from a given exported extension
+    std::vector<IImportExporter*> GetImportersFrom(const std::string& extension, bool check_drag_drop_status = false)
+    {
+        std::vector<IImportExporter*> result;
+        for (const auto& item : m_Items) {
+            if (item->GetType() == ImportExportType_Importer || item->GetType() == ImportExportType_Both) {
+                if (check_drag_drop_status && item->IsDragDropImportable() && extension == item->GetExportExtension()) {
+                    result.emplace_back(item.get());
+                } else if (!check_drag_drop_status && extension == item->GetExportExtension()) {
+                    result.emplace_back(item.get());
+                }
+            }
+        }
+
+        return result;
+    }
+
+    // Get a list of exporters for a given extension
+    std::vector<IImportExporter*> GetExportersFor(const std::string& extension)
     {
         std::vector<IImportExporter*> result;
         for (const auto& item : m_Items) {

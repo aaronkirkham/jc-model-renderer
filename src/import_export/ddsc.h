@@ -20,14 +20,19 @@ class DDSC : public IImportExporter
         return ImportExportType_Both;
     }
 
-    const char* GetName() override final
+    const char* GetImportName() override final
     {
-        return "DirectDraw Surface";
+        return "Avalanche Texture";
     }
 
-    std::vector<const char*> GetImportExtension() override final
+    std::vector<std::string> GetImportExtension() override final
     {
         return {".ddsc", ".hmddsc", ".atx1", ".atx2"};
+    }
+
+	const char* GetExportName() override final
+    {
+        return "DirectDraw Surface";
     }
 
     const char* GetExportExtension() override final

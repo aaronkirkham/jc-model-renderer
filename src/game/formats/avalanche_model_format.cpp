@@ -189,7 +189,7 @@ bool AvalancheModelFormat::ParseMeshBuffers()
                     (m_LowMeshBuffers->m_VertexBuffers.m_Count + m_HighMeshBuffers->m_VertexBuffers.m_Count));
         SPDLOG_INFO(" - IndexBufferIndex: {} ({})", mesh.m_IndexBufferIndex,
                     (m_LowMeshBuffers->m_IndexBuffers.m_Count + m_HighMeshBuffers->m_IndexBuffers.m_Count));
-
+#pragma warning(disable : 4018)
         assert(mesh.m_VertexBufferIndices.m_Data[0]
                < (m_LowMeshBuffers->m_VertexBuffers.m_Count + m_HighMeshBuffers->m_VertexBuffers.m_Count));
         assert(mesh.m_IndexBufferIndex

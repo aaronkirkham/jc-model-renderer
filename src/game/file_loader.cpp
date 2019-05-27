@@ -112,7 +112,7 @@ FileLoader::FileLoader()
 
     // import file
     UI::Get()->Events().ImportFileRequest.connect([&](IImportExporter* importer, ImportFinishedCallback callback) {
-        std::string filter = importer->GetName();
+        std::string filter = importer->GetExportName();
         filter.push_back('\0');
         filter.append("*");
         filter.append(importer->GetExportExtension());
@@ -132,7 +132,7 @@ FileLoader::FileLoader()
             "Select a folder to export the file to.", [&, file, exporter](const std::filesystem::path& selected) {
                 auto _exporter = exporter;
                 if (!exporter) {
-                    const auto& exporters = ImportExportManager::Get()->GetExporters(file.extension().string());
+                    const auto& exporters = ImportExportManager::Get()->GetExportersFor(file.extension().string());
                     if (exporters.size() > 0) {
                         _exporter = exporters.at(0);
                     }
@@ -468,6 +468,7 @@ void FileLoader::ReadFileFromDisk(const std::filesystem::path& filename, ReadFil
 void FileLoader::ReadFileFromDiskAndRunHandlers(const std::filesystem::path& filename)
 {
     const auto& extension = filename.extension().string();
+    const auto& importers = ImportExportManager::Get()->GetImportersFrom(extension, true);
 
     // do we have a registered callback for this file type?
     if (m_FileReadHandlers.find(extension) != m_FileReadHandlers.end()) {
@@ -478,6 +479,38 @@ void FileLoader::ReadFileFromDiskAndRunHandlers(const std::filesystem::path& fil
                 }
             }
         });
+    } else if (importers.size() > 0) {
+        static const auto finished_callback = [](bool success, std::filesystem::path filename, std::any data) {
+            assert(success);
+
+            // NOTE: this kind of assumes the data will always be binary data
+            // because the importer will always have drag-and-drop support (see
+            // ReadFileFromDiskAndRunHandlers)
+
+            // TODO: this can be improved.
+
+#ifdef DEBUG
+            auto ext = filename.extension();
+            filename.replace_filename("imported").replace_extension(ext);
+#endif
+
+            SPDLOG_INFO(filename.string());
+
+            auto buffer = std::any_cast<FileBuffer>(data);
+
+            std::ofstream stream(filename, std::ios::binary);
+            assert(!stream.fail());
+            stream.write((char*)buffer.data(), buffer.size());
+            stream.close();
+        };
+
+        if (importers.size() > 1) {
+            // TODO: we can improve this even more by looking at the input file extension (before the .xml) and figure
+            // out the importer to use without asking.
+            UI::Get()->ShowSelectImporter(filename, importers, finished_callback);
+        } else {
+            importers[0]->Import(filename, finished_callback);
+        }
     } else {
         SPDLOG_ERROR("Unknown file type extension \"{}\"", filename.filename().string());
 

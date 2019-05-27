@@ -79,6 +79,13 @@ class UI : public Singleton<UI>
         std::shared_ptr<Texture> Texture      = nullptr;
     } m_NewTextureSettings;
 
+    struct {
+        bool                          ShowImporterSettings = false;
+        std::filesystem::path         Filename             = "";
+        std::vector<IImportExporter*> Importers;
+        ImportFinishedCallback        Callback = nullptr;
+    } m_SelectImporterSettings;
+
     ImDrawList* m_SceneDrawList = nullptr;
     float       m_SceneWidth    = 0.0f;
     float       m_SidebarWidth  = MIN_SIDEBAR_WIDTH;
@@ -131,5 +138,14 @@ class UI : public Singleton<UI>
     inline void ShowGameSelection()
     {
         m_ShowGameSelection = true;
+    }
+
+    void ShowSelectImporter(const std::filesystem::path& filename, const std::vector<IImportExporter*>& importers,
+                            ImportFinishedCallback callback)
+    {
+        m_SelectImporterSettings.ShowImporterSettings = true;
+        m_SelectImporterSettings.Filename             = filename;
+        m_SelectImporterSettings.Importers            = importers;
+        m_SelectImporterSettings.Callback             = callback;
     }
 };
