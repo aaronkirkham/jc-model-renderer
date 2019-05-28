@@ -209,7 +209,8 @@ class ADF2XML : public IImportExporter
                         const uint32_t alignment = jc::DISTANCE_TO_BOUNDARY(real_payload_offset, member_type->m_Align);
 
                         // get the offset where we want to write the actual data
-                        const uint32_t real_data_offset = (data_offset + current_data_offset);
+                        const uint32_t real_data_offset =
+                            jc::ALIGN_TO_BOUNDARY(data_offset + current_data_offset, member_type->m_Align);
 
                         if (member_type->m_AdfType == EAdfType::BitField) {
                             // assert(member_type->m_Size == 4);
@@ -222,17 +223,20 @@ class ADF2XML : public IImportExporter
                                 value = child->Unsigned64Text();
                             }
 
-                            auto v7 = value & ((1 << member_type->m_ArraySizeOrBitCount) - 1);
+                            // TODO: we should generate bit_offset our selfs.
+                            auto v7            = value & ((1 << member_type->m_ArraySizeOrBitCount) - 1);
+                            auto current_value = *(uint32_t*)&payload[real_payload_offset];
                             *(uint32_t*)&payload[real_payload_offset] |= (v7 << current_member->m_BitOffset);
 
-                            // TODO: we should generate m_BitOffset ourselves.
+                            // update current member data offset
+                            current_member->m_Offset = jc::ALIGN_TO_BOUNDARY(member_offset, type->m_Align);
                         } else {
                             // write instance
                             current_data_offset += XmlReadInstance(adf, child, member_type, payload,
                                                                    real_payload_offset, real_data_offset);
 
                             // update current member data offset
-                            current_member->m_Offset = jc::ALIGN_TO_BOUNDARY(member_offset, type->m_Align);
+                            current_member->m_Offset = jc::ALIGN_TO_BOUNDARY(member_offset, member_type->m_Align);
 
                             // next member offset
                             member_offset += (member_type->m_Size + alignment);
@@ -258,17 +262,17 @@ class ADF2XML : public IImportExporter
                     const auto type_hash     = pointer_el->UnsignedAttribute("type");
                     const auto deferred_type = adf->FindType(type_hash);
 
-                    // write the reference to the data
-                    const uint32_t next_offset = -1;
-                    payload_offset             = jc::ALIGN_TO_BOUNDARY(payload_offset, type->m_Align);
-                    std::memcpy((char*)payload + payload_offset, &data_offset, sizeof(data_offset));
-                    std::memcpy((char*)payload + (payload_offset + 4), &next_offset, sizeof(next_offset));
-                    std::memcpy((char*)payload + (payload_offset + 8), &type_hash, sizeof(type_hash));
-
-                    //
-                    m_RefsToFix.push_back(jc::ALIGN_TO_BOUNDARY(payload_offset, type->m_Align));
-
                     if (deferred_type && pointer_el->FirstChildElement()) {
+                        // write the reference to the data
+                        const uint32_t next_offset = -1;
+                        payload_offset             = jc::ALIGN_TO_BOUNDARY(payload_offset, type->m_Align);
+                        std::memcpy((char*)payload + payload_offset, &data_offset, sizeof(data_offset));
+                        std::memcpy((char*)payload + (payload_offset + 4), &next_offset, sizeof(next_offset));
+                        std::memcpy((char*)payload + (payload_offset + 8), &type_hash, sizeof(type_hash));
+
+                        //
+                        m_RefsToFix.push_back(payload_offset);
+
                         const auto deferred_payload_offset = (data_offset);
                         const auto deferred_data_offset    = (data_offset + deferred_type->m_Size);
                         auto       size = XmlReadInstance(adf, pointer_el->FirstChildElement(), deferred_type, payload,
@@ -330,8 +334,7 @@ class ADF2XML : public IImportExporter
                             member_offset += subtype->m_Size;
                         }
 
-                        written =
-                            jc::ALIGN_TO_BOUNDARY((subtype->m_Size * count) + current_data_offset, subtype->m_Align);
+                        written = jc::ALIGN_TO_BOUNDARY((subtype->m_Size * count) + current_data_offset, type->m_Align);
                     }
 
                     // write the reference to the data
@@ -341,8 +344,8 @@ class ADF2XML : public IImportExporter
                     std::memcpy((char*)payload + (payload_offset + 4), &next_offset, sizeof(next_offset));
                     std::memcpy((char*)payload + (payload_offset + 8), &count, sizeof(count));
 
-                    // TODO: is this align needed? can't remember why I wrote it this way
-                    m_RefsToFix.push_back(jc::ALIGN_TO_BOUNDARY(payload_offset, type->m_Align));
+                    //
+                    m_RefsToFix.push_back(payload_offset);
 
                     return written;
                 }
@@ -403,7 +406,7 @@ class ADF2XML : public IImportExporter
                 const uint32_t next_offset = -1;
                 payload_offset             = jc::ALIGN_TO_BOUNDARY(payload_offset, type->m_Align);
 
-                m_RefsToFix.push_back(jc::ALIGN_TO_BOUNDARY(payload_offset, type->m_Align));
+                m_RefsToFix.push_back(payload_offset);
 
                 // if we haven't yet wrote this string, write it now.
                 const auto it = m_StringRefs.find(value);
@@ -614,8 +617,6 @@ class ADF2XML : public IImportExporter
                 types.emplace_back((Type*)mem);
                 ++types_count;
             }
-        } else {
-            SPDLOG_WARN("ADF import has no bundled types.");
         }
 
         // calculate string hashes lengths
@@ -630,11 +631,12 @@ class ADF2XML : public IImportExporter
             adf->m_InternalStrings.begin(), adf->m_InternalStrings.end(), 0,
             [](int32_t accumulator, const std::string& str) { return accumulator + (str.length() + 1); });
 
-        // NOTE: +sizeof(uint32_t) as we write some unknown (padding?) value after the payload, the instance must be
-        // aligned correctly on the next 8 byte boundary
+        // calculate the first instance write offset
         const auto first_instance = instances.front();
         const auto first_instance_offset =
-            jc::ALIGN_TO_BOUNDARY(first_instance.m_PayloadOffset + first_instance.m_PayloadSize + sizeof(uint32_t), 8);
+            jc::ALIGN_TO_BOUNDARY(first_instance.m_PayloadOffset + first_instance.m_PayloadSize
+                                      + ((flags & EHeaderFlags::RELATIVE_OFFSETS_EXISTS) ? sizeof(uint32_t) : 0),
+                                  8);
 
         //
         const auto total_string_hashes      = static_cast<uint32_t>(adf->m_StringHashes.size());
@@ -695,9 +697,8 @@ class ADF2XML : public IImportExporter
 
             const auto type = adf->FindType((*it).m_TypeHash);
             if (type) {
-                auto total = XmlReadInstance(adf.get(), child, type, (const char*)&adf->m_Buffer[(*it).m_PayloadOffset],
-                                             0, type->m_Size);
-                SPDLOG_INFO("total written to buffer: {}", total);
+                XmlReadInstance(adf.get(), child, type, (const char*)&adf->m_Buffer[(*it).m_PayloadOffset], 0,
+                                type->m_Size);
 
                 // fix references
                 // TODO: only if header flag 1 is set.
@@ -718,9 +719,11 @@ class ADF2XML : public IImportExporter
             }
         }
 
-        // write the size of the padding
-        // NOTE: this always seems to be 4. ---   NOT TRUE
-        *(uint32_t*)&adf->m_Buffer[first_instance.m_PayloadOffset + first_instance.m_PayloadSize] = 4;
+        // write something unknown
+        // TODO: figure this out..
+        if (flags & EHeaderFlags::RELATIVE_OFFSETS_EXISTS) {
+            *(uint32_t*)&adf->m_Buffer[first_instance.m_PayloadOffset + first_instance.m_PayloadSize] = -1;
+        }
 
         // write the instances
         std::memcpy(adf->m_Buffer.data() + header.m_FirstInstanceOffset, instances.data(),
@@ -886,7 +889,9 @@ class ADF2XML : public IImportExporter
                     printer.OpenElement("pointer");
                     printer.PushAttribute("type", type_hash);
 
-                    XmlWriteInstance(adf, printer, header, deferred_type, payload, data_offset);
+                    if (data_offset) {
+                        XmlWriteInstance(adf, printer, header, deferred_type, payload, data_offset);
+                    }
 
                     printer.CloseElement();
                 }
@@ -950,6 +955,8 @@ class ADF2XML : public IImportExporter
             case EAdfType::Enumeration: {
                 const auto enum_index   = *(uint32_t*)&payload[offset];
                 const auto current_enum = (Enum*)((char*)type + sizeof(Type) + (sizeof(Enum) * enum_index));
+
+                assert(enum_index <= type->m_MemberCount);
 
                 printer.PushText(adf->m_Strings[current_enum->m_Name].c_str());
                 break;

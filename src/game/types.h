@@ -487,6 +487,11 @@ namespace AvalancheDataFormat
         Float    = 2,
     };
 
+    enum EHeaderFlags {
+        RELATIVE_OFFSETS_EXISTS        = 0x1,
+        HAS_INLINE_ARRAY_WITH_POINTERS = 0x2,
+    };
+
     struct HeaderV2 {
         uint32_t m_Magic = 0x41444620; // "ADF "
         uint32_t m_Version;
@@ -609,128 +614,6 @@ namespace AvalancheDataFormat
     };
 
     static_assert(sizeof(SInstanceInfo) == 0x1C, "SInstanceInfo alignment is wrong.");
-
-#if 0
-    struct Header {
-        uint32_t    m_Magic            = 0x41444620; // "ADF "
-        uint32_t    m_Version          = 4;
-        uint32_t    m_InstanceCount    = 0;
-        uint32_t    m_InstanceOffset   = 0;
-        uint32_t    m_TypeCount        = 0;
-        uint32_t    m_TypeOffset       = 0;
-        uint32_t    m_StringHashCount  = 0;
-        uint32_t    m_StringHashOffset = 0;
-        uint32_t    m_StringCount      = 0;
-        uint32_t    m_StringOffset     = 0;
-        uint32_t    m_FileSize         = 0;
-        char        _padding[20];
-        char const* m_Description = "";
-    };
-
-    enum class TypeDefinitionType : uint32_t {
-        Primitive   = 0,
-        Structure   = 1,
-        Pointer     = 2,
-        Array       = 3,
-        InlineArray = 4,
-        String      = 5,
-        Unknown     = 6,
-        BitField    = 7,
-        Enumeration = 8,
-        StringHash  = 9,
-        Deferred    = 10,
-    };
-
-    enum class TypeMemberHash : uint32_t {
-        Int8     = 0x580D0A62,
-        UInt8    = 0xCA2821D,
-        Int16    = 0xD13FCF93,
-        UInt16   = 0x86D152BD,
-        Int32    = 0x192FE633,
-        UInt32   = 0x75E4E4F,
-        Int64    = 0xAF41354F,
-        UInt64   = 0xA139E01F,
-        Float    = 0x7515A207,
-        Double   = 0xC609F663,
-        String   = 0x8955583E,
-        Deferred = 0xDEFE88ED,
-    };
-
-    enum class PrimitiveType : uint16_t {
-        Signed   = 0,
-        Unsigned = 1,
-        Float    = 2,
-    };
-
-    static const char* TypeDefinitionStr(TypeDefinitionType type)
-    {
-        switch (type) {
-            case TypeDefinitionType::Primitive:
-                return "Primitive";
-            case TypeDefinitionType::Structure:
-                return "Structure";
-            case TypeDefinitionType::Pointer:
-                return "Pointer";
-            case TypeDefinitionType::Array:
-                return "Array";
-            case TypeDefinitionType::InlineArray:
-                return "InlineArray";
-            case TypeDefinitionType::String:
-                return "String";
-            case TypeDefinitionType::BitField:
-                return "BitField";
-            case TypeDefinitionType::Enumeration:
-                return "Enumeration";
-            case TypeDefinitionType::StringHash:
-                return "StringHash";
-            case TypeDefinitionType::Deferred:
-                return "Deferred";
-        }
-
-        return "Unknown";
-    }
-
-    struct TypeDefinition {
-        TypeDefinitionType m_Type;
-        uint32_t           m_Size;
-        uint32_t           m_Alignment;
-        TypeMemberHash     m_TypeHash;
-        int64_t            m_NameIndex;
-        uint16_t           m_Flags;
-        PrimitiveType      m_PrimitiveType;
-        TypeMemberHash     m_ElementTypeHash;
-        uint32_t           m_ArraySizeOrBitCount;
-    };
-
-    struct MemeberDefinition {
-        int64_t        m_NameIndex;
-        TypeMemberHash m_TypeHash;
-        uint32_t       m_Alignment;
-        uint32_t       m_Offset : 24;
-        uint32_t       m_BitIndex : 8;
-        uint32_t       m_Flags;
-        uint64_t       m_DefaultValue;
-    };
-
-    struct InstanceInfo {
-        uint32_t       m_NameHash;
-        TypeMemberHash m_TypeHash;
-        uint32_t       m_Offset;
-        uint32_t       m_Size;
-        int64_t        m_NameIndex;
-    };
-
-    struct Enum {
-        int64_t m_NameIndex;
-        int32_t m_Value;
-    };
-
-    static_assert(sizeof(Header) == 0x48, "AvalancheDataFormat Header alignment is wrong!");
-    static_assert(sizeof(TypeDefinition) == 0x24, "AvalancheDataFormat TypeDefinition alignment is wrong!");
-    static_assert(sizeof(MemeberDefinition) == 0x20, "AvalancheDataFormat MemeberDefinition alignment is wrong!");
-    static_assert(sizeof(InstanceInfo) == 0x18, "AvalancheDataFormat InstanceInfo alignment is wrong!");
-    static_assert(sizeof(Enum) == 0xC, "AvalancheDataFormat Enum alignment is wrong!");
-#endif
 } // namespace AvalancheDataFormat
 
 template <typename T> inline static T ALIGN_TO_BOUNDARY(T value, uint32_t alignment = sizeof(uint32_t))
