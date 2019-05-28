@@ -538,6 +538,15 @@ class ADF2XML : public IImportExporter
             PrefetchStringHashes(adf.get(), child);
         }
 
+        // right now we only support single instances.
+        if (instances.size() > 1) {
+#ifdef DEBUG
+            __debugbreak();
+#endif
+            SPDLOG_ERROR("ADF has multiple instances.");
+            return callback(false, filename, {});
+        }
+
         // load types
         uint32_t           types_count      = 0;
         uint32_t           total_types_size = 0;
@@ -717,12 +726,12 @@ class ADF2XML : public IImportExporter
                     *(uint32_t*)&adf->m_Buffer[(*it).m_PayloadOffset + (offset + 4)] = next_offset;
                 }
             }
-        }
 
-        // write something unknown
-        // TODO: figure this out..
-        if (flags & EHeaderFlags::RELATIVE_OFFSETS_EXISTS) {
-            *(uint32_t*)&adf->m_Buffer[first_instance.m_PayloadOffset + first_instance.m_PayloadSize] = -1;
+            // TODO: figure out what this is
+            if (flags & EHeaderFlags::RELATIVE_OFFSETS_EXISTS) {
+                const auto unknown = child->UnsignedAttribute("unknown");
+                *(uint32_t*)&adf->m_Buffer[(*it).m_PayloadOffset + (*it).m_PayloadSize] = unknown;
+            }
         }
 
         // write the instances
@@ -1008,9 +1017,8 @@ class ADF2XML : public IImportExporter
         // instances
         auto instance_buffer = &buffer[header_out.m_FirstInstanceOffset];
         for (uint32_t i = 0; i < header_out.m_InstanceCount; ++i) {
-            auto current_instance = (Instance*)instance_buffer;
-
-            const auto& instance_name = adf->m_Strings[current_instance->m_Name];
+            auto        current_instance = (Instance*)instance_buffer;
+            const auto& instance_name    = adf->m_Strings[current_instance->m_Name];
 
             printer.OpenElement("instance");
             XmlPushAttribute("name", instance_name.c_str());
@@ -1018,6 +1026,13 @@ class ADF2XML : public IImportExporter
             XmlPushAttribute("typehash", current_instance->m_TypeHash);
             XmlPushAttribute("offset", current_instance->m_PayloadOffset);
             XmlPushAttribute("size", current_instance->m_PayloadSize);
+
+            // TODO: don't write this when we know what it is actually for
+            if (header_out.m_Flags & EHeaderFlags::RELATIVE_OFFSETS_EXISTS) {
+                const auto unknown =
+                    *(uint32_t*)&adf->m_Buffer[current_instance->m_PayloadOffset + current_instance->m_PayloadSize];
+                XmlPushAttribute("unknown", unknown);
+            }
 
             // write the type members
             const auto type = adf->FindType(current_instance->m_TypeHash);
