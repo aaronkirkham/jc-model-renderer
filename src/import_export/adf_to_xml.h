@@ -45,6 +45,20 @@ class ADF2XML : public IImportExporter
         }
     }
 
+    void PushHigherPrecisionFloat(tinyxml2::XMLPrinter& printer, float value)
+    {
+        static auto TIXML_SNPRINTF = [](char* buffer, size_t size, const char* format, ...) {
+            va_list va;
+            va_start(va, format);
+            vsnprintf_s(buffer, size, _TRUNCATE, format, va);
+            va_end(va);
+        };
+
+        char buf[200];
+        TIXML_SNPRINTF(buf, 200, "%.9g", value);
+        printer.PushText(buf, false);
+    }
+
     void WriteFromString(const jc::AvalancheDataFormat::Type* type, const char* payload, uint32_t offset,
                          const std::string& data)
     {
@@ -106,7 +120,7 @@ class ADF2XML : public IImportExporter
     std::vector<std::string> GetImportExtension() override final
     {
         // TODO: get a real list of all ADF extensions
-        return {".blo_adf", ".flo_adf", ".epe_adf", ".vmodc", ".wtunec", ".modelc", ".meshc", ".hrmeshc"};
+        return {".blo_adf", ".flo_adf", ".epe_adf", ".vmodc", ".wtunec", ".modelc", ".meshc", ".hrmeshc", ".environc"};
     }
 
     const char* GetExportName() override final
@@ -836,7 +850,8 @@ class ADF2XML : public IImportExporter
 
                     case ScalarType::Float: {
                         if (type->m_Size == 4) {
-                            printer.PushText(*(float*)&payload[offset]);
+                            // NOTE: game uses %.9g when writing floats, tinyxml2 only uses %.8g
+                            PushHigherPrecisionFloat(printer, *(float*)&payload[offset]);
                         } else if (type->m_Size == 8) {
                             printer.PushText(*(double*)&payload[offset]);
                         }
