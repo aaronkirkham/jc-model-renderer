@@ -132,6 +132,8 @@ class ADF2XML : public IImportExporter
 
         switch (type->m_AdfType) {
             case EAdfType::Primitive: {
+                payload_offset = jc::ALIGN_TO_BOUNDARY(payload_offset, type->m_Align);
+
                 switch (type->m_ScalarType) {
                     case ScalarType::Signed: {
                         if (type->m_Size == 1) {
@@ -205,6 +207,8 @@ class ADF2XML : public IImportExporter
                         const auto member_type = adf->FindType(current_member->m_TypeHash);
 
                         // get the offset where to write the next element
+                        // TODO: the payload offset should use ALIGN_TO_BOUNDARY, then we don't have to manually
+                        // do it in each case for primitives/strings/hashes/enums etc.
                         const uint32_t real_payload_offset = (payload_offset + member_offset);
                         const uint32_t alignment = jc::DISTANCE_TO_BOUNDARY(real_payload_offset, member_type->m_Align);
 
@@ -860,8 +864,8 @@ class ADF2XML : public IImportExporter
 
                         auto data = *(uint64_t*)&payload[(offset + (current_member->m_Offset & 0xFFFFFF))];
 
-                        const auto v26 = (1 << bit_count);
-                        auto       v27 = (v26 - 1) & (data >> current_member->m_BitOffset);
+                        const int64_t v26 = (1 << bit_count);
+                        int64_t       v27 = (v26 - 1) & (data >> current_member->m_BitOffset);
 
                         if (member_type->m_ScalarType == ScalarType::Signed
                             && _bittest64((long long*)&v27, (bit_count - 1))) {
