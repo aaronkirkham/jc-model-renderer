@@ -163,7 +163,7 @@ bool AvalancheModelFormat::ParseMeshBuffers()
     std::vector<SAmfBuffer*> vertex_buffers;
     std::vector<SAmfBuffer*> index_buffers;
     {
-        static const auto CopyBuffer = [](AdfArray<SAmfBuffer>& buffers, std::vector<SAmfBuffer*>* to) {
+        static const auto CopyBuffer = [](SAdfArray<SAmfBuffer>& buffers, std::vector<SAmfBuffer*>* to) {
             for (uint32_t i = 0; i < buffers.m_Count; ++i) {
                 to->emplace_back(&buffers.m_Data[i]);
             }

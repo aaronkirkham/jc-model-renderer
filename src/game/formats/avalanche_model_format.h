@@ -23,18 +23,18 @@ struct SAmfBoundingBox {
 static_assert(sizeof(SAmfBoundingBox) == 0x18, "SAmfBoundingBox alignment is wrong!");
 
 struct SAmfMaterial {
-    uint32_t           m_Name;
-    uint32_t           m_RenderBlockId;
-    SAdfDeferredPtr    m_Attributes;
-    AdfArray<uint32_t> m_Textures;
+    uint32_t            m_Name;
+    uint32_t            m_RenderBlockId;
+    SAdfDeferredPtr     m_Attributes;
+    SAdfArray<uint32_t> m_Textures;
 };
 
 struct SAmfModel {
-    uint32_t               m_Mesh;
-    AdfArray<uint8_t>      m_LodSlots;
-    uint32_t               m_MemoryTag;
-    float                  m_LodFactor;
-    AdfArray<SAmfMaterial> m_Materials;
+    uint32_t                m_Mesh;
+    SAdfArray<uint8_t>      m_LodSlots;
+    uint32_t                m_MemoryTag;
+    float                   m_LodFactor;
+    SAdfArray<SAmfMaterial> m_Materials;
 };
 
 static_assert(sizeof(SAmfMaterial) == 0x28, "SAmfMaterial alignment is wrong!");
@@ -57,20 +57,20 @@ struct SAmfStreamAttribute {
 };
 
 struct SAmfMesh {
-    uint32_t                      m_MeshTypeId;
-    uint32_t                      m_IndexCount;
-    uint32_t                      m_VertexCount;
-    int8_t                        m_IndexBufferIndex;
-    int8_t                        m_IndexBufferStride;
-    uint32_t                      m_IndexBufferOffset;
-    AdfArray<int8_t>              m_VertexBufferIndices;
-    AdfArray<int8_t>              m_VertexStreamStrides;
-    AdfArray<int32_t>             m_VertexStreamOffsets;
-    float                         m_TextureDensities[3];
-    SAdfDeferredPtr               m_MeshProperties;
-    AdfArray<int16_t>             m_BoneIndexLookup;
-    AdfArray<SAmfSubMesh>         m_SubMeshes;
-    AdfArray<SAmfStreamAttribute> m_StreamAttributes;
+    uint32_t                       m_MeshTypeId;
+    uint32_t                       m_IndexCount;
+    uint32_t                       m_VertexCount;
+    int8_t                         m_IndexBufferIndex;
+    int8_t                         m_IndexBufferStride;
+    uint32_t                       m_IndexBufferOffset;
+    SAdfArray<int8_t>              m_VertexBufferIndices;
+    SAdfArray<int8_t>              m_VertexStreamStrides;
+    SAdfArray<int32_t>             m_VertexStreamOffsets;
+    float                          m_TextureDensities[3];
+    SAdfDeferredPtr                m_MeshProperties;
+    SAdfArray<int16_t>             m_BoneIndexLookup;
+    SAdfArray<SAmfSubMesh>         m_SubMeshes;
+    SAdfArray<SAmfStreamAttribute> m_StreamAttributes;
 };
 
 static_assert(sizeof(SAmfSubMesh) == 0x24, "SAmfSubMesh alignment is wrong!");
@@ -78,29 +78,29 @@ static_assert(sizeof(SAmfStreamAttribute) == 0x14, "SAmfStreamAttribute alignmen
 static_assert(sizeof(SAmfMesh) == 0x98, "SAmfMesh alignment is wrong!");
 
 struct SAmfLodGroup {
-    uint32_t           m_LODIndex;
-    AdfArray<SAmfMesh> m_Meshes;
+    uint32_t            m_LODIndex;
+    SAdfArray<SAmfMesh> m_Meshes;
 };
 
 struct SAmfMeshHeader {
-    SAmfBoundingBox        m_BoundingBox;
-    uint32_t               m_MemoryTag;
-    AdfArray<SAmfLodGroup> m_LodGroups;
-    uint32_t               m_HighLodPath;
+    SAmfBoundingBox         m_BoundingBox;
+    uint32_t                m_MemoryTag;
+    SAdfArray<SAmfLodGroup> m_LodGroups;
+    uint32_t                m_HighLodPath;
 };
 
 static_assert(sizeof(SAmfLodGroup) == 0x18, "SAmfLodGroup alignment is wrong!");
 static_assert(sizeof(SAmfMeshHeader) == 0x38, "SAmfMeshHeader alignment is wrong!");
 
 struct SAmfBuffer {
-    AdfArray<int8_t> m_Data;
-    int8_t           m_CreateSRV : 1;
+    SAdfArray<int8_t> m_Data;
+    int8_t            m_CreateSRV : 1;
 };
 
 struct SAmfMeshBuffers {
-    uint32_t             m_MemoryTag;
-    AdfArray<SAmfBuffer> m_IndexBuffers;
-    AdfArray<SAmfBuffer> m_VertexBuffers;
+    uint32_t              m_MemoryTag;
+    SAdfArray<SAmfBuffer> m_IndexBuffers;
+    SAdfArray<SAmfBuffer> m_VertexBuffers;
 };
 
 static_assert(sizeof(SAmfBuffer) == 0x18, "SAmfBuffer alignment is wrong!");

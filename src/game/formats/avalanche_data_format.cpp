@@ -61,24 +61,18 @@ void AvalancheDataFormat::GetInstance(uint32_t index, jc::AvalancheDataFormat::S
         return;
     }
 
-    Instance*   instance      = nullptr;
-    const char* name          = "";
-    const auto  instance_data = &m_Buffer[header_out.m_FirstInstanceOffset];
-
-    if (header_out.m_Version > 3) {
-        instance = (Instance*)&m_Buffer[sizeof(Instance) * index + header_out.m_FirstInstanceOffset];
-        name     = m_Strings[instance->m_Name].c_str();
-    } else {
-#ifdef _DEBUG
+    if (header_out.m_Version != 4) {
+#ifdef DEBUG
         __debugbreak();
 #endif
-        instance = (Instance*)&instance_data[sizeof(InstanceV3) * index];
-        name     = (const char*)&instance_data[sizeof(InstanceV3) * index + offsetof(InstanceV3, m_Name)];
+        return;
     }
+
+    const Instance* instance = (Instance*)&m_Buffer[header_out.m_FirstInstanceOffset + (sizeof(Instance) * index)];
 
     instance_info->m_NameHash = instance->m_NameHash;
     instance_info->m_TypeHash = instance->m_TypeHash;
-    instance_info->m_Name     = name;
+    instance_info->m_Name     = m_Strings[instance->m_Name].c_str();
 
     const auto type = FindType(instance->m_TypeHash);
     if (type) {
@@ -113,7 +107,7 @@ void AvalancheDataFormat::ReadInstance(uint32_t name_hash, uint32_t type_hash, v
             break;
         }
 
-        instance_buffer += ((header_out.m_Version > 3) ? sizeof(Instance) : sizeof(InstanceV3));
+        instance_buffer += sizeof(Instance);
     }
 
     if (!current_instance) {

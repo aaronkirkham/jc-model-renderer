@@ -38,7 +38,7 @@ project "jc-model-renderer"
     "vendor/tinyxml2"
   }
 
-  disablewarnings { "4244", "4267", "6031", "6262" }
+  disablewarnings { "4200", "4244", "4267", "6031", "6262" }
 
 -- ImGui
 project "imgui"

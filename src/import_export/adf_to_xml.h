@@ -759,10 +759,7 @@ class ADF2XML : public IImportExporter
         // write the types
         uint32_t cur_type_offset = 0;
         for (const auto type : types) {
-            const auto size =
-                type->m_MemberCount * ((type->m_AdfType == EAdfType::Enumeration) ? sizeof(Enum) : sizeof(Member))
-                + sizeof(Type);
-
+            const uint32_t size = type->Size();
             std::memcpy(adf->m_Buffer.data() + header.m_FirstTypeOffset + cur_type_offset, (char*)type, size);
             cur_type_offset += size;
         }
@@ -812,53 +809,39 @@ class ADF2XML : public IImportExporter
     }
 
     void XmlWriteInstance(::AvalancheDataFormat* adf, tinyxml2::XMLPrinter& printer,
-                          const jc::AvalancheDataFormat::Header* header, jc::AvalancheDataFormat::Type* type,
-                          const char* payload, uint32_t offset = 0, const char* name = nullptr)
+                          const jc::AvalancheDataFormat::Header* header, const jc::AvalancheDataFormat::Type* type,
+                          const char* payload, uint32_t offset = 0)
     {
         using namespace jc::AvalancheDataFormat;
 
         switch (type->m_AdfType) {
             case EAdfType::Primitive: {
+                // clang-format off
                 switch (type->m_ScalarType) {
-                    case ScalarType::Signed: {
-                        if (type->m_Size == 1) {
-                            printer.PushText(*(int8_t*)&payload[offset]);
-                        } else if (type->m_Size == 2) {
-                            printer.PushText(*(int16_t*)&payload[offset]);
-                        } else if (type->m_Size == 4) {
-                            printer.PushText(*(int32_t*)&payload[offset]);
-                        } else if (type->m_Size == 8) {
-                            printer.PushText(*(int64_t*)&payload[offset]);
+                    case ScalarType::Signed:
+                        switch (type->m_Size) {
+                            case sizeof(int8_t):	printer.PushText(*(int8_t*)&payload[offset]); break;
+                            case sizeof(int16_t):	printer.PushText(*(int16_t*)&payload[offset]); break;
+                            case sizeof(int32_t):	printer.PushText(*(int32_t*)&payload[offset]); break;
+                            case sizeof(int64_t):	printer.PushText(*(int64_t*)&payload[offset]); break;
                         }
-
                         break;
-                    }
-
-                    case ScalarType::Unsigned: {
-                        if (type->m_Size == 1) {
-                            printer.PushText(*(uint8_t*)&payload[offset]);
-                        } else if (type->m_Size == 2) {
-                            printer.PushText(*(uint16_t*)&payload[offset]);
-                        } else if (type->m_Size == 4) {
-                            printer.PushText(*(uint32_t*)&payload[offset]);
-                        } else if (type->m_Size == 8) {
-                            printer.PushText(*(uint64_t*)&payload[offset]);
+                    case ScalarType::Unsigned:
+                        switch (type->m_Size) {
+                            case sizeof(uint8_t):	printer.PushText(*(uint8_t*)&payload[offset]); break;
+                            case sizeof(uint16_t):	printer.PushText(*(uint16_t*)&payload[offset]); break;
+                            case sizeof(uint32_t):	printer.PushText(*(uint32_t*)&payload[offset]); break;
+                            case sizeof(uint64_t):	printer.PushText(*(uint64_t*)&payload[offset]); break;
                         }
-
                         break;
-                    }
-
-                    case ScalarType::Float: {
-                        if (type->m_Size == 4) {
-                            // NOTE: game uses %.9g when writing floats, tinyxml2 only uses %.8g
-                            PushHigherPrecisionFloat(printer, *(float*)&payload[offset]);
-                        } else if (type->m_Size == 8) {
-                            printer.PushText(*(double*)&payload[offset]);
+                    case ScalarType::Float:
+                        switch (type->m_Size) {
+                            case sizeof(float):	PushHigherPrecisionFloat(printer, *(float*)&payload[offset]); break;
+                            case sizeof(double):	printer.PushText(*(double*)&payload[offset]); break;
                         }
-
                         break;
-                    }
                 }
+                // clang-format on
 
                 break;
             }
@@ -868,19 +851,21 @@ class ADF2XML : public IImportExporter
                 printer.PushAttribute("type", adf->m_Strings[type->m_Name].c_str());
 
                 for (uint32_t i = 0; i < type->m_MemberCount; ++i) {
-                    const auto current_member = (Member*)((char*)type + sizeof(Type) + (sizeof(Member) * i));
-                    const auto member_type    = adf->FindType(current_member->m_TypeHash);
+                    const Member& member      = type->Member(i);
+                    const Type*   member_type = adf->FindType(member.m_TypeHash);
+
+                    assert(member_type);
 
                     printer.OpenElement("member");
-                    printer.PushAttribute("name", adf->m_Strings[current_member->m_Name].c_str());
+                    printer.PushAttribute("name", adf->m_Strings[member.m_Name].c_str());
 
                     if (member_type->m_AdfType == EAdfType::BitField) {
                         const auto bit_count = member_type->m_ArraySizeOrBitCount;
 
-                        auto data = *(uint64_t*)&payload[(offset + (current_member->m_Offset & 0xFFFFFF))];
+                        auto data = *(uint64_t*)&payload[(offset + (member.m_Offset & 0xFFFFFF))];
 
                         const int64_t v26 = (1 << bit_count);
-                        int64_t       v27 = (v26 - 1) & (data >> current_member->m_BitOffset);
+                        int64_t       v27 = (v26 - 1) & (data >> member.m_BitOffset);
 
                         if (member_type->m_ScalarType == ScalarType::Signed
                             && _bittest64((long long*)&v27, (bit_count - 1))) {
@@ -891,7 +876,7 @@ class ADF2XML : public IImportExporter
                         printer.PushText(v27);
                     } else {
                         XmlWriteInstance(adf, printer, header, member_type, payload,
-                                         (offset + (current_member->m_Offset & 0xFFFFFF)));
+                                         (offset + (member.m_Offset & 0xFFFFFF)));
                     }
 
                     printer.CloseElement();
@@ -974,27 +959,25 @@ class ADF2XML : public IImportExporter
             }
 
             case EAdfType::String: {
-                auto string_offset = *(uint32_t*)&payload[offset];
-                auto value         = (const char*)&payload[string_offset];
+                const uint32_t string_offset = *(uint32_t*)&payload[offset];
+                const char*    value         = (const char*)&payload[string_offset];
                 printer.PushText(value);
                 break;
             }
 
             case EAdfType::Enumeration: {
-                const auto enum_index   = *(uint32_t*)&payload[offset];
-                const auto current_enum = (Enum*)((char*)type + sizeof(Type) + (sizeof(Enum) * enum_index));
+                const uint32_t index       = *(uint32_t*)&payload[offset];
+                const Enum&    enum_member = type->Enum(index);
 
-                assert(enum_index <= type->m_MemberCount);
-
-                printer.PushText(adf->m_Strings[current_enum->m_Name].c_str());
+                printer.PushText(adf->m_Strings[enum_member.m_Name].c_str());
                 break;
             }
 
             case EAdfType::StringHash: {
                 printer.OpenElement("stringhash");
 
-                auto        string_hash = *(uint32_t*)&payload[offset];
-                const auto& string      = adf->HashLookup(string_hash);
+                const uint32_t string_hash = *(uint32_t*)&payload[offset];
+                const char*    string      = adf->HashLookup(string_hash);
 
                 printer.PushText(string);
                 printer.CloseElement();
@@ -1036,33 +1019,30 @@ class ADF2XML : public IImportExporter
         // instances
         auto instance_buffer = &buffer[header_out.m_FirstInstanceOffset];
         for (uint32_t i = 0; i < header_out.m_InstanceCount; ++i) {
-            auto        current_instance = (Instance*)instance_buffer;
-            const auto& instance_name    = adf->m_Strings[current_instance->m_Name];
+            const Instance* instance = (Instance*)instance_buffer;
 
             printer.OpenElement("instance");
-            XmlPushAttribute("name", instance_name.c_str());
-            XmlPushAttribute("namehash", current_instance->m_NameHash);
-            XmlPushAttribute("typehash", current_instance->m_TypeHash);
-            XmlPushAttribute("offset", current_instance->m_PayloadOffset);
-            XmlPushAttribute("size", current_instance->m_PayloadSize);
+            XmlPushAttribute("name", adf->m_Strings[instance->m_Name].c_str());
+            XmlPushAttribute("namehash", instance->m_NameHash);
+            XmlPushAttribute("typehash", instance->m_TypeHash);
+            XmlPushAttribute("offset", instance->m_PayloadOffset);
+            XmlPushAttribute("size", instance->m_PayloadSize);
 
             // TODO: don't write this when we know what it is actually for
             if (header_out.m_Flags & EHeaderFlags::RELATIVE_OFFSETS_EXISTS) {
-                const auto unknown =
-                    *(uint32_t*)&adf->m_Buffer[current_instance->m_PayloadOffset + current_instance->m_PayloadSize];
+                const auto unknown = *(uint32_t*)&adf->m_Buffer[instance->m_PayloadOffset + instance->m_PayloadSize];
                 XmlPushAttribute("unknown", unknown);
             }
 
             // write the type members
-            const auto type = adf->FindType(current_instance->m_TypeHash);
+            const auto type = adf->FindType(instance->m_TypeHash);
             if (type) {
-                XmlWriteInstance(adf, printer, &header_out, type,
-                                 (const char*)&buffer[current_instance->m_PayloadOffset], 0, instance_name.c_str());
+                XmlWriteInstance(adf, printer, &header_out, type, (const char*)&buffer[instance->m_PayloadOffset], 0);
             }
 
             printer.CloseElement();
 
-            instance_buffer += ((header_out.m_Version > 3) ? sizeof(Instance) : sizeof(InstanceV3));
+            instance_buffer += sizeof(Instance);
         }
 
         // types
@@ -1072,38 +1052,34 @@ class ADF2XML : public IImportExporter
 
             auto types_buffer = &adf->m_Buffer[header_out.m_FirstTypeOffset];
             for (uint32_t i = 0; i < header_out.m_TypeCount; ++i) {
-                const auto current_type = (Type*)types_buffer;
-                const auto size =
-                    current_type->m_MemberCount
-                        * ((current_type->m_AdfType == EAdfType::Enumeration) ? sizeof(Enum) : sizeof(Member))
-                    + sizeof(Type);
+                const Type* type = (Type*)types_buffer;
 
                 printer.OpenElement("type");
-                XmlPushAttribute("name", adf->m_Strings[current_type->m_Name].c_str());
-                XmlPushAttribute("type", static_cast<uint32_t>(current_type->m_AdfType));
-                XmlPushAttribute("size", current_type->m_Size);
-                XmlPushAttribute("alignment", current_type->m_Align);
-                XmlPushAttribute("typehash", current_type->m_TypeHash);
-                XmlPushAttribute("flags", current_type->m_Flags);
-                XmlPushAttribute("scalartype", static_cast<uint32_t>(current_type->m_ScalarType));
-                XmlPushAttribute("subtypehash", current_type->m_SubTypeHash);
-                XmlPushAttribute("arraysizeorbitcount", current_type->m_ArraySizeOrBitCount);
+                XmlPushAttribute("name", adf->m_Strings[type->m_Name].c_str());
+                XmlPushAttribute("type", static_cast<uint32_t>(type->m_AdfType));
+                XmlPushAttribute("size", type->m_Size);
+                XmlPushAttribute("alignment", type->m_Align);
+                XmlPushAttribute("typehash", type->m_TypeHash);
+                XmlPushAttribute("flags", type->m_Flags);
+                XmlPushAttribute("scalartype", static_cast<uint32_t>(type->m_ScalarType));
+                XmlPushAttribute("subtypehash", type->m_SubTypeHash);
+                XmlPushAttribute("arraysizeorbitcount", type->m_ArraySizeOrBitCount);
 
-                const auto is_enum = (current_type->m_AdfType == EAdfType::Enumeration);
-                for (uint32_t y = 0; y < current_type->m_MemberCount; ++y) {
+                const auto is_enum = (type->m_AdfType == EAdfType::Enumeration);
+                for (uint32_t y = 0; y < type->m_MemberCount; ++y) {
                     printer.OpenElement("member");
 
                     if (is_enum) {
-                        const auto current_enum = (Enum*)(types_buffer + sizeof(Type) + (sizeof(Enum) * y));
-                        XmlPushAttribute("name", adf->m_Strings[current_enum->m_Name].c_str());
+                        const Enum& enum_member = type->Enum(y);
+                        XmlPushAttribute("name", adf->m_Strings[enum_member.m_Name].c_str());
                     } else {
-                        const auto current_member = (Member*)(types_buffer + sizeof(Type) + (sizeof(Member) * y));
-                        XmlPushAttribute("name", adf->m_Strings[current_member->m_Name].c_str());
-                        XmlPushAttribute("typehash", current_member->m_TypeHash);
-                        XmlPushAttribute("alignment", current_member->m_Align);
-                        XmlPushAttribute("bitoffset", current_member->m_BitOffset);
-                        XmlPushAttribute("flags", current_member->m_Flags);
-                        XmlPushAttribute("default", current_member->m_DefaultValue);
+                        const Member& member = type->m_Members[y];
+                        XmlPushAttribute("name", adf->m_Strings[member.m_Name].c_str());
+                        XmlPushAttribute("typehash", member.m_TypeHash);
+                        XmlPushAttribute("alignment", member.m_Align);
+                        XmlPushAttribute("bitoffset", member.m_BitOffset);
+                        XmlPushAttribute("flags", member.m_Flags);
+                        XmlPushAttribute("default", member.m_DefaultValue);
                     }
 
                     printer.CloseElement();
@@ -1112,7 +1088,7 @@ class ADF2XML : public IImportExporter
                 printer.CloseElement();
 
                 // next element
-                types_buffer += size;
+                types_buffer += type->Size();
             }
 
             printer.CloseElement();
