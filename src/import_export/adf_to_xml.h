@@ -59,48 +59,42 @@ class ADF2XML : public IImportExporter
         printer.PushText(buf, false);
     }
 
-    void WriteFromString(const jc::AvalancheDataFormat::Type* type, const char* payload, uint32_t offset,
-                         const std::string& data)
+    template <typename T> inline void WriteScalarToPayload(T value, const char* payload, uint32_t payload_offset)
+    {
+        std::memcpy((char*)payload + payload_offset, &value, sizeof(T));
+    }
+
+    void WriteScalarToPayloadFromString(const jc::AvalancheDataFormat::Type* type, const char* payload,
+                                        uint32_t payload_offset, const std::string& data)
     {
         using namespace jc::AvalancheDataFormat;
 
-        if (type->m_ScalarType == ScalarType::Signed) {
-            if (type->m_Size == 1) {
-                auto value = static_cast<int8_t>(std::stoi(data));
-                std::memcpy((char*)payload + offset, &value, sizeof(value));
-            } else if (type->m_Size == 2) {
-                auto value = static_cast<int16_t>(std::stoi(data));
-                std::memcpy((char*)payload + offset, &value, sizeof(value));
-            } else if (type->m_Size == 4) {
-                auto value = static_cast<int32_t>(std::stol(data));
-                std::memcpy((char*)payload + offset, &value, sizeof(value));
-            } else if (type->m_Size == 8) {
-                auto value = static_cast<int64_t>(std::stoll(data));
-                std::memcpy((char*)payload + offset, &value, sizeof(value));
+        // clang-format off
+        switch (type->m_ScalarType) {
+        case ScalarType::Signed:
+            switch (type->m_Size) {
+                case sizeof(int8_t):	WriteScalarToPayload<int8_t>(std::stoi(data), payload, payload_offset); break;
+                case sizeof(int16_t):	WriteScalarToPayload<int16_t>(std::stoi(data), payload, payload_offset); break;
+                case sizeof(int32_t):	WriteScalarToPayload<int32_t>(std::stol(data), payload, payload_offset); break;
+                case sizeof(int64_t):	WriteScalarToPayload<int64_t>(std::stoll(data), payload, payload_offset); break;
             }
-        } else if (type->m_ScalarType == ScalarType::Unsigned) {
-            if (type->m_Size == 1) {
-                auto value = static_cast<uint8_t>(std::stoi(data));
-                std::memcpy((char*)payload + offset, &value, sizeof(value));
-            } else if (type->m_Size == 2) {
-                auto value = static_cast<uint16_t>(std::stoi(data));
-                std::memcpy((char*)payload + offset, &value, sizeof(value));
-            } else if (type->m_Size == 4) {
-                auto value = static_cast<uint32_t>(std::stoul(data));
-                std::memcpy((char*)payload + offset, &value, sizeof(value));
-            } else if (type->m_Size == 8) {
-                auto value = static_cast<uint64_t>(std::stoull(data));
-                std::memcpy((char*)payload + offset, &value, sizeof(value));
+            break;
+        case ScalarType::Unsigned:
+            switch (type->m_Size) {
+                case sizeof(uint8_t):	WriteScalarToPayload<uint8_t>(std::stoi(data), payload, payload_offset); break;
+                case sizeof(uint16_t):	WriteScalarToPayload<uint16_t>(std::stoi(data), payload, payload_offset); break;
+                case sizeof(uint32_t):	WriteScalarToPayload<uint32_t>(std::stoul(data), payload, payload_offset); break;
+                case sizeof(uint64_t):	WriteScalarToPayload<uint64_t>(std::stoull(data), payload, payload_offset); break;
             }
-        } else if (type->m_ScalarType == ScalarType::Float) {
-            if (type->m_Size == 4) {
-                auto value = std::stof(data);
-                std::memcpy((char*)payload + offset, &value, sizeof(value));
-            } else if (type->m_Size == 8) {
-                auto value = std::stod(data);
-                std::memcpy((char*)payload + offset, &value, sizeof(value));
+            break;
+        case ScalarType::Float:
+            switch (type->m_Size) {
+                case sizeof(float):		WriteScalarToPayload(std::stof(data), payload, payload_offset); break;
+                case sizeof(double):	WriteScalarToPayload(std::stod(data), payload, payload_offset); break;
             }
+            break;
         }
+        // clang-format on
     }
 
   public:
@@ -146,58 +140,32 @@ class ADF2XML : public IImportExporter
 
         switch (type->m_AdfType) {
             case EAdfType::Primitive: {
-                payload_offset = jc::ALIGN_TO_BOUNDARY(payload_offset, type->m_Align);
-
+                // clang-format off
                 switch (type->m_ScalarType) {
-                    case ScalarType::Signed: {
-                        if (type->m_Size == 1) {
-                            auto value = static_cast<int8_t>(el->IntText());
-                            std::memcpy((char*)payload + payload_offset, &value, sizeof(value));
-                        } else if (type->m_Size == 2) {
-                            auto value = static_cast<int16_t>(el->IntText());
-                            std::memcpy((char*)payload + payload_offset, &value, sizeof(value));
-                        } else if (type->m_Size == 4) {
-                            auto value = el->IntText();
-                            std::memcpy((char*)payload + payload_offset, &value, sizeof(value));
-                        } else if (type->m_Size == 8) {
-                            auto value = el->Int64Text();
-                            std::memcpy((char*)payload + payload_offset, &value, sizeof(value));
-                        }
-
-                        break;
+                case ScalarType::Signed:
+                    switch (type->m_Size) {
+                        case sizeof(int8_t):	WriteScalarToPayload<int8_t>(el->IntText(), payload, payload_offset); break;
+                        case sizeof(int16_t):	WriteScalarToPayload<int16_t>(el->IntText(), payload, payload_offset); break;
+                        case sizeof(int32_t):	WriteScalarToPayload<int32_t>(el->IntText(), payload, payload_offset); break;
+                        case sizeof(int64_t):	WriteScalarToPayload<int64_t>(el->Int64Text(), payload, payload_offset); break;
                     }
-
-                    case ScalarType::Unsigned: {
-                        if (type->m_Size == 1) {
-                            auto value = static_cast<uint8_t>(el->UnsignedText());
-                            std::memcpy((char*)payload + payload_offset, &value, sizeof(value));
-                        } else if (type->m_Size == 2) {
-                            auto value = static_cast<uint16_t>(el->UnsignedText());
-                            std::memcpy((char*)payload + payload_offset, &value, sizeof(value));
-                        } else if (type->m_Size == 4) {
-                            auto value = el->UnsignedText();
-                            std::memcpy((char*)payload + payload_offset, &value, sizeof(value));
-                        } else if (type->m_Size == 8) {
-                            auto value = el->Unsigned64Text();
-                            std::memcpy((char*)payload + payload_offset, &value, sizeof(value));
-                        }
-
-                        break;
+                    break;
+                case ScalarType::Unsigned:
+                    switch (type->m_Size) {
+                        case sizeof(uint8_t):	WriteScalarToPayload<uint8_t>(el->UnsignedText(), payload, payload_offset); break;
+                        case sizeof(uint16_t):	WriteScalarToPayload<uint16_t>(el->UnsignedText(), payload, payload_offset); break;
+                        case sizeof(uint32_t):	WriteScalarToPayload<uint32_t>(el->UnsignedText(), payload, payload_offset); break;
+                        case sizeof(uint64_t):	WriteScalarToPayload<uint64_t>(el->Unsigned64Text(), payload, payload_offset); break;
                     }
-
-                    case ScalarType::Float: {
-                        if (type->m_Size == 4) {
-                            auto value = el->FloatText();
-                            std::memcpy((char*)payload + payload_offset, &value, sizeof(value));
-                        } else if (type->m_Size == 8) {
-                            auto value = el->DoubleText();
-                            std::memcpy((char*)payload + payload_offset, &value, sizeof(value));
-                        }
-
-                        break;
+                    break;
+                case ScalarType::Float:
+                    switch (type->m_Size) {
+                        case sizeof(float):		WriteScalarToPayload(el->FloatText(), payload, payload_offset); break;
+                        case sizeof(double):	WriteScalarToPayload(el->DoubleText(), payload, payload_offset); break;
                     }
+                    break;
                 }
-
+                // clang-format on
                 // NOTE: no return as we didn't write anything to the data offset
                 break;
             }
@@ -223,16 +191,15 @@ class ADF2XML : public IImportExporter
                         // get the offset where to write the next element
                         // TODO: the payload offset should use ALIGN_TO_BOUNDARY, then we don't have to manually
                         // do it in each case for primitives/strings/hashes/enums etc.
-                        const uint32_t real_payload_offset = (payload_offset + member_offset);
+                        uint32_t       real_payload_offset = (payload_offset + member_offset);
                         const uint32_t alignment = jc::DISTANCE_TO_BOUNDARY(real_payload_offset, member_type->m_Align);
+                        real_payload_offset += alignment;
 
                         // get the offset where we want to write the actual data
                         const uint32_t real_data_offset =
                             jc::ALIGN_TO_BOUNDARY(data_offset + current_data_offset, member_type->m_Align);
 
                         if (member_type->m_AdfType == EAdfType::BitField) {
-                            // assert(member_type->m_Size == 4);
-
                             // get the current bit value
                             uint64_t value = 0;
                             if (member_type->m_ScalarType == ScalarType::Signed) {
@@ -245,16 +212,10 @@ class ADF2XML : public IImportExporter
                             auto v7            = value & ((1 << member_type->m_ArraySizeOrBitCount) - 1);
                             auto current_value = *(uint32_t*)&payload[real_payload_offset];
                             *(uint32_t*)&payload[real_payload_offset] |= (v7 << current_member->m_BitOffset);
-
-                            // update current member data offset
-                            current_member->m_Offset = jc::ALIGN_TO_BOUNDARY(member_offset, type->m_Align);
                         } else {
                             // write instance
                             current_data_offset += XmlReadInstance(adf, child, member_type, payload,
                                                                    real_payload_offset, real_data_offset);
-
-                            // update current member data offset
-                            current_member->m_Offset = jc::ALIGN_TO_BOUNDARY(member_offset, member_type->m_Align);
 
                             // next member offset
                             member_offset += (member_type->m_Size + alignment);
@@ -283,7 +244,6 @@ class ADF2XML : public IImportExporter
                     if (deferred_type && pointer_el->FirstChildElement()) {
                         // write the reference to the data
                         const uint32_t next_offset = -1;
-                        payload_offset             = jc::ALIGN_TO_BOUNDARY(payload_offset, type->m_Align);
                         std::memcpy((char*)payload + payload_offset, &data_offset, sizeof(data_offset));
                         std::memcpy((char*)payload + (payload_offset + 4), &next_offset, sizeof(next_offset));
                         std::memcpy((char*)payload + (payload_offset + 8), &type_hash, sizeof(type_hash));
@@ -311,7 +271,6 @@ class ADF2XML : public IImportExporter
                     // if we don't have any members, write zeros
                     if (count == 0) {
                         static uint32_t zero = 0;
-                        payload_offset       = jc::ALIGN_TO_BOUNDARY(payload_offset, type->m_Align);
                         std::memcpy((char*)payload + payload_offset, &zero, sizeof(zero));
                         std::memcpy((char*)payload + (payload_offset + 4), &zero, sizeof(zero));
                         std::memcpy((char*)payload + (payload_offset + 8), &zero, sizeof(zero));
@@ -329,7 +288,8 @@ class ADF2XML : public IImportExporter
 
                         const auto& data = util::split(array_el->GetText(), " ");
                         for (uint32_t i = 0; i < count; ++i) {
-                            WriteFromString(subtype, payload, (data_offset + (subtype->m_Size * i)), data[i]);
+                            WriteScalarToPayloadFromString(subtype, payload, (data_offset + (subtype->m_Size * i)),
+                                                           data[i]);
                         }
 
                         written = jc::ALIGN_TO_BOUNDARY((subtype->m_Size * count), type->m_Align);
@@ -357,7 +317,6 @@ class ADF2XML : public IImportExporter
 
                     // write the reference to the data
                     const uint32_t next_offset = -1;
-                    payload_offset             = jc::ALIGN_TO_BOUNDARY(payload_offset, type->m_Align);
                     std::memcpy((char*)payload + payload_offset, &data_offset, sizeof(data_offset));
                     std::memcpy((char*)payload + (payload_offset + 4), &next_offset, sizeof(next_offset));
                     std::memcpy((char*)payload + (payload_offset + 8), &count, sizeof(count));
@@ -392,7 +351,7 @@ class ADF2XML : public IImportExporter
                         assert(data.size() == type->m_ArraySizeOrBitCount);
 
                         for (uint32_t i = 0; i < type->m_ArraySizeOrBitCount; ++i) {
-                            WriteFromString(subtype, payload, (payload_offset + (size * i)), data[i]);
+                            WriteScalarToPayloadFromString(subtype, payload, (payload_offset + (size * i)), data[i]);
                         }
                     } else {
                         uint32_t   member_index        = 0;
@@ -419,10 +378,10 @@ class ADF2XML : public IImportExporter
             }
 
             case EAdfType::String: {
-                auto value = el->GetText();
+                auto        el_value = el->GetText();
+                std::string value    = el_value ? el_value : "";
 
-                const uint32_t next_offset = -1;
-                payload_offset             = jc::ALIGN_TO_BOUNDARY(payload_offset, type->m_Align);
+                static uint32_t next_offset = -1;
 
                 m_RefsToFix.push_back(payload_offset);
 
@@ -430,7 +389,7 @@ class ADF2XML : public IImportExporter
                 const auto it = m_StringRefs.find(value);
                 if (it == m_StringRefs.end()) {
                     // write the string into the data offset
-                    std::memcpy((char*)payload + data_offset, value, strlen(value));
+                    std::memcpy((char*)payload + data_offset, value.data(), value.size());
 
                     // write the reference to the data
                     std::memcpy((char*)payload + payload_offset, &data_offset, sizeof(data_offset));
@@ -439,7 +398,7 @@ class ADF2XML : public IImportExporter
                     m_StringRefs[value] = data_offset;
 
                     // return the aligned string length
-                    return jc::ALIGN_TO_BOUNDARY(strlen(value) + 1, type->m_Align);
+                    return jc::ALIGN_TO_BOUNDARY(value.length() + 1, type->m_Align);
                 }
 
                 // get the first reference to the string, and write the offset
@@ -484,8 +443,10 @@ class ADF2XML : public IImportExporter
 
                 if (stringhash_el) {
                     const auto string = stringhash_el->GetText();
-                    const auto hash   = hashlittle(string);
-                    std::memcpy((char*)payload + payload_offset, &hash, sizeof(hash));
+                    if (string && strlen(string) > 0) {
+                        const auto hash = hashlittle(string);
+                        std::memcpy((char*)payload + payload_offset, &hash, sizeof(hash));
+                    }
                 }
 
                 // NOTE: no return as we didn't write anything to the data offset
@@ -544,7 +505,7 @@ class ADF2XML : public IImportExporter
 
             // load the instance
             Instance instance;
-            instance.m_NameHash      = child->UnsignedAttribute("namehash");
+            instance.m_NameHash      = hashlittle(instance_name);
             instance.m_TypeHash      = child->UnsignedAttribute("typehash");
             instance.m_PayloadOffset = child->UnsignedAttribute("offset");
             instance.m_PayloadSize   = child->UnsignedAttribute("size");
@@ -627,7 +588,7 @@ class ADF2XML : public IImportExporter
                         adf_member.m_Name         = adf->GetStringIndex(member_name, true);
                         adf_member.m_TypeHash     = member->UnsignedAttribute("typehash");
                         adf_member.m_Align        = member->UnsignedAttribute("alignment");
-                        adf_member.m_Offset       = 0xDEAD; // NOTE: generated later
+                        adf_member.m_Offset       = member->UnsignedAttribute("offset");
                         adf_member.m_BitOffset    = member->UnsignedAttribute("bitoffset");
                         adf_member.m_Flags        = member->UnsignedAttribute("flags");
                         adf_member.m_DefaultValue = member->Unsigned64Attribute("default");
@@ -714,7 +675,7 @@ class ADF2XML : public IImportExporter
         // read type members
         for (auto child = root->FirstChildElement("instance"); child != nullptr;
              child      = child->NextSiblingElement("instance")) {
-            const auto namehash = child->UnsignedAttribute("namehash");
+            const auto namehash = hashlittle(child->Attribute("name"));
             const auto it       = std::find_if(instances.begin(), instances.end(),
                                          [namehash](const Instance& item) { return item.m_NameHash == namehash; });
 
@@ -836,7 +797,7 @@ class ADF2XML : public IImportExporter
                         break;
                     case ScalarType::Float:
                         switch (type->m_Size) {
-                            case sizeof(float):	PushHigherPrecisionFloat(printer, *(float*)&payload[offset]); break;
+                            case sizeof(float):		PushHigherPrecisionFloat(printer, *(float*)&payload[offset]); break;
                             case sizeof(double):	printer.PushText(*(double*)&payload[offset]); break;
                         }
                         break;
@@ -1023,7 +984,6 @@ class ADF2XML : public IImportExporter
 
             printer.OpenElement("instance");
             XmlPushAttribute("name", adf->m_Strings[instance->m_Name].c_str());
-            XmlPushAttribute("namehash", instance->m_NameHash);
             XmlPushAttribute("typehash", instance->m_TypeHash);
             XmlPushAttribute("offset", instance->m_PayloadOffset);
             XmlPushAttribute("size", instance->m_PayloadSize);
@@ -1077,6 +1037,7 @@ class ADF2XML : public IImportExporter
                         XmlPushAttribute("name", adf->m_Strings[member.m_Name].c_str());
                         XmlPushAttribute("typehash", member.m_TypeHash);
                         XmlPushAttribute("alignment", member.m_Align);
+                        XmlPushAttribute("offset", member.m_Offset);
                         XmlPushAttribute("bitoffset", member.m_BitOffset);
                         XmlPushAttribute("flags", member.m_Flags);
                         XmlPushAttribute("default", member.m_DefaultValue);

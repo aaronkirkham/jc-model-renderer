@@ -74,6 +74,8 @@ HRESULT DropTarget::Drop(IDataObject* data_object, DWORD key_state, POINTL curso
 {
     m_TimeSinceDragEnter = {};
     m_BringToFront       = false;
+    SetForegroundWindow(m_Hwnd);
+    SetFocus(m_Hwnd);
 
     Window::Get()->Events().DragDropped();
     return S_OK;

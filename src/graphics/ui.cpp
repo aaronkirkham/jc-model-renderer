@@ -81,7 +81,18 @@ UI::UI()
     };
 
     Window::Get()->Events().DragLeave.connect(ResetDragDrop);
-    Window::Get()->Events().DragDropped.connect(ResetDragDrop);
+    Window::Get()->Events().DragDropped.connect([&] {
+        // unhandled drag drop
+        if (!ImGui::IsDragDropPayloadBeingAccepted()) {
+            for (const auto& file : m_DragDropPayload.data) {
+                if (!std::filesystem::is_directory(file)) {
+                    FileLoader::Get()->ReadFileFromDiskAndRunHandlers(file);
+                }
+            }
+        }
+
+        ResetDragDrop();
+    });
 
     // reset scene mouse state
     Window::Get()->Events().FocusLost.connect([&] { m_SceneMouseState.fill(false); });

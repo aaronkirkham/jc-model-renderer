@@ -467,8 +467,10 @@ void FileLoader::ReadFileFromDisk(const std::filesystem::path& filename, ReadFil
 
 void FileLoader::ReadFileFromDiskAndRunHandlers(const std::filesystem::path& filename)
 {
-    const auto& extension = filename.extension().string();
-    const auto& importers = ImportExportManager::Get()->GetImportersFrom(extension, true);
+    bool        is_unhandled = false;
+    const auto& extension    = filename.extension().string();
+    auto&       importers    = ImportExportManager::Get()->GetImportersFrom(extension, true);
+    // const auto& exporters = ImportExportManager::Get()->GetExportersFor(extension);
 
     // do we have a registered callback for this file type?
     if (m_FileReadHandlers.find(extension) != m_FileReadHandlers.end()) {
@@ -481,37 +483,54 @@ void FileLoader::ReadFileFromDiskAndRunHandlers(const std::filesystem::path& fil
         });
     } else if (importers.size() > 0) {
         static const auto finished_callback = [](bool success, std::filesystem::path filename, std::any data) {
-            assert(success);
+            if (success) {
+                // NOTE: this kind of assumes the data will always be binary data
+                // because the importer will always have drag-and-drop support (see
+                // ReadFileFromDiskAndRunHandlers)
 
-            // NOTE: this kind of assumes the data will always be binary data
-            // because the importer will always have drag-and-drop support (see
-            // ReadFileFromDiskAndRunHandlers)
+                // TODO: this can be improved.
 
-            // TODO: this can be improved.
+                auto buffer = std::any_cast<FileBuffer>(data);
 
-#ifdef DEBUG
-            auto ext = filename.extension();
-            filename.replace_filename("imported").replace_extension(ext);
-#endif
-
-            SPDLOG_INFO(filename.string());
-
-            auto buffer = std::any_cast<FileBuffer>(data);
-
-            std::ofstream stream(filename, std::ios::binary);
-            assert(!stream.fail());
-            stream.write((char*)buffer.data(), buffer.size());
-            stream.close();
+                std::ofstream stream(filename, std::ios::binary);
+                assert(!stream.fail());
+                stream.write((char*)buffer.data(), buffer.size());
+                stream.close();
+            }
         };
 
+        // if we have more than 1 importer, try find one for the real extension
+        // NOTE: files are exported with <name>.<real extension>.<export extension>, we're trying to find importers
+        // which deal with the real extension
         if (importers.size() > 1) {
-            // TODO: we can improve this even more by looking at the input file extension (before the .xml) and figure
-            // out the importer to use without asking.
-            UI::Get()->ShowSelectImporter(filename, importers, finished_callback);
-        } else {
+            // filter importers based on filename extensions
+            std::vector<IImportExporter*> final_importers;
+            for (const auto importer : importers) {
+                for (const auto& extension : importer->GetImportExtension()) {
+                    if (filename.filename().string().find(extension) != std::string::npos) {
+                        final_importers.push_back(importer);
+                    }
+                }
+            }
+
+            if (final_importers.size() != 0) {
+                importers = std::move(final_importers);
+            }
+        }
+
+        const size_t total = importers.size();
+        if (total == 0) {
+            is_unhandled = true;
+        } else if (total == 1) {
             importers[0]->Import(filename, finished_callback);
+        } else {
+            UI::Get()->ShowSelectImporter(filename, importers, finished_callback);
         }
     } else {
+        is_unhandled = true;
+    }
+
+    if (is_unhandled) {
         SPDLOG_ERROR("Unknown file type extension \"{}\"", filename.filename().string());
 
         std::string error = "Unable to read the \"" + extension + "\" extension.\n\n";
