@@ -384,13 +384,14 @@ class Wavefront_Obj : public IImportExporter
             } else {
                 FileLoader::Get()->ReadFile(filename, [&, filename, path, callback](bool success, FileBuffer data) {
                     if (success) {
-                        auto model = std::make_unique<::AvalancheModelFormat>(filename);
-                        model->Parse(data, [&, filename, path, callback](bool success) {
+                        auto model = new ::AvalancheModelFormat(filename);
+                        model->Parse(data, [&, model, filename, path, callback](bool success) {
                             if (success) {
                                 WriteModelFile(filename, path, model->GetRenderBlocks());
                             }
 
                             callback(success);
+                            delete model;
                         });
                     }
                 });
