@@ -84,11 +84,14 @@ class Window : public Singleton<Window>
     }
 
     int32_t ShowMessageBox(const std::string& message, uint32_t type = MB_ICONWARNING | MB_OK);
-    void    ShowFileSelection(const std::string& title, const char* filter, const char* def_extension,
-                              std::function<void(const std::filesystem::path&)> fn_selected);
-    void    ShowFileFolderSelection(const std::string& title, const char* filter, const char* def_extension,
-                                    std::function<void(const std::filesystem::path&)> fn_selected);
-    void    ShowFolderSelection(const std::string& title, std::function<void(const std::filesystem::path&)> fn_selected,
+    void    ShowFileSelection(const std::string& title, const char* default_filename, const char* filter,
+                              const char* default_extension, std::function<void(const std::filesystem::path&)> fn_selected,
+                              std::function<void()> fn_cancelled = {});
+    void    ShowFileFolderSelection(const std::string& title, const char* default_filename, const char* filter,
+                                    const char*                                       default_extension,
+                                    std::function<void(const std::filesystem::path&)> fn_selected,
+                                    std::function<void()>                             fn_cancelled = {});
+    void    ShowFolderSelection(const std::string& title, uint32_t flags, std::function<void(const std::filesystem::path&)> fn_selected,
                                 std::function<void()> fn_cancelled = {});
 
     void                  SwitchMode(bool jc4_mode);

@@ -119,7 +119,7 @@ FileLoader::FileLoader()
         filter.push_back('\0');
 
         Window::Get()->ShowFileSelection(
-            "Select a file to import", filter.c_str(), importer->GetExportExtension(),
+            "Select a file to import", "", filter.c_str(), importer->GetExportExtension(),
             [&, importer, callback](const std::filesystem::path& selected) {
                 SPDLOG_INFO("(ImportFileRequest) Want to import file \"{}\"", selected.string());
                 std::thread([&, importer, selected, callback] { importer->Import(selected, callback); }).detach();
@@ -129,7 +129,7 @@ FileLoader::FileLoader()
     // export file
     UI::Get()->Events().ExportFileRequest.connect([&](const std::filesystem::path& file, IImportExporter* exporter) {
         Window::Get()->ShowFolderSelection(
-            "Select a folder to export the file to.", [&, file, exporter](const std::filesystem::path& selected) {
+            "Select a folder to export the file to.", 0, [&, file, exporter](const std::filesystem::path& selected) {
                 auto _exporter = exporter;
                 if (!exporter) {
                     const auto& exporters = ImportExportManager::Get()->GetExportersFor(file.extension().string());
@@ -262,7 +262,7 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultC
 {
     uint64_t status_text_id = 0;
 
-	// if the path is absolute, read straight from disk
+    // if the path is absolute, read straight from disk
     if (filename.is_absolute()) {
         return ReadFileFromDisk(filename, callback);
     }

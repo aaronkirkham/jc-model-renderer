@@ -548,16 +548,18 @@ void RuntimeContainer::DrawUI(int32_t index, uint8_t depth)
 
 void RuntimeContainer::ContextMenuUI(const std::filesystem::path& filename)
 {
-    if (ImGui::Selectable("Load models")) {
-        auto rc = get(filename.string());
+    if (!g_IsJC4Mode) {
+        if (ImGui::Selectable("Load models")) {
+            auto rc = get(filename.string());
 
-        // load the runtime container
-        if (!rc) {
-            RuntimeContainer::Load(filename, [&, filename](std::shared_ptr<RuntimeContainer> rc) {
+            // load the runtime container
+            if (!rc) {
+                RuntimeContainer::Load(filename, [&, filename](std::shared_ptr<RuntimeContainer> rc) {
+                    RenderBlockModel::LoadFromRuntimeContainer(filename, rc);
+                });
+            } else {
                 RenderBlockModel::LoadFromRuntimeContainer(filename, rc);
-            });
-        } else {
-            RenderBlockModel::LoadFromRuntimeContainer(filename, rc);
+            }
         }
     }
 }

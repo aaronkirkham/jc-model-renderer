@@ -9,7 +9,7 @@ workspace "jc-model-renderer"
   characterset "MBCS"
   architecture "x64"
   disablewarnings { "26451", "26491", "26495", "28020" }
-  defines { "WIN32", "WIN32_LEAN_AND_MEAN", "_CRT_SECURE_NO_WARNINGS", "_CRT_NONSTDC_NO_DEPRECATE" }
+  defines { "WIN32", "WIN32_LEAN_AND_MEAN", "_CRT_SECURE_NO_WARNINGS", "_CRT_NONSTDC_NO_DEPRECATE", "_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING" }
 
   filter "configurations:Debug"
     defines { "DEBUG", "_DEBUG", "_ITERATOR_DEBUG_LEVEL=0" }

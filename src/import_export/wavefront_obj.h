@@ -393,6 +393,8 @@ class Wavefront_Obj : public IImportExporter
                             callback(success);
                             delete model;
                         });
+                    } else {
+                        callback(false);
                     }
                 });
             }

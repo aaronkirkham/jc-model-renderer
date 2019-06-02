@@ -276,7 +276,7 @@ void UI::Render(RenderContext_t* context)
                 const auto  status_text_id = PushStatusText(status_text);
 
                 Window::Get()->ShowFolderSelection(
-                    "Select a location to export the file to.",
+                    "Select a location to export the file to.", 0,
                     [&, status_text_id](const std::filesystem::path& path) {
                         m_ExportSettings.Exporter->Export(
                             m_ExportSettings.Filename, path, [&, path, status_text_id](bool success) {
@@ -377,7 +377,7 @@ void UI::Render(RenderContext_t* context)
                         FileBuffer buffer;
                         if (FileLoader::Get()->WriteAVTX(m_NewTextureSettings.Texture.get(), &buffer)) {
                             Window::Get()->ShowFileFolderSelection(
-                                "Save as...", "Avalanche Compressed Texture (*.ddsc)\0*.ddsc\0\0", ".ddsc",
+                                "Save as...", "", "Avalanche Compressed Texture (*.ddsc)\0*.ddsc\0\0", ".ddsc",
                                 [&](const std::filesystem::path& filename) {
                                     std::ofstream file(filename, std::ios::binary);
                                     if (file.fail()) {
@@ -541,7 +541,7 @@ void UI::RenderMenuBar()
                 const auto& importers = ImportExportManager::Get()->GetImportersFor(".resourcebundle");
                 if (importers.size() > 0) {
                     Window::Get()->ShowFolderSelection(
-                        "Select a folder to import",
+                        "Select a folder to import", 0,
                         [&, importer = importers.at(0)](const std::filesystem::path& selected) {
                             std::thread([&, importer, selected] { importer->Import(selected); }).detach();
                         });
@@ -1060,7 +1060,7 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
     if (ImGui::BeginPopupContextItem("Context Menu")) {
         // save file
         if (ImGui::Selectable(ICON_FA_SAVE "  Save to...")) {
-            Window::Get()->ShowFolderSelection("Select a folder to save the file to.",
+            Window::Get()->ShowFolderSelection("Select a folder to save the file to.", 0,
                                                [&](const std::filesystem::path& selected) {
                                                    UI::Get()->Events().SaveFileRequest(filename, selected, false);
                                                });

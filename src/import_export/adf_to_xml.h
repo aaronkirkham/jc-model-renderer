@@ -121,7 +121,7 @@ class ADF2XML : public IImportExporter
             ".effc", ".blo_adf", ".flo_adf", ".epe_adf", ".vmodc", ".environc", ".aisystunec",
             ".weaponsc", ".asynccc", ".vfxsettingsc", ".vocals_settingsc", ".vocalsc",
             ".streampatch", ".roadgraphc", ".shudc", ".revolutionc", ".worldaudioinfo_xmlc",
-            ".onlinec", ".statisticsc", ".gadfc", ".gdc",
+            ".onlinec", ".statisticsc", ".gadfc", ".gdc", ".terrainsystemc", ".vegetationinfo"
         };
         // clang-format on
 

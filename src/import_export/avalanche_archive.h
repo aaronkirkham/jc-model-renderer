@@ -88,11 +88,18 @@ class AvalancheArchive : public IImportExporter
         } else {
             FileLoader::Get()->ReadFile(filename, [&, filename, path, callback](bool success, FileBuffer data) {
                 if (success) {
-                    auto arc = std::make_unique<::AvalancheArchive>(filename, data);
-                    WriteArchiveFiles(path, arc.get());
-                }
+                    auto arc = new ::AvalancheArchive(filename);
+                    arc->Parse(data, [&, path, callback, arc](bool success) {
+                        if (success) {
+                            WriteArchiveFiles(path, arc);
+                        }
 
-                callback(success);
+                        delete arc;
+                        callback(success);
+                    });
+                } else {
+                    callback(false);
+                }
             });
         }
     }

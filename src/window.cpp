@@ -231,16 +231,22 @@ int32_t Window::ShowMessageBox(const std::string& message, uint32_t type)
     return result;
 }
 
-void Window::ShowFileSelection(const std::string& title, const char* filter, const char* def_extension,
-                               std::function<void(const std::filesystem::path&)> fn_selected)
+void Window::ShowFileSelection(const std::string& title, const char* default_filename, const char* filter,
+                               const char*                                       default_extension,
+                               std::function<void(const std::filesystem::path&)> fn_selected,
+                               std::function<void()>                             fn_cancelled)
 {
     char         filename[MAX_PATH] = {0};
     OPENFILENAME ofn                = {0};
 
+    if (default_filename) {
+        strcpy_s(filename, default_filename);
+    }
+
     ofn.lStructSize = sizeof(OPENFILENAME);
     ofn.hwndOwner   = m_Hwnd;
     ofn.lpstrFilter = filter;
-    ofn.lpstrDefExt = def_extension;
+    ofn.lpstrDefExt = default_extension;
     ofn.lpstrFile   = filename;
     ofn.nMaxFile    = MAX_PATH;
     ofn.lpstrTitle  = title.c_str();
@@ -248,19 +254,27 @@ void Window::ShowFileSelection(const std::string& title, const char* filter, con
 
     if (GetOpenFileName(&ofn)) {
         fn_selected(filename);
+    } else if (fn_cancelled) {
+        fn_cancelled();
     }
 }
 
-void Window::ShowFileFolderSelection(const std::string& title, const char* filter, const char* def_extension,
-                                     std::function<void(const std::filesystem::path&)> fn_selected)
+void Window::ShowFileFolderSelection(const std::string& title, const char* default_filename, const char* filter,
+                                     const char*                                       default_extension,
+                                     std::function<void(const std::filesystem::path&)> fn_selected,
+                                     std::function<void()>                             fn_cancelled)
 {
     char         filename[MAX_PATH] = {0};
     OPENFILENAME sfn                = {0};
 
+    if (default_filename) {
+        strcpy_s(filename, default_filename);
+    }
+
     sfn.lStructSize = sizeof(OPENFILENAME);
     sfn.hwndOwner   = m_Hwnd;
     sfn.lpstrFilter = filter;
-    sfn.lpstrDefExt = def_extension;
+    sfn.lpstrDefExt = default_extension;
     sfn.lpstrFile   = filename;
     sfn.nMaxFile    = MAX_PATH;
     sfn.lpstrTitle  = title.c_str();
@@ -268,28 +282,54 @@ void Window::ShowFileFolderSelection(const std::string& title, const char* filte
 
     if (GetSaveFileName(&sfn)) {
         fn_selected(filename);
+    } else if (fn_cancelled) {
+        fn_cancelled();
     }
 }
 
-void Window::ShowFolderSelection(const std::string&                                title,
+void Window::ShowFolderSelection(const std::string& title, uint32_t flags,
                                  std::function<void(const std::filesystem::path&)> fn_selected,
                                  std::function<void()>                             fn_cancelled)
 {
-    TCHAR      path[MAX_PATH] = {0};
-    BROWSEINFO browse_info    = {0};
+    bool success = false;
+    auto hr      = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    if (SUCCEEDED(hr)) {
+        // create the file open dialog object
+        IFileOpenDialog* file_open = nullptr;
+        hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, IID_IFileOpenDialog, (void**)&file_open);
 
-    browse_info.hwndOwner      = m_Hwnd;
-    browse_info.pidlRoot       = nullptr;
-    browse_info.pszDisplayName = path;
-    browse_info.lpszTitle      = title.c_str();
-    browse_info.ulFlags        = BIF_RETURNONLYFSDIRS;
-    browse_info.lpfn           = nullptr;
+        if (SUCCEEDED(hr)) {
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 
-    LPITEMIDLIST pidl = SHBrowseForFolder(&browse_info);
-    if (pidl) {
-        SHGetPathFromIDList(pidl, path);
-        fn_selected(path);
-    } else if (fn_cancelled) {
+            file_open->SetTitle(converter.from_bytes(title).c_str());
+            file_open->SetOptions(flags | FOS_PICKFOLDERS | FOS_PATHMUSTEXIST);
+            hr = file_open->Show(m_Hwnd);
+
+            if (SUCCEEDED(hr)) {
+                IShellItem* item = nullptr;
+                hr               = file_open->GetResult(&item);
+
+                if (SUCCEEDED(hr)) {
+                    PWSTR file_path;
+                    hr = item->GetDisplayName(SIGDN_FILESYSPATH, &file_path);
+
+                    if (SUCCEEDED(hr)) {
+                        success = true;
+                        fn_selected(file_path);
+                        CoTaskMemFree(file_path);
+                    }
+
+                    item->Release();
+                }
+            }
+
+            file_open->Release();
+        }
+    }
+
+    CoUninitialize();
+
+    if (!success && fn_cancelled) {
         fn_cancelled();
     }
 }
@@ -355,7 +395,7 @@ void Window::SelectJustCauseDirectory(bool override_mode, bool jc3_mode)
         }
     };
 
-    ShowFolderSelection(title, OnSelected, OnCancelled);
+    ShowFolderSelection(title, 0, OnSelected, OnCancelled);
 }
 
 std::filesystem::path Window::GetJustCauseDirectory()
