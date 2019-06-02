@@ -12,6 +12,12 @@ namespace ImportExport
 
 class ResourceBundle : public IImportExporter
 {
+  private:
+    bool is_number(const std::string& string)
+    {
+        return !string.empty() && std::all_of(string.begin(), string.end(), std::isdigit);
+    }
+
   public:
     ResourceBundle()          = default;
     virtual ~ResourceBundle() = default;
@@ -43,7 +49,67 @@ class ResourceBundle : public IImportExporter
 
     void Import(const std::filesystem::path& filename, ImportFinishedCallback callback) override final
     {
-        // not implemented
+        if (!std::filesystem::is_directory(filename)) {
+            if (callback) {
+                callback(false, filename, {});
+            }
+
+            return;
+        }
+
+        auto path = filename.parent_path();
+        auto _fn  = filename.filename().string();
+        util::replace(_fn, "_resourcebundle", "");
+        _fn += ".resourcebundle";
+
+        auto          out_filename = path / _fn;
+        std::ofstream stream(out_filename, std::ios::binary);
+        if (stream.fail()) {
+            if (callback) {
+                callback(false, filename, {});
+            }
+
+            return;
+        }
+
+        // add each file in the directory to the stream
+        // TODO: maybe some sanitization? this is not recursive, so atleast we have that.
+        for (const auto& filepath : std::filesystem::directory_iterator(filename)) {
+            // skip none regular files
+            if (!std::filesystem::is_regular_file(filepath)) {
+                continue;
+            }
+
+            const auto&    current_filename = filepath.path();
+            const uint32_t file_size        = filepath.file_size();
+
+            // read the file buffer
+            FileBuffer    buffer(file_size);
+            std::ifstream in_stream(current_filename, std::ios::binary);
+            if (in_stream.fail()) {
+                continue;
+            }
+
+            in_stream.read((char*)buffer.data(), file_size);
+            in_stream.close();
+
+            // generate path and extension hashes
+            const auto     filename_str = current_filename.stem().string();
+            const uint32_t path_hash =
+                (!is_number(filename_str) ? hashlittle(filename_str.c_str()) : std::stoul(filename_str));
+            const uint32_t extension_hash = hashlittle(current_filename.extension().string().c_str());
+
+            // write file info
+            stream.write((char*)&path_hash, sizeof(path_hash));
+            stream.write((char*)&extension_hash, sizeof(extension_hash));
+            stream.write((char*)&file_size, sizeof(file_size));
+            stream.write((char*)buffer.data(), file_size);
+        }
+
+        stream.close();
+        if (callback) {
+            callback(true, filename, {});
+        }
     }
 
     void Export(const std::filesystem::path& filename, const std::filesystem::path& to,

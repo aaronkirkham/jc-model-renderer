@@ -537,6 +537,17 @@ void UI::RenderMenuBar()
                 m_NewTextureSettings.ShowSettings = true;
             }
 
+            if (ImGui::MenuItem("Resource Bundle", ".resourcebundle", nullptr, g_IsJC4Mode)) {
+                const auto& importers = ImportExportManager::Get()->GetImportersFor(".resourcebundle");
+                if (importers.size() > 0) {
+                    Window::Get()->ShowFolderSelection(
+                        "Select a folder to import",
+                        [&, importer = importers.at(0)](const std::filesystem::path& selected) {
+                            std::thread([&, importer, selected] { importer->Import(selected); }).detach();
+                        });
+                }
+            }
+
             ImGui::EndMenu();
         }
 #endif

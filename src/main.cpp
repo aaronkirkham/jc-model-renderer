@@ -329,8 +329,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterSaveCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::SaveFileCallback);
         FileLoader::Get()->RegisterSaveCallback({".epe", ".blo"}, RuntimeContainer::SaveFileCallback);
 
-        // FileLoader::Get()->RegisterSaveCallback(0x20464441, nullptr);
-
         // register file type context menu callbacks
         UI::Get()->RegisterContextMenuCallback({".rbm"}, RenderBlockModel::ContextMenuUI);
         // UI::Get()->RegisterContextMenuCallback({".modelc"}, AvalancheModelFormat::ContextMenuUI);
@@ -342,7 +340,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         ImportExportManager::Get()->Register<ImportExport::AvalancheArchive>();
         ImportExportManager::Get()->Register<ImportExport::ADF2XML>();
         ImportExportManager::Get()->Register<ImportExport::ResourceBundle>();
-        ImportExportManager::Get()->Register<ImportExport::RTPC2XML>();
+        // ImportExportManager::Get()->Register<ImportExport::RTPC2XML>();
 
         // draw gizmos
         Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {

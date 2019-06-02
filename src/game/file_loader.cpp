@@ -262,6 +262,11 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultC
 {
     uint64_t status_text_id = 0;
 
+	// if the path is absolute, read straight from disk
+    if (filename.is_absolute()) {
+        return ReadFileFromDisk(filename, callback);
+    }
+
     if (!UseBatches) {
         std::string status_text = "Reading \"" + filename.generic_string() + "\"...";
         status_text_id          = UI::Get()->PushStatusText(status_text);
@@ -470,7 +475,7 @@ void FileLoader::ReadFileFromDiskAndRunHandlers(const std::filesystem::path& fil
     bool        is_unhandled = false;
     const auto& extension    = filename.extension().string();
     auto&       importers    = ImportExportManager::Get()->GetImportersFrom(extension, true);
-    // const auto& exporters = ImportExportManager::Get()->GetExportersFor(extension);
+    const auto& exporters    = ImportExportManager::Get()->GetExportersFor(extension);
 
     // do we have a registered callback for this file type?
     if (m_FileReadHandlers.find(extension) != m_FileReadHandlers.end()) {
@@ -526,6 +531,9 @@ void FileLoader::ReadFileFromDiskAndRunHandlers(const std::filesystem::path& fil
         } else {
             UI::Get()->ShowSelectImporter(filename, importers, finished_callback);
         }
+    } else if (exporters.size() > 0) {
+        auto to = filename.parent_path();
+        exporters[0]->Export(filename, to, [&](bool success) {});
     } else {
         is_unhandled = true;
     }

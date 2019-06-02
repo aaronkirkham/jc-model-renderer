@@ -35,9 +35,11 @@ class ADF2XML : public IImportExporter
     void PrefetchStringHashes(::AvalancheDataFormat* adf, tinyxml2::XMLElement* el)
     {
         if (!strcmp(el->Name(), "stringhash")) {
-            const auto text           = el->GetText();
-            const auto hash           = hashlittle(text);
-            adf->m_StringHashes[hash] = text;
+            const auto text = el->GetText();
+            if (text && strlen(text) > 0) {
+                const auto hash           = hashlittle(text);
+                adf->m_StringHashes[hash] = text;
+            }
         }
 
         for (auto child = el->FirstChildElement(); child != nullptr; child = child->NextSiblingElement()) {
@@ -113,8 +115,17 @@ class ADF2XML : public IImportExporter
 
     std::vector<std::string> GetImportExtension() override final
     {
-        // TODO: get a real list of all ADF extensions
-        return {".blo_adf", ".flo_adf", ".epe_adf", ".vmodc", ".wtunec", ".modelc", ".meshc", ".hrmeshc", ".environc"};
+        // clang-format off
+        static std::vector<std::string> extensions = {
+            ".atunec", ".ctunec", ".etunec", ".ftunec", ".gtunec", ".mtunec", ".wtunec", ".cmtunec",
+            ".effc", ".blo_adf", ".flo_adf", ".epe_adf", ".vmodc", ".environc", ".aisystunec",
+            ".weaponsc", ".asynccc", ".vfxsettingsc", ".vocals_settingsc", ".vocalsc",
+            ".streampatch", ".roadgraphc", ".shudc", ".revolutionc", ".worldaudioinfo_xmlc",
+            ".onlinec", ".statisticsc", ".gadfc", ".gdc",
+        };
+        // clang-format on
+
+        return extensions;
     }
 
     const char* GetExportName() override final
@@ -133,8 +144,8 @@ class ADF2XML : public IImportExporter
     }
 
     uint32_t XmlReadInstance(::AvalancheDataFormat* adf, tinyxml2::XMLElement* el,
-                             const jc::AvalancheDataFormat::Type* type, const char* payload, uint32_t payload_offset,
-                             uint32_t data_offset)
+                             const jc::AvalancheDataFormat::Header* header, const jc::AvalancheDataFormat::Type* type,
+                             const char* payload, uint32_t payload_offset, uint32_t data_offset)
     {
         using namespace jc::AvalancheDataFormat;
 
@@ -214,7 +225,7 @@ class ADF2XML : public IImportExporter
                             *(uint32_t*)&payload[real_payload_offset] |= (v7 << current_member->m_BitOffset);
                         } else {
                             // write instance
-                            current_data_offset += XmlReadInstance(adf, child, member_type, payload,
+                            current_data_offset += XmlReadInstance(adf, child, header, member_type, payload,
                                                                    real_payload_offset, real_data_offset);
 
                             // next member offset
@@ -253,8 +264,8 @@ class ADF2XML : public IImportExporter
 
                         const auto deferred_payload_offset = (data_offset);
                         const auto deferred_data_offset    = (data_offset + deferred_type->m_Size);
-                        auto       size = XmlReadInstance(adf, pointer_el->FirstChildElement(), deferred_type, payload,
-                                                    deferred_payload_offset, deferred_data_offset);
+                        auto       size = XmlReadInstance(adf, pointer_el->FirstChildElement(), header, deferred_type,
+                                                    payload, deferred_payload_offset, deferred_data_offset);
 
                         return deferred_data_offset - (deferred_payload_offset - size);
                     }
@@ -268,6 +279,9 @@ class ADF2XML : public IImportExporter
                     // TODO: dont read/write array count. we should be able to figure this out from the type
                     const auto count = array_el->UnsignedAttribute("count");
 
+                    const auto subtype = adf->FindType(type->m_SubTypeHash);
+                    assert(subtype);
+
                     // if we don't have any members, write zeros
                     if (count == 0) {
                         static uint32_t zero = 0;
@@ -275,14 +289,13 @@ class ADF2XML : public IImportExporter
                         std::memcpy((char*)payload + (payload_offset + 4), &zero, sizeof(zero));
                         std::memcpy((char*)payload + (payload_offset + 8), &zero, sizeof(zero));
 
-                        return 0;
+                        bool has_32bit_inline_arrays = ~LOBYTE(header->m_Flags) & 1;
+                        return (has_32bit_inline_arrays ? subtype->m_Align : 0);
                     }
 
                     uint32_t written = 0;
 
                     // write the array sub types
-                    const auto subtype = adf->FindType(type->m_SubTypeHash);
-                    assert(subtype);
                     if (subtype->m_AdfType == EAdfType::Primitive) {
                         // TODO: better support for binary data.
 
@@ -305,8 +318,8 @@ class ADF2XML : public IImportExporter
                                 data_offset + (subtype->m_Size * count) + current_data_offset;
 
                             // write the instance
-                            current_data_offset += XmlReadInstance(adf, child, subtype, payload, member_payload_offset,
-                                                                   member_data_offset);
+                            current_data_offset += XmlReadInstance(adf, child, header, subtype, payload,
+                                                                   member_payload_offset, member_data_offset);
 
                             // next
                             member_offset += subtype->m_Size;
@@ -362,8 +375,8 @@ class ADF2XML : public IImportExporter
                             uint32_t member_payload_offset = (payload_offset + member_offset);
                             uint32_t member_data_offset = (data_offset + (size * member_index)) + current_data_offset;
 
-                            current_data_offset +=
-                                XmlReadInstance(adf, child, subtype, payload, member_payload_offset, data_offset);
+                            current_data_offset += XmlReadInstance(adf, child, header, subtype, payload,
+                                                                   member_payload_offset, data_offset);
 
                             member_offset += subtype->m_Size;
                             ++member_index;
@@ -685,7 +698,7 @@ class ADF2XML : public IImportExporter
 
             const auto type = adf->FindType((*it).m_TypeHash);
             if (type) {
-                XmlReadInstance(adf.get(), child, type, (const char*)&adf->m_Buffer[(*it).m_PayloadOffset], 0,
+                XmlReadInstance(adf.get(), child, &header, type, (const char*)&adf->m_Buffer[(*it).m_PayloadOffset], 0,
                                 type->m_Size);
 
                 // fix references
@@ -1087,6 +1100,5 @@ class ADF2XML : public IImportExporter
             });
         }
     }
-};
-
+}; // namespace ImportExport
 }; // namespace ImportExport
