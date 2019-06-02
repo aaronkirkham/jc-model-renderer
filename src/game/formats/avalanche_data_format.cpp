@@ -126,21 +126,26 @@ void AvalancheDataFormat::ReadInstance(uint32_t name_hash, uint32_t type_hash, v
     auto payload = &m_Buffer[current_instance->m_PayloadOffset];
 
     // alloc the memory for the result
-    const auto mem = std::malloc(current_instance->m_PayloadSize);
+    auto mem = std::malloc(current_instance->m_PayloadSize);
     std::memcpy(mem, payload, current_instance->m_PayloadSize);
 
-    // adjust the relative offsets
-    uint64_t current_offset = 0;
-    uint64_t v72            = 0;
-    for (auto size = *(uint32_t*)&payload[current_instance->m_PayloadSize]; size;
-         *(uint64_t*)((uint32_t)(current_offset - 4) + (uint64_t)mem) = (uint64_t)mem + v72) {
+    const bool has_32bit_inline_arrays = ~LOBYTE(header_out.m_Flags) & EHeaderFlags::RELATIVE_OFFSETS_EXISTS;
+    if (has_32bit_inline_arrays) {
+        LoadInlineOffsets(type, (char*)mem);
+    } else {
+        // adjust the relative offsets
+        uint64_t current_offset = 0;
+        uint64_t v72            = 0;
+        for (auto size = *(uint32_t*)&payload[current_instance->m_PayloadSize]; size;
+             *(uint64_t*)((uint32_t)(current_offset - 4) + (uint64_t)mem) = (uint64_t)mem + v72) {
 
-        current_offset = (current_offset + size);
-        size           = *(uint32_t*)(current_offset + (uint64_t)mem);
-        v72            = *(uint32_t*)((uint32_t)(current_offset - 4) + (uint64_t)mem);
+            current_offset = (current_offset + size);
+            size           = *(uint32_t*)(current_offset + (uint64_t)mem);
+            v72            = *(uint32_t*)((uint32_t)(current_offset - 4) + (uint64_t)mem);
 
-        if (v72 == 1) {
-            v72 = 0;
+            if (v72 == 1) {
+                v72 = 0;
+            }
         }
     }
 
@@ -434,4 +439,76 @@ jc::AvalancheDataFormat::Type* AvalancheDataFormat::FindType(uint32_t type_hash)
     }
 
     return *it;
+}
+
+void AvalancheDataFormat::LoadInlineOffsets(const jc::AvalancheDataFormat::Type* type, char* payload,
+                                            const uint32_t offset)
+{
+    using namespace jc::AvalancheDataFormat;
+
+    static auto DoesTypeNeedFixing = [](const EAdfType type) {
+        return (type == EAdfType::Structure || type == EAdfType::Pointer || type == EAdfType::Array
+                || type == EAdfType::Deferred || type == EAdfType::String);
+    };
+
+    switch (type->m_AdfType) {
+        case EAdfType::Structure: {
+            uint32_t member_offset = 0;
+            for (uint32_t i = 0; i < type->m_MemberCount; ++i) {
+                const Member& member      = type->Member(i);
+                const Type*   member_type = FindType(member.m_TypeHash);
+
+                const uint32_t payload_offset = (offset + member_offset);
+                const uint32_t alignment      = jc::DISTANCE_TO_BOUNDARY(payload_offset, member_type->m_Align);
+
+                if (DoesTypeNeedFixing(member_type->m_AdfType)) {
+                    LoadInlineOffsets(member_type, payload, (payload_offset + alignment));
+                }
+
+                member_offset += (member_type->m_Size + alignment);
+            }
+            break;
+        }
+
+        case EAdfType::Pointer:
+        case EAdfType::Deferred: {
+            const uint32_t real_offset   = *(uint32_t*)&payload[offset];
+            *(uint64_t*)&payload[offset] = (uint64_t)((char*)payload + real_offset);
+
+            uint32_t type_hash = 0xDEFE88ED;
+            if (type->m_AdfType == EAdfType::Pointer) {
+                type_hash = type->m_SubTypeHash;
+            } else if (real_offset) {
+                type_hash = *(uint32_t*)&payload[offset + 8];
+            }
+
+            const Type* deferred_type = FindType(type_hash);
+            if (deferred_type && real_offset) {
+                LoadInlineOffsets(deferred_type, payload, real_offset);
+            }
+
+            break;
+        }
+
+        case EAdfType::Array: {
+            const uint32_t real_offset   = *(uint32_t*)&payload[offset];
+            *(uint64_t*)&payload[offset] = (uint64_t)((char*)payload + real_offset);
+
+            const Type* subtype = FindType(type->m_SubTypeHash);
+            if (subtype && DoesTypeNeedFixing(subtype->m_AdfType)) {
+                const uint32_t count = *(uint32_t*)&payload[offset + 8];
+                for (uint32_t i = 0; i < count; ++i) {
+                    LoadInlineOffsets(subtype, payload, (real_offset + (subtype->m_Size * i)));
+                }
+            }
+
+            break;
+        }
+
+        case EAdfType::String: {
+            const uint32_t real_offset   = *(uint32_t*)&payload[offset];
+            *(uint64_t*)&payload[offset] = (uint64_t)((char*)payload + real_offset);
+            break;
+        }
+    }
 }

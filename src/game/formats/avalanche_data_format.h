@@ -37,6 +37,8 @@ class AvalancheDataFormat : public Factory<AvalancheDataFormat>
         return std::distance(strings.begin(), std::find(strings.begin(), strings.end(), string));
     }
 
+    void LoadInlineOffsets(const jc::AvalancheDataFormat::Type* type, char* payload, const uint32_t offset = 0);
+
   public:
     AvalancheDataFormat(const std::filesystem::path& file, const FileBuffer& buffer);
     virtual ~AvalancheDataFormat();
