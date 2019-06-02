@@ -1,4 +1,4 @@
-; 1894/1953 (96%)
+; 1899/1953 (97%)
 locations/campaign/slum_bridge/rf_campaign_slumbridge_favela_01.nl
 locations/campaign/slum_bridge/rf_campaign_slumbridge_favela_01.nl.mdic
 locations/campaign/slum_bridge/rf_campaign_slumbridge_favela_01.obc
@@ -132,7 +132,6 @@ locations/campaign/tornado/tornado_finale_roadblocks10.bl
 locations/campaign/tornado/tornado_finale_roadblocks10.blo
 locations/campaign/tornado/tornado_finale_roadblocks10.fl
 locations/campaign/tornado/tornado_finale_roadblocks10.nl
-locations/campaign/tornado/tornado_finale_secondary_fans_airport.bl
 locations/campaign/tornado/tornado_finale_secondary_fans_airport.blo
 locations/campaign/tornado/tornado_finale_secondary_fans_airport.blo_adf
 locations/campaign/tornado/tornado_finale_secondary_fans_airport.fl
@@ -688,6 +687,11 @@ locations/collectibles/desert/questcfinale_shipwrecks.blo
 locations/collectibles/desert/questcfinale_shipwrecks.blo_adf
 locations/collectibles/desert/questcfinale_shipwrecks.fl
 locations/collectibles/desert/questcfinale_shipwrecks.nl
+locations/collectibles/desert/secondary_town_02_main-01.bl
+locations/collectibles/desert/secondary_town_02_main-01.blo
+locations/collectibles/desert/secondary_town_02_main-01.blo_adf
+locations/collectibles/desert/secondary_town_02_main-01.fl
+locations/collectibles/desert/secondary_town_02_main-01.nl
 locations/collectibles/desert/secondary_town_02_main.bl
 locations/collectibles/desert/secondary_town_02_main.blo
 locations/collectibles/desert/secondary_town_02_main.blo_adf
@@ -1893,3 +1897,4 @@ locations/cutscenes/persistent_setdressing/ps_windwalker_finale_end_with_time.bl
 locations/cutscenes/persistent_setdressing/ps_windwalker_finale_end_with_time.blo_adf
 locations/cutscenes/persistent_setdressing/ps_windwalker_finale_end_with_time.fl
 locations/cutscenes/persistent_setdressing/ps_windwalker_finale_end_with_time.fl.mdic
+models/environments/biome_grassland/vegetation/vegetation_grasslands_trees_large_001_col.pfxc

@@ -8688,7 +8688,6 @@ editor/entities/ai/contextual_actions/props/anim_props_a_bucket_small_01.epe_adf
 editor/entities/ai/contextual_actions/props/anim_props_a_camera.ee
 editor/entities/ai/contextual_actions/props/anim_props_a_camera.epe
 editor/entities/ai/contextual_actions/props/anim_props_a_camera.epe_adf
-editor/entities/ai/contextual_actions/props/anim_props_a_cellphone.ee
 editor/entities/ai/contextual_actions/props/anim_props_a_cellphone.epe
 editor/entities/ai/contextual_actions/props/anim_props_a_cellphone.epe_adf
 editor/entities/ai/contextual_actions/props/anim_props_a_cigarette.ee
@@ -9172,3 +9171,4 @@ editor/entities/characters/civilians/16_athletic/civ_soccer_male_001.epe_adf
 editor/entities/characters/civilians/17_upperclass/civ_upperclass_female_01.ee
 editor/entities/characters/civilians/17_upperclass/civ_upperclass_female_01.epe
 editor/entities/characters/civilians/17_upperclass/civ_upperclass_female_01.epe_adf
+sound/dialogue/ita/bark_reb_female02_see_exitheli_01.wavc

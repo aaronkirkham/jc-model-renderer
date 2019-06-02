@@ -1,7 +1,12 @@
-; 102/164 (62%)
+; 114/164 (69%)
+hires/climate/zone_0/mpm_textures_near_0.ddsc
 models/characters/animals/cow/textures/jerseycow_body_dif.atx2
 models/characters/animals/cows/caracu_cattle01/textures/caracu_cattle01_bull_dif.atx2
 models/characters/animals/cows/caracu_cattle01/textures/caracu_cattle01_cow_dif.atx2
+models/characters/animals/cows/holando-argentino_cattle01/textures/holando-argentino_cattle01_bull_dif.atx2
+models/characters/animals/cows/holando-argentino_cattle01/textures/holando-argentino_cattle01_cow_dif.atx2
+models/characters/animals/cows/indo-brazilian_cattle01/textures/indo-brazilian_cattle01_bull_dif.atx2
+models/characters/animals/cows/indo-brazilian_cattle01/textures/indo-brazilian_cattle01_cow_dif.atx2
 models/characters/animals/deer/textures/deer_body_dif.atx2
 models/characters/animals/deer/textures/muledeer_body_dif.atx2
 models/characters/animals/goat/textures/texturesgoat_body_dif.atx2
@@ -55,6 +60,12 @@ models/characters/world_sim/4_full/textures/m_full_civil_worker_jumpsuit_001_dif
 models/characters/world_sim/4_full/textures/m_full_farmer_set_01_dif.atx2
 models/characters/world_sim/4_full/textures/m_full_miner_002_dif.atx2
 models/characters/world_sim/4_full/textures/m_steel_worker_001b_dif.atx2
+models/environments/biome_rainforest/rocks/rainforest_rock_cliff_face_01_nrm.atx2
+models/environments/biome_rainforest/textures/tiling_rock_cliff_a_01_dif.atx2
+models/environments/biome_rainforest/textures/tiling_rock_cliff_a_01_height.atx2
+models/environments/biome_rainforest/textures/tiling_rock_cliff_a_01_mpm.atx2
+models/environments/biome_rainforest/textures/tiling_rock_cliff_a_01_nrm.atx2
+models/environments/biome_rainforest/textures/tiling_rock_cliff_b_01_dif.atx2
 models/environments/locale_civilian/civ_carnival_a/textures/carousel_a_base_dif.atx2
 models/environments/locale_civilian/civ_carnival_a/textures/carousel_a_horse_dif.atx2
 models/environments/locale_global/glo_electrical_large_a/textures/glo_electrical_large_red_dmg_01_a_dif.atx2
@@ -101,3 +112,4 @@ models/objects/parachute_rico/textures/parachute_rico_cloth_nrm.atx2
 models/vehicles/01_land/v001_car_forklift/textures/v001_car_forklift_body_dif.atx2
 models/vehicles/01_land/v010_car_oldtractor/textures/v010_car_oldtractor_body_dif.atx2
 models/vehicles/01_land/v034_car_oldtruck/textures/v034_car_oldtruck_body_dif.atx2
+models/vehicles/01_land/v035_car_modernvan/textures/v035_car_modernvan_body_ambulance_dif.atx2

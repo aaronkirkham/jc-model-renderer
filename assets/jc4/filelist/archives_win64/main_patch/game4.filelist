@@ -1,4 +1,4 @@
-; 753/848 (88%)
+; 779/848 (91%)
 models/environments/biome_rainforest/textures/vegetation_rainforest_cliff_clump_002_alpha_dif.atx1
 models/environments/biome_rainforest/textures/vegetation_rainforest_cliff_fern_001_alpha_dif.atx1
 models/environments/biome_rainforest/textures/vegetation_rainforest_cliff_hanging_001_alpha_dif.atx1
@@ -90,7 +90,9 @@ models/environments/locale_global/glo_cargo_container_a/textures/cargo_container
 models/environments/locale_global/glo_cargo_container_a/textures/cargo_container_a_green_dif.atx1
 models/environments/locale_global/glo_cargo_container_a/textures/cargo_container_a_green_dif.ddsc
 models/environments/locale_global/glo_cargo_container_a/textures/cargo_container_a_light_blue_dif.atx1
+models/environments/locale_global/glo_cargo_container_a/textures/cargo_container_a_light_blue_dif.ddsc
 models/environments/locale_global/glo_cargo_container_a/textures/cargo_container_a_light_green_dif.atx1
+models/environments/locale_global/glo_cargo_container_a/textures/cargo_container_a_light_green_dif.ddsc
 models/environments/locale_global/glo_cargo_container_a/textures/cargo_container_a_orange_dif.atx1
 models/environments/locale_global/glo_cargo_container_a/textures/cargo_container_a_orange_dif.ddsc
 models/environments/locale_global/glo_cargo_container_a/textures/cargo_container_a_white_dif.atx1
@@ -290,6 +292,7 @@ models/environments/locale_road/road_prop_sign_a/textures/sign_chevrons_rt_blue_
 models/environments/locale_road/road_prop_sign_a/textures/sign_chevrons_rt_yellow_dif.atx1
 models/environments/locale_road/road_prop_sign_a/textures/sign_chevrons_rt_yellow_dif.ddsc
 models/environments/locale_road/road_prop_sign_a/textures/sign_i-80_arrow_dif.atx1
+models/environments/locale_road/trainbridge_a/trainbridge_a_rail_str_20m_01_rails.hrmeshc
 models/environments/locale_science/sci_machines_a/textures/screen_frame_01_dif.atx1
 models/environments/locale_science/sci_machines_a/textures/screen_frame_01_dif.ddsc
 models/environments/locale_science/sci_machines_a/textures/screen_frame_02_dif.atx1
@@ -308,6 +311,7 @@ models/environments/locale_village/vil_prop_a/textures/prop_set_02_a_dif.ddsc
 models/environments/locale_village/vil_treehouse_a/vil_treehouse_a_main_01.hrmeshc
 models/environments/locale_village/vil_treehouse_a/vil_treehouse_a_main_01.meshc
 models/environments/locale_village/vil_treehouse_a/vil_treehouse_a_main_01.modelc
+models/environments/locale_village/vil_treehouse_a/vil_treehouse_a_tree_01.hrmeshc
 models/environments/locale_village/vil_treehouse_a/vil_treehouse_a_tree_01.meshc
 models/environments/locale_village/vil_treehouse_a/vil_treehouse_a_tree_01.modelc
 models/environments/shared/textures/asphalt_floor_03_a_clean_alpha_mpm.atx1
@@ -684,6 +688,7 @@ models/landmarks/world_locations/waterfall_set_dressing/waterfall_set_dressing_5
 models/objects/enm_mil_parachute/enm_mil_parachute_body.modelc
 models/objects/parachute_armyofchaos/parachute_armyofchaos.modelc
 models/objects/parachute_batwing/parachute_batwing.modelc
+models/objects/parachute_chaos/parachute_chaos.hrmeshc
 models/objects/parachute_chicken/parachute_chicken.modelc
 models/objects/parachute_cow/parachute_cow.modelc
 models/objects/parachute_frigoauto/parachute_frigoauto.modelc
@@ -700,9 +705,14 @@ models/objects/parachute_rico/textures/parachute_rico_cloth_nrm.atx1
 models/objects/parachute_rico/textures/parachute_rico_cloth_nrm.ddsc
 models/objects/parachute_sofluffy/parachute_sofluffy.modelc
 models/objects/parachute_southamericanfabric/parachute_southamericanfabric.modelc
+models/objects/parachute_stunts/parachute_stunts.hrmeshc
+models/objects/parachute_wind/parachute_wind.hrmeshc
 models/objects/retooler/retooler/retooler_base.modelc
 models/objects/retooler/retooler/retooler_base_disk.modelc
+models/objects/retooler/retooler/retooler_booster.modelc
 models/objects/retooler/retooler/retooler_cin_wire.modelc
+models/objects/retooler/retooler/retooler_lifter.modelc
+models/objects/retooler/retooler/retooler_retractor.modelc
 models/objects/wingsuit_armyofchaos/wingsuit_armyofchaos_body.modelc
 models/objects/wingsuit_batwing/wingsuit_batwing_body.modelc
 models/objects/wingsuit_frigoauto/wingsuit_frigoauto_body.modelc
@@ -711,18 +721,30 @@ models/objects/wingsuit_quetzalcoatl/wingsuit_quetzalcoatl_body.modelc
 models/objects/wingsuit_rainbow/wingsuit_rainbow_body.modelc
 models/objects/wingsuit_southamericanfabric/wingsuit_southamericanfabric_body.modelc
 models/vehicles/01_land/v001_car_forklift/textures/v001_car_forklift_body_dif.atx1
+models/vehicles/01_land/v001_car_forklift/textures/v001_car_forklift_body_dif.ddsc
 models/vehicles/01_land/v010_car_oldtractor/textures/v010_car_oldtractor_body_dif.atx1
+models/vehicles/01_land/v010_car_oldtractor/textures/v010_car_oldtractor_body_dif.ddsc
 models/vehicles/01_land/v010_car_oldtractor/textures/v010_car_oldtractor_wheels_dif.atx1
+models/vehicles/01_land/v010_car_oldtractor/textures/v010_car_oldtractor_wheels_dif.ddsc
 models/vehicles/01_land/v011_car_oldtwodoorhatch/textures/v011_car_old_two_door_hatch_interior_dif.atx1
+models/vehicles/01_land/v011_car_oldtwodoorhatch/textures/v011_car_old_two_door_hatch_interior_dif.ddsc
 models/vehicles/01_land/v034_car_oldtruck/textures/v034_car_oldtruck_body_dif.atx1
 models/vehicles/01_land/v034_car_oldtruck/textures/v034_car_oldtruck_body_dif.ddsc
+models/vehicles/01_land/v035_car_modernvan/textures/v035_car_modernvan_body_ambulance_dif.atx1
+models/vehicles/01_land/v035_car_modernvan/textures/v035_car_modernvan_body_ambulance_dif.ddsc
+models/vehicles/01_land/v035_car_modernvan/textures/v035_car_modernvan_body_ambulance_mpm.atx1
+models/vehicles/01_land/v035_car_modernvan/textures/v035_car_modernvan_body_ambulance_mpm.ddsc
+models/vehicles/01_land/v035_car_modernvan/textures/v035_car_modernvan_body_ambulance_nrm.atx1
+models/vehicles/01_land/v035_car_modernvan/textures/v035_car_modernvan_body_ambulance_nrm.ddsc
 models/vehicles/02_air/v402_plane_fighterbomber/fighterbomber.physicsc
+models/vehicles/02_air/v403_plane_microjet/microjet.physicsc
 models/vehicles/02_air/v405_plane_commercialcargo/commercialcargo.physicsc
 models/vehicles/02_air/v408_plane_ultralight/ultralight.physicsc
 models/vehicles/02_air/v700_balloon_dirigible/dirigible.physicsc
 models/weapons/wpn_001_assault_rifle/textures/wpn_001_assault_rifle_alpha_mpm.atx1
 models/weapons/wpn_001_assault_rifle/textures/wpn_001_assault_rifle_dif.atx1
 models/weapons/wpn_061_rpg/textures/wpn_061_rpg_alpha_mpm.atx1
+models/weapons/wpn_061_rpg/textures/wpn_061_rpg_alpha_mpm.ddsc
 packages/main/expentity_info_collection.expentity_infoc
 packages/main/generated_global_resources.bl
 packages/main/landmarks.blo
@@ -734,6 +756,8 @@ packages/main/weapons.weaponsc
 sound/fmod_banks/cha_civilian.fmod_bankc
 sound/fmod_banks/cha_global_rico.fmod_bankc
 sound/fmod_banks/cine_intro_campaigns.fmod_bankc
+sound/fmod_banks/cine_outro_end.fmod_bankc
+sound/fmod_banks/cine_outro_start.fmod_bankc
 sound/fmod_banks/eff_bullets.fmod_bankc
 sound/fmod_banks/eff_electricity_common.fmod_bankc
 sound/fmod_banks/eff_explosion_common.fmod_bankc
@@ -741,6 +765,7 @@ sound/fmod_banks/eff_extreme_weather_sandstorm.fmod_bankc
 sound/fmod_banks/eff_extreme_weather_tornado.fmod_bankc
 sound/fmod_banks/eff_fire.fmod_bankc
 sound/fmod_banks/eff_global_common.fmod_bankc
+sound/fmod_banks/eff_grapple.fmod_bankc
 sound/fmod_banks/eff_grenade_common.fmod_bankc
 sound/fmod_banks/global_gui.fmod_bankc
 sound/fmod_banks/global_sound_layers.fmod_bankc
@@ -752,3 +777,4 @@ sound/fmod_banks/node_amb_peoples_city.fmod_bankc
 sound/fmod_banks/node_ambience.fmod_bankc
 sound/fmod_banks/phy_global_effects.fmod_bankc
 sound/fmod_banks/phy_javi_statues.fmod_bankc
+sound/fmod_banks/streaming_main_menu_dlc_trailer.fmod_bankc

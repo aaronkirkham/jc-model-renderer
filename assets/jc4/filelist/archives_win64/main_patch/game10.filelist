@@ -1,4 +1,4 @@
-; 76/110 (69%)
+; 95/110 (86%)
 terrain/jc3/patches/patch_11_13_14.streampatch
 terrain/jc3/patches/patch_11_14_04.streampatch
 terrain/jc3/patches/patch_11_14_05.streampatch
@@ -73,5 +73,24 @@ terrain/jc3/patches/patch_12_07_04.streampatch
 terrain/jc3/patches/patch_12_07_05.streampatch
 terrain/jc3/patches/patch_12_07_06.streampatch
 terrain/jc3/patches/patch_12_07_07.streampatch
+textures/ui/zoom0/0.ddsc
+textures/ui/zoom0/1.ddsc
+textures/ui/zoom0/10.ddsc
+textures/ui/zoom0/11.ddsc
+textures/ui/zoom0/12.ddsc
+textures/ui/zoom0/13.ddsc
+textures/ui/zoom0/14.ddsc
+textures/ui/zoom0/15.ddsc
+textures/ui/zoom0/2.ddsc
+textures/ui/zoom0/3.ddsc
+textures/ui/zoom0/4.ddsc
+textures/ui/zoom0/5.ddsc
+textures/ui/zoom0/6.ddsc
+textures/ui/zoom0/7.ddsc
+textures/ui/zoom0/9.ddsc
+videos/daredevil_trailer.bikc
+videos/retooler_group_on_balloon_destroy_1.bikc
+videos/retooler_group_remote_controlled_balloon_locked.bikc
+videos/scene_garland_outro_end.bikc
 videos/scene_intro_blizzard.bikc
 videos/scene_intro_gear.bikc

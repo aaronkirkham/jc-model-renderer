@@ -1,4 +1,5 @@
 ; 910/916 (99%)
+locations/node/node_civilian_04/node_civilian_04_city_north_airport.nlo
 locations/secondary_locations/desert/d_settlement_13/d_settlement_13.nl
 locations/secondary_locations/desert/d_settlement_13/d_settlement_13.nl.mdic
 locations/secondary_locations/desert/d_settlement_13/d_settlement_13.obc
@@ -509,7 +510,6 @@ locations/secondary_locations/grasslands/additional_encounter_locations/20x37_en
 locations/secondary_locations/grasslands/additional_encounter_locations/20x37_encounters.blo
 locations/secondary_locations/grasslands/additional_encounter_locations/20x37_encounters.blo_adf
 locations/secondary_locations/grasslands/additional_encounter_locations/20x37_encounters.fl
-locations/secondary_locations/grasslands/additional_encounter_locations/20x37_encounters.nl
 locations/secondary_locations/grasslands/additional_encounter_locations/21x45_encounters.bl
 locations/secondary_locations/grasslands/additional_encounter_locations/21x45_encounters.blo
 locations/secondary_locations/grasslands/additional_encounter_locations/21x45_encounters.blo_adf

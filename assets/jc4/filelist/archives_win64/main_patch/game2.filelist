@@ -1,4 +1,4 @@
-; 3195/3438 (92%)
+; 3232/3438 (94%)
 locations/campaign/tornado/tornado_finale_underground_mines_meshes_mission_loaded.bl
 locations/campaign/tornado/tornado_finale_underground_mines_meshes_mission_loaded.blo
 locations/campaign/tornado/tornado_finale_underground_mines_meshes_mission_loaded.blo_adf
@@ -130,6 +130,7 @@ locations/collectibles/desert/questa17_start.blo
 locations/collectibles/desert/questa17_start.fl.mdic
 locations/collectibles/desert/questa17_start.nl.mdic
 locations/collectibles/desert/questcfinale_shipwrecks.blo
+locations/collectibles/desert/secondary_town_02_main-01.blo
 locations/collectibles/desert/secondary_town_02_main.blo
 locations/collectibles/desert/secondary_town_02_main.fl.mdic
 locations/collectibles/desert/secondary_town_02_main.nl.mdic
@@ -249,6 +250,38 @@ locations/collectibles/grassland/settlement12.fl.mdic
 locations/collectibles/grassland/settlement12.nl.mdic
 locations/collectibles/grassland/town09.blo
 locations/collectibles/grassland/town12.blo
+locations/collectibles/monthy_challenges/stunt/35x33.blo
+locations/collectibles/monthy_challenges/stunt/35x33.nl
+locations/collectibles/monthy_challenges/stunt/38x31.blo
+locations/collectibles/monthy_challenges/stunt/38x31.blo_adf
+locations/collectibles/monthy_challenges/stunt/38x31.nl
+locations/collectibles/monthy_challenges/stunt/51x39.blo
+locations/collectibles/monthy_challenges/stunt/51x39.blo_adf
+locations/collectibles/monthy_challenges/stunt/51x39.nl
+locations/collectibles/monthy_challenges/stunt/52x38.blo
+locations/collectibles/monthy_challenges/stunt/52x38.blo_adf
+locations/collectibles/monthy_challenges/stunt/52x38.nl
+locations/collectibles/monthy_challenges/stunt/52x39.blo
+locations/collectibles/monthy_challenges/stunt/52x39.blo_adf
+locations/collectibles/monthy_challenges/stunt/52x39.nl
+locations/collectibles/monthy_challenges/stunt/53x39.blo
+locations/collectibles/monthy_challenges/stunt/53x39.blo_adf
+locations/collectibles/monthy_challenges/stunt/53x39.nl
+locations/collectibles/monthy_challenges/stunt/53x40.blo
+locations/collectibles/monthy_challenges/stunt/53x40.blo_adf
+locations/collectibles/monthy_challenges/stunt/53x40.nl
+locations/collectibles/monthy_challenges/wingsuit/25x23.blo
+locations/collectibles/monthy_challenges/wingsuit/25x23.blo_adf
+locations/collectibles/monthy_challenges/wingsuit/25x23.nl
+locations/collectibles/monthy_challenges/wingsuit/26x32.blo
+locations/collectibles/monthy_challenges/wingsuit/26x32.blo_adf
+locations/collectibles/monthy_challenges/wingsuit/26x32.nl
+locations/collectibles/monthy_challenges/wingsuit/48x26.blo
+locations/collectibles/monthy_challenges/wingsuit/48x26.blo_adf
+locations/collectibles/monthy_challenges/wingsuit/48x26.nl
+locations/collectibles/monthy_challenges/wingsuit/6x23.blo
+locations/collectibles/monthy_challenges/wingsuit/6x23.blo_adf
+locations/collectibles/monthy_challenges/wingsuit/6x23.nl
 locations/collectibles/rainforest/alpine_north.blo
 locations/collectibles/rainforest/alpine_north.fl.mdic
 locations/collectibles/rainforest/alpine_north.nl.mdic
@@ -1528,6 +1561,10 @@ locations/frontlines/node_military_11/frontline_node_military_11_industrial_09.f
 locations/frontlines/node_military_11/frontline_node_military_11_industrial_09.flo
 locations/frontlines/node_military_11/frontline_node_military_11_industrial_09.flo_adf
 locations/frontlines/node_military_11/frontline_node_military_11_industrial_09.nl
+locations/frontlines/node_military_11/frontline_node_military_11_industrial_09_generated_rebel_node_industrial_09.blo
+locations/frontlines/node_military_11/frontline_node_military_11_industrial_09_generated_rebel_node_industrial_09.flo
+locations/frontlines/node_military_11/frontline_node_military_11_industrial_09_generated_rebel_node_industrial_09.nl
+locations/frontlines/node_military_11/frontline_node_military_11_industrial_09_generated_rebel_node_industrial_09.resourcebundle
 locations/frontlines/node_military_11/frontline_node_military_11_industrial_09_generated_rebel_node_military_11.blo
 locations/frontlines/node_military_11/frontline_node_military_11_industrial_09_generated_rebel_node_military_11.blo_adf
 locations/frontlines/node_military_11/frontline_node_military_11_industrial_09_generated_rebel_node_military_11.fl

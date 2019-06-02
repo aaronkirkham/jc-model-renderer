@@ -1,4 +1,4 @@
-; 1799/1800 (99%)
+; 1800/1800 (100%)
 models/characters/main_characters/garland/textures/garland_head_002_alpha_mpm.atx1
 models/characters/main_characters/garland/textures/garland_head_002_dif.atx1
 models/characters/main_characters/garland/textures/garland_head_002_nrm.atx1
@@ -1557,6 +1557,7 @@ models/characters/world_sim/5_misc/textures/m_headwear_logos_a001_nrm.atx1
 models/characters/world_sim/5_misc/textures/rebel_assets_dif.atx1
 models/characters/world_sim/5_misc/textures/rebel_assets_mpm.atx1
 models/characters/world_sim/5_misc/textures/rebel_assets_nrm.atx1
+models/characters/world_sim/corpses/f_corpse_aviation_mechanic_001.hrmeshc
 models/environments/biome_alpine/textures/vegetation_alpine_bush_fire_001_alpha_dif.atx1
 models/environments/biome_alpine/textures/vegetation_alpine_bush_fire_001_mpm.atx1
 models/environments/biome_alpine/textures/vegetation_alpine_bush_fire_001_nrm.atx1
