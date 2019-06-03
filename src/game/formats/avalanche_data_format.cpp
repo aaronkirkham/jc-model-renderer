@@ -472,33 +472,34 @@ void AvalancheDataFormat::LoadInlineOffsets(const jc::AvalancheDataFormat::Type*
 
         case EAdfType::Pointer:
         case EAdfType::Deferred: {
-            const uint32_t real_offset   = *(uint32_t*)&payload[offset];
-            *(uint64_t*)&payload[offset] = (uint64_t)((char*)payload + real_offset);
+            const uint32_t real_offset = *(uint32_t*)&payload[offset];
 
-            uint32_t type_hash = 0xDEFE88ED;
-            if (type->m_AdfType == EAdfType::Pointer) {
-                type_hash = type->m_SubTypeHash;
-            } else if (real_offset) {
-                type_hash = *(uint32_t*)&payload[offset + 8];
-            }
+            if (real_offset) {
+                *(uint64_t*)&payload[offset] = (uint64_t)((char*)payload + real_offset);
 
-            const Type* deferred_type = FindType(type_hash);
-            if (deferred_type && real_offset) {
-                LoadInlineOffsets(deferred_type, payload, real_offset);
+                const uint32_t type_hash =
+                    (type->m_AdfType == EAdfType::Pointer ? type->m_SubTypeHash : *(uint32_t*)&payload[offset + 8]);
+                const Type* ptr_type = FindType(type_hash);
+                if (ptr_type) {
+                    LoadInlineOffsets(ptr_type, payload, real_offset);
+                }
             }
 
             break;
         }
 
         case EAdfType::Array: {
-            const uint32_t real_offset   = *(uint32_t*)&payload[offset];
-            *(uint64_t*)&payload[offset] = (uint64_t)((char*)payload + real_offset);
+            const uint32_t real_offset = *(uint32_t*)&payload[offset];
 
-            const Type* subtype = FindType(type->m_SubTypeHash);
-            if (subtype && DoesTypeNeedFixing(subtype->m_AdfType)) {
-                const uint32_t count = *(uint32_t*)&payload[offset + 8];
-                for (uint32_t i = 0; i < count; ++i) {
-                    LoadInlineOffsets(subtype, payload, (real_offset + (subtype->m_Size * i)));
+            if (real_offset) {
+                *(uint64_t*)&payload[offset] = (uint64_t)((char*)payload + real_offset);
+
+                const Type* subtype = FindType(type->m_SubTypeHash);
+                if (subtype && DoesTypeNeedFixing(subtype->m_AdfType)) {
+                    const uint32_t count = *(uint32_t*)&payload[offset + 8];
+                    for (uint32_t i = 0; i < count; ++i) {
+                        LoadInlineOffsets(subtype, payload, (real_offset + (subtype->m_Size * i)));
+                    }
                 }
             }
 
@@ -506,8 +507,11 @@ void AvalancheDataFormat::LoadInlineOffsets(const jc::AvalancheDataFormat::Type*
         }
 
         case EAdfType::String: {
-            const uint32_t real_offset   = *(uint32_t*)&payload[offset];
-            *(uint64_t*)&payload[offset] = (uint64_t)((char*)payload + real_offset);
+            const uint32_t real_offset = *(uint32_t*)&payload[offset];
+
+            if (real_offset) {
+                *(uint64_t*)&payload[offset] = (uint64_t)((char*)payload + real_offset);
+            }
             break;
         }
     }

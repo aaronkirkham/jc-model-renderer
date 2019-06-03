@@ -78,7 +78,7 @@ bool RenderBlockModel::ParseRBM(const FileBuffer& buffer, bool add_to_render_lis
     SPDLOG_INFO("RBM v{}.{}.{}. NumberOfBlocks={}, Flags={}", header.m_VersionMajor, header.m_VersionMinor,
                 header.m_VersionRevision, header.m_NumberOfBlocks, header.m_Flags);
 
-    // ensure we can read the file version (TODO: when JC4 is released, check this)
+    // ensure we can read the file version
     if (header.m_VersionMajor != 1 && header.m_VersionMinor != 16) {
 #ifdef DEBUG
         __debugbreak();

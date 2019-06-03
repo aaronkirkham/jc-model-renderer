@@ -231,91 +231,53 @@ int32_t Window::ShowMessageBox(const std::string& message, uint32_t type)
     return result;
 }
 
-void Window::ShowFileSelection(const std::string& title, const char* default_filename, const char* filter,
-                               const char*                                       default_extension,
-                               std::function<void(const std::filesystem::path&)> fn_selected,
-                               std::function<void()>                             fn_cancelled)
+std::filesystem::path Window::CreateFileDialog(const CLSID& clsid, const std::string& title,
+                                               const FileSelectionParams& params, uint32_t flags)
 {
-    char         filename[MAX_PATH] = {0};
-    OPENFILENAME ofn                = {0};
-
-    if (default_filename) {
-        strcpy_s(filename, default_filename);
-    }
-
-    ofn.lStructSize = sizeof(OPENFILENAME);
-    ofn.hwndOwner   = m_Hwnd;
-    ofn.lpstrFilter = filter;
-    ofn.lpstrDefExt = default_extension;
-    ofn.lpstrFile   = filename;
-    ofn.nMaxFile    = MAX_PATH;
-    ofn.lpstrTitle  = title.c_str();
-    ofn.Flags       = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
-
-    if (GetOpenFileName(&ofn)) {
-        fn_selected(filename);
-    } else if (fn_cancelled) {
-        fn_cancelled();
-    }
-}
-
-void Window::ShowFileFolderSelection(const std::string& title, const char* default_filename, const char* filter,
-                                     const char*                                       default_extension,
-                                     std::function<void(const std::filesystem::path&)> fn_selected,
-                                     std::function<void()>                             fn_cancelled)
-{
-    char         filename[MAX_PATH] = {0};
-    OPENFILENAME sfn                = {0};
-
-    if (default_filename) {
-        strcpy_s(filename, default_filename);
-    }
-
-    sfn.lStructSize = sizeof(OPENFILENAME);
-    sfn.hwndOwner   = m_Hwnd;
-    sfn.lpstrFilter = filter;
-    sfn.lpstrDefExt = default_extension;
-    sfn.lpstrFile   = filename;
-    sfn.nMaxFile    = MAX_PATH;
-    sfn.lpstrTitle  = title.c_str();
-    sfn.Flags       = OFN_DONTADDTORECENT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
-
-    if (GetSaveFileName(&sfn)) {
-        fn_selected(filename);
-    } else if (fn_cancelled) {
-        fn_cancelled();
-    }
-}
-
-void Window::ShowFolderSelection(const std::string& title, uint32_t flags,
-                                 std::function<void(const std::filesystem::path&)> fn_selected,
-                                 std::function<void()>                             fn_cancelled)
-{
-    bool success = false;
-    auto hr      = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    std::filesystem::path selected = "";
+    HRESULT               hr       = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     if (SUCCEEDED(hr)) {
         // create the file open dialog object
-        IFileOpenDialog* file_open = nullptr;
-        hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, IID_IFileOpenDialog, (void**)&file_open);
+        IFileDialog* dialog = nullptr;
+        hr                  = CoCreateInstance(clsid, nullptr, CLSCTX_ALL, IID_IFileDialog, (void**)&dialog);
 
         if (SUCCEEDED(hr)) {
             std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 
-            file_open->SetTitle(converter.from_bytes(title).c_str());
-            file_open->SetOptions(flags | FOS_PICKFOLDERS | FOS_PATHMUSTEXIST);
-            hr = file_open->Show(m_Hwnd);
+            // set title and flags
+            dialog->SetTitle(converter.from_bytes(title).c_str());
+            dialog->SetOptions(flags);
+
+            // set default filename
+            if (!params.Filename.empty()) {
+                dialog->SetFileName(converter.from_bytes(params.Filename).c_str());
+            }
+
+            // set default extension
+            if (!params.Extension.empty()) {
+                dialog->SetDefaultExtension(converter.from_bytes(params.Extension).c_str());
+            }
+
+            // set filters
+            std::vector<std::wstring>      buffer;
+            std::vector<COMDLG_FILTERSPEC> filterspec;
+            ConvertFileSelectionFilters(converter, params.Filters, &buffer, &filterspec);
+            if (!filterspec.empty()) {
+                dialog->SetFileTypes(filterspec.size(), filterspec.data());
+            }
+
+            hr = dialog->Show(m_Hwnd);
 
             if (SUCCEEDED(hr)) {
                 IShellItem* item = nullptr;
-                hr               = file_open->GetResult(&item);
+                hr               = dialog->GetResult(&item);
 
                 if (SUCCEEDED(hr)) {
                     PWSTR file_path;
                     hr = item->GetDisplayName(SIGDN_FILESYSPATH, &file_path);
 
                     if (SUCCEEDED(hr)) {
-                        success = true;
-                        fn_selected(file_path);
+                        selected = file_path;
                         CoTaskMemFree(file_path);
                     }
 
@@ -323,15 +285,30 @@ void Window::ShowFolderSelection(const std::string& title, uint32_t flags,
                 }
             }
 
-            file_open->Release();
+            dialog->Release();
         }
     }
 
     CoUninitialize();
+    return selected;
+}
 
-    if (!success && fn_cancelled) {
-        fn_cancelled();
-    }
+std::filesystem::path Window::ShowFileSelecton(const std::string& title, const FileSelectionParams& params,
+                                               uint32_t flags)
+{
+    return CreateFileDialog(CLSID_FileOpenDialog, title, params, (flags | FOS_FILEMUSTEXIST));
+}
+
+std::filesystem::path Window::ShowFolderSelection(const std::string& title, const FileSelectionParams& params,
+                                                  uint32_t flags)
+{
+    return CreateFileDialog(CLSID_FileOpenDialog, title, params, (flags | FOS_PICKFOLDERS | FOS_PATHMUSTEXIST));
+}
+
+std::filesystem::path Window::ShowSaveDialog(const std::string& title, const FileSelectionParams& params,
+                                             uint32_t flags)
+{
+    return CreateFileDialog(CLSID_FileSaveDialog, title, params, (flags | FOS_OVERWRITEPROMPT));
 }
 
 void Window::SwitchMode(bool jc4_mode)
@@ -373,7 +350,8 @@ void Window::SelectJustCauseDirectory(bool override_mode, bool jc3_mode)
     std::string title = is_jc4_mode ? "Please select your Just Cause 4 install folder"
                                     : "Please select your Just Cause 3 install folder";
 
-    static auto OnSelected = [&](const std::filesystem::path& selected) {
+    const auto& selected = ShowFolderSelection(title);
+    if (!selected.empty()) {
         SPDLOG_INFO("Selected directory: \"{}\"", selected.string());
 
         std::filesystem::path exe_path = selected;
@@ -385,17 +363,13 @@ void Window::SelectJustCauseDirectory(bool override_mode, bool jc3_mode)
         }
 
         Settings::Get()->SetValue(is_jc4_mode ? "jc4_directory" : "jc3_directory", selected.string());
-    };
-
-    static auto OnCancelled = [&]() {
+    } else {
         const auto& jc_directory =
             Settings::Get()->GetValue<std::string>(is_jc4_mode ? "jc4_directory" : "jc3_directory");
         if (jc_directory.empty()) {
             ShowMessageBox("Unable to find Just Cause root directory.\n\nSome features will be disabled.");
         }
-    };
-
-    ShowFolderSelection(title, 0, OnSelected, OnCancelled);
+    }
 }
 
 std::filesystem::path Window::GetJustCauseDirectory()
@@ -457,4 +431,29 @@ bool Window::LoadInternalResource(int32_t resource_id, std::vector<uint8_t>* out
     const auto resource = LockResource(data);
     *out_buffer         = {(char*)resource, (char*)resource + SizeofResource(handle, rc)};
     return true;
+}
+
+void Window::ConvertFileSelectionFilters(std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>& converter,
+                                         const std::vector<FileSelectionFilter>&                 filters,
+                                         std::vector<std::wstring>* buffer, std::vector<COMDLG_FILTERSPEC>* filterspec)
+{
+    if (filters.empty()) {
+        filterspec->push_back(COMDLG_FILTERSPEC{L"All Files (*.*)", L"*.*"});
+        return;
+    }
+
+    buffer->reserve(filters.size() * 2);
+    filterspec->reserve(filters.size());
+
+    for (const auto& filter : filters) {
+        COMDLG_FILTERSPEC spec;
+
+        buffer->push_back(converter.from_bytes(filter.first));
+        spec.pszName = buffer->back().c_str();
+
+        buffer->push_back(converter.from_bytes(filter.second));
+        spec.pszSpec = buffer->back().c_str();
+
+        filterspec->push_back(std::move(spec));
+    }
 }

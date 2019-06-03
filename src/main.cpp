@@ -57,9 +57,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
     g_DrawBoundingBoxes = Settings::Get()->GetValue<bool>("draw_bounding_boxes", false);
     g_ShowModelLabels   = Settings::Get()->GetValue<bool>("show_model_labels", false);
 
-    // TODO: Validate the jc3 directory, make sure we can see some common stuff like JustCause3.exe / archives_win64
-    // folder.
-
 #if 0
     // try find the jc3 directory from the steam installation folder
     std::filesystem::path jc3_directory = Settings::Get()->GetValue<std::string>("jc3_directory");
@@ -88,7 +85,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         // show game selection window
         UI::Get()->ShowGameSelection();
 
-#if 1
+#ifdef DEBUG
         // input thread
         std::thread([&] {
             while (true) {

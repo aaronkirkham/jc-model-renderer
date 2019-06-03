@@ -24,6 +24,7 @@
 #include "../game/irenderblock.h"
 #include "../game/render_block_factory.h"
 
+#include "../game/jc3/renderblocks/irenderblock.h"
 #include "../game/jc4/renderblocks/irenderblock.h"
 
 #include "../game/hashlittle.h"
@@ -275,25 +276,19 @@ void UI::Render(RenderContext_t* context)
                 std::string status_text    = "Exporting \"" + m_ExportSettings.Filename.generic_string() + "\"...";
                 const auto  status_text_id = PushStatusText(status_text);
 
-                Window::Get()->ShowFolderSelection(
-                    "Select a location to export the file to.", 0,
-                    [&, status_text_id](const std::filesystem::path& path) {
-                        m_ExportSettings.Exporter->Export(
-                            m_ExportSettings.Filename, path, [&, path, status_text_id](bool success) {
-                                m_ExportSettings.ShowExportSettings = false;
-                                UI::Get()->PopStatusText(status_text_id);
-                                if (!success) {
-                                    SPDLOG_ERROR("Failed to export \"{}\"",
-                                                 m_ExportSettings.Filename.filename().string());
-                                    Window::Get()->ShowMessageBox(
-                                        "Failed to export \"" + m_ExportSettings.Filename.filename().string() + "\".");
-                                }
-                            });
-                    },
-                    [&, status_text_id] {
-                        m_ExportSettings.ShowExportSettings = false;
-                        UI::Get()->PopStatusText(status_text_id);
-                    });
+                const auto& selected = Window::Get()->ShowFolderSelection("Select a folder to export the file to");
+                if (!selected.empty()) {
+                    m_ExportSettings.Exporter->Export(
+                        m_ExportSettings.Filename, selected, [&, selected, status_text_id](bool success) {
+                            m_ExportSettings.ShowExportSettings = false;
+                            UI::Get()->PopStatusText(status_text_id);
+                            if (!success) {
+                                SPDLOG_ERROR("Failed to export \"{}\"", m_ExportSettings.Filename.filename().string());
+                                Window::Get()->ShowMessageBox("Failed to export \""
+                                                              + m_ExportSettings.Filename.filename().string() + "\".");
+                            }
+                        });
+                }
             }
 
             ImGui::EndPopup();
@@ -376,19 +371,22 @@ void UI::Render(RenderContext_t* context)
                     if (ImGui::Button(ICON_FA_SAVE "  Save as...")) {
                         FileBuffer buffer;
                         if (FileLoader::Get()->WriteAVTX(m_NewTextureSettings.Texture.get(), &buffer)) {
-                            Window::Get()->ShowFileFolderSelection(
-                                "Save as...", "", "Avalanche Compressed Texture (*.ddsc)\0*.ddsc\0\0", ".ddsc",
-                                [&](const std::filesystem::path& filename) {
-                                    std::ofstream file(filename, std::ios::binary);
-                                    if (file.fail()) {
-                                        Window::Get()->ShowMessageBox("Failed to save file.",
-                                                                      MB_ICONEXCLAMATION | MB_OK);
-                                        return;
-                                    }
+                            FileSelectionParams params{};
+                            params.Filename  = m_NewTextureSettings.Texture->GetFileName().stem().string();
+                            params.Extension = ".ddsc";
+                            params.Filters.emplace_back(FileSelectionFilter{"Avalanche Texture (*.ddsc)", "*.ddsc"});
+                            const auto& selected = Window::Get()->ShowSaveDialog("Save as...", params);
 
-                                    file.write((char*)buffer.data(), buffer.size());
-                                    file.close();
-                                });
+                            if (!selected.empty()) {
+                                std::ofstream stream(selected, std::ios::binary);
+                                if (stream.fail()) {
+                                    Window::Get()->ShowMessageBox("Failed to save file.", MB_ICONEXCLAMATION | MB_OK);
+                                    return;
+                                }
+
+                                stream.write((char*)buffer.data(), buffer.size());
+                                stream.close();
+                            }
                         }
                     }
                 }
@@ -540,11 +538,8 @@ void UI::RenderMenuBar()
             if (ImGui::MenuItem("Resource Bundle", ".resourcebundle", nullptr, g_IsJC4Mode)) {
                 const auto& importers = ImportExportManager::Get()->GetImportersFor(".resourcebundle");
                 if (importers.size() > 0) {
-                    Window::Get()->ShowFolderSelection(
-                        "Select a folder to import", 0,
-                        [&, importer = importers.at(0)](const std::filesystem::path& selected) {
-                            std::thread([&, importer, selected] { importer->Import(selected); }).detach();
-                        });
+                    const auto& selected = Window::Get()->ShowFolderSelection("Select a folder to import");
+                    std::thread([&, importer = importers.at(0), selected] { importer->Import(selected); }).detach();
                 }
             }
 
@@ -930,24 +925,28 @@ void UI::RenderModelsTab_RBM()
                             static auto red = ImVec4{1, 0, 0, 1};
                             ImGui::TextColored(red, "This Render Block doesn't have any mesh!");
 
-                            if (ImGuiCustom::BeginButtonDropDown("Import Mesh From")) {
-                                const auto& importers = ImportExportManager::Get()->GetImportersFor(".rbm");
-                                for (const auto& importer : importers) {
-                                    if (ImGui::MenuItem(importer->GetExportName(), importer->GetExportExtension())) {
-                                        UI::Events().ImportFileRequest(
-                                            importer, [&](bool success, std::filesystem::path filename, std::any data) {
+                            if (!g_IsJC4Mode) {
+                                if (ImGuiCustom::BeginButtonDropDown("Import Mesh From")) {
+                                    const auto& importers = ImportExportManager::Get()->GetImportersFor(".rbm");
+                                    for (const auto& importer : importers) {
+                                        if (ImGui::MenuItem(importer->GetExportName(),
+                                                            importer->GetExportExtension())) {
+                                            UI::Events().ImportFileRequest(importer, [&](bool                  success,
+                                                                                         std::filesystem::path filename,
+                                                                                         std::any              data) {
                                                 auto& [vertices, indices, materials] =
                                                     std::any_cast<std::tuple<vertices_t, uint16s_t, materials_t>>(data);
 
-                                                /*render_block->SetData(&vertices, &indices, &materials);
-                                                render_block->Create();*/
+                                                render_block->SetData(&vertices, &indices, &materials);
+                                                ((jc3::IRenderBlock*)render_block)->Create();
 
                                                 Renderer::Get()->AddToRenderList(render_block);
                                             });
+                                        }
                                     }
-                                }
 
-                                ImGuiCustom::EndButtonDropDown();
+                                    ImGuiCustom::EndButtonDropDown();
+                                }
                             }
 #endif
                         } else {
@@ -1060,10 +1059,8 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
     if (ImGui::BeginPopupContextItem("Context Menu")) {
         // save file
         if (ImGui::Selectable(ICON_FA_SAVE "  Save to...")) {
-            Window::Get()->ShowFolderSelection("Select a folder to save the file to.", 0,
-                                               [&](const std::filesystem::path& selected) {
-                                                   UI::Get()->Events().SaveFileRequest(filename, selected, false);
-                                               });
+            const auto& selected = Window::Get()->ShowFolderSelection("Select a folder to save the file to");
+            UI::Get()->Events().SaveFileRequest(filename, selected, false);
         }
 
         // save to dropzone

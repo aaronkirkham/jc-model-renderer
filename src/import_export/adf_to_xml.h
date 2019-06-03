@@ -289,7 +289,7 @@ class ADF2XML : public IImportExporter
                         std::memcpy((char*)payload + (payload_offset + 4), &zero, sizeof(zero));
                         std::memcpy((char*)payload + (payload_offset + 8), &zero, sizeof(zero));
 
-                        bool has_32bit_inline_arrays = ~LOBYTE(header->m_Flags) & 1;
+                        bool has_32bit_inline_arrays = ~LOBYTE(header->m_Flags) & EHeaderFlags::RELATIVE_OFFSETS_EXISTS;
                         return (has_32bit_inline_arrays ? subtype->m_Align : 0);
                     }
 

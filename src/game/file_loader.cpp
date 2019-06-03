@@ -112,49 +112,54 @@ FileLoader::FileLoader()
 
     // import file
     UI::Get()->Events().ImportFileRequest.connect([&](IImportExporter* importer, ImportFinishedCallback callback) {
-        std::string filter = importer->GetExportName();
-        filter.push_back('\0');
-        filter.append("*");
-        filter.append(importer->GetExportExtension());
-        filter.push_back('\0');
+        std::string filter_extension = "*";
+        filter_extension.append(importer->GetExportExtension());
 
-        Window::Get()->ShowFileSelection(
-            "Select a file to import", "", filter.c_str(), importer->GetExportExtension(),
-            [&, importer, callback](const std::filesystem::path& selected) {
-                SPDLOG_INFO("(ImportFileRequest) Want to import file \"{}\"", selected.string());
-                std::thread([&, importer, selected, callback] { importer->Import(selected, callback); }).detach();
-            });
+        std::string filter_name = importer->GetExportName();
+        filter_name.append(" (");
+        filter_name.append(filter_extension);
+        filter_name.append(")");
+
+        FileSelectionParams params{};
+        params.Extension = importer->GetExportExtension();
+        params.Filters.emplace_back(FileSelectionFilter{filter_name, filter_extension});
+
+        const auto& selected = Window::Get()->ShowFileSelecton("Select a file to import", params);
+        if (!selected.empty()) {
+            SPDLOG_INFO("(ImportFileRequest) Want to import file \"{}\"", selected.string());
+            std::thread([&, importer, selected, callback] { importer->Import(selected, callback); }).detach();
+        }
     });
 
     // export file
     UI::Get()->Events().ExportFileRequest.connect([&](const std::filesystem::path& file, IImportExporter* exporter) {
-        Window::Get()->ShowFolderSelection(
-            "Select a folder to export the file to.", 0, [&, file, exporter](const std::filesystem::path& selected) {
-                auto _exporter = exporter;
-                if (!exporter) {
-                    const auto& exporters = ImportExportManager::Get()->GetExportersFor(file.extension().string());
-                    if (exporters.size() > 0) {
-                        _exporter = exporters.at(0);
-                    }
+        const auto& selected = Window::Get()->ShowFolderSelection("Select a folder to export the file to");
+        if (!selected.empty()) {
+            auto _exporter = exporter;
+            if (!exporter) {
+                const auto& exporters = ImportExportManager::Get()->GetExportersFor(file.extension().string());
+                if (exporters.size() > 0) {
+                    _exporter = exporters.at(0);
                 }
+            }
 
-                // if we have a valid exporter, read the file and export it
-                if (_exporter) {
-                    std::string status_text    = "Exporting \"" + file.generic_string() + "\"...";
-                    const auto  status_text_id = UI::Get()->PushStatusText(status_text);
+            // if we have a valid exporter, read the file and export it
+            if (_exporter) {
+                std::string status_text    = "Exporting \"" + file.generic_string() + "\"...";
+                const auto  status_text_id = UI::Get()->PushStatusText(status_text);
 
-                    std::thread([&, file, selected, status_text_id] {
-                        _exporter->Export(file, selected, [&, file, status_text_id](bool success) {
-                            UI::Get()->PopStatusText(status_text_id);
+                std::thread([&, file, selected, status_text_id] {
+                    _exporter->Export(file, selected, [&, file, status_text_id](bool success) {
+                        UI::Get()->PopStatusText(status_text_id);
 
-                            if (!success) {
-                                SPDLOG_ERROR("(ExportFileRequest) Failed to export \"{}\"", file.filename().string());
-                                Window::Get()->ShowMessageBox("Failed to export \"" + file.filename().string() + "\".");
-                            }
-                        });
-                    }).detach();
-                }
-            });
+                        if (!success) {
+                            SPDLOG_ERROR("(ExportFileRequest) Failed to export \"{}\"", file.filename().string());
+                            Window::Get()->ShowMessageBox("Failed to export \"" + file.filename().string() + "\".");
+                        }
+                    });
+                }).detach();
+            }
+        }
     });
 }
 

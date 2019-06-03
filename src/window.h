@@ -30,6 +30,13 @@ struct WindowEvents {
     ksignals::Event<void()>                                                DragDropped;
 };
 
+using FileSelectionFilter = std::pair<std::string, std::string>;
+struct FileSelectionParams {
+    std::string                      Filename;
+    std::string                      Extension;
+    std::vector<FileSelectionFilter> Filters;
+};
+
 class Window : public Singleton<Window>
 {
   private:
@@ -48,6 +55,13 @@ class Window : public Singleton<Window>
     std::unique_ptr<DropTarget>                    m_DragDrop        = nullptr;
 
     static LRESULT CALLBACK WndProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam);
+
+    std::filesystem::path CreateFileDialog(const CLSID& clsid, const std::string& title,
+                                           const FileSelectionParams& params = {}, uint32_t flags = 0);
+
+    void ConvertFileSelectionFilters(std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>& converter,
+                                     const std::vector<FileSelectionFilter>& filters, std::vector<std::wstring>* buffer,
+                                     std::vector<COMDLG_FILTERSPEC>* filterspec);
 
   public:
     Window()          = default;
@@ -83,16 +97,13 @@ class Window : public Singleton<Window>
         return m_IsMouseCaptured;
     }
 
-    int32_t ShowMessageBox(const std::string& message, uint32_t type = MB_ICONWARNING | MB_OK);
-    void    ShowFileSelection(const std::string& title, const char* default_filename, const char* filter,
-                              const char* default_extension, std::function<void(const std::filesystem::path&)> fn_selected,
-                              std::function<void()> fn_cancelled = {});
-    void    ShowFileFolderSelection(const std::string& title, const char* default_filename, const char* filter,
-                                    const char*                                       default_extension,
-                                    std::function<void(const std::filesystem::path&)> fn_selected,
-                                    std::function<void()>                             fn_cancelled = {});
-    void    ShowFolderSelection(const std::string& title, uint32_t flags, std::function<void(const std::filesystem::path&)> fn_selected,
-                                std::function<void()> fn_cancelled = {});
+    int32_t               ShowMessageBox(const std::string& message, uint32_t type = MB_ICONWARNING | MB_OK);
+    std::filesystem::path ShowFileSelecton(const std::string& title, const FileSelectionParams& params = {},
+                                           uint32_t flags = 0);
+    std::filesystem::path ShowFolderSelection(const std::string& title, const FileSelectionParams& params = {},
+                                              uint32_t flags = 0);
+    std::filesystem::path ShowSaveDialog(const std::string& title, const FileSelectionParams& params = {},
+                                         uint32_t flags = 0);
 
     void                  SwitchMode(bool jc4_mode);
     void                  SelectJustCauseDirectory(bool override_mode = false, bool jc3_mode = true);
