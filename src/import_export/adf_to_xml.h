@@ -65,16 +65,16 @@ class ADF2XML : public IImportExporter
     {
         // clang-format off
         switch (type_hash) {
-            case 0xca2821d:		printer.PushAttribute("type", "uint8"); break;
-            case 0x580d0a62:	printer.PushAttribute("type", "int8"); break;
-            case 0x86d152bd:	printer.PushAttribute("type", "uint16"); break;
-            case 0xd13fcf93:	printer.PushAttribute("type", "int16"); break;
-            case 0x75e4e4f:		printer.PushAttribute("type", "uint32"); break;
-            case 0x192fe633:	printer.PushAttribute("type", "int32"); break;
-            case 0xa139e01f:	printer.PushAttribute("type", "uint64"); break;
-            case 0xaf41354f:	printer.PushAttribute("type", "int64"); break;
-            case 0x7515a207:	printer.PushAttribute("type", "float"); break;
-            case 0xc609f663:	printer.PushAttribute("type", "double"); break;
+            case 0xca2821d:    printer.PushAttribute("type", "uint8"); break;
+            case 0x580d0a62:   printer.PushAttribute("type", "int8"); break;
+            case 0x86d152bd:   printer.PushAttribute("type", "uint16"); break;
+            case 0xd13fcf93:   printer.PushAttribute("type", "int16"); break;
+            case 0x75e4e4f:    printer.PushAttribute("type", "uint32"); break;
+            case 0x192fe633:   printer.PushAttribute("type", "int32"); break;
+            case 0xa139e01f:   printer.PushAttribute("type", "uint64"); break;
+            case 0xaf41354f:   printer.PushAttribute("type", "int64"); break;
+            case 0x7515a207:   printer.PushAttribute("type", "float"); break;
+            case 0xc609f663:   printer.PushAttribute("type", "double"); break;
         }
         // clang-format on
     }
@@ -883,7 +883,7 @@ class ADF2XML : public IImportExporter
                             if (subtype->m_AdfType == EAdfType::Primitive) {
                                 PushPrimitiveTypeAttribute(printer, subtype->m_TypeHash);
                             }
-						}
+                        }
 
                         XmlWriteInstance(adf, printer, header, member_type, payload, (offset + member.m_Offset));
                     }
