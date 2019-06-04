@@ -196,13 +196,14 @@ void RenderBlockModel::DrawGizmos()
 
 void RenderBlockModel::ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external)
 {
-    auto rbm = RenderBlockModel::make(filename);
-    assert(rbm);
-
-    if (filename.extension() == ".lod") {
-        rbm->ParseLOD(std::move(data));
-    } else if (filename.extension() == ".rbm") {
-        rbm->ParseRBM(std::move(data));
+    if (!RenderBlockModel::exists(filename.string())) {
+        if (const auto rbm = RenderBlockModel::make(filename)) {
+            if (filename.extension() == ".lod") {
+                rbm->ParseLOD(std::move(data));
+            } else if (filename.extension() == ".rbm") {
+                rbm->ParseRBM(std::move(data));
+            }
+        }
     }
 }
 

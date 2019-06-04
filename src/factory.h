@@ -8,6 +8,8 @@
 
 template <typename T> class Factory
 {
+    using HashPtrPair = std::pair<uint32_t, std::shared_ptr<T>>;
+
   public:
     virtual std::string GetFactoryKey() const = 0;
 
@@ -39,15 +41,24 @@ template <typename T> class Factory
         const auto hash = fnv_1_32::hash(key.c_str(), key.length());
 
         std::lock_guard<decltype(InstancesMutex)> _lk{InstancesMutex};
-        const auto                                find_it =
-            std::find_if(Instances.begin(), Instances.end(),
-                         [&](const std::pair<uint32_t, std::shared_ptr<T>>& item) { return item.first == hash; });
+        const auto                                find_it = std::find_if(Instances.begin(), Instances.end(),
+                                          [hash](const HashPtrPair& item) { return item.first == hash; });
 
         if (find_it != Instances.end()) {
             return (*find_it).second;
         }
 
         return nullptr;
+    }
+
+    static bool exists(const std::string& key)
+    {
+        const auto hash = fnv_1_32::hash(key.c_str(), key.length());
+
+        std::lock_guard<decltype(InstancesMutex)> _lk{InstancesMutex};
+        return (std::find_if(Instances.begin(), Instances.end(),
+                             [hash](const HashPtrPair& item) { return item.first == hash; })
+                != Instances.end());
     }
 
     static std::recursive_mutex                   InstancesMutex;

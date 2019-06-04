@@ -61,6 +61,24 @@ class ADF2XML : public IImportExporter
         printer.PushText(buf, false);
     }
 
+    void PushPrimitiveTypeAttribute(tinyxml2::XMLPrinter& printer, uint32_t type_hash)
+    {
+        // clang-format off
+        switch (type_hash) {
+            case 0xca2821d:		printer.PushAttribute("type", "uint8"); break;
+            case 0x580d0a62:	printer.PushAttribute("type", "int8"); break;
+            case 0x86d152bd:	printer.PushAttribute("type", "uint16"); break;
+            case 0xd13fcf93:	printer.PushAttribute("type", "int16"); break;
+            case 0x75e4e4f:		printer.PushAttribute("type", "uint32"); break;
+            case 0x192fe633:	printer.PushAttribute("type", "int32"); break;
+            case 0xa139e01f:	printer.PushAttribute("type", "uint64"); break;
+            case 0xaf41354f:	printer.PushAttribute("type", "int64"); break;
+            case 0x7515a207:	printer.PushAttribute("type", "float"); break;
+            case 0xc609f663:	printer.PushAttribute("type", "double"); break;
+        }
+        // clang-format on
+    }
+
     template <typename T> inline void WriteScalarToPayload(T value, const char* payload, uint32_t payload_offset)
     {
         std::memcpy((char*)payload + payload_offset, &value, sizeof(T));
@@ -121,7 +139,9 @@ class ADF2XML : public IImportExporter
             ".effc", ".blo_adf", ".flo_adf", ".epe_adf", ".vmodc", ".environc", ".aisystunec",
             ".weaponsc", ".asynccc", ".vfxsettingsc", ".vocals_settingsc", ".vocalsc",
             ".streampatch", ".roadgraphc", ".shudc", ".revolutionc", ".worldaudioinfo_xmlc",
-            ".onlinec", ".statisticsc", ".gadfc", ".gdc", ".terrainsystemc", ".vegetationinfo"
+            ".onlinec", ".statisticsc", ".gadfc", ".gdc", ".terrainsystemc", ".vegetationinfo",
+            ".graphc", ".nhf", ".encountersc", ".collectionc", ".objectivesc", ".physicstunec",
+            ".vfxc", ".reactionc",
         };
         // clang-format on
 
@@ -426,6 +446,12 @@ class ADF2XML : public IImportExporter
             }
 
             case EAdfType::Enumeration: {
+                // TODO: See XmlWriteInstance
+
+                const uint32_t value = el->UnsignedText();
+                std::memcpy((char*)payload + payload_offset, &value, sizeof(value));
+
+#if 0
                 // find the enum member from the name index
                 const auto name_index  = adf->GetStringIndex(el->GetText(), true);
                 Enum*      enum_member = nullptr;
@@ -443,6 +469,7 @@ class ADF2XML : public IImportExporter
 
                 // write the enum index value
                 std::memcpy((char*)payload + payload_offset, &enum_member->m_Value, sizeof(enum_member->m_Value));
+#endif
 
                 // NOTE: no return as we didn't write anything to the data offset
                 break;
@@ -591,7 +618,7 @@ class ADF2XML : public IImportExporter
                     if (is_enum) {
                         Enum adf_enum;
                         adf_enum.m_Name  = adf->GetStringIndex(member_name, true);
-                        adf_enum.m_Value = current_child_index;
+                        adf_enum.m_Value = member->IntAttribute("value");
 
                         // copy the member to the type block
                         void* ptr = ((char*)mem + sizeof(Type) + (sizeof(Enum) * current_child_index));
@@ -836,7 +863,7 @@ class ADF2XML : public IImportExporter
                     if (member_type->m_AdfType == EAdfType::BitField) {
                         const auto bit_count = member_type->m_ArraySizeOrBitCount;
 
-                        auto data = *(uint64_t*)&payload[(offset + (member.m_Offset & 0xFFFFFF))];
+                        auto data = *(uint64_t*)&payload[(offset + member.m_Offset)];
 
                         const int64_t v26 = (1 << bit_count);
                         int64_t       v27 = (v26 - 1) & (data >> member.m_BitOffset);
@@ -849,8 +876,16 @@ class ADF2XML : public IImportExporter
                         // TODO: signed values seem wrong? showing -4 instead of 4
                         printer.PushText(v27);
                     } else {
-                        XmlWriteInstance(adf, printer, header, member_type, payload,
-                                         (offset + (member.m_Offset & 0xFFFFFF)));
+                        if (member_type->m_AdfType == EAdfType::Primitive) {
+                            PushPrimitiveTypeAttribute(printer, member_type->m_TypeHash);
+                        } else if (member_type->m_AdfType == EAdfType::InlineArray) {
+                            const Type* subtype = adf->FindType(member_type->m_SubTypeHash);
+                            if (subtype->m_AdfType == EAdfType::Primitive) {
+                                PushPrimitiveTypeAttribute(printer, subtype->m_TypeHash);
+                            }
+						}
+
+                        XmlWriteInstance(adf, printer, header, member_type, payload, (offset + member.m_Offset));
                     }
 
                     printer.CloseElement();
@@ -940,10 +975,22 @@ class ADF2XML : public IImportExporter
             }
 
             case EAdfType::Enumeration: {
+                // TODO: because enums also used for flags, the "index" is actually the value, and multiple members
+                // can be OR'd together meaning the index might sometimes be greater than the member count
+
+                // idealy, we would want visually show this instead of writing the enum value directly
+                // e.g.: FLAG1 | FLAG6 | FLAG8 etc..
+
+                const uint32_t value = *(uint32_t*)&payload[offset];
+                printer.PushText(value);
+
+#if 0
                 const uint32_t index       = *(uint32_t*)&payload[offset];
                 const Enum&    enum_member = type->Enum(index);
 
                 printer.PushText(adf->m_Strings[enum_member.m_Name].c_str());
+#endif
+
                 break;
             }
 
@@ -1045,6 +1092,7 @@ class ADF2XML : public IImportExporter
                     if (is_enum) {
                         const Enum& enum_member = type->Enum(y);
                         XmlPushAttribute("name", adf->m_Strings[enum_member.m_Name].c_str());
+                        XmlPushAttribute("value", enum_member.m_Value);
                     } else {
                         const Member& member = type->m_Members[y];
                         XmlPushAttribute("name", adf->m_Strings[member.m_Name].c_str());

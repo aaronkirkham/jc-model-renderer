@@ -43,9 +43,10 @@ AvalancheModelFormat::~AvalancheModelFormat()
 void AvalancheModelFormat::ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data,
                                             bool external)
 {
-    auto amf = AvalancheModelFormat::make(filename);
-    if (amf) {
-        amf->Parse(data, [](bool) {});
+    if (!AvalancheModelFormat::exists(filename.string())) {
+        if (const auto amf = AvalancheModelFormat::make(filename)) {
+            amf->Parse(data, [](bool) {});
+        }
     }
 }
 

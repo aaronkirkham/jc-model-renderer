@@ -182,8 +182,9 @@ std::vector<RuntimeContainerProperty*> RuntimeContainer::GetSortedProperties()
 
 void RuntimeContainer::ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external)
 {
-    const auto rtpc = FileLoader::Get()->ParseRuntimeContainer(filename, data);
-    assert(rtpc);
+    if (!RuntimeContainer::exists(filename.string())) {
+        const auto rtpc = FileLoader::Get()->ParseRuntimeContainer(filename, data);
+    }
 }
 
 void WriteNode(std::ofstream& stream, RuntimeContainer* node, std::unordered_map<std::string, uint32_t>& string_offsets,

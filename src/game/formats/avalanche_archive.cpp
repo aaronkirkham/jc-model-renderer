@@ -75,7 +75,9 @@ bool AvalancheArchive::HasFile(const std::filesystem::path& filename)
 
 void AvalancheArchive::ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external)
 {
-    AvalancheArchive::make(filename, data, external);
+    if (!AvalancheArchive::exists(filename.string())) {
+        AvalancheArchive::make(filename, data, external);
+    }
 }
 
 bool AvalancheArchive::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path)
