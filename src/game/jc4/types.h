@@ -13,7 +13,7 @@ namespace ArchiveTable
         uint32_t m_Magic                  = 0x424154; // "TAB"
         uint16_t m_Version                = 2;
         uint16_t m_Endian                 = 1;
-        int32_t  m_Alignment              = 0;
+        int32_t  m_Alignment              = 0x1000;
         uint32_t _unknown                 = 0;
         uint32_t m_MaxCompressedBlockSize = 0;
         uint32_t m_UncompressedBlockSize  = 0;
