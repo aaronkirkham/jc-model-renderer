@@ -311,12 +311,12 @@ std::filesystem::path Window::ShowSaveDialog(const std::string& title, const Fil
     return CreateFileDialog(CLSID_FileSaveDialog, title, params, (flags | FOS_OVERWRITEPROMPT));
 }
 
-void Window::SwitchMode(bool jc4_mode)
+void Window::SwitchMode(GameMode mode)
 {
     // TODO: check if we are idle.
     // nothing should be loading at this point.
 
-    g_IsJC4Mode = jc4_mode;
+    g_IsJC4Mode = (mode == GameMode::GameMode_JustCause4);
 
     // select the directory for the current game
     const auto& jc_directory = GetJustCauseDirectory();

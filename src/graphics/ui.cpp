@@ -127,7 +127,7 @@ void UI::Render(RenderContext_t* context)
             // just cause 3
             if (m_GameSelectionIcons[0] ? ImGui::ImageButton(m_GameSelectionIcons[0]->GetSRV(), image_size)
                                         : ImGui::Button("Just Cause 3")) {
-                Window::Get()->SwitchMode(false);
+                Window::Get()->SwitchMode(GameMode_JustCause3);
                 m_ShowGameSelection = false;
                 ImGui::CloseCurrentPopup();
             }
@@ -137,7 +137,7 @@ void UI::Render(RenderContext_t* context)
             // just cause 4
             if (m_GameSelectionIcons[1] ? ImGui::ImageButton(m_GameSelectionIcons[1]->GetSRV(), image_size)
                                         : ImGui::Button("Just Cause 4")) {
-                Window::Get()->SwitchMode(true);
+                Window::Get()->SwitchMode(GameMode_JustCause4);
                 m_ShowGameSelection = false;
                 ImGui::CloseCurrentPopup();
             }
@@ -537,6 +537,14 @@ void UI::RenderMenuBar()
 
             if (ImGui::MenuItem("Resource Bundle", ".resourcebundle", nullptr, g_IsJC4Mode)) {
                 const auto& importers = ImportExportManager::Get()->GetImportersFor(".resourcebundle");
+                if (importers.size() > 0) {
+                    const auto& selected = Window::Get()->ShowFolderSelection("Select a folder to import");
+                    std::thread([&, importer = importers.at(0), selected] { importer->Import(selected); }).detach();
+                }
+            }
+
+            if (ImGui::MenuItem("Archive Table", ".arc & .tab")) {
+                const auto& importers = ImportExportManager::Get()->GetImportersFor(".arc");
                 if (importers.size() > 0) {
                     const auto& selected = Window::Get()->ShowFolderSelection("Select a folder to import");
                     std::thread([&, importer = importers.at(0), selected] { importer->Import(selected); }).detach();

@@ -19,6 +19,7 @@
 #include "game/render_block_factory.h"
 
 #include "import_export/adf_to_xml.h"
+#include "import_export/archive_table.h"
 #include "import_export/avalanche_archive.h"
 #include "import_export/ddsc.h"
 #include "import_export/import_export_manager.h"
@@ -29,6 +30,8 @@
 extern bool g_IsJC4Mode         = false;
 extern bool g_DrawBoundingBoxes = true;
 extern bool g_ShowModelLabels   = true;
+
+#include <argparse.h>
 
 #ifndef DEBUG
 LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS* exception_pointers);
@@ -41,6 +44,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
     SetUnhandledExceptionFilter(UnhandledExceptionHandler);
 #endif
 
+    ArgumentParser args(VER_FILE_DESCRIPTION_STR);
+    args.add_argument("--jc3", "Start in Just Cause 3 Mode");
+    args.add_argument("--jc4", "Start in Just Cause 4 Mode");
+
+    // parse launch arguments
+    try {
+        args.parse(__argc, __argv);
+    } catch (const ArgumentParser::ArgumentNotFound& e) {
+        SPDLOG_ERROR(e.what());
+    }
+
+#if 0
     static auto ReadRegistryKeyString = [](HKEY location, const char* subkey, const char* key, char* data, DWORD size) {
         HKEY hKey = nullptr;
         if (RegOpenKeyExA(location, subkey, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
@@ -53,6 +68,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
         return false;
     };
+#endif
 
     g_DrawBoundingBoxes = Settings::Get()->GetValue<bool>("draw_bounding_boxes", false);
     g_ShowModelLabels   = Settings::Get()->GetValue<bool>("show_model_labels", false);
@@ -82,8 +98,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         Window::Get()->CheckForUpdates();
 #endif
 
-        // show game selection window
-        UI::Get()->ShowGameSelection();
+        // set game mode
+        if (args.get<bool>("jc3")) {
+            Window::Get()->SwitchMode(GameMode_JustCause3);
+        } else if (args.get<bool>("jc4")) {
+            Window::Get()->SwitchMode(GameMode_JustCause4);
+        } else {
+            UI::Get()->ShowGameSelection();
+        }
 
 #ifdef DEBUG
         // input thread
@@ -337,6 +359,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         ImportExportManager::Get()->Register<ImportExport::AvalancheArchive>();
         ImportExportManager::Get()->Register<ImportExport::ADF2XML>();
         ImportExportManager::Get()->Register<ImportExport::ResourceBundle>();
+        ImportExportManager::Get()->Register<ImportExport::ArchiveTable>();
         // ImportExportManager::Get()->Register<ImportExport::RTPC2XML>();
 
         // draw gizmos

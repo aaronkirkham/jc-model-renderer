@@ -65,7 +65,7 @@ class UI : public Singleton<UI>
     bool                                       m_IsDragDrop           = false;
     DragDropPayload                            m_DragDropPayload;
     std::string                                m_DragDropTooltip;
-    bool                                       m_ShowGameSelection  = true;
+    bool                                       m_ShowGameSelection  = false;
     std::array<std::unique_ptr<Texture>, 2>    m_GameSelectionIcons = {nullptr};
 
     struct {

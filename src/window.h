@@ -37,6 +37,11 @@ struct FileSelectionParams {
     std::vector<FileSelectionFilter> Filters;
 };
 
+enum GameMode {
+	GameMode_JustCause3 = 0,
+	GameMode_JustCause4,
+};
+
 class Window : public Singleton<Window>
 {
   private:
@@ -105,7 +110,7 @@ class Window : public Singleton<Window>
     std::filesystem::path ShowSaveDialog(const std::string& title, const FileSelectionParams& params = {},
                                          uint32_t flags = 0);
 
-    void                  SwitchMode(bool jc4_mode);
+    void                  SwitchMode(GameMode mode);
     void                  SelectJustCauseDirectory(bool override_mode = false, bool jc3_mode = true);
     std::filesystem::path GetJustCauseDirectory();
     void                  CheckForUpdates(bool show_no_update_messagebox = false);

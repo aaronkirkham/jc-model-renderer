@@ -23,19 +23,33 @@ project "jc-model-renderer"
   kind "WindowedApp"
   defines "CPPHTTPLIB_ZLIB_SUPPORT"
   dependson { "imgui", "zlib", "tinyxml2" }
-  links { "Advapi32", "Comdlg32", "d3d11", "D3DCompiler", "dxgi", "Gdi32", "Ole32", "Shell32", "ws2_32", "out/%{cfg.buildcfg}/imgui", "out/%{cfg.buildcfg}/zlib", "out/%{cfg.buildcfg}/tinyxml2" }
+  links {
+    "Advapi32",
+    "Comdlg32",
+    "d3d11",
+    "D3DCompiler",
+    "dxgi",
+    "Gdi32",
+    "Ole32",
+    "Shell32",
+    "ws2_32",
+    "out/%{cfg.buildcfg}/imgui",
+    "out/%{cfg.buildcfg}/zlib",
+    "out/%{cfg.buildcfg}/tinyxml2"
+  }
   files { "src/assets.rc", "src/**.h", "src/**.cpp" }
 
   includedirs {
     "src",
+    "vendor/argparse",
     "vendor/glm",
     "vendor/httplib",
     "vendor/imgui",
     "vendor/json/single_include/nlohmann",
-    "vendor/ksignals",
-    "vendor/zlib",
+    "vendor/ksignals/include/ksignals",
     "vendor/spdlog/include",
-    "vendor/tinyxml2"
+    "vendor/tinyxml2",
+    "vendor/zlib"
   }
 
   disablewarnings { "4200", "4244", "4267", "6031", "6262" }
