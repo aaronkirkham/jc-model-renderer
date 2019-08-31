@@ -22,3 +22,6 @@
 [submodule "vendor/argparse"]
 	path = vendor/argparse
 	url = https://github.com/jamolnng/argparse
+[submodule "vendor/tinyxml2"]
+	path = vendor/tinyxml2
+	url = https://github.com/leethomason/tinyxml2.git

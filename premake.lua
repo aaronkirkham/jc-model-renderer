@@ -87,6 +87,6 @@ project "zlib"
 -- tinyxml2
 project "tinyxml2"
 kind "StaticLib"
-files { "vendor/tinyxml2/*.cpp", "vendor/tinyxml2/*.h" }
+files { "vendor/tinyxml2/tinyxml2.cpp", "vendor/tinyxml2/tinyxml2.h" }
 includedirs { "vendor/tinyxml2" }
 -- disablewarnings { "4996", "4267" }
