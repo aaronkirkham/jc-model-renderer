@@ -314,7 +314,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterReadCallback({".lod", ".rbm"}, RenderBlockModel::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({".modelc"}, AvalancheModelFormat::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::ReadFileCallback);
-        FileLoader::Get()->RegisterReadCallback({".epe", ".blo"}, RuntimeContainer::ReadFileCallback);
+        FileLoader::Get()->RegisterReadCallback({".epe", ".blo", ".rtpc", ".bin"}, RuntimeContainer::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback(
             {".dds", ".ddsc", ".hmddsc", ".atx1", ".atx2"},
             [&](const std::filesystem::path& filename, FileBuffer data, bool external) {
@@ -346,7 +346,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterSaveCallback({".rbm"}, RenderBlockModel::SaveFileCallback);
         FileLoader::Get()->RegisterSaveCallback({".modelc"}, AvalancheModelFormat::SaveFileCallback);
         FileLoader::Get()->RegisterSaveCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::SaveFileCallback);
-        FileLoader::Get()->RegisterSaveCallback({".epe", ".blo"}, RuntimeContainer::SaveFileCallback);
+        FileLoader::Get()->RegisterSaveCallback({".epe", ".blo", ".rtpc", ".bin"}, RuntimeContainer::SaveFileCallback);
 
         // register file type context menu callbacks
         UI::Get()->RegisterContextMenuCallback({".rbm"}, RenderBlockModel::ContextMenuUI);
@@ -360,7 +360,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         ImportExportManager::Get()->Register<ImportExport::ADF2XML>();
         ImportExportManager::Get()->Register<ImportExport::ResourceBundle>();
         ImportExportManager::Get()->Register<ImportExport::ArchiveTable>();
-        // ImportExportManager::Get()->Register<ImportExport::RTPC2XML>();
+        ImportExportManager::Get()->Register<ImportExport::RTPC2XML>();
 
         // draw gizmos
         Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {
