@@ -484,7 +484,7 @@ void UI::Render(RenderContext_t* context)
 
         bool open = true;
         ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
-        if (ImGui::Begin(title.c_str(), &open, (ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking))) {
+        if (ImGui::Begin(title.c_str(), &open, ImGuiWindowFlags_NoCollapse)) {
             (*it).second->DrawUI();
             ImGui::End();
         }
@@ -779,7 +779,7 @@ void UI::RenderFileTreeView(const glm::vec2& window_size)
 
     ImGui::Begin("Tree View", nullptr,
                  (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse
-                  | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoDocking));
+                  | ImGuiWindowFlags_NoBringToFrontOnFocus));
     {
         m_SidebarWidth = ImGui::GetWindowSize().x;
 
