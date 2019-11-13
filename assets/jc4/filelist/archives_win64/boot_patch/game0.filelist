@@ -1,4 +1,4 @@
-; 356/681 (52%)
+; 358/723 (49%)
 ai/aicoversettings.aicoversettingsc
 ai/aisystem.aisystunec
 ai/aivision.aisystunec
@@ -17,6 +17,7 @@ climate/common/treeimpostors.gadfc
 climate/vegetation.vegetationinfo
 climate/zone_0/vegetation_set_0.bin
 climate/zone_0/vegetation_types_0.bin
+dlc/daredevil/locations/global/dlc1_global_ai.bl
 effects/allflipbooks.flipbookc
 environment/base.environc
 environment/presets/alpine01.environc
@@ -59,6 +60,7 @@ settings/supply_drop_stuff.bin
 settings/water_tuning.watertunec
 sound/fmod_banks/master.fmod_bankc
 sound/fmod_banks/master_strings.fmod_bankc
+sound/fmod_banks/streaming_front_end.fmod_bankc
 sound/fmod_banks/streaming_zones.fmod_bankc
 terrain/global_heightfield.rawc
 terrain/globalhires_heightfield.short.rawc

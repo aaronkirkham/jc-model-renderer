@@ -1,6 +1,4 @@
-; 7385/7505 (98%)
-ai/tiles/36_39.navmeshc
-ai/tiles/36_40.navmeshc
+; 7384/7506 (98%)
 ai/tiles/36_41.navmeshc
 ai/tiles/36_43.navmeshc
 ai/tiles/36_46.navmeshc
@@ -57,10 +55,10 @@ ai/tiles/38_11.navmeshc
 ai/tiles/38_12.navmeshc
 ai/tiles/38_13.navmeshc
 ai/tiles/38_14.navmeshc
-ai/tiles/38_15.navmeshc
 ai/tiles/38_16.navmeshc
 ai/tiles/38_17.navmeshc
 ai/tiles/38_18.navmeshc
+ai/tiles/38_19.navmeshc
 ai/tiles/38_20.navmeshc
 ai/tiles/38_21.navmeshc
 ai/tiles/38_22.navmeshc
@@ -109,6 +107,7 @@ ai/tiles/39_21.navmeshc
 ai/tiles/39_22.navmeshc
 ai/tiles/39_23.navmeshc
 ai/tiles/39_24.navmeshc
+ai/tiles/39_25.navmeshc
 ai/tiles/39_26.navmeshc
 ai/tiles/39_27.navmeshc
 ai/tiles/39_28.navmeshc
@@ -217,6 +216,7 @@ ai/tiles/41_41.navmeshc
 ai/tiles/41_42.navmeshc
 ai/tiles/41_43.navmeshc
 ai/tiles/41_44.navmeshc
+ai/tiles/41_47.navmeshc
 ai/tiles/41_48.navmeshc
 ai/tiles/41_49.navmeshc
 ai/tiles/41_50.navmeshc
@@ -228,8 +228,6 @@ ai/tiles/41_56.navmeshc
 ai/tiles/41_57.navmeshc
 ai/tiles/42_11.navmeshc
 ai/tiles/42_12.navmeshc
-ai/tiles/42_13.navmeshc
-ai/tiles/42_14.navmeshc
 ai/tiles/42_15.navmeshc
 ai/tiles/42_16.navmeshc
 ai/tiles/42_17.navmeshc
@@ -270,13 +268,12 @@ ai/tiles/42_53.navmeshc
 ai/tiles/42_55.navmeshc
 ai/tiles/42_56.navmeshc
 ai/tiles/42_57.navmeshc
-ai/tiles/43_13.navmeshc
-ai/tiles/43_14.navmeshc
 ai/tiles/43_15.navmeshc
 ai/tiles/43_16.navmeshc
 ai/tiles/43_17.navmeshc
 ai/tiles/43_18.navmeshc
 ai/tiles/43_19.navmeshc
+ai/tiles/43_20.navmeshc
 ai/tiles/43_21.navmeshc
 ai/tiles/43_22.navmeshc
 ai/tiles/43_23.navmeshc
@@ -310,7 +307,6 @@ ai/tiles/43_54.navmeshc
 ai/tiles/43_55.navmeshc
 ai/tiles/43_56.navmeshc
 ai/tiles/43_57.navmeshc
-ai/tiles/44_14.navmeshc
 ai/tiles/44_16.navmeshc
 ai/tiles/44_17.navmeshc
 ai/tiles/44_18.navmeshc
@@ -411,7 +407,6 @@ ai/tiles/46_38.navmeshc
 ai/tiles/46_39.navmeshc
 ai/tiles/46_40.navmeshc
 ai/tiles/46_41.navmeshc
-ai/tiles/46_42.navmeshc
 ai/tiles/46_43.navmeshc
 ai/tiles/46_46.navmeshc
 ai/tiles/46_47.navmeshc
@@ -456,6 +451,7 @@ ai/tiles/47_46.navmeshc
 ai/tiles/47_47.navmeshc
 ai/tiles/47_48.navmeshc
 ai/tiles/47_52.navmeshc
+ai/tiles/47_53.navmeshc
 ai/tiles/47_54.navmeshc
 ai/tiles/47_55.navmeshc
 ai/tiles/48_13.navmeshc
@@ -553,7 +549,7 @@ ai/tiles/50_52.navmeshc
 ai/tiles/50_53.navmeshc
 ai/tiles/51_14.navmeshc
 ai/tiles/51_15.navmeshc
-ai/tiles/51_16.navmeshc
+ai/tiles/51_17.navmeshc
 ai/tiles/51_18.navmeshc
 ai/tiles/51_19.navmeshc
 ai/tiles/51_20.navmeshc
@@ -608,6 +604,7 @@ ai/tiles/52_46.navmeshc
 ai/tiles/52_47.navmeshc
 ai/tiles/52_48.navmeshc
 ai/tiles/52_49.navmeshc
+ai/tiles/52_52.navmeshc
 ai/tiles/52_53.navmeshc
 ai/tiles/52_54.navmeshc
 ai/tiles/52_55.navmeshc
@@ -643,6 +640,7 @@ ai/tiles/53_55.navmeshc
 ai/tiles/54_14.navmeshc
 ai/tiles/54_15.navmeshc
 ai/tiles/54_16.navmeshc
+ai/tiles/54_17.navmeshc
 ai/tiles/54_18.navmeshc
 ai/tiles/54_19.navmeshc
 ai/tiles/54_20.navmeshc
@@ -670,6 +668,7 @@ ai/tiles/54_50.navmeshc
 ai/tiles/54_51.navmeshc
 ai/tiles/54_52.navmeshc
 ai/tiles/54_53.navmeshc
+ai/tiles/55_16.navmeshc
 ai/tiles/55_17.navmeshc
 ai/tiles/55_18.navmeshc
 ai/tiles/55_19.navmeshc
@@ -719,6 +718,7 @@ ai/tiles/5_38.navmeshc
 ai/tiles/60_20.navmeshc
 ai/tiles/60_21.navmeshc
 ai/tiles/60_22.navmeshc
+ai/tiles/6_32.navmeshc
 ai/tiles/6_34.navmeshc
 ai/tiles/6_35.navmeshc
 ai/tiles/6_36.navmeshc
@@ -737,7 +737,6 @@ ai/tiles/7_35.navmeshc
 ai/tiles/7_36.navmeshc
 ai/tiles/7_41.navmeshc
 ai/tiles/7_42.navmeshc
-ai/tiles/7_43.navmeshc
 ai/tiles/7_45.navmeshc
 ai/tiles/8_13.navmeshc
 ai/tiles/8_14.navmeshc
