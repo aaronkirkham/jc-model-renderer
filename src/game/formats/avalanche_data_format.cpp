@@ -180,17 +180,17 @@ void AvalancheDataFormat::AddBuiltInType(jc::AvalancheDataFormat::EAdfType   typ
     }
 
     // create the type def
-    const auto def             = new jc::AvalancheDataFormat::Type;
-    def->m_AdfType             = type;
-    def->m_Size                = size;
-    def->m_Align               = alignment;
-    def->m_TypeHash            = type_hash;
-    def->m_Name                = -1;
-    def->m_Flags               = flags;
-    def->m_ScalarType          = scalar_type;
-    def->m_SubTypeHash         = 0;
-    def->m_ArraySizeOrBitCount = 0;
-    def->m_MemberCount         = 0;
+    const auto def     = new jc::AvalancheDataFormat::Type;
+    def->m_AdfType     = type;
+    def->m_Size        = size;
+    def->m_Align       = alignment;
+    def->m_TypeHash    = type_hash;
+    def->m_Name        = -1;
+    def->m_Flags       = flags;
+    def->m_ScalarType  = scalar_type;
+    def->m_SubTypeHash = 0;
+    def->m_ArraySize   = 0;
+    def->m_MemberCount = 0;
     m_Types.emplace_back(std::move(def));
 }
 
@@ -249,10 +249,8 @@ void AvalancheDataFormat::ParseTypes(const char* data, uint64_t data_size, bool 
         auto types_buffer = &data[header_out.m_FirstTypeOffset];
         auto _type_data   = types_buffer;
         for (uint32_t i = 0; i < header_out.m_TypeCount; ++i) {
-            const auto current_type = (Type*)_type_data;
-            const auto size         = current_type->m_MemberCount
-                                  * ((current_type->m_AdfType == EAdfType::Enumeration) ? sizeof(Enum) : sizeof(Member))
-                              + sizeof(Type);
+            const auto     current_type = (Type*)_type_data;
+            const uint32_t size         = current_type->Size();
 
             // get the name
             const auto name = GetInstanceNameFromStrings(
@@ -268,32 +266,31 @@ void AvalancheDataFormat::ParseTypes(const char* data, uint64_t data_size, bool 
 
             // copy the type (and members)
             {
-                auto type = std::malloc(size);
+                auto type = (Type*)std::malloc(size);
                 std::memcpy(type, current_type, size);
 
                 const auto it = std::find_if(m_Strings.begin(), m_Strings.end(),
                                              [name](const std::string& str) { return str == name; });
 
                 // adjust the type name index
-                const auto _cast_type = (Type*)type;
-                _cast_type->m_Name    = std::distance(m_Strings.begin(), it);
+                type->m_Name = std::distance(m_Strings.begin(), it);
 
-                // adjust all member name indices
-                const auto is_enum = (_cast_type->m_AdfType == EAdfType::Enumeration);
-                for (uint32_t x = 0; x < _cast_type->m_MemberCount; ++x) {
-                    const auto ptr =
-                        (void*)((char*)type + sizeof(Type) + ((is_enum ? sizeof(Enum) : sizeof(Member)) * x));
-                    const auto name_index = *(uint64_t*)ptr;
+                // adjust all type member name indices
+                if (type->m_AdfType == EAdfType::Structure || type->m_AdfType == EAdfType::Enumeration) {
+                    const bool is_enumeration = (type->m_AdfType == EAdfType::Enumeration);
+                    for (decltype(type->m_MemberCount) x = 0; x < type->m_MemberCount; ++x) {
+                        auto member = &type->Member(x);
 
-                    // find the original name in the new strings list
-                    const auto name = GetInstanceNameFromStrings(
-                        &data[header_out.m_FirstStringDataOffset],
-                        &data[header_out.m_FirstStringDataOffset + header_out.m_StringCount], name_index);
-                    const auto it = std::find_if(m_Strings.begin(), m_Strings.end(),
-                                                 [name](const std::string& str) { return str == name; });
+                        // find the original name in the new strings list
+                        const auto name = GetInstanceNameFromStrings(
+                            &data[header_out.m_FirstStringDataOffset],
+                            &data[header_out.m_FirstStringDataOffset + header_out.m_StringCount], member->m_Name);
+                        const auto it = std::find_if(m_Strings.begin(), m_Strings.end(),
+                                                     [name](const std::string& str) { return str == name; });
 
-                    // update the new string index
-                    *(uint64_t*)ptr = std::distance(m_Strings.begin(), it);
+                        // @TODO: non const version of type->Member(x);
+                        type->m_Members[x].m_Name = std::distance(m_Strings.begin(), it);
+                    }
                 }
 
                 m_Types.emplace_back((Type*)type);
@@ -329,6 +326,13 @@ void AvalancheDataFormat::ReadTypeLibrariesByExtension(const std::filesystem::pa
         ReadTypeLibrary("RigidObject.adf");
         ReadTypeLibrary("TargetSystem.adf");
     }
+#if 0
+	else if (extension == ".vmodc") {
+        ReadTypeLibrary("vmodc/VehiclePipeline.adf");
+        ReadTypeLibrary("vmodc/Splines.adf");
+        ReadTypeLibrary("vmodc/VehiclePhysicsSettings.adf");
+    }
+#endif
 }
 
 bool AvalancheDataFormat::ParseHeader(jc::AvalancheDataFormat::Header* data, uint64_t data_size,

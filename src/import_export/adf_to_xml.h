@@ -240,7 +240,7 @@ class ADF2XML : public IImportExporter
                             }
 
                             // TODO: we should generate bit_offset our selfs.
-                            auto v7            = value & ((1 << member_type->m_ArraySizeOrBitCount) - 1);
+                            auto v7            = value & ((1 << member_type->m_BitCount) - 1);
                             auto current_value = *(uint32_t*)&payload[real_payload_offset];
                             *(uint32_t*)&payload[real_payload_offset] |= (v7 << current_member->m_BitOffset);
                         } else {
@@ -381,9 +381,9 @@ class ADF2XML : public IImportExporter
 
                         // NOTE: we dont want any new entries as the array is a fixed size.
                         // TODO: should show errors in jc-model-renderer when we add this.
-                        assert(data.size() == type->m_ArraySizeOrBitCount);
+                        assert(data.size() == type->m_ArraySize);
 
-                        for (uint32_t i = 0; i < type->m_ArraySizeOrBitCount; ++i) {
+                        for (uint32_t i = 0; i < type->m_ArraySize; ++i) {
                             WriteScalarToPayloadFromString(subtype, payload, (payload_offset + (size * i)), data[i]);
                         }
                     } else {
@@ -594,17 +594,17 @@ class ADF2XML : public IImportExporter
                 total_types_size += type_size;
 
                 // init the type
-                auto cast_type                   = (Type*)mem;
-                cast_type->m_AdfType             = type;
-                cast_type->m_Size                = child->UnsignedAttribute("size");
-                cast_type->m_Align               = child->UnsignedAttribute("alignment");
-                cast_type->m_TypeHash            = child->UnsignedAttribute("typehash");
-                cast_type->m_Name                = adf->GetStringIndex(type_name, true);
-                cast_type->m_Flags               = (uint16_t)child->UnsignedAttribute("flags");
-                cast_type->m_ScalarType          = (ScalarType)child->IntAttribute("scalartype");
-                cast_type->m_SubTypeHash         = child->UnsignedAttribute("subtypehash");
-                cast_type->m_ArraySizeOrBitCount = child->UnsignedAttribute("arraysizeorbitcount");
-                cast_type->m_MemberCount         = member_count;
+                auto cast_type           = (Type*)mem;
+                cast_type->m_AdfType     = type;
+                cast_type->m_Size        = child->UnsignedAttribute("size");
+                cast_type->m_Align       = child->UnsignedAttribute("alignment");
+                cast_type->m_TypeHash    = child->UnsignedAttribute("typehash");
+                cast_type->m_Name        = adf->GetStringIndex(type_name, true);
+                cast_type->m_Flags       = (uint16_t)child->UnsignedAttribute("flags");
+                cast_type->m_ScalarType  = (ScalarType)child->IntAttribute("scalartype");
+                cast_type->m_SubTypeHash = child->UnsignedAttribute("subtypehash");
+                cast_type->m_ArraySize   = child->UnsignedAttribute("arraysizeorbitcount");
+                cast_type->m_MemberCount = member_count;
 
                 // read members
                 uint32_t current_child_index = 0;
@@ -861,7 +861,7 @@ class ADF2XML : public IImportExporter
                     printer.PushAttribute("name", adf->m_Strings[member.m_Name].c_str());
 
                     if (member_type->m_AdfType == EAdfType::BitField) {
-                        const auto bit_count = member_type->m_ArraySizeOrBitCount;
+                        const auto bit_count = member_type->m_BitCount;
 
                         auto data = *(uint64_t*)&payload[(offset + member.m_Offset)];
 
@@ -954,11 +954,11 @@ class ADF2XML : public IImportExporter
                     size = 8;
                 }
 
-                for (uint32_t i = 0; i < type->m_ArraySizeOrBitCount; ++i) {
+                for (uint32_t i = 0; i < type->m_ArraySize; ++i) {
                     XmlWriteInstance(adf, printer, header, subtype, payload, offset + (size * i));
 
                     // if it's not the last element, add a space
-                    if (subtype->m_AdfType == EAdfType::Primitive && i != (type->m_ArraySizeOrBitCount - 1)) {
+                    if (subtype->m_AdfType == EAdfType::Primitive && i != (type->m_ArraySize - 1)) {
                         printer.PushText(" ");
                     }
                 }
@@ -1083,28 +1083,31 @@ class ADF2XML : public IImportExporter
                 XmlPushAttribute("flags", type->m_Flags);
                 XmlPushAttribute("scalartype", static_cast<uint32_t>(type->m_ScalarType));
                 XmlPushAttribute("subtypehash", type->m_SubTypeHash);
-                XmlPushAttribute("arraysizeorbitcount", type->m_ArraySizeOrBitCount);
+                XmlPushAttribute("arraysizeorbitcount", type->m_ArraySize);
 
-                const auto is_enum = (type->m_AdfType == EAdfType::Enumeration);
-                for (uint32_t y = 0; y < type->m_MemberCount; ++y) {
-                    printer.OpenElement("member");
+                // write all type members
+                if (type->m_AdfType == EAdfType::Structure || type->m_AdfType == EAdfType::Enumeration) {
+                    const bool is_enumeration = (type->m_AdfType == EAdfType::Enumeration);
+                    for (decltype(type->m_MemberCount) y = 0; y < type->m_MemberCount; ++y) {
+                        printer.OpenElement("member");
 
-                    if (is_enum) {
-                        const Enum& enum_member = type->Enum(y);
-                        XmlPushAttribute("name", adf->m_Strings[enum_member.m_Name].c_str());
-                        XmlPushAttribute("value", enum_member.m_Value);
-                    } else {
-                        const Member& member = type->m_Members[y];
-                        XmlPushAttribute("name", adf->m_Strings[member.m_Name].c_str());
-                        XmlPushAttribute("typehash", member.m_TypeHash);
-                        XmlPushAttribute("alignment", member.m_Align);
-                        XmlPushAttribute("offset", member.m_Offset);
-                        XmlPushAttribute("bitoffset", member.m_BitOffset);
-                        XmlPushAttribute("flags", member.m_Flags);
-                        XmlPushAttribute("default", member.m_DefaultValue);
+                        if (is_enumeration) {
+                            const Enum& enum_member = type->Enum(y);
+                            XmlPushAttribute("name", adf->m_Strings[enum_member.m_Name].c_str());
+                            XmlPushAttribute("value", enum_member.m_Value);
+                        } else {
+                            const Member& member = type->m_Members[y];
+                            XmlPushAttribute("name", adf->m_Strings[member.m_Name].c_str());
+                            XmlPushAttribute("typehash", member.m_TypeHash);
+                            XmlPushAttribute("alignment", member.m_Align);
+                            XmlPushAttribute("offset", member.m_Offset);
+                            XmlPushAttribute("bitoffset", member.m_BitOffset);
+                            XmlPushAttribute("flags", member.m_Flags);
+                            XmlPushAttribute("default", member.m_DefaultValue);
+                        }
+
+                        printer.CloseElement();
                     }
-
-                    printer.CloseElement();
                 }
 
                 printer.CloseElement();

@@ -544,17 +544,23 @@ namespace AvalancheDataFormat
     static_assert(sizeof(Enum) == 0xC, "AvalancheDataFormat Enum alignment is wrong.");
 
     struct Type {
-        EAdfType                        m_AdfType;
-        uint32_t                        m_Size;
-        uint32_t                        m_Align;
-        uint32_t                        m_TypeHash;
-        uint64_t                        m_Name;
-        uint16_t                        m_Flags;
-        ScalarType                      m_ScalarType;
-        uint32_t                        m_SubTypeHash;
-        uint32_t                        m_ArraySizeOrBitCount;
-        uint32_t                        m_MemberCount;
-        jc::AvalancheDataFormat::Member m_Members[0];
+        EAdfType   m_AdfType;
+        uint32_t   m_Size;
+        uint32_t   m_Align;
+        uint32_t   m_TypeHash;
+        uint64_t   m_Name;
+        uint16_t   m_Flags;
+        ScalarType m_ScalarType;
+        uint32_t   m_SubTypeHash;
+        union {
+            uint32_t m_BitCount;  // Only for BitField
+            uint32_t m_ArraySize; // Only for InlineArray
+        };
+        union {
+            uint32_t m_MemberCount; // Only for Structure and Enum
+            uint32_t m_DataAlign;
+        };
+        Member m_Members[0];
 
         const jc::AvalancheDataFormat::Member& Member(uint32_t i) const
         {
@@ -568,10 +574,17 @@ namespace AvalancheDataFormat
 
         const size_t Size() const
         {
-            return (sizeof(Type)
-                    + ((m_AdfType != EAdfType::Enumeration ? sizeof(jc::AvalancheDataFormat::Member)
-                                                           : sizeof(jc::AvalancheDataFormat::Enum))
-                       * m_MemberCount));
+            uint32_t member_count = 0;
+            uint32_t member_size  = sizeof(AvalancheDataFormat::Member);
+            if (m_AdfType == EAdfType::Structure || m_AdfType == EAdfType::Enumeration) {
+                member_count = m_MemberCount;
+
+                if (m_AdfType == EAdfType::Enumeration) {
+                    member_size = sizeof(AvalancheDataFormat::Enum);
+                }
+            }
+
+            return (sizeof(Type) + (member_count * member_size));
         }
     };
 
