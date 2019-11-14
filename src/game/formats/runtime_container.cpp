@@ -424,6 +424,7 @@ void RuntimeContainer::DrawUI(int32_t index, uint8_t depth)
                 && (prop->GetNameHash() == 0x932E9257 || // ragdoll
                     prop->GetNameHash() == 0x26FA86FE || // skeleton
                     prop->GetNameHash() == 0x0F94740B || // model
+                    prop->GetNameHash() == 0xB498C27D || // filepath
                     prop->GetName().rfind("hash") != std::string::npos)) {
                 auto value = std::any_cast<int32_t>(prop->GetValue());
                 ImGui::InputInt(prop->GetName().c_str(), (int32_t*)&value, 0, 0,

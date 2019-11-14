@@ -1554,3 +1554,5 @@ CfBmFractal
 
 
 _class_hash
+filepath
+Weight
