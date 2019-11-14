@@ -22,14 +22,20 @@ class NameHashLookup
                     throw std::runtime_error("FindResource failed");
                 }
 
-                const auto data = LoadResource(handle, rc);
-                if (data == nullptr) {
+                const auto res_data = LoadResource(handle, rc);
+                if (res_data == nullptr) {
                     throw std::runtime_error("LoadResource failed");
                 }
 
+                const void* ptr = LockResource(res_data);
+                if (ptr == nullptr) {
+                    throw std::runtime_error("LockResource failed");
+                }
+
                 // parse the file list json
-                auto  str        = static_cast<const char*>(LockResource(data));
-                auto& dictionary = nlohmann::json::parse(str);
+                std::vector<uint8_t> buffer(SizeofResource(handle, rc));
+                memcpy(buffer.data(), ptr, buffer.size());
+                const auto& dictionary = nlohmann::json::parse(buffer.begin(), buffer.end());
 
                 // generate the lookup table
                 for (auto& it = dictionary.begin(); it != dictionary.end(); ++it) {
@@ -37,12 +43,11 @@ class NameHashLookup
                     LookupTable.insert(std::make_pair(namehash, it.value().get<std::string>()));
                 }
             } catch (const std::exception& e) {
-                SPDLOG_ERROR("Failed to load lookup table. ({})", e.what());
+                SPDLOG_ERROR("Failed to load lookup table.");
+                SPDLOG_ERROR(e.what());
 
-                std::string error = "Failed to load namehash lookup table. (";
+                std::string error = "Failed to load namehash lookup table, some features will be unavailable.\n\n";
                 error += e.what();
-                error += ")\n\n";
-                error += "Some features will be disabled.";
                 Window::Get()->ShowMessageBox(error);
             }
         }).detach();
