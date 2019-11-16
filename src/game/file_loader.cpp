@@ -93,20 +93,23 @@ FileLoader::FileLoader()
 
             // no handlers, fallback to just reading the raw data
             if (!was_handled) {
-                FileLoader::Get()->ReadFile(file, [&, file, path](bool success, FileBuffer data) {
-                    if (success) {
-                        // write the file data
-                        std::ofstream stream(path, std::ios::binary);
-                        if (!stream.fail()) {
-                            stream.write((char*)data.data(), data.size());
-                            stream.close();
-                            return;
+                FileLoader::Get()->ReadFile(
+                    file,
+                    [&, file, path](bool success, FileBuffer data) {
+                        if (success) {
+                            // write the file data
+                            std::ofstream stream(path, std::ios::binary);
+                            if (!stream.fail()) {
+                                stream.write((char*)data.data(), data.size());
+                                stream.close();
+                                return;
+                            }
                         }
-                    }
 
-                    SPDLOG_ERROR("(SaveFileRequest) Failed to save \"{}\"", file.filename().string());
-                    Window::Get()->ShowMessageBox("Failed to save \"" + file.filename().string() + "\".");
-                });
+                        SPDLOG_ERROR("(SaveFileRequest) Failed to save \"{}\"", file.filename().string());
+                        Window::Get()->ShowMessageBox("Failed to save \"" + file.filename().string() + "\".");
+                    },
+                    ReadFileFlags_SkipTextureLoader);
             }
         });
 

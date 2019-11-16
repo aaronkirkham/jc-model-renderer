@@ -127,7 +127,7 @@ class ArchiveTable : public IImportExporter
 
         // write compressed block count
         uint32_t                                 compressed_block_count = 2;
-        jc4::ArchiveTable::VfsTabCompressedBlock compressed_block{-1, -1};
+        jc4::ArchiveTable::VfsTabCompressedBlock compressed_block{0xFFFFFFFF, 0xFFFFFFFF};
         tab.write((char*)&compressed_block_count, sizeof(compressed_block_count));
         tab.write((char*)&compressed_block, sizeof(compressed_block));
         tab.write((char*)&compressed_block, sizeof(compressed_block));
