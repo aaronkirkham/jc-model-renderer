@@ -9,6 +9,7 @@
 #include "version.h"
 
 #include "game/file_loader.h"
+#include "game/formats/avalanche_archive.h"
 
 namespace ImportExport
 {
@@ -936,6 +937,33 @@ static void WriteInstance(tinyxml2::XMLPrinter &printer, ava::AvalancheDataForma
         printer.PushAttribute(k, v);                                                                                   \
     }
 
+static void AddTypeLibraries(ava::AvalancheDataFormat::ADF *adf, const std::filesystem::path &extension)
+{
+    static auto ReadTypeLibrary = [](ava::AvalancheDataFormat::ADF *adf, const std::string &filename) {
+        try {
+            AvalancheArchive *   arc = FileLoader::Get()->GetAdfTypeLibraries();
+            std::vector<uint8_t> out_buffer;
+            ava::StreamArchive::ReadEntry(arc->GetBuffer(), arc->GetEntries(), filename, &out_buffer);
+            adf->AddTypes(out_buffer);
+        } catch (const std::exception &e) {
+            SPDLOG_ERROR(e.what());
+#ifdef _DEBUG
+            __debugbreak();
+#endif
+        }
+    };
+
+    if (extension == ".blo_adf" || extension == ".flo_adf" || extension == ".epe_adf") {
+        ReadTypeLibrary(adf, "AttachedEffects.adf");
+        ReadTypeLibrary(adf, "Damageable.adf");
+        ReadTypeLibrary(adf, "DamageController.adf");
+        ReadTypeLibrary(adf, "LocationGameObjectAdf.adf");
+        ReadTypeLibrary(adf, "PhysicsGameObject.adf");
+        ReadTypeLibrary(adf, "RigidObject.adf");
+        ReadTypeLibrary(adf, "TargetSystem.adf");
+    }
+}
+
 static void DoExport(tinyxml2::XMLPrinter &printer, const std::filesystem::path &filename,
                      const std::vector<uint8_t> &buffer)
 {
@@ -946,8 +974,9 @@ static void DoExport(tinyxml2::XMLPrinter &printer, const std::filesystem::path 
     const char *description = "";
     ParseHeader(buffer, &header, &description);
 
-    //
+    // init adf & add type libraries
     ADF adf{buffer};
+    AddTypeLibraries(&adf, filename.extension());
 
     // write adf element
     printer.PushHeader(false, true);
