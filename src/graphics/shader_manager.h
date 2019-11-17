@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-#include "../singleton.h"
+#include "singleton.h"
 
 #include "../vendor/ava-format-lib/include/avalanche_data_format.h"
 
@@ -28,11 +28,6 @@ struct SShaderLibrary {
 static_assert(sizeof(SShader) == 0x28, "SShader alignment is wrong!");
 static_assert(sizeof(SShaderLibrary) == 0x70, "SShaderLibrary alignment is wrong!");
 #pragma pack(pop)
-
-namespace ava::AvalancheDataFormat
-{
-class ADF;
-};
 
 struct VertexShader_t;
 struct PixelShader_t;
