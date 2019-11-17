@@ -288,6 +288,8 @@ void RenderBlockModel::Load(const std::filesystem::path& filename)
 void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&      filename,
                                                 std::shared_ptr<RuntimeContainer> rc)
 {
+    // @TODO: refactor
+#if 0
     assert(rc);
 
     auto path = filename.parent_path().string();
@@ -320,4 +322,5 @@ void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&    
         error << "\nA model might still be rendered, but some parts of it may be missing.";
         Window::Get()->ShowMessageBox(error.str(), MB_ICONINFORMATION | MB_OK);
     }).detach();
+#endif
 }

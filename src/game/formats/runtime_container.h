@@ -8,128 +8,89 @@
 
 #include "../vendor/ava-format-lib/include/runtime_property_container.h"
 
-class RuntimeContainerProperty
+namespace RTPC
 {
-  private:
-    std::string                                 m_Name     = "";
-    uint32_t                                    m_NameHash = 0x0;
-    ava::RuntimePropertyContainer::EVariantType m_Type     = ava::RuntimePropertyContainer::T_VARIANT_UNASSIGNED;
-    std::any                                    m_Value;
+class Variant : public ava::RuntimePropertyContainer::RtpcContainerVariant
+{
+  public:
+    std::string m_Name;
+    std::any    m_Value;
+    bool        m_IsHash = false;
 
   public:
-    RuntimeContainerProperty(uint32_t name_hash, ava::RuntimePropertyContainer::EVariantType type);
-    virtual ~RuntimeContainerProperty() = default;
+    Variant(const ava::RuntimePropertyContainer::RtpcContainerVariant& variant);
+    virtual ~Variant() = default;
 
-    void SetValue(const std::any& anything)
-    {
-        m_Value = anything;
-    }
-
-    const std::any& GetValue()
-    {
-        return m_Value;
-    }
-
-    template <typename T> T GetValue() const
+    template <typename T> T Value() const
     {
         return std::any_cast<T>(m_Value);
     }
-
-    const std::string& GetName() const
-    {
-        return m_Name;
-    }
-
-    uint32_t GetNameHash() const
-    {
-        return m_NameHash;
-    }
-
-    ava::RuntimePropertyContainer::EVariantType GetType() const
-    {
-        return m_Type;
-    }
-
-    static std::string GetTypeName(ava::RuntimePropertyContainer::EVariantType type);
 };
+
+class Container : public ava::RuntimePropertyContainer::RtpcContainer
+{
+  public:
+    std::string                             m_Name;
+    std::vector<std::unique_ptr<Container>> m_Containers;
+    std::vector<std::unique_ptr<Variant>>   m_Variants;
+
+  public:
+    Container(const ava::RuntimePropertyContainer::RtpcContainer& container);
+    virtual ~Container() = default;
+
+    void UpdateDisplayName();
+
+    Container* GetContainer(const uint32_t name_hash, bool recursive = true);
+    Variant*   GetVariant(const uint32_t name_hash, bool recursive = true);
+};
+}; // namespace RTPC
 
 class RuntimeContainer : public Factory<RuntimeContainer>
 {
+    using ParseCallback_t = std::function<void(bool success)>;
+    using LoadCallback_t  = std::function<void(bool success, std::shared_ptr<RuntimeContainer> container)>;
+
   private:
-    std::filesystem::path                  m_Filename = "";
-    std::string                            m_Name     = "";
-    uint32_t                               m_NameHash = 0x0;
-    std::vector<RuntimeContainerProperty*> m_Properties;
-    std::vector<RuntimeContainer*>         m_Containers;
+    std::filesystem::path            m_Filename = "";
+    std::vector<uint8_t>             m_Buffer;
+    std::unique_ptr<RTPC::Container> m_Root;
 
   public:
-    RuntimeContainer(uint32_t name_hash, const std::filesystem::path& filename = "");
-    virtual ~RuntimeContainer();
-
-    static void Load(const std::filesystem::path&                           filename,
-                     std::function<void(std::shared_ptr<RuntimeContainer>)> callback);
+    RuntimeContainer(const std::filesystem::path& filename)
+        : m_Filename(filename)
+    {
+    }
+    virtual ~RuntimeContainer() = default;
 
     virtual std::string GetFactoryKey() const
     {
         return m_Filename.string();
     }
 
-    void GenerateBetterNames();
+    void Parse(const std::vector<uint8_t>& buffer, ParseCallback_t callback = nullptr);
 
     static void ReadFileCallback(const std::filesystem::path& filename, const std::vector<uint8_t>& data,
                                  bool external);
     static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path);
 
-    void        DrawUI(int32_t index = 0, uint8_t depth = 0);
-    static void ContextMenuUI(const std::filesystem::path& filename);
+    static void Load(const std::filesystem::path& filename, LoadCallback_t callback);
 
-    void AddProperty(RuntimeContainerProperty* prop)
+    void DrawUI(RTPC::Container* container = nullptr, int32_t index = 0, uint8_t depth = 0);
+
+    RTPC::Container* GetContainer(const uint32_t name_hash, bool recursive = true)
     {
-        m_Properties.emplace_back(prop);
+        assert(m_Root);
+        return m_Root->GetContainer(name_hash, recursive);
     }
 
-    void AddContainer(RuntimeContainer* cont)
+    RTPC::Variant* GetVariant(const uint32_t name_hash, bool recursive = true)
     {
-        m_Containers.emplace_back(cont);
+        assert(m_Root);
+        return m_Root->GetVariant(name_hash, recursive);
     }
 
-    void SetFileName(const std::filesystem::path& filename)
-    {
-        m_Filename = filename;
-    }
-
-    const std::filesystem::path& GetFileName() const
+    const std::filesystem::path& GetFilePath()
     {
         return m_Filename;
-    }
-
-    const std::string& GetName() const
-    {
-        return m_Name;
-    }
-
-    uint32_t GetNameHash() const
-    {
-        return m_NameHash;
-    }
-
-    RuntimeContainerProperty* GetProperty(uint32_t name_hash, bool include_children = true);
-    RuntimeContainerProperty* GetProperty(const std::string& name, bool include_children = true);
-
-    RuntimeContainer* GetContainer(uint32_t name_hash, bool include_children = true);
-    RuntimeContainer* GetContainer(const std::string& name, bool include_children = true);
-
-    std::vector<RuntimeContainer*> GetAllContainers(const std::string& class_name);
-
-    const std::vector<RuntimeContainerProperty*>& GetProperties()
-    {
-        return m_Properties;
-    }
-
-    std::vector<RuntimeContainerProperty*> GetSortedProperties();
-
-    const std::vector<RuntimeContainer*>& GetContainers()
-    {
-        return m_Containers;
     }
 };

@@ -90,10 +90,6 @@ class FileLoader : public Singleton<FileLoader>
     void ParseTextureSource(std::vector<uint8_t>* buffer, std::vector<uint8_t>* out_buffer);
     bool WriteAVTX(Texture* texture, std::vector<uint8_t>* out_buffer);
 
-    // runtime containers
-    std::shared_ptr<RuntimeContainer> ParseRuntimeContainer(const std::filesystem::path& filename,
-                                                            const std::vector<uint8_t>&  buffer);
-
     // dictionary lookup
     inline bool            HasFileInDictionary(uint32_t name_hash);
     DictionaryLookupResult LocateFileInDictionary(const std::filesystem::path& filename);

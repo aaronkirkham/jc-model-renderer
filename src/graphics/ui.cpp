@@ -478,7 +478,7 @@ void UI::Render(RenderContext_t* context)
 
     // runtime container editor
     for (auto it = RuntimeContainer::Instances.begin(); it != RuntimeContainer::Instances.end();) {
-        std::string title = "Runtime Container Editor - " + (*it).second->GetFileName().filename().string();
+        std::string title = "Runtime Container Editor - " + (*it).second->GetFilePath().filename().string();
 
         bool open = true;
         ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
