@@ -1,9 +1,10 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 #include <cstdint>
 #include <d3d11.h>
 #include <filesystem>
-#include <glm/glm.hpp>
 #include <vector>
 
 using floats_t    = std::vector<float>;
@@ -21,8 +22,6 @@ struct vertex_t {
         return lhs.pos == rhs.pos && lhs.uv == rhs.uv && lhs.normal == rhs.normal;
     }
 };
-
-using vertices_t = std::vector<vertex_t>;
 
 class Renderer;
 struct RenderContext_t {
@@ -46,6 +45,8 @@ struct RenderContext_t {
     glm::mat4            m_ProjectionMatrix;
     glm::mat4            m_viewProjectionMatrix;
 };
+
+using vertices_t = std::vector<vertex_t>;
 
 enum BufferType { VERTEX_BUFFER = 1, INDEX_BUFFER = 2, NUM_BUFFER_TYPES = 3 };
 
@@ -108,6 +109,7 @@ struct SamplerState_t {
     ID3D11SamplerState* m_SamplerState = nullptr;
 };
 
+#if 0
 struct BoundingBox {
     glm::vec3 m_Min;
     glm::vec3 m_Max;
@@ -156,7 +158,9 @@ struct BoundingBox {
         return (m_Max * m_Scale);
     }
 };
+#endif
 
+#if 0
 struct Ray {
     glm::vec3 m_Origin;
     glm::vec3 m_End;
@@ -239,3 +243,4 @@ struct Ray {
         return dist;
     }
 };
+#endif

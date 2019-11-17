@@ -1,12 +1,13 @@
 #pragma once
 
+#include <glm/glm.hpp>
+#include <ksignals.h>
+
+#include "import_export/iimportexporter.h"
+#include "singleton.h"
+
 #include <array>
 #include <map>
-
-#include "../import_export/IImportExporter.h"
-#include "../singleton.h"
-
-#include <ksignals.h>
 
 struct ImDrawList;
 struct BoundingBox;
@@ -133,7 +134,7 @@ class UI : public Singleton<UI>
 
 #undef DrawText
     void DrawText(const std::string& text, const glm::vec3& position, const glm::vec4& colour, bool center);
-    void DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour);
+    // void DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour);
 
     inline void ShowGameSelection()
     {

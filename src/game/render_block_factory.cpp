@@ -15,7 +15,7 @@
 #include "jc4/renderblocks/renderblockcarpaint.h"
 #include "jc4/renderblocks/renderblockcharacter.h"
 
-#include "hashlittle.h"
+#include <AvaFormatLib.h>
 
 IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type, bool jc4)
 {
@@ -60,7 +60,7 @@ IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type, bool jc
 
 IRenderBlock* RenderBlockFactory::CreateRenderBlock(const std::string& name, bool jc4)
 {
-    return CreateRenderBlock(hashlittle(name.c_str()), jc4);
+    return CreateRenderBlock(ava::hashlittle(name.c_str()), jc4);
 }
 
 const char* RenderBlockFactory::GetRenderBlockName(const uint32_t type)

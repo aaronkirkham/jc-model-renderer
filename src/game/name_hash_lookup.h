@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../window.h"
-
 #include <json.hpp>
+
+#include "window.h"
 
 class NameHashLookup
 {
@@ -16,25 +16,11 @@ class NameHashLookup
     {
         std::thread([&] {
             try {
-                const auto handle = GetModuleHandle(nullptr);
-                const auto rc     = FindResource(handle, MAKEINTRESOURCE(512), RT_RCDATA);
-                if (rc == nullptr) {
-                    throw std::runtime_error("FindResource failed");
+                std::vector<uint8_t> buffer;
+                if (!Window::Get()->LoadInternalResource(512, &buffer)) {
+                    throw std::runtime_error("LoadInternalResource failed.");
                 }
 
-                const auto res_data = LoadResource(handle, rc);
-                if (res_data == nullptr) {
-                    throw std::runtime_error("LoadResource failed");
-                }
-
-                const void* ptr = LockResource(res_data);
-                if (ptr == nullptr) {
-                    throw std::runtime_error("LockResource failed");
-                }
-
-                // parse the file list json
-                std::vector<uint8_t> buffer(SizeofResource(handle, rc));
-                memcpy(buffer.data(), ptr, buffer.size());
                 const auto& dictionary = nlohmann::json::parse(buffer.begin(), buffer.end());
 
                 // generate the lookup table

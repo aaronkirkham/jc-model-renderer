@@ -1,29 +1,25 @@
-#include <ShlObj.h>
 #include <Windows.h>
-#include <commdlg.h>
 #include <shellapi.h>
 
-#include "game/file_loader.h"
-#include "graphics/renderer.h"
-#include "graphics/shader_manager.h"
-#include "graphics/texture_manager.h"
+#include <httplib.h>
+#ifdef DEBUG
+#include <spdlog/sinks/stdout_color_sinks.h>
+#endif
+
 #include "settings.h"
 #include "version.h"
 #include "window.h"
 
+#include "graphics/renderer.h"
+#include "graphics/shader_manager.h"
+#include "graphics/texture_manager.h"
+#include "graphics/ui.h"
+
+#include "game/file_loader.h"
 #include "game/formats/avalanche_archive.h"
 #include "game/formats/avalanche_model_format.h"
 #include "game/formats/render_block_model.h"
 #include "game/formats/runtime_container.h"
-
-#include <examples/imgui_impl_win32.h>
-#include <imgui.h>
-
-#include <httplib.h>
-
-#ifdef DEBUG
-#include <spdlog/sinks/stdout_color_sinks.h>
-#endif
 
 extern bool g_IsJC4Mode;
 
@@ -125,7 +121,6 @@ void Window::Shutdown()
     m_Running = false;
 
     // clear factories
-    AvalancheDataFormat::Instances.clear();
     RuntimeContainer::Instances.clear();
     RenderBlockModel::Instances.clear();
     AvalancheArchive::Instances.clear();
@@ -311,6 +306,11 @@ std::filesystem::path Window::ShowSaveDialog(const std::string& title, const Fil
     return CreateFileDialog(CLSID_FileSaveDialog, title, params, (flags | FOS_OVERWRITEPROMPT));
 }
 
+void Window::OpenUrl(const std::string& url)
+{
+    ShellExecuteA(nullptr, "open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+}
+
 void Window::SwitchMode(GameMode mode)
 {
     // TODO: check if we are idle.
@@ -326,7 +326,6 @@ void Window::SwitchMode(GameMode mode)
     }
 
     // reset factories
-    AvalancheDataFormat::Instances.clear();
     RuntimeContainer::Instances.clear();
     RenderBlockModel::Instances.clear();
     AvalancheArchive::Instances.clear();
@@ -399,9 +398,7 @@ void Window::CheckForUpdates(bool show_no_update_messagebox)
                     msg.append("Do you want to go to the release page on GitHub?");
 
                     if (Window::Get()->ShowMessageBox(msg, MB_ICONQUESTION | MB_YESNO) == IDYES) {
-                        ShellExecuteA(nullptr, "open",
-                                      "https://github.com/aaronkirkham/jc-model-renderer/releases/latest", nullptr,
-                                      nullptr, SW_SHOWNORMAL);
+                        Window::Get()->OpenUrl("https://github.com/aaronkirkham/jc-model-renderer/releases/latest");
                     }
                 } else if (show_no_update_messagebox) {
                     Window::Get()->ShowMessageBox("You have the latest version!", MB_ICONINFORMATION);
@@ -428,8 +425,10 @@ bool Window::LoadInternalResource(int32_t resource_id, std::vector<uint8_t>* out
         return false;
     }
 
-    const auto resource = LockResource(data);
-    *out_buffer         = {(char*)resource, (char*)resource + SizeofResource(handle, rc)};
+    const void* ptr = LockResource(data);
+
+    out_buffer->resize(SizeofResource(handle, rc));
+    std::memcpy(out_buffer->data(), ptr, out_buffer->size());
     return true;
 }
 

@@ -1,12 +1,12 @@
 #pragma once
 
+#include <dxgiformat.h>
 #include <unordered_map>
 
-#include "../singleton.h"
-#include "texture.h"
+#include "singleton.h"
 
 struct DDS_PIXELFORMAT;
-
+class Texture;
 class TextureManager : public Singleton<TextureManager>
 {
   private:
@@ -28,7 +28,7 @@ class TextureManager : public Singleton<TextureManager>
 
     std::shared_ptr<Texture> GetTexture(const std::filesystem::path& filename,
                                         uint8_t                      flags = TextureCreateFlags_CreateIfNotExists);
-    std::shared_ptr<Texture> GetTexture(const std::filesystem::path& filename, FileBuffer* buffer,
+    std::shared_ptr<Texture> GetTexture(const std::filesystem::path& filename, std::vector<uint8_t>* buffer,
                                         uint8_t flags = TextureCreateFlags_CreateIfNotExists);
 
     bool HasTexture(const std::filesystem::path& filename);

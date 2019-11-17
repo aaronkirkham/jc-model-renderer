@@ -1,13 +1,14 @@
 #pragma once
 
+#include <glm/glm.hpp>
+#include <ksignals.h>
+
+#include "singleton.h"
+#include "types.h"
+
 #include <array>
 #include <d3d11.h>
 #include <mutex>
-
-#include "../singleton.h"
-#include "types.h"
-#include <glm/glm.hpp>
-#include <ksignals.h>
 
 #define SAFE_DELETE(ptr)                                                                                               \
     if (ptr) {                                                                                                         \

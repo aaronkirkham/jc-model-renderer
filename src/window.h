@@ -1,19 +1,15 @@
 #pragma once
 
-#include <filesystem>
-#include <sstream>
+#include <glm/glm.hpp>
+
+#include <ksignals.h>
+#include <spdlog/spdlog.h>
 
 #include "drop_target.h"
 #include "singleton.h"
 
-#include <glm/vec2.hpp>
-#include <ksignals.h>
-
-#ifdef DEBUG
-#define SPDLOG_ACTIVE_LEVEL 1
-#endif
-
-#include <spdlog/spdlog.h>
+#include <filesystem>
+#include <sstream>
 
 #ifdef DEBUG
 static constexpr auto g_WindowName = "Just Cause Model Renderer (DEBUG)";
@@ -38,8 +34,8 @@ struct FileSelectionParams {
 };
 
 enum GameMode {
-	GameMode_JustCause3 = 0,
-	GameMode_JustCause4,
+    GameMode_JustCause3 = 0,
+    GameMode_JustCause4,
 };
 
 class Window : public Singleton<Window>
@@ -109,6 +105,8 @@ class Window : public Singleton<Window>
                                               uint32_t flags = 0);
     std::filesystem::path ShowSaveDialog(const std::string& title, const FileSelectionParams& params = {},
                                          uint32_t flags = 0);
+
+    void OpenUrl(const std::string& url);
 
     void                  SwitchMode(GameMode mode);
     void                  SelectJustCauseDirectory(bool override_mode = false, bool jc3_mode = true);

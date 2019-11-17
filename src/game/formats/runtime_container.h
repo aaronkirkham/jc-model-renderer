@@ -1,37 +1,23 @@
 #pragma once
 
+#include "factory.h"
+
 #include <any>
+#include <filesystem>
+#include <fstream>
 
-#include "../../factory.h"
-#include "../../graphics/types.h"
-
-enum PropertyType : uint8_t {
-    RTPC_TYPE_UNASSIGNED = 0,
-    RTPC_TYPE_INTEGER,
-    RTPC_TYPE_FLOAT,
-    RTPC_TYPE_STRING,
-    RTPC_TYPE_VEC2,
-    RTPC_TYPE_VEC3,
-    RTPC_TYPE_VEC4,
-    RTPC_TYPE_MAT4X4 = 8,
-    RTPC_TYPE_LIST_INTEGERS,
-    RTPC_TYPE_LIST_FLOATS,
-    RTPC_TYPE_LIST_BYTES,
-    RTPC_TYPE_OBJECT_ID = 13,
-    RTPC_TYPE_EVENTS,
-    RTPC_TYPE_TOTAL,
-};
+#include "../vendor/ava-format-lib/include/runtime_property_container.h"
 
 class RuntimeContainerProperty
 {
   private:
-    std::string  m_Name     = "";
-    uint32_t     m_NameHash = 0x0;
-    PropertyType m_Type     = RTPC_TYPE_UNASSIGNED;
-    std::any     m_Value;
+    std::string                                 m_Name     = "";
+    uint32_t                                    m_NameHash = 0x0;
+    ava::RuntimePropertyContainer::EVariantType m_Type     = ava::RuntimePropertyContainer::T_VARIANT_UNASSIGNED;
+    std::any                                    m_Value;
 
   public:
-    RuntimeContainerProperty(uint32_t name_hash, uint8_t type);
+    RuntimeContainerProperty(uint32_t name_hash, ava::RuntimePropertyContainer::EVariantType type);
     virtual ~RuntimeContainerProperty() = default;
 
     void SetValue(const std::any& anything)
@@ -59,44 +45,12 @@ class RuntimeContainerProperty
         return m_NameHash;
     }
 
-    PropertyType GetType() const
+    ava::RuntimePropertyContainer::EVariantType GetType() const
     {
         return m_Type;
     }
 
-    static std::string GetTypeName(uint8_t type)
-    {
-        switch (type) {
-            case RTPC_TYPE_UNASSIGNED:
-                return "unassigned";
-            case RTPC_TYPE_INTEGER:
-                return "integer";
-            case RTPC_TYPE_FLOAT:
-                return "float";
-            case RTPC_TYPE_STRING:
-                return "string";
-            case RTPC_TYPE_VEC2:
-                return "vec2";
-            case RTPC_TYPE_VEC3:
-                return "vec3";
-            case RTPC_TYPE_VEC4:
-                return "vec4";
-            case RTPC_TYPE_MAT4X4:
-                return "mat4x4";
-            case RTPC_TYPE_LIST_INTEGERS:
-                return "vec_int";
-            case RTPC_TYPE_LIST_FLOATS:
-                return "vec_float";
-            case RTPC_TYPE_LIST_BYTES:
-                return "vec_byte";
-            case RTPC_TYPE_OBJECT_ID:
-                return "object_id";
-            case RTPC_TYPE_EVENTS:
-                return "vec_events";
-        }
-
-        return "unknown";
-    }
+    static std::string GetTypeName(ava::RuntimePropertyContainer::EVariantType type);
 };
 
 class RuntimeContainer : public Factory<RuntimeContainer>
@@ -122,7 +76,8 @@ class RuntimeContainer : public Factory<RuntimeContainer>
 
     void GenerateBetterNames();
 
-    static void ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);
+    static void ReadFileCallback(const std::filesystem::path& filename, const std::vector<uint8_t>& data,
+                                 bool external);
     static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path);
 
     void        DrawUI(int32_t index = 0, uint8_t depth = 0);

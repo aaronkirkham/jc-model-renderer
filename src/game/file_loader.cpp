@@ -1,29 +1,30 @@
-#include <istream>
+#include <AvaFormatLib.h>
 #include <queue>
-#include <thread>
+#include <sstream>
 
+#include "../vendor/ava-format-lib/include/archives/legacy/archive_table.h"
+#include "../vendor/ava-format-lib/include/util/byte_array_buffer.h"
+#include "../vendor/ava-format-lib/include/util/byte_vector_writer.h"
+
+#include "directory_list.h"
 #include "file_loader.h"
 #include "name_hash_lookup.h"
+#include "settings.h"
+#include "util.h"
+#include "window.h"
 
-#include "../graphics/dds_texture_loader.h"
-#include "../graphics/texture_manager.h"
-#include "../graphics/ui.h"
+#include "graphics/dds_texture_loader.h"
+#include "graphics/texture.h"
+#include "graphics/texture_manager.h"
+#include "graphics/ui.h"
 
-#include "formats/avalanche_archive.h"
-#include "formats/render_block_model.h"
-#include "formats/runtime_container.h"
-#include "render_block_factory.h"
-
-#include "jc4/oodle.h"
+#include "game/formats/avalanche_archive.h"
+#include "game/formats/render_block_model.h"
+#include "game/formats/runtime_container.h"
+#include "game/render_block_factory.h"
+#include "game/types.h"
 
 #include "../import_export/import_export_manager.h"
-
-#include "../fnv1.h"
-#include "../settings.h"
-#include "hashlittle.h"
-#include "util.h"
-
-#include <zlib.h>
 
 // Credit to gibbed for most of the file formats
 // http://gib.me
@@ -39,18 +40,17 @@ FileLoader::FileLoader()
     NameHashLookup::Init();
 
     // load ADF type libraries
-    FileBuffer buffer;
+    std::vector<uint8_t> buffer;
     if (Window::Get()->LoadInternalResource(103, &buffer)) {
         m_AdfTypeLibraries = std::make_unique<AvalancheArchive>("adf-type-libraries.ee", buffer);
     }
 
     // TODO: move the events to a better location?
-
     // trigger the file type callbacks
     UI::Get()->Events().FileTreeItemSelected.connect([&](const std::filesystem::path& file, AvalancheArchive* archive) {
         // do we have a registered callback for this file type?
         if (m_FileReadHandlers.find(file.extension().string()) != m_FileReadHandlers.end()) {
-            ReadFile(file, [&, file](bool success, FileBuffer data) {
+            ReadFile(file, [&, file](bool success, std::vector<uint8_t> data) {
                 if (success) {
                     for (const auto& fn : m_FileReadHandlers[file.extension().string()]) {
                         fn(file, std::move(data), false);
@@ -95,7 +95,7 @@ FileLoader::FileLoader()
             if (!was_handled) {
                 FileLoader::Get()->ReadFile(
                     file,
-                    [&, file, path](bool success, FileBuffer data) {
+                    [&, file, path](bool success, std::vector<uint8_t> data) {
                         if (success) {
                             // write the file data
                             std::ofstream stream(path, std::ios::binary);
@@ -177,28 +177,17 @@ void FileLoader::Init()
 
     // load oo2core_7_win64.dll
     if (g_IsJC4Mode) {
-        std::filesystem::path filename = Window::Get()->GetJustCauseDirectory();
-        filename /= "oo2core_7_win64.dll";
+        try {
+            std::filesystem::path filename = Window::Get()->GetJustCauseDirectory();
+            filename /= "oo2core_7_win64.dll";
 
-        if (!std::filesystem::exists(filename)) {
-            SPDLOG_ERROR("Can't find oo2core_7_win64.dll! ({})", filename.string());
+            ava::Oodle::LoadLib(filename.string().c_str());
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Failed to load oo2core_7_win64.dll. ({})", e.what());
             Window::Get()->ShowMessageBox(
-                "Can't find oo2core_7_win64.dll.\n\nPlease make sure your Just Cause 4 directory is valid.",
+                "Failed to load oo2core_7_win64.dll.\n\nPlease make sure your Just Cause 4 directory is valid.",
                 MB_ICONERROR | MB_OK);
-            return;
         }
-
-        oo2core_7_win64 = LoadLibrary(filename.string().c_str());
-        if (!oo2core_7_win64) {
-            SPDLOG_ERROR("Failed to load oo2core_7_win64.dll! (ErrorCode={})", GetLastError());
-            std::string error = "Failed to load oo2core_7_win64.dll\n\nErrorCode=" + std::to_string(GetLastError());
-            Window::Get()->ShowMessageBox(error, MB_ICONERROR | MB_OK);
-            return;
-        }
-
-        oo2::OodleLZ_Compress_original = (oo2::OodleLZ_Compress_t)GetProcAddress(oo2core_7_win64, "OodleLZ_Compress");
-        oo2::OodleLZ_Decompress_original =
-            (oo2::OodleLZ_Decompress_t)GetProcAddress(oo2core_7_win64, "OodleLZ_Decompress");
     }
 
     // init the filelist
@@ -207,20 +196,12 @@ void FileLoader::Init()
     const auto status_text_id = UI::Get()->PushStatusText("Loading dictionary...");
     std::thread([this, status_text_id] {
         try {
-            const auto handle = GetModuleHandle(nullptr);
-            const auto rc     = FindResource(handle, MAKEINTRESOURCE(g_IsJC4Mode ? 256 : 128), RT_RCDATA);
-            if (rc == nullptr) {
-                throw std::runtime_error("FindResource failed");
+            std::vector<uint8_t> buffer;
+            if (!Window::Get()->LoadInternalResource(g_IsJC4Mode ? 256 : 128, &buffer)) {
+                throw std::runtime_error("LoadInternalResource failed.");
             }
 
-            const auto data = LoadResource(handle, rc);
-            if (data == nullptr) {
-                throw std::runtime_error("LoadResource failed");
-            }
-
-            // parse the file list json
-            auto  str        = static_cast<const char*>(LockResource(data));
-            auto& dictionary = nlohmann::json::parse(str, (str + SizeofResource(handle, rc)));
+            auto& dictionary = nlohmann::json::parse(buffer.begin(), buffer.end());
             m_FileList->Parse(&dictionary);
 
             // parse the dictionary
@@ -253,16 +234,7 @@ void FileLoader::Init()
 
 void FileLoader::Shutdown()
 {
-    // release oo2core_7_win64.dll
-    if (oo2core_7_win64) {
-        FreeLibrary(oo2core_7_win64);
-
-        oo2core_7_win64                  = nullptr;
-        oo2::OodleLZ_Compress_original   = nullptr;
-        oo2::OodleLZ_Decompress_original = nullptr;
-    }
-
-    //
+    ava::Oodle::UnloadLib();
     m_FileList = nullptr;
 }
 
@@ -299,7 +271,8 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultC
     // check any loaded archives for the file
     const auto& [archive, entry] = GetStreamArchiveFromFile(filename);
     if (archive && entry.m_Offset != 0 && entry.m_Offset != -1) {
-        auto buffer = archive->GetEntryBuffer(entry);
+        std::vector<uint8_t> buffer;
+        ava::StreamArchive::ReadEntry(archive->GetBuffer(), entry, &buffer);
 
         UI::Get()->PopStatusText(status_text_id);
         return callback(true, std::move(buffer));
@@ -321,7 +294,7 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultC
     std::thread([this, filename, callback, status_text_id] {
         const auto& [directory_name, archive_name, namehash] = LocateFileInDictionary(filename);
         if (!directory_name.empty()) {
-            FileBuffer buffer;
+            std::vector<uint8_t> buffer;
             if (ReadFileFromArchive(directory_name, archive_name, namehash, &buffer)) {
                 UI::Get()->PopStatusText(status_text_id);
                 return callback(true, std::move(buffer));
@@ -341,6 +314,8 @@ void FileLoader::ReadFileBatched(const std::filesystem::path& filename, ReadFile
 
 void FileLoader::RunFileBatches()
 {
+    using namespace ava;
+
     std::thread([&] {
         std::lock_guard<std::recursive_mutex> _lk{m_BatchesMutex};
 
@@ -399,8 +374,8 @@ void FileLoader::RunFileBatches()
                 continue;
             }
 
-            std::vector<TabFileEntry>                             entries;
-            std::vector<jc4::ArchiveTable::VfsTabCompressedBlock> blocks;
+            std::vector<ArchiveTable::TabEntry>           entries;
+            std::vector<ArchiveTable::TabCompressedBlock> blocks;
             if (ReadArchiveTable(tab_file, &entries, &blocks)) {
                 // open the arc file
                 std::ifstream stream(arc_file, std::ios::binary);
@@ -416,9 +391,10 @@ void FileLoader::RunFileBatches()
 
                 // iterate over all the files
                 for (const auto& file : batch.second) {
-                    const auto it = std::find_if(entries.begin(), entries.end(), [&](const TabFileEntry& entry) {
-                        return entry.m_NameHash == file.first;
-                    });
+                    const auto it =
+                        std::find_if(entries.begin(), entries.end(), [&](const ArchiveTable::TabEntry& entry) {
+                            return entry.m_NameHash == file.first;
+                        });
 
                     if (it != entries.end()) {
                         const auto& entry = (*it);
@@ -427,9 +403,8 @@ void FileLoader::RunFileBatches()
                         stream.seekg(entry.m_Offset);
 
                         // read the file buffer
-                        FileBuffer buffer;
-                        buffer.resize(entry.m_CompressedSize);
-                        stream.read((char*)buffer.data(), entry.m_CompressedSize);
+                        std::vector<uint8_t> buffer(entry.m_Size);
+                        stream.read((char*)buffer.data(), entry.m_Size);
 
                         // trigger the callbacks
                         for (const auto& callback : file.second) {
@@ -469,8 +444,8 @@ void FileLoader::ReadFileFromDisk(const std::filesystem::path& filename, ReadFil
         }
 
         // read the file
-        const auto size = std::filesystem::file_size(filename);
-        FileBuffer buffer(size);
+        const auto           size = std::filesystem::file_size(filename);
+        std::vector<uint8_t> buffer(size);
         stream.read((char*)buffer.data(), size);
         stream.close();
 
@@ -487,7 +462,7 @@ void FileLoader::ReadFileFromDiskAndRunHandlers(const std::filesystem::path& fil
 
     // do we have a registered callback for this file type?
     if (m_FileReadHandlers.find(extension) != m_FileReadHandlers.end()) {
-        ReadFileFromDisk(filename, [&, filename, extension](bool success, FileBuffer data) {
+        ReadFileFromDisk(filename, [&, filename, extension](bool success, std::vector<uint8_t> data) {
             if (success) {
                 for (const auto& fn : m_FileReadHandlers[extension]) {
                     fn(filename.filename(), std::move(data), true);
@@ -503,7 +478,7 @@ void FileLoader::ReadFileFromDiskAndRunHandlers(const std::filesystem::path& fil
 
                 // TODO: this can be improved.
 
-                auto buffer = std::any_cast<FileBuffer>(data);
+                auto buffer = std::any_cast<std::vector<uint8_t>>(data);
 
                 std::ofstream stream(filename, std::ios::binary);
                 assert(!stream.fail());
@@ -555,34 +530,13 @@ void FileLoader::ReadFileFromDiskAndRunHandlers(const std::filesystem::path& fil
     }
 }
 
-static void DEBUG_TEXTURE_FLAGS(const jc::AvalancheTexture::Header* header)
-{
-    using namespace jc::AvalancheTexture;
-
-    if (header->m_Flags != 0) {
-        // clang-format off
-        std::stringstream ss;
-        ss << "AVTX m_Flags=" << header->m_Flags << " (";
-
-        if (header->m_Flags & STREAMED)       ss << "streamed, ";
-        if (header->m_Flags & PLACEHOLDER)    ss << "placeholder, ";
-        if (header->m_Flags & TILED)          ss << "tiled, ";
-        if (header->m_Flags & SRGB)           ss << "SRGB, ";
-        if (header->m_Flags & CUBE)           ss << "cube, ";
-
-        ss.seekp(-2, ss.cur);
-        ss << ")";
-		SPDLOG_INFO(ss.str());
-
-        // clang-format on
-    }
-}
-
 void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResultCallback callback)
 {
+    using namespace ava::AvalancheTexture;
+
     FileLoader::Get()->ReadFile(
         filename,
-        [this, filename, callback](bool success, FileBuffer data) {
+        [this, filename, callback](bool success, std::vector<uint8_t> data) {
             if (!success) {
                 // ddsc failed. look for the source file instead
                 if (filename.extension() == ".ddsc") {
@@ -591,11 +545,11 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResu
 
                     // we should look for .atx2 first, if that doesn't exist, look for .atx1
 
-                    auto cb = [&, callback](bool success, FileBuffer data) {
+                    auto cb = [&, callback](bool success, std::vector<uint8_t> data) {
                         if (success) {
-                            FileBuffer d;
-                            ReadHMDDSC(&data, &d);
-                            return callback(success, std::move(d));
+                            std::vector<uint8_t> out_buffer;
+                            ParseTextureSource(&data, &out_buffer);
+                            return callback(success, std::move(out_buffer));
                         }
 
                         return callback(success, {});
@@ -609,37 +563,21 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResu
 
                     return;
                 }
-
                 return callback(false, {});
             }
 
-            // generic DDS handler
+            // raw DDS handler
             if (filename.extension() == ".dds") {
                 return callback(true, std::move(data));
             }
 
-            // source file buffer
+            // raw source handler
             if (filename.extension() == ".hmddsc" || filename.extension() == ".atx1"
                 || filename.extension() == ".atx2") {
-                FileBuffer d;
-                ReadHMDDSC(&data, &d);
-                return callback(true, std::move(d));
+                std::vector<uint8_t> source_buffer;
+                ParseTextureSource(&data, &source_buffer);
+                return callback(true, std::move(source_buffer));
             }
-
-            util::byte_array_buffer buf(data.data(), data.size());
-            std::istream            stream(&buf);
-
-            // read the texture data
-            jc::AvalancheTexture::Header texture;
-            stream.read((char*)&texture, sizeof(texture));
-
-            // ensure the header magic is correct
-            if (texture.m_Magic != 0x58545641) {
-                SPDLOG_ERROR("Invalid header magic");
-                return callback(false, {});
-            }
-
-            DEBUG_TEXTURE_FLAGS(&texture);
 
             // figure out which source file to load
             uint8_t source = 0;
@@ -650,12 +588,13 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResu
                 // TODO: .atx2 is very weird.
                 // in the archive they as usually offset 0, size 0 - figure this out before we enable them again.
 
-                bool has_atx2 = false; // FileLoader::Get()->HasFileInDictionary(hashlittle(atx2.string().c_str()));
+                bool has_atx2 =
+                    false; // FileLoader::Get()->HasFileInDictionary(ava::hashlittle(atx2.string().c_str()));
                 if (!has_atx2) {
                     auto atx1 = filename;
                     atx1.replace_extension(".atx1");
 
-                    bool has_atx1 = FileLoader::Get()->HasFileInDictionary(hashlittle(atx1.string().c_str()));
+                    bool has_atx1 = FileLoader::Get()->HasFileInDictionary(ava::hashlittle(atx1.string().c_str()));
                     source        = static_cast<uint8_t>(has_atx1);
                 } else {
                     source = 2;
@@ -663,50 +602,70 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResu
             } else {
                 auto hmddsc = filename;
                 hmddsc.replace_extension(".hmddsc");
-                if (FileLoader::Get()->HasFileInDictionary(hashlittle(hmddsc.string().c_str()))) {
+                if (FileLoader::Get()->HasFileInDictionary(ava::hashlittle(hmddsc.string().c_str()))) {
                     source = 1;
                 }
             }
 
-            // find the best stream to use
-            const auto stream_index = jc::AvalancheTexture::FindBest(&texture, source);
+            byte_array_buffer buf(data);
+            std::istream      stream(&buf);
 
-            // find the rank
-            const auto rank = jc::AvalancheTexture::GetHighestRank(&texture, stream_index);
+            // read header
+            AvtxHeader header{};
+            stream.read((char*)&header, sizeof(AvtxHeader));
+            if (header.m_Magic != AVTX_MAGIC) {
+                SPDLOG_ERROR("Invalid AVTX header magic!");
+                return callback(false, {});
+            }
+
+            if (header.m_Version != 1) {
+                SPDLOG_ERROR("Invalid AVTX version!");
+                return callback(false, {});
+            }
+
+            // find the best stream to use
+            const uint8_t     stream_index = FindBestStream(header, source);
+            const uint32_t    rank         = GetRank(header, stream_index);
+            const AvtxStream& avtx_stream  = header.m_Streams[stream_index];
 
             // generate the DDS header
-            DDS_HEADER header{};
-            header.size        = sizeof(DDS_HEADER);
-            header.flags       = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
-            header.width       = texture.m_Width >> rank;
-            header.height      = texture.m_Height >> rank;
-            header.depth       = texture.m_Depth;
-            header.mipMapCount = 1;
-            header.ddspf       = TextureManager::GetPixelFormat(texture.m_Format);
-            header.caps        = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
+            DDS_HEADER dds_header{};
+            dds_header.size        = sizeof(DDS_HEADER);
+            dds_header.flags       = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
+            dds_header.width       = (header.m_Width >> rank);
+            dds_header.height      = (header.m_Height >> rank);
+            dds_header.depth       = (header.m_Depth >> rank);
+            dds_header.mipMapCount = 1;
+            dds_header.ddspf       = TextureManager::GetPixelFormat((DXGI_FORMAT)header.m_Format);
+            dds_header.caps        = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
 
             //
-            bool dxt10header = (header.ddspf.fourCC == MAKEFOURCC('D', 'X', '1', '0'));
+            bool isDXT10 = (dds_header.ddspf.fourCC == MAKEFOURCC('D', 'X', '1', '0'));
 
-            // resize the output buffer
-            FileBuffer out;
-            out.resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + (dxt10header ? sizeof(DDS_HEADER_DXT10) : 0)
-                       + texture.m_Streams[stream_index].m_Size);
+            // resize the final output buffer
+            std::vector<uint8_t> dds_buffer;
+            dds_buffer.resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + (isDXT10 ? sizeof(DDS_HEADER_DXT10) : 0));
 
-            // write the DDS magic and header
-            std::memcpy(&out.front(), (char*)&DDS_MAGIC, sizeof(DDS_MAGIC));
-            std::memcpy(&out.front() + sizeof(DDS_MAGIC), (char*)&header, sizeof(DDS_HEADER));
+            //
+            byte_vector_writer w_buf(&dds_buffer);
+            w_buf.setp(0);
+
+            // write the DDS header
+            w_buf.write((char*)&DDS_MAGIC, sizeof(uint32_t));
+            w_buf.write((char*)&dds_header, sizeof(DDS_HEADER));
 
             // write the DXT10 header
-            if (dxt10header) {
-                DDS_HEADER_DXT10 dx10header{};
-                dx10header.dxgiFormat        = texture.m_Format;
-                dx10header.resourceDimension = D3D10_RESOURCE_DIMENSION_TEXTURE2D;
-                dx10header.arraySize         = 1;
+            if (isDXT10) {
+                DDS_HEADER_DXT10 dxt10header{};
+                dxt10header.dxgiFormat        = (DXGI_FORMAT)header.m_Format;
+                dxt10header.resourceDimension = D3D10_RESOURCE_DIMENSION_TEXTURE2D;
+                dxt10header.arraySize         = 1;
 
-                std::memcpy(&out.front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER), (char*)&dx10header,
-                            sizeof(DDS_HEADER_DXT10));
+                w_buf.write((char*)&dxt10header, sizeof(DDS_HEADER_DXT10));
             }
+
+            const uint32_t stream_offset = avtx_stream.m_Offset;
+            const uint32_t stream_size   = avtx_stream.m_Size;
 
             // if we need to load the source file, request it
             if (source > 0) {
@@ -719,26 +678,21 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResu
                     source_filename.replace_extension(".hmddsc");
                 }
 
-                SPDLOG_INFO("Loading source: \"{}\".", source_filename.string());
-
-                auto offset = texture.m_Streams[stream_index].m_Offset;
-                auto size   = texture.m_Streams[stream_index].m_Size;
+                SPDLOG_INFO("Loading texture source: \"{}\".", source_filename.string());
 
                 // read file callback
-                auto cb = [&, dxt10header, offset, size, out, callback](bool success, FileBuffer data) mutable {
+                auto cb = [dds_buffer, stream_offset, stream_size, callback](bool                 success,
+                                                                             std::vector<uint8_t> data) mutable {
                     if (success) {
-                        std::memcpy(&out.front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER)
-                                        + (dxt10header ? sizeof(DDS_HEADER_DXT10) : 0),
-                                    data.data() + offset, size);
-
-                        return callback(true, std::move(out));
+                        byte_vector_writer w_buf(&dds_buffer);
+                        w_buf.write((char*)data.data() + stream_offset, stream_size);
+                        return callback(true, std::move(dds_buffer));
                     }
 
                     return callback(false, {});
                 };
 
                 if (FileLoader::UseBatches) {
-                    SPDLOG_INFO("Using batches for \"{}\"", source_filename.string());
                     FileLoader::Get()->ReadFileBatched(source_filename, cb);
                 } else {
                     FileLoader::Get()->ReadFile(source_filename, cb, ReadFileFlags_SkipTextureLoader);
@@ -747,110 +701,102 @@ void FileLoader::ReadTexture(const std::filesystem::path& filename, ReadFileResu
                 return;
             }
 
-            // read the texture data
-            stream.seekg(texture.m_Streams[stream_index].m_Offset);
-            stream.read((char*)&out.front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER)
-                            + (dxt10header ? sizeof(DDS_HEADER_DXT10) : 0),
-                        texture.m_Streams[stream_index].m_Size);
-
-            return callback(true, std::move(out));
+            // write the texture data
+            w_buf.write((char*)data.data() + stream_offset, stream_size);
+            return callback(true, std::move(dds_buffer));
         },
         ReadFileFlags_SkipTextureLoader);
 }
 
-bool FileLoader::ReadAVTX(FileBuffer* data, FileBuffer* outData)
+bool FileLoader::ReadAVTX(const std::vector<uint8_t>& buffer, std::vector<uint8_t>* out_buffer)
 {
-    util::byte_array_buffer buf(data->data(), data->size());
-    std::istream            stream(&buf);
+    using namespace ava::AvalancheTexture;
 
-    // read the texture data
-    jc::AvalancheTexture::Header texture;
-    stream.read((char*)&texture, sizeof(texture));
+    try {
+        TextureEntry         entry{};
+        std::vector<uint8_t> texture_buffer;
+        ava::AvalancheTexture::ReadBestEntry(buffer, &entry, &texture_buffer, {});
 
-    // ensure the header magic is correct
-    if (texture.m_Magic != 0x58545641) {
-        SPDLOG_ERROR("Invalid header magic");
-        return false;
+        // generate the DDS header
+        DDS_HEADER dds_header{};
+        dds_header.size        = sizeof(DDS_HEADER);
+        dds_header.flags       = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
+        dds_header.width       = entry.m_Width;
+        dds_header.height      = entry.m_Height;
+        dds_header.depth       = entry.m_Depth;
+        dds_header.mipMapCount = 1;
+        dds_header.ddspf       = TextureManager::GetPixelFormat((DXGI_FORMAT)entry.m_Format);
+        dds_header.caps        = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
+
+        //
+        bool isDXT10 = (dds_header.ddspf.fourCC == MAKEFOURCC('D', 'X', '1', '0'));
+
+        // resize the final output buffer
+        out_buffer->resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + (isDXT10 ? sizeof(DDS_HEADER_DXT10) : 0)
+                           + texture_buffer.size());
+
+        byte_vector_writer buf(out_buffer);
+        buf.setp(0);
+
+        // write the DDS header
+        buf.write((char*)&DDS_MAGIC, sizeof(uint32_t));
+        buf.write((char*)&dds_header, sizeof(DDS_HEADER));
+
+        // write the DXT10 header
+        if (isDXT10) {
+            DDS_HEADER_DXT10 dxt10header{};
+            dxt10header.dxgiFormat        = (DXGI_FORMAT)entry.m_Format;
+            dxt10header.resourceDimension = D3D10_RESOURCE_DIMENSION_TEXTURE2D;
+            dxt10header.arraySize         = 1;
+
+            buf.write((char*)&dxt10header, sizeof(DDS_HEADER_DXT10));
+        }
+
+        // write the texture data
+        buf.write((char*)texture_buffer.data(), texture_buffer.size());
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR(e.what());
+#ifdef _DEBUG
+        __debugbreak();
+#endif
     }
 
-    DEBUG_TEXTURE_FLAGS(&texture);
-
-    // find the best stream to use
-    const auto stream_index = jc::AvalancheTexture::FindBest(&texture, 0);
-
-    // find the rank
-    const auto rank = jc::AvalancheTexture::GetHighestRank(&texture, stream_index);
-
-    // generate the DDS header
-    DDS_HEADER header{};
-    header.size        = sizeof(DDS_HEADER);
-    header.flags       = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
-    header.width       = texture.m_Width >> rank;
-    header.height      = texture.m_Height >> rank;
-    header.depth       = texture.m_Depth;
-    header.mipMapCount = texture.m_Mips;
-    header.ddspf       = TextureManager::GetPixelFormat(texture.m_Format);
-    header.caps        = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
-
-    //
-    bool dxt10header = (header.ddspf.fourCC == MAKEFOURCC('D', 'X', '1', '0'));
-
-    // resize the output buffer
-    outData->resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + (dxt10header ? sizeof(DDS_HEADER_DXT10) : 0)
-                    + texture.m_Streams[stream_index].m_Size);
-
-    // write the DDS magic and header
-    std::memcpy(&outData->front(), (char*)&DDS_MAGIC, sizeof(DDS_MAGIC));
-    std::memcpy(&outData->front() + sizeof(DDS_MAGIC), (char*)&header, sizeof(DDS_HEADER));
-
-    // write the DXT10 header
-    if (dxt10header) {
-        DDS_HEADER_DXT10 dx10header{};
-        dx10header.dxgiFormat        = texture.m_Format;
-        dx10header.resourceDimension = D3D10_RESOURCE_DIMENSION_TEXTURE2D;
-        dx10header.arraySize         = 1;
-
-        std::memcpy(&outData->front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER), (char*)&dx10header,
-                    sizeof(DDS_HEADER_DXT10));
-    }
-
-    // read the texture data
-    stream.seekg(texture.m_Streams[stream_index].m_Offset);
-    stream.read((char*)&outData->front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER)
-                    + (dxt10header ? sizeof(DDS_HEADER_DXT10) : 0),
-                texture.m_Streams[stream_index].m_Size);
-
-    return true;
+    return false;
 }
 
-void FileLoader::ReadHMDDSC(FileBuffer* data, FileBuffer* outData)
+void FileLoader::ParseTextureSource(std::vector<uint8_t>* buffer, std::vector<uint8_t>* out_buffer)
 {
-    assert(data && data->size() > 0);
+    assert(buffer && buffer->size() > 0);
 
-    DDS_HEADER header{};
-    header.size        = sizeof(DDS_HEADER);
-    header.flags       = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
-    header.width       = 512;
-    header.height      = 512;
-    header.depth       = 1;
-    header.mipMapCount = 1;
-    header.ddspf       = TextureManager::GetPixelFormat(DXGI_FORMAT_BC1_UNORM);
-    header.caps        = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
+    DDS_HEADER dds_header{};
+    dds_header.size        = sizeof(DDS_HEADER);
+    dds_header.flags       = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
+    dds_header.width       = 512;
+    dds_header.height      = 512;
+    dds_header.depth       = 1;
+    dds_header.mipMapCount = 1;
+    dds_header.ddspf       = TextureManager::GetPixelFormat(DXGI_FORMAT_BC1_UNORM);
+    dds_header.caps        = (DDSCAPS_COMPLEX | DDSCAPS_TEXTURE);
 
-    outData->resize(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + data->size());
+    out_buffer->resize(sizeof(uint32_t) + sizeof(DDS_HEADER) + buffer->size());
 
-    std::memcpy(&outData->front(), (char*)&DDS_MAGIC, sizeof(DDS_MAGIC));
-    std::memcpy(&outData->front() + sizeof(DDS_MAGIC), (char*)&header, sizeof(DDS_HEADER));
-    std::memcpy(&outData->front() + sizeof(DDS_MAGIC) + sizeof(DDS_HEADER), data->data(), data->size());
+    byte_vector_writer buf(out_buffer);
+    buf.setp(0);
+
+    buf.write((char*)&DDS_MAGIC, sizeof(uint32_t));
+    buf.write((char*)&dds_header, sizeof(DDS_HEADER));
+    buf.write((char*)buffer->data(), buffer->size());
 }
 
-bool FileLoader::WriteAVTX(Texture* texture, FileBuffer* outData)
+bool FileLoader::WriteAVTX(Texture* texture, std::vector<uint8_t>* out_buffer)
 {
     if (!texture || !texture->IsLoaded()) {
         return false;
     }
 
-    jc::AvalancheTexture::Header header;
+    using namespace ava::AvalancheTexture;
+
+    AvtxHeader header;
 
     auto tex_buffer = texture->GetBuffer();
     auto tex_desc   = texture->GetDesc();
@@ -871,29 +817,32 @@ bool FileLoader::WriteAVTX(Texture* texture, FileBuffer* outData)
     header.m_Streams[0].m_Offset    = sizeof(header);
     header.m_Streams[0].m_Size      = (tex_buffer->size() - dds_header_size);
     header.m_Streams[0].m_Alignment = 16;
-    header.m_Streams[0].m_IsTile    = false;
-    header.m_Streams[0].m_Source    = 0;
+    header.m_Streams[0].m_TileMode  = false;
+    header.m_Streams[0].m_Source    = false;
 
-    outData->resize(sizeof(header) + header.m_Streams[0].m_Size);
-    std::memcpy(&outData->front(), (char*)&header, sizeof(header));
-    std::memcpy(&outData->front() + sizeof(header), (char*)tex_buffer->data() + dds_header_size,
-                header.m_Streams[0].m_Size);
+    out_buffer->resize(sizeof(AvtxHeader) + header.m_Streams[0].m_Size);
+    byte_vector_writer buf(out_buffer);
+    buf.setp(0);
 
+    buf.write((char*)&header, sizeof(AvtxHeader));
+    buf.write((char*)tex_buffer->data() + dds_header_size, header.m_Streams[0].m_Size);
     return true;
 }
 
 std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::filesystem::path& filename,
-                                                                    const FileBuffer&            buffer)
+                                                                    const std::vector<uint8_t>&  buffer)
 {
     util::byte_array_buffer buf(buffer.data(), buffer.size());
     std::istream            stream(&buf);
 
+    using namespace ava::RuntimePropertyContainer;
+
     // read the runtimer container header
-    jc::RuntimeContainer::Header header;
+    RtpcHeader header{};
     stream.read((char*)&header, sizeof(header));
 
     // ensure the header magic is correct
-    if (strncmp(header.m_Magic, "RTPC", 4) != 0) {
+    if (header.m_Magic != RTPC_MAGIC) {
         SPDLOG_ERROR("Invalid header magic");
         return nullptr;
     }
@@ -901,14 +850,14 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
     SPDLOG_INFO("RTPC v{}", header.m_Version);
 
     // read the root node
-    jc::RuntimeContainer::Node rootNode;
-    stream.read((char*)&rootNode, sizeof(rootNode));
+    RtpcContainer rootNode;
+    stream.read((char*)&rootNode, sizeof(RtpcContainer));
 
     // create the root container
-    auto root_container = RuntimeContainer::make(rootNode.m_NameHash, filename);
+    auto root_container = RuntimeContainer::make(rootNode.m_Key, filename);
 
-    std::queue<std::tuple<RuntimeContainer*, jc::RuntimeContainer::Node>>             instanceQueue;
-    std::queue<std::tuple<RuntimeContainerProperty*, jc::RuntimeContainer::Property>> propertyQueue;
+    std::queue<std::tuple<RuntimeContainer*, RtpcContainer>>                instanceQueue;
+    std::queue<std::tuple<RuntimeContainerProperty*, RtpcContainerVariant>> propertyQueue;
 
     instanceQueue.push({root_container.get(), rootNode});
 
@@ -918,32 +867,32 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
         stream.seekg(item.m_DataOffset);
 
         // read all the node properties
-        for (uint16_t i = 0; i < item.m_PropertyCount; ++i) {
-            jc::RuntimeContainer::Property prop;
-            stream.read((char*)&prop, sizeof(prop));
+        for (uint16_t i = 0; i < item.m_NumVariants; ++i) {
+            RtpcContainerVariant variant{};
+            stream.read((char*)&variant, sizeof(RtpcContainerVariant));
 
             if (current_container) {
-                auto container_property = new RuntimeContainerProperty{prop.m_NameHash, prop.m_Type};
+                auto container_property = new RuntimeContainerProperty{variant.m_Key, variant.m_Type};
                 current_container->AddProperty(container_property);
 
-                propertyQueue.push({container_property, prop});
+                propertyQueue.push({container_property, variant});
             }
         }
 
         // seek to our current pos with 4-byte alignment
-        stream.seekg(jc::ALIGN_TO_BOUNDARY(stream.tellg()));
+        stream.seekg(ava::math::align(stream.tellg()));
 
         // read all the node instances
-        for (uint16_t i = 0; i < item.m_InstanceCount; ++i) {
-            jc::RuntimeContainer::Node node;
-            stream.read((char*)&node, sizeof(node));
+        for (uint16_t i = 0; i < item.m_NumContainers; ++i) {
+            RtpcContainer container;
+            stream.read((char*)&container, sizeof(RtpcContainer));
 
-            auto next_container = new RuntimeContainer{node.m_NameHash};
+            auto next_container = new RuntimeContainer{container.m_Key};
             if (current_container) {
                 current_container->AddContainer(next_container);
             }
 
-            instanceQueue.push({next_container, node});
+            instanceQueue.push({next_container, container});
         }
 
         instanceQueue.pop();
@@ -959,19 +908,19 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
         const auto type = current_property->GetType();
         switch (type) {
             // integer
-            case RTPC_TYPE_INTEGER: {
+            case T_VARIANT_INTEGER: {
                 current_property->SetValue(*(int32_t*)&prop.m_DataOffset);
                 break;
             }
 
             // float
-            case RTPC_TYPE_FLOAT: {
+            case T_VARIANT_FLOAT: {
                 current_property->SetValue(*(float*)&prop.m_DataOffset);
                 break;
             }
 
             // string
-            case RTPC_TYPE_STRING: {
+            case T_VARIANT_STRING: {
                 stream.seekg(prop.m_DataOffset);
 
                 std::string buffer;
@@ -982,25 +931,25 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
             }
 
             // vec2, vec3, vec4, mat4x4
-            case RTPC_TYPE_VEC2:
-            case RTPC_TYPE_VEC3:
-            case RTPC_TYPE_VEC4:
-            case RTPC_TYPE_MAT4X4: {
+            case T_VARIANT_VEC2:
+            case T_VARIANT_VEC3:
+            case T_VARIANT_VEC4:
+            case T_VARIANT_MAT4x4: {
                 stream.seekg(prop.m_DataOffset);
 
-                if (type == RTPC_TYPE_VEC2) {
+                if (type == T_VARIANT_VEC2) {
                     glm::vec2 result;
                     stream.read((char*)&result, sizeof(result));
                     current_property->SetValue(result);
-                } else if (type == RTPC_TYPE_VEC3) {
+                } else if (type == T_VARIANT_VEC3) {
                     glm::vec3 result;
                     stream.read((char*)&result, sizeof(result));
                     current_property->SetValue(result);
-                } else if (type == RTPC_TYPE_VEC4) {
+                } else if (type == T_VARIANT_VEC4) {
                     glm::vec4 result;
                     stream.read((char*)&result, sizeof(result));
                     current_property->SetValue(result);
-                } else if (type == RTPC_TYPE_MAT4X4) {
+                } else if (type == T_VARIANT_MAT4x4) {
                     glm::mat4x4 result;
                     stream.read((char*)&result, sizeof(result));
                     current_property->SetValue(result);
@@ -1010,27 +959,27 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
             }
 
             // lists
-            case RTPC_TYPE_LIST_INTEGERS:
-            case RTPC_TYPE_LIST_FLOATS:
-            case RTPC_TYPE_LIST_BYTES: {
+            case T_VARIANT_VEC_INTS:
+            case T_VARIANT_VEC_FLOATS:
+            case T_VARIANT_VEC_BYTES: {
                 stream.seekg(prop.m_DataOffset);
 
                 int32_t count;
                 stream.read((char*)&count, sizeof(count));
 
-                if (type == RTPC_TYPE_LIST_INTEGERS) {
+                if (type == T_VARIANT_VEC_INTS) {
                     std::vector<int32_t> result;
                     result.resize(count);
                     stream.read((char*)result.data(), (count * sizeof(int32_t)));
 
                     current_property->SetValue(result);
-                } else if (type == RTPC_TYPE_LIST_FLOATS) {
+                } else if (type == T_VARIANT_VEC_FLOATS) {
                     std::vector<float> result;
                     result.resize(count);
                     stream.read((char*)result.data(), (count * sizeof(float)));
 
                     current_property->SetValue(result);
-                } else if (type == RTPC_TYPE_LIST_BYTES) {
+                } else if (type == T_VARIANT_VEC_BYTES) {
                     std::vector<uint8_t> result;
                     result.resize(count);
                     stream.read((char*)result.data(), count);
@@ -1042,7 +991,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
             }
 
             // objectid
-            case RTPC_TYPE_OBJECT_ID: {
+            case T_VARIANT_OBJECTID: {
                 stream.seekg(prop.m_DataOffset);
 
                 uint32_t key, value;
@@ -1054,7 +1003,7 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
             }
 
             // events
-            case RTPC_TYPE_EVENTS: {
+            case T_VARIANT_VEC_EVENTS: {
                 stream.seekg(prop.m_DataOffset);
 
                 int32_t count;
@@ -1089,8 +1038,8 @@ std::shared_ptr<RuntimeContainer> FileLoader::ParseRuntimeContainer(const std::f
     return root_container;
 }
 
-std::tuple<AvalancheArchive*, ArchiveEntry_t> FileLoader::GetStreamArchiveFromFile(const std::filesystem::path& file,
-                                                                                   AvalancheArchive*            archive)
+std::tuple<AvalancheArchive*, ava::StreamArchive::ArchiveEntry>
+FileLoader::GetStreamArchiveFromFile(const std::filesystem::path& file, AvalancheArchive* archive)
 {
     if (archive) {
         for (const auto& entry : archive->GetEntries()) {
@@ -1109,86 +1058,71 @@ std::tuple<AvalancheArchive*, ArchiveEntry_t> FileLoader::GetStreamArchiveFromFi
         }
     }
 
-    return {nullptr, ArchiveEntry_t{}};
+    return {nullptr, ava::StreamArchive::ArchiveEntry{}};
 }
 
-bool FileLoader::ReadArchiveTable(const std::filesystem::path& filename, std::vector<TabFileEntry>* output,
-                                  std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks)
+bool FileLoader::ReadArchiveTable(const std::filesystem::path&                        filename,
+                                  std::vector<ava::ArchiveTable::TabEntry>*           output,
+                                  std::vector<ava::ArchiveTable::TabCompressedBlock>* output_blocks)
 {
-    std::ifstream stream(filename, std::ios::ate | std::ios::binary);
+    std::ifstream stream(filename, std::ios::binary);
     if (stream.fail()) {
         SPDLOG_ERROR("Failed to open file stream!");
         return false;
     }
 
-    if (g_IsJC4Mode) {
-        const auto length = stream.tellg();
-        stream.seekg(std::ios::beg);
+    const size_t         size = std::filesystem::file_size(filename);
+    std::vector<uint8_t> buffer(size);
+    stream.read((char*)buffer.data(), size);
+    stream.close();
 
-        jc4::ArchiveTable::TabFileHeader header;
-        stream.read((char*)&header, sizeof(header));
+    using namespace ava;
+    try {
+        if (g_IsJC4Mode) {
+            ArchiveTable::Parse(buffer, output, output_blocks);
+        } else {
+            std::vector<legacy::ArchiveTable::TabEntry> entries;
+            legacy::ArchiveTable::Parse(buffer, &entries);
 
-        if (header.m_Magic != 0x424154) {
-            SPDLOG_ERROR("Invalid header magic");
-            return false;
-        }
-
-        // read compressed blocked
-        uint32_t _count = 0;
-        stream.read((char*)&_count, sizeof(_count));
-        output_blocks->resize(_count);
-        stream.read((char*)output_blocks->data(), (sizeof(jc4::ArchiveTable::VfsTabCompressedBlock) * _count));
-
-        while (static_cast<int32_t>(stream.tellg()) + 20 <= length) {
-            jc4::ArchiveTable::VfsTabEntry entry;
-            stream.read((char*)&entry, sizeof(entry));
-
-            output->emplace_back(std::move(entry));
-        }
-    } else {
-        stream.seekg(std::ios::beg);
-
-        jc3::ArchiveTable::TabFileHeader header;
-        stream.read((char*)&header, sizeof(header));
-
-        if (header.m_Magic != 0x424154) {
-            SPDLOG_ERROR("Invalid header magic");
-            return false;
-        }
-
-        while (!stream.eof()) {
-            jc3::ArchiveTable::VfsTabEntry entry;
-            stream.read((char*)&entry, sizeof(entry));
-
-            // prevent the entry being added 2 times when we get to the null character at the end
-            // failbit will be set because the stream can only read 1 more byte
-            if (stream.fail()) {
-                break;
+            // legacy TabEntry convert
+            output->reserve(entries.size());
+            for (const auto& entry : entries) {
+                ava::ArchiveTable::TabEntry _entry{};
+                _entry.m_NameHash         = entry.m_NameHash;
+                _entry.m_Offset           = entry.m_Offset;
+                _entry.m_Size             = entry.m_Size;
+                _entry.m_UncompressedSize = entry.m_Size;
+                output->push_back(std::move(_entry));
             }
-
-            output->emplace_back(std::move(entry));
         }
+
+        return true;
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR(e.what());
+#ifdef _DEBUG
+        __debugbreak();
+#endif
     }
 
-    stream.close();
-    return true;
+    return false;
 }
 
 bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, const std::filesystem::path& filename,
-                                       TabFileEntry*                                          output,
-                                       std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks)
+                                       ava::ArchiveTable::TabEntry*                        output,
+                                       std::vector<ava::ArchiveTable::TabCompressedBlock>* output_blocks)
 {
-    auto namehash = hashlittle(filename.generic_string().c_str());
+    auto namehash = ava::hashlittle(filename.generic_string().c_str());
     return ReadArchiveTableEntry(table, namehash, output, output_blocks);
 }
 
-bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, uint32_t name_hash, TabFileEntry* output,
-                                       std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks)
+bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, uint32_t name_hash,
+                                       ava::ArchiveTable::TabEntry*                        output,
+                                       std::vector<ava::ArchiveTable::TabCompressedBlock>* output_blocks)
 {
-    std::vector<TabFileEntry> entries;
+    std::vector<ava::ArchiveTable::TabEntry> entries;
     if (ReadArchiveTable(table, &entries, output_blocks)) {
         auto it = std::find_if(entries.begin(), entries.end(),
-                               [&](const TabFileEntry& entry) { return entry.m_NameHash == name_hash; });
+                               [&](const ava::ArchiveTable::TabEntry& entry) { return entry.m_NameHash == name_hash; });
 
         if (it != entries.end()) {
             *output = (*it);
@@ -1200,7 +1134,7 @@ bool FileLoader::ReadArchiveTableEntry(const std::filesystem::path& table, uint3
 }
 
 bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash,
-                                     FileBuffer* output)
+                                     std::vector<uint8_t>* out_buffer)
 {
     std::filesystem::path jc_directory = Window::Get()->GetJustCauseDirectory();
     const auto            tab_file     = jc_directory / directory / (archive + ".tab");
@@ -1218,12 +1152,14 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
         return false;
     }
 
-    TabFileEntry                                          entry;
-    std::vector<jc4::ArchiveTable::VfsTabCompressedBlock> blocks;
-    if (ReadArchiveTableEntry(tab_file, namehash, &entry, &blocks)) {
-        SPDLOG_INFO("NameHash={}, Offset={}, CompressedSize={}, UncompressedSize={}, CompressionType={}, "
+    using namespace ava;
+
+    ArchiveTable::TabEntry                        entry{};
+    std::vector<ArchiveTable::TabCompressedBlock> compression_blocks;
+    if (ReadArchiveTableEntry(tab_file, namehash, &entry, &compression_blocks)) {
+        SPDLOG_INFO("NameHash={}, Offset={}, Size={}, UncompressedSize={}, Library={}, "
                     "CompressedBlockIndex={}",
-                    namehash, entry.m_Offset, entry.m_CompressedSize, entry.m_UncompressedSize, entry.m_CompressionType,
+                    namehash, entry.m_Offset, entry.m_Size, entry.m_UncompressedSize, entry.m_Library,
                     entry.m_CompressedBlockIndex);
 
         // read the arc file
@@ -1236,91 +1172,25 @@ bool FileLoader::ReadFileFromArchive(const std::string& directory, const std::st
         g_ArchiveLoadCount++;
         SPDLOG_INFO("Current archive load count: {}", g_ArchiveLoadCount);
 
-        //
         stream.seekg(entry.m_Offset);
 
-        // file is compressed
-        if (entry.m_CompressedSize != entry.m_UncompressedSize
-            && entry.m_CompressionType != jc4::ArchiveTable::CompressionType_None) {
-            SPDLOG_WARN("File is compressed with {}.",
-                        (static_cast<jc4::ArchiveTable::CompressionType>(entry.m_CompressionType)
-                                 == jc4::ArchiveTable::CompressionType_Zlib
-                             ? "zlib"
-                             : "oodle"));
+        // file is compressed!
+        if (entry.m_Size != entry.m_UncompressedSize && entry.m_Library != ArchiveTable::E_COMPRESS_LIBRARY_NONE) {
+            // read the compressed buffer
+            std::vector<uint8_t> compressed_buffer(ArchiveTable::GetEntryRequiredBufferSize(entry, compression_blocks));
+            stream.read((char*)compressed_buffer.data(), compressed_buffer.size());
 
-            assert(entry.m_CompressionType == jc4::ArchiveTable::CompressionType_Oodle);
+            assert(entry.m_Size != entry.m_UncompressedSize);
 
-            // doesn't have compression blocks
-            if (entry.m_CompressedBlockIndex == 0) {
-                FileBuffer data;
-                data.resize(entry.m_CompressedSize);
-
-                // read the file from the archive
-                stream.read((char*)data.data(), data.size());
-
-                // uncompress the data
-                FileBuffer uncompressed_buffer;
-                uncompressed_buffer.resize(entry.m_UncompressedSize);
-                const auto size = oo2::OodleLZ_Decompress(&data, &uncompressed_buffer);
-
-                SPDLOG_INFO("OodleLZ_Decompress={}", size);
-
-                if (size != entry.m_UncompressedSize) {
-                    SPDLOG_ERROR("Failed to decompress the file.");
-                    return false;
-                }
-
-                *output = std::move(uncompressed_buffer);
-                return true;
-            } else {
-                FileBuffer data;
-                data.resize(entry.m_UncompressedSize);
-
-                auto     block_index        = entry.m_CompressedBlockIndex;
-                auto     total_compressed   = entry.m_CompressedSize;
-                uint32_t total_uncompressed = 0;
-                while (total_compressed > 0) {
-                    const auto& block = blocks[block_index];
-
-                    // read the compressed block
-                    FileBuffer compressedBlock;
-                    compressedBlock.resize(block.m_CompressedSize);
-                    stream.read((char*)compressedBlock.data(), block.m_CompressedSize);
-
-                    const auto size =
-                        oo2::OodleLZ_Decompress(compressedBlock.data(), block.m_CompressedSize,
-                                                data.data() + total_uncompressed, block.m_UncompressedSize);
-                    if (size != block.m_UncompressedSize) {
-                        SPDLOG_ERROR("Failed to decompress the block.");
-                        return false;
-                    }
-
-                    //
-                    total_compressed -= block.m_CompressedSize;
-                    total_uncompressed += block.m_UncompressedSize;
-                    block_index++;
-                }
-
-                SPDLOG_INFO("OodleLZ_Decompress={}", total_uncompressed);
-
-                *output = std::move(data);
-                return output->size() > 0;
-            }
-        } else {
-            if (entry.m_CompressedSize == 0) {
-                SPDLOG_ERROR("Archive entry doesn't contain a buffer size. Can't read from stream.");
-                return false;
-            }
-
-            FileBuffer data;
-            data.resize(entry.m_CompressedSize);
-
-            // read the file from the archive
-            stream.read((char*)data.data(), data.size());
-
-            *output = std::move(data);
-            return output->size() > 0;
+            // decompress the buffer
+            out_buffer->resize(entry.m_UncompressedSize);
+            ArchiveTable::DecompressEntryBuffer(compressed_buffer, entry, out_buffer, compression_blocks);
+            return !out_buffer->empty();
         }
+
+        out_buffer->resize(entry.m_Size);
+        stream.read((char*)out_buffer->data(), entry.m_Size);
+        return !out_buffer->empty();
     }
 
     return false;
@@ -1333,8 +1203,7 @@ bool FileLoader::HasFileInDictionary(uint32_t name_hash)
 
 DictionaryLookupResult FileLoader::LocateFileInDictionary(const std::filesystem::path& filename)
 {
-    auto name_hash = hashlittle(filename.generic_string().c_str());
-    return LocateFileInDictionary(name_hash);
+    return LocateFileInDictionary(ava::hashlittle(filename.generic_string().c_str()));
 }
 
 DictionaryLookupResult FileLoader::LocateFileInDictionary(uint32_t name_hash)

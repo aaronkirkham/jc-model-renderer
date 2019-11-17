@@ -9,7 +9,7 @@ An application to preview Just Cause's (3 and 4) Model files without the need fo
 ### Installation
 Download a version from [releases](https://github.com/aaronkirkham/jc-model-renderer/releases) __or__ build it yourself:
  - Clone this repository
- - Run `git submodule update --init`
+ - Run `git submodule update --init --recursive`
  - Run `configure.ps1` with PowerShell
  - Build `out/jc-model-renderer.sln` in Visual Studio
 

@@ -1,13 +1,13 @@
 #pragma once
 
+#include "singleton.h"
+
 #include <functional>
+#include <mutex>
 
-#include "directory_list.h"
-#include "formats/avalanche_data_format.h"
-#include "types.h"
-
-using ReadFileResultCallback = std::function<void(bool success, FileBuffer data)>;
-using FileReadHandler = std::function<void(const std::filesystem::path& filename, FileBuffer data, bool external)>;
+using ReadFileResultCallback = std::function<void(bool success, std::vector<uint8_t> data)>;
+using FileReadHandler =
+    std::function<void(const std::filesystem::path& filename, std::vector<uint8_t> data, bool external)>;
 using FileSaveHandler = std::function<bool(const std::filesystem::path& filename, const std::filesystem::path& path)>;
 using DictionaryLookupResult = std::tuple<std::string, std::string, uint32_t>;
 
@@ -16,45 +16,27 @@ enum ReadFileFlags : uint8_t {
     ReadFileFlags_SkipTextureLoader = (1 << 0),
 };
 
-struct TabFileEntry {
-    uint8_t  m_Version              = 0;
-    uint32_t m_NameHash             = 0;
-    uint32_t m_Offset               = 0;
-    uint32_t m_CompressedSize       = 0;
-    uint32_t m_UncompressedSize     = 0;
-    uint8_t  m_CompressionType      = 0;
-    uint16_t m_CompressedBlockIndex = 0;
+namespace ava
+{
+namespace StreamArchive
+{
+    struct ArchiveEntry;
+}
+namespace ArchiveTable
+{
+    struct TabEntry;
+    struct TabCompressedBlock;
+} // namespace ArchiveTable
+}; // namespace ava
 
-    TabFileEntry() {}
-
-    TabFileEntry(const jc4::ArchiveTable::VfsTabEntry& entry)
-    {
-        m_Version              = 2;
-        m_NameHash             = entry.m_NameHash;
-        m_Offset               = entry.m_Offset;
-        m_CompressedSize       = entry.m_CompressedSize;
-        m_UncompressedSize     = entry.m_UncompressedSize;
-        m_CompressionType      = entry.m_CompressionType;
-        m_CompressedBlockIndex = entry.m_CompressedBlockIndex;
-    }
-
-    TabFileEntry(const jc3::ArchiveTable::VfsTabEntry& entry)
-    {
-        m_Version          = 1;
-        m_NameHash         = entry.m_NameHash;
-        m_Offset           = entry.m_Offset;
-        m_CompressedSize   = entry.m_Size;
-        m_UncompressedSize = entry.m_Size;
-    }
-};
-
+class AvalancheArchive;
+class DirectoryList;
 class RuntimeContainer;
-struct ArchiveEntry_t;
+class Texture;
 class FileLoader : public Singleton<FileLoader>
 {
   private:
-    std::unique_ptr<DirectoryList> m_FileList      = nullptr;
-    HMODULE                        oo2core_7_win64 = nullptr;
+    std::unique_ptr<DirectoryList> m_FileList = nullptr;
 
     // file list dictionary
     std::unordered_map<uint32_t, std::pair<std::filesystem::path, std::vector<std::string>>> m_Dictionary;
@@ -87,29 +69,30 @@ class FileLoader : public Singleton<FileLoader>
     void ReadFileFromDiskAndRunHandlers(const std::filesystem::path& filename);
 
     // archives
-    bool ReadArchiveTable(const std::filesystem::path& filename, std::vector<TabFileEntry>* output,
-                          std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks);
+    bool ReadArchiveTable(const std::filesystem::path& filename, std::vector<ava::ArchiveTable::TabEntry>* output,
+                          std::vector<ava::ArchiveTable::TabCompressedBlock>* output_blocks);
     bool ReadArchiveTableEntry(const std::filesystem::path& table, const std::filesystem::path& filename,
-                               TabFileEntry*                                          output,
-                               std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks);
-    bool ReadArchiveTableEntry(const std::filesystem::path& table, uint32_t name_hash, TabFileEntry* output,
-                               std::vector<jc4::ArchiveTable::VfsTabCompressedBlock>* output_blocks);
+                               ava::ArchiveTable::TabEntry*                        output,
+                               std::vector<ava::ArchiveTable::TabCompressedBlock>* output_blocks);
+    bool ReadArchiveTableEntry(const std::filesystem::path& table, uint32_t name_hash,
+                               ava::ArchiveTable::TabEntry*                        output,
+                               std::vector<ava::ArchiveTable::TabCompressedBlock>* output_blocks);
     bool ReadFileFromArchive(const std::string& directory, const std::string& archive, uint32_t namehash,
-                             FileBuffer* output);
+                             std::vector<uint8_t>* out_buffer);
 
     // stream archive
-    std::tuple<AvalancheArchive*, ArchiveEntry_t> GetStreamArchiveFromFile(const std::filesystem::path& file,
-                                                                           AvalancheArchive* archive = nullptr);
+    std::tuple<AvalancheArchive*, ava::StreamArchive::ArchiveEntry>
+    GetStreamArchiveFromFile(const std::filesystem::path& file, AvalancheArchive* archive = nullptr);
 
     // textures
     void ReadTexture(const std::filesystem::path& filename, ReadFileResultCallback callback);
-    bool ReadAVTX(FileBuffer* data, FileBuffer* outData);
-    void ReadHMDDSC(FileBuffer* data, FileBuffer* outData);
-    bool WriteAVTX(Texture* texture, FileBuffer* outData);
+    bool ReadAVTX(const std::vector<uint8_t>& buffer, std::vector<uint8_t>* out_buffer);
+    void ParseTextureSource(std::vector<uint8_t>* buffer, std::vector<uint8_t>* out_buffer);
+    bool WriteAVTX(Texture* texture, std::vector<uint8_t>* out_buffer);
 
     // runtime containers
     std::shared_ptr<RuntimeContainer> ParseRuntimeContainer(const std::filesystem::path& filename,
-                                                            const FileBuffer&            buffer);
+                                                            const std::vector<uint8_t>&  buffer);
 
     // dictionary lookup
     inline bool            HasFileInDictionary(uint32_t name_hash);

@@ -28,20 +28,14 @@ class RenderBlockBuildingJC3 : public IRenderBlock
 
   public:
     RenderBlockBuildingJC3() = default;
-    virtual ~RenderBlockBuildingJC3()
-    {
-        Renderer::Get()->DestroyBuffer(m_VertexBufferData);
-    }
+    virtual ~RenderBlockBuildingJC3();
 
     virtual const char* GetTypeName() override final
     {
         return "RenderBlockBuildingJC3";
     }
 
-    virtual uint32_t GetTypeHash() const override final
-    {
-        return RenderBlockFactory::RB_BUILDINGJC3;
-    }
+    virtual uint32_t GetTypeHash() const override final;
 
     virtual bool IsOpaque() override final
     {
@@ -121,22 +115,8 @@ class RenderBlockBuildingJC3 : public IRenderBlock
         //
     }
 
-    virtual void Setup(RenderContext_t* context) override final
-    {
-        if (!m_Visible)
-            return;
-
-        IRenderBlock::Setup(context);
-
-        // set the constant buffers
-        // context->m_Renderer->SetVertexShaderConstants(m_ConstantBuffer, 2, m_Constants);
-        // context->m_Renderer->SetPixelShaderConstants(m_ConstantBuffer, 2, m_Constants);
-
-        // context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & 1)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
-
-        // set the 2nd vertex buffers
-        context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
-    }
+    virtual void Setup(RenderContext_t* context) override final;
+	// Draw
 
     virtual void DrawContextMenu() override final {}
     virtual void DrawUI() override final {}

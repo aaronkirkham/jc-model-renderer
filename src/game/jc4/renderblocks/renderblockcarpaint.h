@@ -9,28 +9,21 @@ class RenderBlockCarPaint : public IRenderBlock
   private:
   public:
     RenderBlockCarPaint() = default;
-    virtual ~RenderBlockCarPaint()
-    {
-        //
-    }
+    virtual ~RenderBlockCarPaint();
 
     virtual const char* GetTypeName() override final
     {
         return "RenderBlockCarPaint";
     }
 
-    virtual uint32_t GetTypeHash() const override final
-    {
-        // return RenderBlockFactory::RB_CARPAINT;
-        return 0xCD931E75;
-    }
+    virtual uint32_t GetTypeHash() const override final;
 
     virtual bool IsOpaque() override final
     {
         return true;
     }
 
-    virtual void Load(SAdfDeferredPtr* constants) override final
+    virtual void Load(ava::AvalancheDataFormat::SAdfDeferredPtr* constants) override final
     {
         //
     }

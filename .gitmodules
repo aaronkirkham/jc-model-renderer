@@ -25,3 +25,6 @@
 [submodule "vendor/tinyxml2"]
 	path = vendor/tinyxml2
 	url = https://github.com/leethomason/tinyxml2.git
+[submodule "vendor/ava-format-lib"]
+	path = vendor/ava-format-lib
+	url = git@github.com:aaronkirkham/ava-format-lib.git

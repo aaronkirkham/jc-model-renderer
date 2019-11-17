@@ -1,22 +1,24 @@
-#include <fstream>
+#include <AvaFormatLib.h>
+#include <spdlog/spdlog.h>
 
-#include "dds_texture_loader.h"
-#include "renderer.h"
 #include "texture.h"
+#include "window.h"
 
-#include "../window.h"
+#include "graphics/dds_texture_loader.h"
+#include "graphics/renderer.h"
 
-#include "../game/hashlittle.h"
+#include <d3d11.h>
+#include <fstream>
 
 Texture::Texture(const std::filesystem::path& filename)
     : m_Filename(filename)
-    , m_NameHash(hashlittle(m_Filename.generic_string().c_str()))
+    , m_NameHash(ava::hashlittle(m_Filename.generic_string().c_str()))
 {
 }
 
-Texture::Texture(const std::filesystem::path& filename, FileBuffer* buffer)
+Texture::Texture(const std::filesystem::path& filename, std::vector<uint8_t>* buffer)
     : m_Filename(filename)
-    , m_NameHash(hashlittle(m_Filename.generic_string().c_str()))
+    , m_NameHash(ava::hashlittle(m_Filename.generic_string().c_str()))
 {
     LoadFromBuffer(buffer);
 }
@@ -27,7 +29,7 @@ Texture::~Texture()
     SAFE_RELEASE(m_Texture);
 }
 
-bool Texture::LoadFromBuffer(FileBuffer* buffer)
+bool Texture::LoadFromBuffer(std::vector<uint8_t>* buffer)
 {
     if (buffer->empty()) {
         return false;
@@ -80,14 +82,13 @@ bool Texture::LoadFromFile(const std::filesystem::path& filename)
     std::ifstream stream(filename, std::ios::binary);
     if (stream.fail()) {
         SPDLOG_ERROR("Failed to create texture from file \"{}\"", filename.filename().string());
-        Window::Get()->ShowMessageBox("Failed to open texture \"" + filename.generic_string() + "\".");
+        // Window::Get()->ShowMessageBox("Failed to open texture \"" + filename.generic_string() + "\".");
         return false;
     }
 
     const auto size = std::filesystem::file_size(filename);
 
-    FileBuffer buffer;
-    buffer.resize(size);
+    std::vector<uint8_t> buffer(size);
     stream.read((char*)buffer.data(), size);
 
     SPDLOG_INFO("Read {} bytes from \"{}\"", size, filename.filename().string());
@@ -135,7 +136,7 @@ const uint32_t Texture::GetHash() const
     return m_NameHash;
 }
 
-const FileBuffer* Texture::GetBuffer() const
+const std::vector<uint8_t>* Texture::GetBuffer() const
 {
     return &m_Buffer;
 }

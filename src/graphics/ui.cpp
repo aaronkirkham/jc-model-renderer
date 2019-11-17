@@ -1,39 +1,37 @@
-#include <Windows.h>
-#include <atomic>
-#include <shellapi.h>
-
-#include "camera.h"
-#include "imgui/fonts/fontawesome5_icons.h"
-#include "imgui/imgui_rotate.h"
-#include "imgui/imgui_tabscrollcontent.h"
-#include "imgui/imgui_textalign.h"
-#include "renderer.h"
-#include "texture_manager.h"
-#include "ui.h"
-
-#include "../settings.h"
-#include "../util.h"
-#include "../version.h"
-#include "../window.h"
-
-#include "../game/file_loader.h"
-#include "../game/formats/avalanche_archive.h"
-#include "../game/formats/avalanche_model_format.h"
-#include "../game/formats/render_block_model.h"
-#include "../game/formats/runtime_container.h"
-#include "../game/irenderblock.h"
-#include "../game/render_block_factory.h"
-
-#include "../game/jc3/renderblocks/irenderblock.h"
-#include "../game/jc4/renderblocks/irenderblock.h"
-
-#include "../game/hashlittle.h"
-
-#include "../import_export/import_export_manager.h"
-
+#include <AvaFormatLib.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
+
+#include "directory_list.h"
+#include "settings.h"
+#include "util.h"
+#include "version.h"
+#include "window.h"
+
+#include "graphics/camera.h"
+#include "graphics/imgui/fonts/fontawesome5_icons.h"
+#include "graphics/imgui/imgui_buttondropdown.h"
+#include "graphics/imgui/imgui_rotate.h"
+#include "graphics/imgui/imgui_tabscrollcontent.h"
+#include "graphics/imgui/imgui_textalign.h"
+#include "graphics/renderer.h"
+#include "graphics/shader_manager.h"
+#include "graphics/texture.h"
+#include "graphics/texture_manager.h"
+#include "graphics/ui.h"
+
+#include "game/file_loader.h"
+#include "game/formats/avalanche_archive.h"
+#include "game/formats/avalanche_model_format.h"
+#include "game/formats/render_block_model.h"
+#include "game/formats/runtime_container.h"
+#include "game/render_block_factory.h"
+
+#include "game/jc3/renderblocks/irenderblock.h"
+#include "game/jc4/renderblocks/irenderblock.h"
+
+#include "import_export/import_export_manager.h"
 
 extern bool g_IsJC4Mode;
 extern bool g_DrawBoundingBoxes;
@@ -304,7 +302,7 @@ void UI::Render(RenderContext_t* context)
             static uint32_t    _hash   = 0;
 
             if (ImGui::InputText("Text to Hash", &_string)) {
-                _hash = _string.length() > 0 ? hashlittle(_string.c_str()) : 0;
+                _hash = _string.length() > 0 ? ava::hashlittle(_string.c_str()) : 0;
             }
 
             ImGui::InputInt("Result", (int32_t*)&_hash, 0, 0,
@@ -583,7 +581,7 @@ void UI::RenderMenuBar()
                                                   || AvalancheModelFormat::Instances.size() > 0))) {
                     for (const auto& model : RenderBlockModel::Instances) {
                         if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
-                            Camera::Get()->FocusOn(model.second->GetBoundingBox());
+                            // Camera::Get()->FocusOn(model.second->GetBoundingBox());
                         }
                     }
 
@@ -659,13 +657,11 @@ void UI::RenderMenuBar()
             }
 
             if (ImGui::MenuItem(ICON_FA_EXTERNAL_LINK_ALT "  View on GitHub")) {
-                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc-model-renderer", nullptr, nullptr,
-                              SW_SHOWNORMAL);
+                Window::Get()->OpenUrl("https://github.com/aaronkirkham/jc-model-renderer");
             }
 
             if (ImGui::MenuItem(ICON_FA_BUG "  Report a Bug")) {
-                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc-model-renderer/issues/new", nullptr,
-                              nullptr, SW_SHOWNORMAL);
+                Window::Get()->OpenUrl("https://github.com/aaronkirkham/jc-model-renderer/issues/new");
             }
 
             ImGui::EndMenu();
@@ -804,7 +800,8 @@ void UI::RenderFileTreeView(const glm::vec2& window_size)
                                            AvalancheArchive::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
                 for (auto it = AvalancheArchive::Instances.begin(); it != AvalancheArchive::Instances.end();) {
                     const auto& archive  = (*it).second;
-                    const auto& filename = archive->GetFilePath().filename();
+                    const auto& filepath = archive->GetFilePath();
+                    const auto& filename = filepath.filename();
 
                     // render the current directory
                     bool is_still_open = true;
@@ -813,12 +810,12 @@ void UI::RenderFileTreeView(const glm::vec2& window_size)
                     // drag drop target
                     if (const auto payload = UI::Get()->GetDropPayload()) {
                         for (const auto& file : payload->data) {
-                            archive->Add(file, file.parent_path());
+                            archive->AddFile(file, file.parent_path());
                         }
                     }
 
                     // context menu
-                    RenderContextMenu(archive->GetFilePath(), 0, ContextMenuFlags_Archive);
+                    RenderContextMenu(filepath, 0, ContextMenuFlags_Archive);
 
                     if (open && archive->GetDirectoryList()) {
                         // draw the directory list
@@ -1255,6 +1252,7 @@ void UI::DrawText(const std::string& text, const glm::vec3& position, const glm:
     }
 }
 
+#if 0
 void UI::DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour)
 {
     assert(m_SceneDrawList);
@@ -1277,3 +1275,4 @@ void UI::DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour)
         m_SceneDrawList->AddLine(points[i], points[4 + i], col);
     }
 }
+#endif
