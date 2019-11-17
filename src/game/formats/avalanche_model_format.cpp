@@ -84,7 +84,6 @@ void AvalancheModelFormat::Parse(const std::vector<uint8_t>& data, ParseCallback
     using namespace ava::AvalancheDataFormat;
 
     std::thread([&, data, callback] {
-        // m_ModelAdf = AvalancheDataFormat::make(m_Filename, data);
         m_ModelAdf = std::make_shared<ADF>(data);
 
         SInstanceInfo instance_info;
@@ -119,7 +118,6 @@ void AvalancheModelFormat::Parse(const std::vector<uint8_t>& data, ParseCallback
         FileLoader::Get()->ReadFile(
             mesh_filename, [&, callback, mesh_filename](bool success, std::vector<uint8_t> data) {
                 if (success) {
-                    // m_MeshAdf = AvalancheDataFormat::make(mesh_filename, data);
                     m_MeshAdf = std::make_shared<ADF>(data);
 
                     SInstanceInfo instance_info;
@@ -139,7 +137,6 @@ void AvalancheModelFormat::Parse(const std::vector<uint8_t>& data, ParseCallback
                             if (success) {
                                 SPDLOG_INFO("Will use high resolution mesh! ({})", hrmesh_filename);
 
-                                // m_HighResMeshAdf = AvalancheDataFormat::make(hrmesh_filename, data);
                                 m_HighResMeshAdf = std::make_shared<ADF>(data);
 
                                 SInstanceInfo instance_info;

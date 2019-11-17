@@ -18,6 +18,9 @@ AvalancheArchive::AvalancheArchive(const std::filesystem::path& filename)
 {
     m_FileList = std::make_unique<DirectoryList>();
     UI::Get()->SwitchToTab(TreeViewTab_Archives);
+
+    // init an empty SARC buffer
+    ava::StreamArchive::InitBuffer(&m_Buffer, g_IsJC4Mode ? 3 : 2);
 }
 
 AvalancheArchive::AvalancheArchive(const std::filesystem::path& filename, const std::vector<uint8_t>& buffer,
@@ -183,6 +186,11 @@ void AvalancheArchive::AddFile(const std::filesystem::path& filename, const std:
             std::ifstream        stream(filename, std::ios::binary);
             stream.read((char*)buffer.data(), size);
             stream.close();
+
+            // add the file to the file list dictionary
+            if (m_FileList && !HasFile(name)) {
+                m_FileList->Add(name.generic_string());
+            }
 
             // write the file buffer to the SARC buffer
             ava::StreamArchive::WriteEntry(&m_Buffer, &m_Entries, name.string(), buffer);
