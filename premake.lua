@@ -71,7 +71,7 @@ group "vendor"
       "vendor/imgui/misc/cpp/imgui_stdlib.cpp",
       "vendor/imgui/misc/cpp/imgui_stdlib.h"
     }
-    removefiles { "vendor/imgui/imgui_demo.cpp" }
+    -- removefiles { "vendor/imgui/imgui_demo.cpp" }
 
     includedirs {
       "vendor/imgui",

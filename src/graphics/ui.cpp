@@ -40,8 +40,9 @@ static bool g_ShowSettingsWindow = false;
 static bool g_ShowAboutWindow    = false;
 static bool g_ShowNameHashWindow = false;
 
-#ifdef DEBUG
+#ifdef _DEBUG
 static bool g_CheckForUpdatesEnabled = false;
+static bool g_ShowImGuiDemoWindow    = false;
 #else
 static bool g_CheckForUpdatesEnabled = true;
 #endif
@@ -493,6 +494,12 @@ void UI::Render(RenderContext_t* context)
         } else
             ++it;
     }
+
+#ifdef _DEBUG
+    if (g_ShowImGuiDemoWindow) {
+        ImGui::ShowDemoWindow(&g_ShowImGuiDemoWindow);
+    }
+#endif
 }
 
 void UI::RenderMenuBar()
@@ -663,6 +670,12 @@ void UI::RenderMenuBar()
             if (ImGui::MenuItem(ICON_FA_BUG "  Report a Bug")) {
                 Window::Get()->OpenUrl("https://github.com/aaronkirkham/jc-model-renderer/issues/new");
             }
+
+#ifdef _DEBUG
+            if (ImGui::MenuItem("Show Demo Window")) {
+                g_ShowImGuiDemoWindow = !g_ShowImGuiDemoWindow;
+            }
+#endif
 
             ImGui::EndMenu();
         }

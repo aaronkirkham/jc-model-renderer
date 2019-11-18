@@ -10,12 +10,17 @@
 
 namespace RTPC
 {
+enum VariantFlags : uint32_t {
+    E_VARIANT_IS_HASH = 0x1,
+    E_VARIANT_IS_GUID = 0x2,
+};
+
 class Variant : public ava::RuntimePropertyContainer::RtpcContainerVariant
 {
   public:
     std::string m_Name;
     std::any    m_Value;
-    bool        m_IsHash = false;
+    uint32_t    m_Flags = 0;
 
   public:
     Variant(const ava::RuntimePropertyContainer::RtpcContainerVariant& variant);

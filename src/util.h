@@ -52,6 +52,26 @@ template <typename... Args> static std::string format(const std::string& format,
     return std::string(buf.get(), buf.get() + size - 1);
 }
 
+static GUID GUID_from_string(const std::string& string, GUID fallback = {})
+{
+    GUID guid{};
+    auto result = sscanf_s(string.c_str(), "{%8x-%04hx-%04hx-%02hhx%02hhx-%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx}",
+                           &guid.Data1, &guid.Data2, &guid.Data3, &guid.Data4[0], &guid.Data4[1], &guid.Data4[2],
+                           &guid.Data4[3], &guid.Data4[4], &guid.Data4[5], &guid.Data4[6], &guid.Data4[7]);
+    if (result == 11) {
+        return guid;
+    }
+
+    return fallback;
+}
+
+static std::string GUID_to_string(const GUID& guid)
+{
+    return format("{%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}", guid.Data1, guid.Data2, guid.Data3,
+                  guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5],
+                  guid.Data4[6], guid.Data4[7]);
+}
+
 static int32_t stoi_s(const std::string& str)
 {
     if (str.length() == 0) {

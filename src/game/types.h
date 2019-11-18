@@ -3,6 +3,25 @@
 #include <cstdint>
 
 #pragma pack(push, 1)
+namespace jc
+{
+struct SObjectNameHash {
+    uint16_t m_First;
+    uint16_t m_Second;
+    uint16_t m_Third;
+};
+
+struct SObjectID {
+    SObjectNameHash m_Hash;
+    uint16_t        m_UserData;
+
+    uint64_t to_uint64()
+    {
+        return m_UserData
+               | ((m_Hash.m_Third | ((m_Hash.m_Second | ((uint64_t)m_Hash.m_First << 0x10)) << 0x10)) << 0x10);
+    }
+};
+}; // namespace jc
 namespace jc::Vertex
 {
 struct SPackedAttribute {

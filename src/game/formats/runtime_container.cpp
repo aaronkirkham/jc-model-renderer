@@ -1,4 +1,5 @@
 #include <AvaFormatLib.h>
+#include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 #include <spdlog/spdlog.h>
@@ -16,6 +17,7 @@
 #include "game/file_loader.h"
 #include "game/formats/render_block_model.h"
 #include "game/name_hash_lookup.h"
+#include "game/types.h"
 
 extern bool g_IsJC4Mode;
 
@@ -46,7 +48,10 @@ void RuntimeContainer::Parse(const std::vector<uint8_t>& buffer, ParseCallback_t
 #ifdef _DEBUG
             __debugbreak();
 #endif
-            return callback(false);
+            if (callback) {
+                callback(false);
+            }
+            return;
         }
 
         SPDLOG_INFO("RTPC v{}", header.m_Version);
@@ -70,6 +75,11 @@ void RuntimeContainer::Parse(const std::vector<uint8_t>& buffer, ParseCallback_t
                 RtpcContainerVariant variant{};
                 stream.read((char*)&variant, sizeof(RtpcContainerVariant));
 
+                // seek to the variant data offset
+                if (variant.m_Type != T_VARIANT_INTEGER && variant.m_Type != T_VARIANT_FLOAT) {
+                    stream.seekg(variant.m_DataOffset);
+                }
+
                 auto variant_wrapper = std::make_unique<RTPC::Variant>(variant);
                 switch (variant.m_Type) {
                     case T_VARIANT_INTEGER: {
@@ -83,146 +93,99 @@ void RuntimeContainer::Parse(const std::vector<uint8_t>& buffer, ParseCallback_t
                     }
 
                     case T_VARIANT_STRING: {
-                        stream.seekg(variant.m_DataOffset);
-
-                        std::string buffer;
-                        std::getline(stream, buffer, '\0');
-                        variant_wrapper->m_Value = buffer;
+                        std::string value;
+                        std::getline(stream, value, '\0');
+                        variant_wrapper->m_Value = value;
                         break;
                     }
 
                     case T_VARIANT_VEC2: {
+                        glm::vec2 value{};
+                        stream.read((char*)&value, sizeof(glm::vec2));
+                        variant_wrapper->m_Value = value;
                         break;
                     }
 
                     case T_VARIANT_VEC3: {
+                        glm::vec3 value{};
+                        stream.read((char*)&value, sizeof(glm::vec3));
+                        variant_wrapper->m_Value = value;
                         break;
                     }
 
                     case T_VARIANT_VEC4: {
+                        glm::vec4 value{};
+                        stream.read((char*)&value, sizeof(glm::vec4));
+                        variant_wrapper->m_Value = value;
                         break;
                     }
 
                     case T_VARIANT_MAT4x4: {
+                        glm::mat4x4 value{};
+                        stream.read((char*)&value, sizeof(glm::mat4x4));
+                        variant_wrapper->m_Value = value;
                         break;
                     }
 
                     case T_VARIANT_VEC_INTS: {
+                        int32_t count;
+                        stream.read((char*)&count, sizeof(int32_t));
+
+                        std::vector<int32_t> value(count);
+                        stream.read((char*)value.data(), (count * sizeof(int32_t)));
+                        variant_wrapper->m_Value = value;
                         break;
                     }
 
                     case T_VARIANT_VEC_FLOATS: {
+                        int32_t count;
+                        stream.read((char*)&count, sizeof(int32_t));
+
+                        std::vector<float> value(count);
+                        stream.read((char*)value.data(), (count * sizeof(float)));
+                        variant_wrapper->m_Value = value;
                         break;
                     }
 
                     case T_VARIANT_VEC_BYTES: {
+                        int32_t count;
+                        stream.read((char*)&count, sizeof(int32_t));
+
+                        std::vector<uint8_t> value(count);
+                        stream.read((char*)value.data(), (count * sizeof(uint8_t)));
+
+                        if (variant_wrapper->m_Flags & RTPC::E_VARIANT_IS_GUID) {
+                            assert(value.size() == sizeof(GUID)); // vector size should always be 16 here!
+                            variant_wrapper->m_Value = *(GUID*)value.data();
+                        } else {
+#ifdef _DEBUG
+                            // PROBABY A GUID. TAKE NOTE OF THE NAME AND ADD THE HASH IN THE VARIANT CONSTRUCTOR!
+                            if (value.size() == 16) {
+                                __debugbreak();
+                            }
+#endif
+                            variant_wrapper->m_Value = value;
+                        }
                         break;
                     }
 
                     case T_VARIANT_OBJECTID: {
+                        jc::SObjectID value{};
+                        stream.read((char*)&value, sizeof(jc::SObjectID));
+                        variant_wrapper->m_Value = value;
                         break;
                     }
 
                     case T_VARIANT_VEC_EVENTS: {
+                        int32_t count = 0;
+                        stream.read((char*)&count, sizeof(int32_t));
+
+                        std::vector<jc::SObjectID> value(count);
+                        stream.read((char*)value.data(), (count * sizeof(jc::SObjectID)));
+                        variant_wrapper->m_Value = value;
                         break;
                     }
                 }
-
-#if 0
-            // vec2, vec3, vec4, mat4x4
-            case T_VARIANT_VEC2:
-            case T_VARIANT_VEC3:
-            case T_VARIANT_VEC4:
-            case T_VARIANT_MAT4x4: {
-                stream.seekg(prop.m_DataOffset);
-
-                if (type == T_VARIANT_VEC2) {
-                    glm::vec2 result;
-                    stream.read((char*)&result, sizeof(result));
-                    current_property->SetValue(result);
-                } else if (type == T_VARIANT_VEC3) {
-                    glm::vec3 result;
-                    stream.read((char*)&result, sizeof(result));
-                    current_property->SetValue(result);
-                } else if (type == T_VARIANT_VEC4) {
-                    glm::vec4 result;
-                    stream.read((char*)&result, sizeof(result));
-                    current_property->SetValue(result);
-                } else if (type == T_VARIANT_MAT4x4) {
-                    glm::mat4x4 result;
-                    stream.read((char*)&result, sizeof(result));
-                    current_property->SetValue(result);
-                }
-
-                break;
-            }
-
-            // lists
-            case T_VARIANT_VEC_INTS:
-            case T_VARIANT_VEC_FLOATS:
-            case T_VARIANT_VEC_BYTES: {
-                stream.seekg(prop.m_DataOffset);
-
-                int32_t count;
-                stream.read((char*)&count, sizeof(count));
-
-                if (type == T_VARIANT_VEC_INTS) {
-                    std::vector<int32_t> result;
-                    result.resize(count);
-                    stream.read((char*)result.data(), (count * sizeof(int32_t)));
-
-                    current_property->SetValue(result);
-                } else if (type == T_VARIANT_VEC_FLOATS) {
-                    std::vector<float> result;
-                    result.resize(count);
-                    stream.read((char*)result.data(), (count * sizeof(float)));
-
-                    current_property->SetValue(result);
-                } else if (type == T_VARIANT_VEC_BYTES) {
-                    std::vector<uint8_t> result;
-                    result.resize(count);
-                    stream.read((char*)result.data(), count);
-
-                    current_property->SetValue(result);
-                }
-
-                break;
-            }
-
-            // objectid
-            case T_VARIANT_OBJECTID: {
-                stream.seekg(prop.m_DataOffset);
-
-                uint32_t key, value;
-                stream.read((char*)&key, sizeof(key));
-                stream.read((char*)&value, sizeof(value));
-
-                current_property->SetValue(std::make_pair(key, value));
-                break;
-            }
-
-            // events
-            case T_VARIANT_VEC_EVENTS: {
-                stream.seekg(prop.m_DataOffset);
-
-                int32_t count;
-                stream.read((char*)&count, sizeof(count));
-
-                std::vector<std::pair<uint32_t, uint32_t>> result;
-                result.reserve(count);
-
-                for (int32_t i = 0; i < count; ++i) {
-                    uint32_t key, value;
-                    stream.read((char*)&key, sizeof(key));
-                    stream.read((char*)&value, sizeof(value));
-
-                    result.emplace_back(std::make_pair(key, value));
-                }
-
-                current_property->SetValue(result);
-                break;
-            }
-#endif
 
                 container->m_Variants.push_back(std::move(variant_wrapper));
             }
@@ -247,7 +210,9 @@ void RuntimeContainer::Parse(const std::vector<uint8_t>& buffer, ParseCallback_t
         // update all container display names
         m_Root->UpdateDisplayName();
 
-        callback(true);
+        if (callback) {
+            callback(true);
+        }
     }).detach();
 }
 
@@ -321,6 +286,13 @@ void RuntimeContainer::Load(const std::filesystem::path& filename, LoadCallback_
 void RuntimeContainer::DrawUI(RTPC::Container* container, int32_t index, uint8_t depth)
 {
     using namespace ava::RuntimePropertyContainer;
+    using namespace RTPC;
+
+    /*if (!container)
+        container = m_Root.get();*/
+
+    // @TODO: there can also be variants in the root node!
+    //		  we should change this a little or those items will not be drawn!
 
     if (!container) {
         // draw root container children
@@ -338,17 +310,17 @@ void RuntimeContainer::DrawUI(RTPC::Container* container, int32_t index, uint8_t
         for (const auto& variant : container->m_Variants) {
             switch (variant->m_Type) {
                 case T_VARIANT_INTEGER: {
-                    auto value = std::any_cast<int32_t>(variant->m_Value);
+                    auto value = variant->Value<int32_t>();
                     if (ImGui::InputInt(variant->m_Name.c_str(), &value, 0, 0,
-                                        variant->m_IsHash ? ImGuiInputTextFlags_CharsHexadecimal
-                                                          : ImGuiInputTextFlags_CharsDecimal)) {
+                                        (variant->m_Flags & E_VARIANT_IS_HASH) ? ImGuiInputTextFlags_CharsHexadecimal
+                                                                               : ImGuiInputTextFlags_CharsDecimal)) {
                         variant->m_Value = value;
                     }
                     break;
                 }
 
                 case T_VARIANT_FLOAT: {
-                    auto value = std::any_cast<float>(variant->m_Value);
+                    auto value = variant->Value<float>();
                     if (ImGui::InputFloat(variant->m_Name.c_str(), &value)) {
                         variant->m_Value = value;
                     }
@@ -356,7 +328,7 @@ void RuntimeContainer::DrawUI(RTPC::Container* container, int32_t index, uint8_t
                 }
 
                 case T_VARIANT_STRING: {
-                    auto& value = std::any_cast<std::string>(variant->m_Value);
+                    auto& value = variant->Value<std::string>();
                     if (ImGui::InputText(variant->m_Name.c_str(), &value)) {
                         variant->m_Value = value;
                     }
@@ -364,38 +336,100 @@ void RuntimeContainer::DrawUI(RTPC::Container* container, int32_t index, uint8_t
                 }
 
                 case T_VARIANT_VEC2: {
+                    auto& value = variant->Value<glm::vec2>();
+                    if (ImGui::InputFloat2(variant->m_Name.c_str(), glm::value_ptr(value))) {
+                        variant->m_Value = value;
+                    }
                     break;
                 }
 
                 case T_VARIANT_VEC3: {
+                    auto& value = variant->Value<glm::vec3>();
+                    if (ImGui::InputFloat3(variant->m_Name.c_str(), glm::value_ptr(value))) {
+                        variant->m_Value = value;
+                    }
                     break;
                 }
 
                 case T_VARIANT_VEC4: {
+                    auto& value = variant->Value<glm::vec4>();
+                    if (ImGui::InputFloat4(variant->m_Name.c_str(), glm::value_ptr(value))) {
+                        variant->m_Value = value;
+                    }
                     break;
                 }
 
                 case T_VARIANT_MAT4x4: {
+                    auto& value = variant->Value<glm::mat4x4>();
+                    for (uint8_t i = 0; i < 4; ++i) {
+                        auto title = util::format("%s [%d]", variant->m_Name.c_str(), i);
+                        ImGui::InputFloat4(title.c_str(), glm::value_ptr(value[i]));
+                    }
                     break;
                 }
 
                 case T_VARIANT_VEC_INTS: {
+                    auto& value = variant->Value<std::vector<int32_t>>();
+                    for (size_t i = 0; i < value.size(); ++i) {
+                        auto title = util::format("%s [%d]", variant->m_Name.c_str(), i);
+                        if (ImGui::InputScalarN(title.c_str(), ImGuiDataType_S32, (void*)&value[i], 1, nullptr, nullptr,
+                                                "%08X")) {
+                            variant->m_Value = value;
+                        }
+                    }
                     break;
                 }
 
                 case T_VARIANT_VEC_FLOATS: {
+                    auto& value = variant->Value<std::vector<float>>();
+                    for (size_t i = 0; i < value.size(); ++i) {
+                        auto title = util::format("%s [%d]", variant->m_Name.c_str(), i);
+                        if (ImGui::InputScalarN(title.c_str(), ImGuiDataType_Float, (void*)&value[i], 1)) {
+                            variant->m_Value = value;
+                        }
+                    }
                     break;
                 }
 
                 case T_VARIANT_VEC_BYTES: {
+                    // special case for GUIDs
+                    if (variant->m_Flags & E_VARIANT_IS_GUID) {
+                        auto& value       = variant->Value<GUID>();
+                        auto  guid_string = util::GUID_to_string(value);
+                        if (ImGui::InputText(variant->m_Name.c_str(), &guid_string)) {
+                            variant->m_Value = util::GUID_from_string(guid_string, value);
+                        }
+                    } else {
+                        auto& value = variant->Value<std::vector<uint8_t>>();
+                        for (size_t i = 0; i < value.size(); ++i) {
+                            auto title = util::format("%s [%d] (bytes)", variant->m_Name.c_str(), i);
+                            if (ImGui::InputScalarN(title.c_str(), ImGuiDataType_U8, (void*)&value[i], 1, nullptr,
+                                                    nullptr, "%02X", ImGuiInputTextFlags_CharsHexadecimal)) {
+                                variant->m_Value = value;
+                            }
+                        }
+                    }
                     break;
                 }
 
                 case T_VARIANT_OBJECTID: {
+                    auto& value = variant->Value<jc::SObjectID>();
+                    if (ImGui::InputScalarN(variant->m_Name.c_str(), ImGuiDataType_U16, (void*)&value, 4, nullptr,
+                                            nullptr, "%04X", ImGuiInputTextFlags_CharsHexadecimal)) {
+                        variant->m_Value = value;
+                    }
                     break;
                 }
 
                 case T_VARIANT_VEC_EVENTS: {
+                    auto& value = variant->Value<std::vector<jc::SObjectID>>();
+                    for (size_t i = 0; i < value.size(); ++i) {
+                        auto title = util::format("%s [%d]", variant->m_Name.c_str(), i);
+                        if (ImGui::InputScalarN(title.c_str(), ImGuiDataType_U16, (void*)&value[i], 4, nullptr, nullptr,
+                                                "%04X", ImGuiInputTextFlags_CharsHexadecimal)) {
+                            variant->m_Value = value;
+                        }
+                    }
                     break;
                 }
             }
@@ -408,88 +442,6 @@ void RuntimeContainer::DrawUI(RTPC::Container* container, int32_t index, uint8_t
 
         ImGui::TreePop();
     }
-
-#if 0
-        switch (prop->GetType()) {
-            case T_VARIANT_VEC2: {
-                auto& value = std::any_cast<glm::vec2>(prop->GetValue());
-                if (ImGui::InputFloat2(prop->GetName().c_str(), &value.x)) {
-                    prop->SetValue(glm::vec2{value.x, value.y});
-                }
-                break;
-            }
-
-            case T_VARIANT_VEC3: {
-                auto& value = std::any_cast<glm::vec3>(prop->GetValue());
-                if (ImGui::InputFloat3(prop->GetName().c_str(), &value.x)) {
-                    prop->SetValue(glm::vec3{value.x, value.y, value.z});
-                }
-                break;
-            }
-
-            case T_VARIANT_VEC4: {
-                auto& value = std::any_cast<glm::vec4>(prop->GetValue());
-                if (ImGui::InputFloat4(prop->GetName().c_str(), &value.x)) {
-                    prop->SetValue(glm::vec4{value.x, value.y, value.z, value.w});
-                }
-                break;
-            }
-
-            case T_VARIANT_MAT4x4: {
-                auto& value = prop->GetValue<glm::mat4>();
-                ImGui::Text(prop->GetName().c_str());
-                ImGui::InputFloat4("m0", &value[0][0]);
-                ImGui::InputFloat4("m1", &value[1][0]);
-                ImGui::InputFloat4("m2", &value[2][0]);
-                ImGui::InputFloat4("m3", &value[3][0]);
-                break;
-            }
-
-            case T_VARIANT_VEC_INTS: {
-                auto& values = prop->GetValue<std::vector<int32_t>>();
-                ImGui::Text(prop->GetName().c_str());
-                ImGui::Text(RuntimeContainerProperty::GetTypeName(prop->GetType()).c_str());
-                for (auto& value : values) {
-                    ImGui::InputInt(".", &value);
-                }
-                break;
-            }
-
-            case T_VARIANT_VEC_FLOATS: {
-                auto& values = prop->GetValue<std::vector<float>>();
-                ImGui::Text(prop->GetName().c_str());
-                ImGui::Text(RuntimeContainerProperty::GetTypeName(prop->GetType()).c_str());
-                for (auto& value : values) {
-                    ImGui::InputFloat(".", &value);
-                }
-                break;
-            }
-
-            case T_VARIANT_VEC_BYTES: {
-                auto& values = prop->GetValue<std::vector<uint8_t>>();
-                ImGui::Text(prop->GetName().c_str());
-                ImGui::Text(RuntimeContainerProperty::GetTypeName(prop->GetType()).c_str());
-                // for (auto& value : values) {
-                // ImGui::InputInt(".", &value);
-                //}
-                break;
-            }
-
-            case T_VARIANT_OBJECTID: {
-                auto& value = prop->GetValue<std::pair<uint32_t, uint32_t>>();
-                if (ImGui::InputScalarN(prop->GetName().c_str(), ImGuiDataType_U32, (void*)&value.first, 2)) {
-                    prop->SetValue(std::make_pair(value.first, value.second));
-                }
-
-                break;
-            }
-
-            case T_VARIANT_VEC_EVENTS: {
-                break;
-            }
-        }
-    }
-#endif
 }
 
 RTPC::Container::Container(const ava::RuntimePropertyContainer::RtpcContainer& container)
@@ -596,82 +548,21 @@ RTPC::Variant::Variant(const ava::RuntimePropertyContainer::RtpcContainerVariant
         "filepath"_hash_little,
     };
 
-    // @NOTE: used in DrawUI to determine if we should draw hex characters or not
-    m_IsHash = std::find(hash_keys.begin(), hash_keys.end(), m_Key) != hash_keys.end()
-               || m_Name.rfind("hash") != std::string::npos;
+    static std::array guid_keys{
+        "Sound"_hash_little,
+        "FMODEvent"_hash_little,
+    };
+
+#define InKeys(keys) std::find(keys.begin(), keys.end(), m_Key) != keys.end()
+
+    if (InKeys(hash_keys) || m_Name.rfind("hash") != std::string::npos) {
+        m_Flags |= E_VARIANT_IS_HASH;
+    } else if (InKeys(guid_keys)) {
+        m_Flags |= E_VARIANT_IS_GUID;
+    }
 }
 
 #if 0
-std::string RuntimeContainerProperty::GetTypeName(ava::RuntimePropertyContainer::EVariantType type)
-{
-    using namespace ava::RuntimePropertyContainer;
-
-    switch (type) {
-        case T_VARIANT_UNASSIGNED:
-            return "unassigned";
-        case T_VARIANT_INTEGER:
-            return "integer";
-        case T_VARIANT_FLOAT:
-            return "float";
-        case T_VARIANT_STRING:
-            return "string";
-        case T_VARIANT_VEC2:
-            return "vec2";
-        case T_VARIANT_VEC3:
-            return "vec3";
-        case T_VARIANT_VEC4:
-            return "vec4";
-        case T_VARIANT_MAT4x4:
-            return "mat4x4";
-        case T_VARIANT_VEC_INTS:
-            return "vec_int";
-        case T_VARIANT_VEC_FLOATS:
-            return "vec_float";
-        case T_VARIANT_VEC_BYTES:
-            return "vec_byte";
-        case T_VARIANT_OBJECTID:
-            return "object_id";
-        case T_VARIANT_VEC_EVENTS:
-            return "vec_events";
-    }
-
-    return "unknown";
-}
-
-std::vector<RuntimeContainer*> RuntimeContainer::GetAllContainers(const std::string& class_name)
-{
-    std::vector<RuntimeContainer*> result;
-
-    const auto _class = GetProperty("_class");
-    assert(_class);
-
-    //
-    auto _class_name = _class->GetValue<std::string>();
-    if (_class_name == class_name) {
-        result.emplace_back(this);
-    }
-
-    for (const auto& child : m_Containers) {
-        auto r = child->GetAllContainers(class_name);
-        std::copy(r.begin(), r.end(), std::back_inserter(result));
-    }
-
-    return result;
-}
-
-std::vector<RuntimeContainerProperty*> RuntimeContainer::GetSortedProperties()
-{
-    auto properties = GetProperties();
-    std::sort(properties.begin(), properties.end(), [&](RuntimeContainerProperty* a, RuntimeContainerProperty* b) {
-        auto& name_a = a->GetName();
-        auto& name_b = b->GetName();
-
-        return std::lexicographical_compare(name_a.begin(), name_a.end(), name_b.begin(), name_b.end());
-    });
-
-    return properties;
-}
-
 // @TODO: move inside AvaFormatLib
 void WriteNode(std::ofstream& stream, RuntimeContainer* node, std::unordered_map<std::string, uint32_t>& string_offsets,
                std::vector<std::pair<uint32_t, ava::RuntimePropertyContainer::RtpcContainer>>& raw_nodes)
