@@ -469,21 +469,25 @@ void RTPC::Container::UpdateDisplayName()
 
     // append the class name
     if (class_name || class_hash) {
-        ss << (has_name ? " (" : "");
-
         if (class_name) {
-            ss << class_name->Value<std::string>();
+            ss << (has_name ? " (" : "") << class_name->Value<std::string>() << (has_name ? ")" : "");
         } else if (class_hash) {
-            ss << NameHashLookup::GetName(class_hash->Value<int32_t>());
+            auto class_hash_name = NameHashLookup::GetName(class_hash->Value<int32_t>());
+            if (!class_hash_name.empty()) {
+                ss << (has_name ? " (" : "") << class_hash_name << (has_name ? ")" : "");
+            }
         }
-
-        ss << (has_name ? ")" : "");
     }
 
     if (m_Name.empty()) {
         m_Name = ss.str();
     } else {
         m_Name = ss.str() + " (" + m_Name + ")";
+    }
+
+    // if the name is still empty, write the namehash
+    if (m_Name.empty()) {
+        m_Name = util::format("Unknown (%08x)", m_Key);
     }
 
     for (const auto& container : m_Containers) {
