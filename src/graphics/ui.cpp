@@ -361,10 +361,10 @@ void UI::Render(RenderContext_t* context)
                 // draw text
                 if (m_NewTextureSettings.Texture) {
                     const auto desc = m_NewTextureSettings.Texture->GetDesc();
-                    ImGui::Text("Width: %d", desc->Width);
-                    ImGui::Text("Height: %d", desc->Height);
-                    ImGui::Text("Format: %d (%s)", desc->Format, TextureManager::GetFormatString(desc->Format));
-                    ImGui::Text("MipLevels: %d", desc->MipLevels);
+                    ImGui::Text("Width: %d", desc.Width);
+                    ImGui::Text("Height: %d", desc.Height);
+                    ImGui::Text("Format: %d (%s)", desc.Format, TextureManager::GetFormatString(desc.Format));
+                    ImGui::Text("MipLevels: %d", desc.MipLevels);
 
                     // save texture as...
                     if (ImGui::Button(ICON_FA_SAVE "  Save as...")) {
@@ -1170,26 +1170,21 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
             const auto& texture_filename = payload->data[0];
             texture->LoadFromFile(texture_filename);
 
-#if 0
             // generate the new file path
-            const auto parent = render_block->GetParent();
-            if (parent) {
-                auto filename = parent->GetPath().parent_path();
+            const auto owner = render_block->GetOwner();
+            if (owner) {
+                auto filename = owner->GetPath().parent_path();
                 filename /= "textures" / texture_filename.filename();
 
                 // update the texture name
                 texture->SetFileName(filename);
-            }
-#endif
 
-            // TODO: do we want this??
-#if 0
-            // add the file to the parent archive
-            const auto archive = parent->GetParentArchive();
-            if (archive) {
-                archive->AddFile(filename, texture->GetBuffer());
+                // add the file to the parent archive
+                const auto archive = owner->GetParentArchive();
+                if (archive) {
+                    archive->AddFile(filename, texture->GetBuffer());
+                }
             }
-#endif
         }
     }
     ImGui::EndGroup();

@@ -38,7 +38,8 @@ class AvalancheArchive : public Factory<AvalancheArchive>
                                  bool external);
     static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path);
 
-    void AddFile(const std::filesystem::path& filename, const std::filesystem::path& root);
+    bool AddFile(const std::filesystem::path& filename, const std::filesystem::path& root);
+    bool AddFile(const std::filesystem::path& filename, const std::vector<uint8_t>& buffer);
     bool HasFile(const std::filesystem::path& filename);
 
     const std::filesystem::path& GetFilePath()

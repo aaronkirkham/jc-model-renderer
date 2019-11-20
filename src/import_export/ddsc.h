@@ -65,7 +65,7 @@ class DDSC : public IImportExporter
 
         FileLoader::Get()->ReadFile(filename, [&, path, callback](bool success, std::vector<uint8_t> data) {
             if (success) {
-                WriteBufferToFile(path, &data);
+                WriteBufferToFile(path, data);
             }
 
             callback(success);

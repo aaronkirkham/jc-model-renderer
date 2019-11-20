@@ -1556,3 +1556,10 @@ CfBmFractal
 _class_hash
 filepath
 Weight
+SAnimationLayerInfo
+sort_order
+layer_name
+EffectUsage
+TintColor1
+TintColor2
+TintColor3

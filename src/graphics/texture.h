@@ -30,9 +30,9 @@ class Texture
 
     bool                        IsLoaded() const;
     const uint32_t              GetHash() const;
-    const std::vector<uint8_t>* GetBuffer() const;
+    const std::vector<uint8_t>& GetBuffer() const;
 
-    ID3D11Resource*           GetResource() const;
-    ID3D11ShaderResourceView* GetSRV() const;
-    D3D11_TEXTURE2D_DESC*     GetDesc();
+    ID3D11Resource*             GetResource() const;
+    ID3D11ShaderResourceView*   GetSRV() const;
+    const D3D11_TEXTURE2D_DESC& GetDesc();
 };

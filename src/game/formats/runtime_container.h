@@ -11,8 +11,9 @@
 namespace RTPC
 {
 enum VariantFlags : uint32_t {
-    E_VARIANT_IS_HASH = 0x1,
-    E_VARIANT_IS_GUID = 0x2,
+    E_VARIANT_IS_HASH  = 0x1,
+    E_VARIANT_IS_GUID  = 0x2,
+    E_VARIANT_IS_COLOR = 0x4,
 };
 
 class Variant : public ava::RuntimePropertyContainer::RtpcContainerVariant

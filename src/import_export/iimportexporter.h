@@ -48,7 +48,7 @@ class IImportExporter
     virtual void Export(const std::filesystem::path& filename, const std::filesystem::path& to,
                         ExportFinishedCallback callback = {})                                        = 0;
 
-    bool WriteBufferToFile(const std::filesystem::path& file, const std::vector<uint8_t>* buffer)
+    bool WriteBufferToFile(const std::filesystem::path& file, const std::vector<uint8_t>& buffer)
     {
         // create the directories for the file
         std::filesystem::create_directories(file.parent_path());
@@ -60,7 +60,7 @@ class IImportExporter
         }
 
         // write the buffer and finish
-        stream.write((char*)&buffer->front(), buffer->size());
+        stream.write((char*)buffer.data(), buffer.size());
         stream.close();
         return true;
     }

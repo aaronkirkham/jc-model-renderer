@@ -256,7 +256,7 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultC
         const auto& texture = TextureManager::Get()->GetTexture(filename, TextureManager::TextureCreateFlags_NoCreate);
         if (texture && texture->IsLoaded()) {
             UI::Get()->PopStatusText(status_text_id);
-            return callback(true, *texture->GetBuffer());
+            return callback(true, texture->GetBuffer());
         }
 
         // try load the texture
@@ -752,6 +752,7 @@ bool FileLoader::ReadAVTX(const std::vector<uint8_t>& buffer, std::vector<uint8_
 
         // write the texture data
         buf.write((char*)texture_buffer.data(), texture_buffer.size());
+        return true;
     } catch (const std::exception& e) {
         SPDLOG_ERROR(e.what());
 #ifdef _DEBUG
@@ -796,24 +797,24 @@ bool FileLoader::WriteAVTX(Texture* texture, std::vector<uint8_t>* out_buffer)
 
     AvtxHeader header;
 
-    auto tex_buffer = texture->GetBuffer();
-    auto tex_desc   = texture->GetDesc();
+    auto& tex_buffer = texture->GetBuffer();
+    auto& tex_desc   = texture->GetDesc();
 
     // calculate the offset to skip
     const auto dds_header_size = (sizeof(DDS_MAGIC) + sizeof(DDS_HEADER));
 
     header.m_Dimension    = 2;
-    header.m_Format       = tex_desc->Format;
-    header.m_Width        = tex_desc->Width;
-    header.m_Height       = tex_desc->Height;
+    header.m_Format       = tex_desc.Format;
+    header.m_Width        = tex_desc.Width;
+    header.m_Height       = tex_desc.Height;
     header.m_Depth        = 1;
     header.m_Flags        = 0;
-    header.m_Mips         = tex_desc->MipLevels;
-    header.m_MipsRedisent = tex_desc->MipLevels;
+    header.m_Mips         = tex_desc.MipLevels;
+    header.m_MipsRedisent = tex_desc.MipLevels;
 
     // set the stream
     header.m_Streams[0].m_Offset    = sizeof(header);
-    header.m_Streams[0].m_Size      = (tex_buffer->size() - dds_header_size);
+    header.m_Streams[0].m_Size      = (tex_buffer.size() - dds_header_size);
     header.m_Streams[0].m_Alignment = 16;
     header.m_Streams[0].m_TileMode  = false;
     header.m_Streams[0].m_Source    = false;
@@ -823,7 +824,7 @@ bool FileLoader::WriteAVTX(Texture* texture, std::vector<uint8_t>* out_buffer)
     buf.setp(0);
 
     buf.write((char*)&header, sizeof(AvtxHeader));
-    buf.write((char*)tex_buffer->data() + dds_header_size, header.m_Streams[0].m_Size);
+    buf.write((char*)tex_buffer.data() + dds_header_size, header.m_Streams[0].m_Size);
     return true;
 }
 

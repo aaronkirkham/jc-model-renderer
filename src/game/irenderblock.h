@@ -9,9 +9,11 @@
 #include <vector>
 
 class Texture;
+class RenderBlockModel;
 class IRenderBlock
 {
   protected:
+    RenderBlockModel*                     m_Owner             = nullptr;
     bool                                  m_Visible           = true;
     float                                 m_ScaleModifier     = 1.0f;
     VertexBuffer_t*                       m_VertexBuffer      = nullptr;
@@ -81,6 +83,16 @@ class IRenderBlock
     virtual const std::vector<std::shared_ptr<Texture>>& GetTextures()
     {
         return m_Textures;
+    }
+
+    void SetOwner(RenderBlockModel* owner)
+    {
+        m_Owner = owner;
+    }
+
+    RenderBlockModel* GetOwner()
+    {
+        return m_Owner;
     }
 };
 

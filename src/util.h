@@ -52,6 +52,14 @@ template <typename... Args> static std::string format(const std::string& format,
     return std::string(buf.get(), buf.get() + size - 1);
 }
 
+// case-insensitive string find
+static bool find(const std::string& haystack, const std::string& needle)
+{
+    auto it = std::search(haystack.begin(), haystack.end(), needle.begin(), needle.end(),
+                          [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); });
+    return (it != haystack.end());
+}
+
 static GUID GUID_from_string(const std::string& string, GUID fallback = {})
 {
     GUID guid{};

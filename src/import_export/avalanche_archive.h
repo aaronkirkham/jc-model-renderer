@@ -59,7 +59,7 @@ class AvalancheArchive : public IImportExporter
                 if (entry.m_Offset != 0 && entry.m_Offset != -1) {
                     std::vector<uint8_t> buffer;
                     ava::StreamArchive::ReadEntry(archive->GetBuffer(), entry, &buffer);
-                    WriteBufferToFile(file_path, &buffer);
+                    WriteBufferToFile(file_path, buffer);
                 }
                 // read patched files directly from the table archive
                 else {
@@ -68,7 +68,7 @@ class AvalancheArchive : public IImportExporter
 
                     std::vector<uint8_t> buffer;
                     if (FileLoader::Get()->ReadFileFromArchive(directory, archive, namehash, &buffer)) {
-                        WriteBufferToFile(file_path, &buffer);
+                        WriteBufferToFile(file_path, buffer);
                     }
                 }
             }

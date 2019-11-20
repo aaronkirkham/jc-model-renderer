@@ -116,7 +116,7 @@ bool RenderBlockModel::ParseRBM(const std::vector<uint8_t>& buffer, bool add_to_
 
         const auto render_block = (jc3::IRenderBlock*)RenderBlockFactory::CreateRenderBlock(hash);
         if (render_block) {
-            // render_block->SetParent(this);
+            render_block->SetOwner(this);
             render_block->Read(stream);
             render_block->Create();
 

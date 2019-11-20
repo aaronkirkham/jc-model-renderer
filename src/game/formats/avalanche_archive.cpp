@@ -166,7 +166,7 @@ bool AvalancheArchive::SaveFileCallback(const std::filesystem::path& filename, c
     return false;
 }
 
-void AvalancheArchive::AddFile(const std::filesystem::path& filename, const std::filesystem::path& root)
+bool AvalancheArchive::AddFile(const std::filesystem::path& filename, const std::filesystem::path& root)
 {
     // TODO: only add files which are a supported format
     // generic textures, models, etc
@@ -175,32 +175,43 @@ void AvalancheArchive::AddFile(const std::filesystem::path& filename, const std:
         for (const auto& f : std::filesystem::directory_iterator(filename)) {
             AddFile(f.path(), root);
         }
+
+        return true;
     } else {
-        try {
-            // strip the root directory from the path
-            const auto& name = filename.lexically_relative(root);
-            const auto  size = std::filesystem::file_size(filename);
+        // strip the root directory from the path
+        const auto& name = filename.lexically_relative(root);
+        const auto  size = std::filesystem::file_size(filename);
 
-            // read the file buffer
-            std::vector<uint8_t> buffer(size);
-            std::ifstream        stream(filename, std::ios::binary);
-            stream.read((char*)buffer.data(), size);
-            stream.close();
+        // read the file buffer
+        std::vector<uint8_t> buffer(size);
+        std::ifstream        stream(filename, std::ios::binary);
+        stream.read((char*)buffer.data(), size);
+        stream.close();
 
-            // add the file to the file list dictionary
-            if (m_FileList && !HasFile(name)) {
-                m_FileList->Add(name.generic_string());
-            }
-
-            // write the file buffer to the SARC buffer
-            ava::StreamArchive::WriteEntry(&m_Buffer, &m_Entries, name.string(), buffer);
-        } catch (const std::exception& e) {
-            SPDLOG_ERROR(e.what());
-#ifdef _DEBUG
-            __debugbreak();
-#endif
-        }
+        return AddFile(name, buffer);
     }
+}
+
+bool AvalancheArchive::AddFile(const std::filesystem::path& filename, const std::vector<uint8_t>& buffer)
+{
+    try {
+        // add the file to the file list dictionary
+        if (m_FileList && !HasFile(filename)) {
+            m_FileList->Add(filename.generic_string());
+        }
+
+        // write the file buffer to the SARC buffer
+        ava::StreamArchive::WriteEntry(&m_Buffer, &m_Entries, filename.generic_string(), buffer);
+
+        return true;
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR(e.what());
+#ifdef _DEBUG
+        __debugbreak();
+#endif
+    }
+
+    return false;
 }
 
 bool AvalancheArchive::HasFile(const std::filesystem::path& filename)

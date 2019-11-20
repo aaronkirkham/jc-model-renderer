@@ -136,9 +136,9 @@ const uint32_t Texture::GetHash() const
     return m_NameHash;
 }
 
-const std::vector<uint8_t>* Texture::GetBuffer() const
+const std::vector<uint8_t>& Texture::GetBuffer() const
 {
-    return &m_Buffer;
+    return m_Buffer;
 }
 
 ID3D11Resource* Texture::GetResource() const
@@ -151,7 +151,7 @@ ID3D11ShaderResourceView* Texture::GetSRV() const
     return m_SRV;
 }
 
-D3D11_TEXTURE2D_DESC* Texture::GetDesc()
+const D3D11_TEXTURE2D_DESC& Texture::GetDesc()
 {
-    return &m_Desc;
+    return m_Desc;
 }

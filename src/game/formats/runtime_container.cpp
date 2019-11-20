@@ -158,9 +158,9 @@ void RuntimeContainer::Parse(const std::vector<uint8_t>& buffer, ParseCallback_t
                             assert(value.size() == sizeof(GUID)); // vector size should always be 16 here!
                             variant_wrapper->m_Value = *(GUID*)value.data();
                         } else {
-#ifdef _DEBUG
+#if 0
                             // PROBABY A GUID. TAKE NOTE OF THE NAME AND ADD THE HASH IN THE VARIANT CONSTRUCTOR!
-                            if (value.size() == 16) {
+                            if (value.size() == sizeof(GUID)) {
                                 __debugbreak();
                             }
 #endif
@@ -288,12 +288,6 @@ void RuntimeContainer::DrawUI(RTPC::Container* container, int32_t index, uint8_t
     using namespace ava::RuntimePropertyContainer;
     using namespace RTPC;
 
-    /*if (!container)
-        container = m_Root.get();*/
-
-    // @TODO: there can also be variants in the root node!
-    //		  we should change this a little or those items will not be drawn!
-
     if (!container) {
         // draw root container children
         if (m_Root) {
@@ -345,7 +339,9 @@ void RuntimeContainer::DrawUI(RTPC::Container* container, int32_t index, uint8_t
 
                 case T_VARIANT_VEC3: {
                     auto& value = variant->Value<glm::vec3>();
-                    if (ImGui::InputFloat3(variant->m_Name.c_str(), glm::value_ptr(value))) {
+                    if (variant->m_Flags & E_VARIANT_IS_COLOR
+                            ? ImGui::ColorEdit3(variant->m_Name.c_str(), glm::value_ptr(value))
+                            : ImGui::InputFloat3(variant->m_Name.c_str(), glm::value_ptr(value))) {
                         variant->m_Value = value;
                     }
                     break;
@@ -353,7 +349,9 @@ void RuntimeContainer::DrawUI(RTPC::Container* container, int32_t index, uint8_t
 
                 case T_VARIANT_VEC4: {
                     auto& value = variant->Value<glm::vec4>();
-                    if (ImGui::InputFloat4(variant->m_Name.c_str(), glm::value_ptr(value))) {
+                    if (variant->m_Flags & E_VARIANT_IS_COLOR
+                            ? ImGui::ColorEdit4(variant->m_Name.c_str(), glm::value_ptr(value))
+                            : ImGui::InputFloat4(variant->m_Name.c_str(), glm::value_ptr(value))) {
                         variant->m_Value = value;
                     }
                     break;
@@ -546,12 +544,11 @@ RTPC::Variant::Variant(const ava::RuntimePropertyContainer::RtpcContainerVariant
 
     // common variant names that contain hashes
     static std::array hash_keys{
-        "ragdoll"_hash_little,
-        "skeleton"_hash_little,
-        "model"_hash_little,
-        "filepath"_hash_little,
+        "ragdoll"_hash_little,  "skeleton"_hash_little,   "model"_hash_little,
+        "filepath"_hash_little, "layer_name"_hash_little, "EffectUsage"_hash_little,
     };
 
+    // common variant names that contain GUIDs
     static std::array guid_keys{
         "Sound"_hash_little,
         "FMODEvent"_hash_little,
@@ -559,10 +556,12 @@ RTPC::Variant::Variant(const ava::RuntimePropertyContainer::RtpcContainerVariant
 
 #define InKeys(keys) std::find(keys.begin(), keys.end(), m_Key) != keys.end()
 
-    if (InKeys(hash_keys) || m_Name.rfind("hash") != std::string::npos) {
+    if (InKeys(hash_keys) || util::find(m_Name, "hash")) {
         m_Flags |= E_VARIANT_IS_HASH;
     } else if (InKeys(guid_keys)) {
         m_Flags |= E_VARIANT_IS_GUID;
+    } else if (util::find(m_Name, "color")) {
+        m_Flags |= E_VARIANT_IS_COLOR;
     }
 }
 
