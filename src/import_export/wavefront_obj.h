@@ -52,7 +52,9 @@ class Wavefront_Obj : public IImportExporter
 
     bool DrawSettingsUI() override final;
 
-    std::map<std::string, std::string> ImportMaterials(const std::filesystem::path& filename)
+    using materials_map_t = std::map<std::string, std::vector<std::pair<std::string, std::filesystem::path>>>;
+
+    materials_map_t ImportMaterials(const std::filesystem::path& filename)
     {
         if (!std::filesystem::exists(filename)) {
             return {};
@@ -63,7 +65,7 @@ class Wavefront_Obj : public IImportExporter
             return {};
         }
 
-        std::map<std::string, std::string> materials;
+        materials_map_t materials;
 
         std::string line;
         std::string current_mtl;
@@ -74,7 +76,15 @@ class Wavefront_Obj : public IImportExporter
             } else if (type == "map_Kd") {
                 auto diffuse = filename;
                 diffuse.replace_filename(line.substr(7, line.length()));
-                materials[current_mtl] = diffuse.string();
+                materials[current_mtl].push_back(std::pair{"diff", diffuse});
+            } else if (type == "map_bump") {
+                auto bump = filename;
+                bump.replace_filename(line.substr(9, line.length()));
+                materials[current_mtl].push_back(std::pair{"bump", bump});
+            } else if (type == "map_Ks") {
+                auto specular = filename;
+                specular.replace_filename(line.substr(7, line.length()));
+                materials[current_mtl].push_back(std::pair{"spec", specular});
             }
         }
 
@@ -88,5 +98,5 @@ class Wavefront_Obj : public IImportExporter
 
     void Export(const std::filesystem::path& filename, const std::filesystem::path& to,
                 ExportFinishedCallback callback) override final;
-};
+}; // namespace ImportExport
 }; // namespace ImportExport

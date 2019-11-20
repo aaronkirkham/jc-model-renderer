@@ -174,8 +174,8 @@ void UI::Render(RenderContext_t* context)
         ImGui::SetNextWindowSize({448, 133});
         if (ImGui::BeginPopupModal("Settings", &g_ShowSettingsWindow,
                                    (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))) {
-            static std::string _jc3_path = Settings::Get()->GetValue<std::string>("jc3_directory");
-            static std::string _jc4_path = Settings::Get()->GetValue<std::string>("jc4_directory");
+            static std::string _jc3_path = Settings::Get()->GetValue<const char*>("jc3_directory", "");
+            static std::string _jc4_path = Settings::Get()->GetValue<const char*>("jc4_directory", "");
 
             // select jc3 path
             ImGui::Text("Just Cause 3 Path");
@@ -185,7 +185,7 @@ void UI::Render(RenderContext_t* context)
             ImGui::SameLine();
             if (ImGui::Button("...##select_jc3_path")) {
                 Window::Get()->SelectJustCauseDirectory(true, true);
-                _jc3_path = Settings::Get()->GetValue<std::string>("jc3_directory");
+                _jc3_path = Settings::Get()->GetValue<const char*>("jc3_directory", "");
             }
 
             ImGui::Separator();
@@ -198,7 +198,7 @@ void UI::Render(RenderContext_t* context)
             ImGui::SameLine();
             if (ImGui::Button("...##select_jc4_path")) {
                 Window::Get()->SelectJustCauseDirectory(true, false);
-                _jc4_path = Settings::Get()->GetValue<std::string>("jc4_directory");
+                _jc4_path = Settings::Get()->GetValue<const char*>("jc4_directory", "");
             }
 
             ImGui::EndPopup();
@@ -509,7 +509,7 @@ void UI::RenderMenuBar()
 
         // file
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem(ICON_FA_GAMEPAD "  Select Game")) {
+            if (ImGui::MenuItem(ICON_FA_GAMEPAD "  Select Game", nullptr, nullptr, !FileLoader::m_DictionaryLoading)) {
                 ShowGameSelection();
             }
 
@@ -798,7 +798,8 @@ void UI::RenderFileTreeView(const glm::vec2& window_size)
             if (ImGuiCustom::TabItemScroll("File Explorer", m_TabToSwitch == TreeViewTab_FileExplorer)) {
                 const auto directory_list = FileLoader::Get()->GetDirectoryList();
                 if (directory_list) {
-                    directory_list->Draw(directory_list->GetTree());
+                    directory_list->Draw();
+                    // directory_list->Draw(directory_list->GetTree());
                 }
 
                 ImGuiCustom::EndTabItemScroll();
@@ -833,7 +834,7 @@ void UI::RenderFileTreeView(const glm::vec2& window_size)
                     if (open && archive->GetDirectoryList()) {
                         // draw the directory list
                         ImGui::PushID(filename.string().c_str());
-                        archive->GetDirectoryList()->Draw(archive->GetDirectoryList()->GetTree(), archive.get());
+                        archive->GetDirectoryList()->Draw(archive.get());
                         ImGui::PopID();
                     }
 
@@ -1028,6 +1029,13 @@ void UI::RenderModelsTab_AMF()
 
                     // current block header
                     const auto tree_open = ImGui::TreeNode(label.c_str());
+
+                    // draw render block context menu
+                    if (ImGui::BeginPopupContextItem()) {
+                        render_block->DrawContextMenu();
+                        ImGui::EndPopup();
+                    }
+
                     if (tree_open) {
                         // draw model attributes ui
                         render_block->DrawUI();

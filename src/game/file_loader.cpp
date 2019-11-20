@@ -24,6 +24,11 @@
 
 #include "../import_export/import_export_manager.h"
 
+//#include "../vendor/rapidjson/include/rapidjson/document.h"
+//#include "../vendor/rapidjson/include/rapidjson/rapidjson.h"
+
+#include <rapidjson/document.h>
+
 // Credit to gibbed for most of the file formats
 // http://gib.me
 
@@ -189,32 +194,41 @@ void FileLoader::Init()
     }
 
     // init the filelist
-    m_FileList = std::make_unique<DirectoryList>();
+    m_FileList          = std::make_unique<DirectoryList>();
+    m_DictionaryLoading = true;
 
     const auto status_text_id = UI::Get()->PushStatusText("Loading dictionary...");
     std::thread([this, status_text_id] {
+        m_Dictionary.clear();
+
         try {
             std::vector<uint8_t> buffer;
             if (!Window::Get()->LoadInternalResource(g_IsJC4Mode ? 256 : 128, &buffer)) {
                 throw std::runtime_error("LoadInternalResource failed.");
             }
 
-            auto& dictionary = nlohmann::json::parse(buffer.begin(), buffer.end());
-            m_FileList->Parse(&dictionary);
+            byte_array_buffer         buf(buffer);
+            std::istream              stream(&buf);
+            rapidjson::IStreamWrapper stream_wrapper(stream);
 
-            // parse the dictionary
-            for (auto& it = dictionary.begin(); it != dictionary.end(); ++it) {
-                const auto& key  = it.key();
-                const auto& data = it.value();
+            rapidjson::Document doc;
+            doc.ParseStream(stream_wrapper);
 
-                const auto namehash = static_cast<uint32_t>(std::stoul(data["hash"].get<std::string>(), nullptr, 16));
+            assert(doc.IsObject());
+            m_Dictionary.reserve(doc.GetObjectA().MemberCount());
 
-                std::vector<std::string> paths;
-                for (const auto& path : data["path"]) {
-                    paths.emplace_back(path.get<std::string>());
+            for (auto itr = doc.MemberBegin(); itr != doc.MemberEnd(); ++itr) {
+                const uint32_t name_hash = ava::hashlittle(itr->name.GetString());
+
+                // add to file list
+                m_FileList->Add(itr->name.GetString());
+
+                std::vector<std::string> _paths;
+                for (auto paths_itr = itr->value.Begin(); paths_itr != itr->value.End(); ++paths_itr) {
+                    _paths.push_back(paths_itr->GetString());
                 }
 
-                m_Dictionary[namehash] = std::make_pair(key, std::move(paths));
+                m_Dictionary[name_hash] = std::pair{itr->name.GetString(), std::move(_paths)};
             }
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Failed to load file list dictionary. ({})", e.what());
@@ -227,6 +241,7 @@ void FileLoader::Init()
         }
 
         UI::Get()->PopStatusText(status_text_id);
+        m_DictionaryLoading = false;
     }).detach();
 }
 

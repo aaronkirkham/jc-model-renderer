@@ -1,66 +1,55 @@
 #pragma once
 
 #include <filesystem>
-#include <json.hpp>
 
-static constexpr auto DIRECTORYLIST_ROOT = "zzzzz_root";
+struct tree_node {
+    std::string              folder_name;
+    std::vector<tree_node>   folders;
+    std::vector<std::string> files;
+
+    tree_node() = default;
+    tree_node(const std::string& folder_name, const std::string& files)
+        : folder_name(folder_name)
+    {
+        add(files);
+    }
+
+    void add(const std::string& filepath)
+    {
+        auto slash_pos = filepath.find('/');
+        if (slash_pos != std::string::npos) {
+            auto directory = filepath.substr(0, slash_pos);
+            auto remain    = filepath.substr(slash_pos + 1, filepath.length());
+
+            auto it = std::find_if(folders.begin(), folders.end(),
+                                   [&](const tree_node& f) { return directory == f.folder_name; });
+
+            if (it == folders.end()) {
+                folders.emplace_back(tree_node{directory, remain});
+            } else {
+                (*it).add(remain);
+            }
+        } else {
+            files.push_back(filepath);
+        }
+    }
+};
 
 class AvalancheArchive;
 class DirectoryList
 {
   private:
-    nlohmann::json m_Structure;
-
-    void split(std::string str, nlohmann::json& current)
-    {
-        auto current_pos = str.find('/');
-        if (current_pos != std::string::npos) {
-            auto directory = str.substr(0, current_pos);
-            str.erase(0, current_pos + 1);
-
-            if (current.is_object() || current.is_null()) {
-                split(str, current[directory]);
-            } else {
-                auto temp                   = current;
-                current                     = nullptr;
-                current[DIRECTORYLIST_ROOT] = temp;
-                split(str, current[directory]);
-            }
-        } else {
-            if (!current.is_object()) {
-                current.emplace_back(str);
-            } else {
-                current[DIRECTORYLIST_ROOT].emplace_back(str);
-            }
-        }
-    }
-
+    tree_node   m_Tree;
     const char* GetFileTypeIcon(const std::filesystem::path& filename);
 
   public:
     DirectoryList()          = default;
     virtual ~DirectoryList() = default;
 
-    void Add(const std::string& filename)
+    void Add(const std::string& filepath)
     {
-        split(filename, m_Structure);
+        m_Tree.add(filepath);
     }
 
-    void Parse(nlohmann::json* tree)
-    {
-        if (tree) {
-            m_Structure.clear();
-
-            for (auto it = tree->begin(); it != tree->end(); ++it) {
-                split(it.key(), m_Structure);
-            }
-        }
-    }
-
-    void Draw(nlohmann::json* tree, AvalancheArchive* current_archive = nullptr, std::string acc_filepath = "");
-
-    nlohmann::json* GetTree()
-    {
-        return &m_Structure;
-    }
+    void Draw(AvalancheArchive* current_archive = nullptr, std::string acc_filepath = "", tree_node* tree = nullptr);
 };

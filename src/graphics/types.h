@@ -9,7 +9,7 @@
 
 using floats_t    = std::vector<float>;
 using uint16s_t   = std::vector<uint16_t>;
-using materials_t = std::vector<std::filesystem::path>;
+using materials_t = std::vector<std::pair<std::string, std::filesystem::path>>;
 using FileBuffer  = std::vector<uint8_t>;
 
 struct vertex_t {

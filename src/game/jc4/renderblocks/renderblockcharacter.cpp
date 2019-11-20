@@ -152,6 +152,14 @@ void RenderBlockCharacter::Setup(RenderContext_t* context)
     IRenderBlock::BindTexture(2, m_SamplerState);
 }
 
+void RenderBlockCharacter::DrawContextMenu()
+{
+#ifdef _DEBUG
+    m_Attributes;
+    __debugbreak();
+#endif
+}
+
 void RenderBlockCharacter::DrawUI()
 {
     ImGui::Text(ICON_FA_COGS "  Attributes");

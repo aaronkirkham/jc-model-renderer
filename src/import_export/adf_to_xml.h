@@ -85,7 +85,7 @@ class ADF2XML : public IImportExporter
             ".streampatch", ".roadgraphc", ".shudc", ".revolutionc", ".worldaudioinfo_xmlc",
             ".onlinec", ".statisticsc", ".gadfc", ".gdc", ".terrainsystemc", ".vegetationinfo",
             ".graphc", ".nhf", ".encountersc", ".collectionc", ".objectivesc", ".physicstunec",
-            ".vfxc", ".reactionc",
+            ".vfxc", ".reactionc", ".modelc", ".meshc", ".hrmeshc"
         };
         // clang-format on
 

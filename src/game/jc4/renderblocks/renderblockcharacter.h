@@ -4,10 +4,10 @@
 
 namespace jc4
 {
-static constexpr uint32_t CHARACTER_CONSTANTS      = 0x25970695;
-static constexpr uint32_t CHARACTER_EYES_CONSTANTS = 0x1BAC0639;
-static constexpr uint32_t CHARACTER_HAIR_CONSTANTS = 0x342303CE;
-static constexpr uint32_t CHARACTER_SKIN_CONSTANTS = 0xD8749464;
+static constexpr uint32_t ATTR_TYPE_CHARACTER_CONSTANTS      = 0x25970695;
+static constexpr uint32_t ATTR_TYPE_CHARACTER_EYES_CONSTANTS = 0x1BAC0639;
+static constexpr uint32_t ATTR_TYPE_CHARACTER_HAIR_CONSTANTS = 0x342303CE;
+static constexpr uint32_t ATTR_TYPE_CHARACTER_SKIN_CONSTANTS = 0xD8749464;
 
 #pragma pack(push, 8)
 struct SCharacterConstants {
@@ -148,10 +148,7 @@ class RenderBlockCharacter : public IRenderBlock
 
     virtual bool IsOpaque() override final
     {
-        // TODO
-        // Find out where the flags are stored. They must be on the modelc "Attributes" reference that we stil cannot
-        // parse within ADF (0xDEFE88ED type)
-
+        // @TODO
         /*
             _flags = *(v2 + 0x258);
             if ( _bittest(&_flags, 0x10u) || _flags & 8 )
@@ -163,9 +160,41 @@ class RenderBlockCharacter : public IRenderBlock
 
     virtual void Load(ava::AvalancheDataFormat::SAdfDeferredPtr* constants) override final
     {
-#if 0
-        SCharacterAttribute attributes{};
+        // m_AttributesType = constants->m_Type;
+        m_Attributes = constants;
 
+#if 0
+        switch (m_AttributesType) {
+            case ATTR_TYPE_CHARACTER_CONSTANTS: {
+                auto character_constants = (SCharacterConstants*)constants->m_Ptr;
+                character_constants->
+                __debugbreak();
+                break;
+            }
+
+            case ATTR_TYPE_CHARACTER_EYES_CONSTANTS: {
+                //
+                break;
+            }
+
+            case ATTR_TYPE_CHARACTER_HAIR_CONSTANTS: {
+                //
+                break;
+            }
+
+            case ATTR_TYPE_CHARACTER_SKIN_CONSTANTS: {
+                //
+                break;
+            }
+        }
+#endif
+
+#ifdef _DEBUG
+        // __debugbreak();
+#endif
+
+#if 0
+        // SCharacterAttribute attributes{};
         if (constants->m_Type == CHARACTER_CONSTANTS) {
             auto character_constants = (SCharacterConstants*)constants->m_Ptr;
             __debugbreak();
@@ -202,7 +231,7 @@ class RenderBlockCharacter : public IRenderBlock
     virtual void Create(const std::string& type_id, IBuffer_t* vertex_buffer, IBuffer_t* index_buffer) override final;
     virtual void Setup(RenderContext_t* context) override final;
 
-    virtual void DrawContextMenu() override final {}
+    virtual void DrawContextMenu() override final;
     virtual void DrawUI() override final;
 
     virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final

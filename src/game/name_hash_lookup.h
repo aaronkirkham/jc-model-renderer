@@ -1,8 +1,11 @@
 #pragma once
 
-#include <json.hpp>
-
 #include "window.h"
+
+#include <util/byte_array_buffer.h>
+
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
 
 class NameHashLookup
 {
@@ -21,12 +24,21 @@ class NameHashLookup
                     throw std::runtime_error("LoadInternalResource failed.");
                 }
 
-                const auto& dictionary = nlohmann::json::parse(buffer.begin(), buffer.end());
+                byte_array_buffer         buf(buffer);
+                std::istream              stream(&buf);
+                rapidjson::IStreamWrapper stream_wrapper(stream);
+
+                rapidjson::Document doc;
+                doc.ParseStream(stream_wrapper);
+
+                assert(doc.IsArray());
+                LookupTable.reserve(doc.Size());
 
                 // generate the lookup table
-                for (auto& it = dictionary.begin(); it != dictionary.end(); ++it) {
-                    const auto namehash = static_cast<uint32_t>(std::stoul(it.key(), nullptr, 16));
-                    LookupTable.insert(std::make_pair(namehash, it.value().get<std::string>()));
+                for (auto itr = doc.Begin(); itr != doc.End(); ++itr) {
+                    assert(itr->IsString());
+                    const uint32_t name_hash = ava::hashlittle(itr->GetString());
+                    LookupTable[name_hash]   = itr->GetString();
                 }
             } catch (const std::exception& e) {
                 SPDLOG_ERROR("Failed to load lookup table.");

@@ -56,7 +56,7 @@ template <typename... Args> static std::string format(const std::string& format,
 static bool find(const std::string& haystack, const std::string& needle)
 {
     auto it = std::search(haystack.begin(), haystack.end(), needle.begin(), needle.end(),
-                          [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); });
+                          [](char ch1, char ch2) { return toupper(ch1) == toupper(ch2); });
     return (it != haystack.end());
 }
 

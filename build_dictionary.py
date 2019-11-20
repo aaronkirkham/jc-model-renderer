@@ -6,7 +6,7 @@
 
 import sys
 import os
-import lookup3
+# import lookup3
 import json
 import argparse
 from pathlib import Path
@@ -63,10 +63,9 @@ for directory in FILELIST_DIRECTORIES:
 
           # append paths if we already have this line so patch_win64 works
           if not line in FILELIST:
-            hash = lookup3.hashlittle(line)
-            FILELIST[line] = { "path": [path], "hash": hash }
+            FILELIST[line] = [path]
           else:
-            FILELIST[line]["path"].append(path)
+            FILELIST[line].append(path)
 
 def sort_cmp(word):
   l = [FILELIST_SORT_HIERARCHY.index(i) for i in FILELIST_SORT_HIERARCHY if i in word]
@@ -74,8 +73,8 @@ def sort_cmp(word):
 
 # order the filelist if it has multiple paths
 for filename, data in FILELIST.items():
-  if len(data["path"]) > 1:
-    FILELIST[filename]["path"] = sorted(data["path"], key=sort_cmp)
+  if len(data) > 1:
+    FILELIST[filename] = sorted(data, key=sort_cmp)
 
 # write the dictionary json
 with open("{0}/dictionary.json".format(ASSETS), "w") as file:

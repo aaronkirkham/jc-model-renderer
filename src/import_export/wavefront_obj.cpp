@@ -47,10 +47,10 @@ void Wavefront_Obj::Import(const std::filesystem::path& filename, ImportFinished
     uint16s_t   indices;
     materials_t materials;
 
-    std::vector<glm::vec3>             _temp_vertices;
-    std::vector<glm::vec2>             _temp_uvs;
-    std::vector<glm::vec3>             _temp_normals;
-    std::map<std::string, std::string> _temp_materials;
+    std::vector<glm::vec3> _temp_vertices;
+    std::vector<glm::vec2> _temp_uvs;
+    std::vector<glm::vec3> _temp_normals;
+    materials_map_t        _temp_materials;
 
     std::string line;
     while (std::getline(stream, line)) {
@@ -76,7 +76,7 @@ void Wavefront_Obj::Import(const std::filesystem::path& filename, ImportFinished
                 continue;
             }
 
-            materials.emplace_back(_temp_materials[name]);
+            materials = _temp_materials[name];
         }
         // vertex
         else if (type == "v") {

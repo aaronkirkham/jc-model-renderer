@@ -44,7 +44,7 @@ project "jc-model-renderer"
     "vendor/glm",
     "vendor/httplib",
     "vendor/imgui",
-    "vendor/json/single_include/nlohmann",
+    "vendor/rapidjson/include",
     "vendor/ksignals/include/ksignals",
     "vendor/spdlog/include",
     "vendor/tinyxml2",

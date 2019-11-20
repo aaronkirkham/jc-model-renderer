@@ -2,6 +2,7 @@
 
 #include "singleton.h"
 
+#include <atomic>
 #include <functional>
 #include <mutex>
 
@@ -53,7 +54,8 @@ class FileLoader : public Singleton<FileLoader>
     std::unique_ptr<AvalancheArchive> m_AdfTypeLibraries;
 
   public:
-    inline static bool UseBatches = false;
+    inline static std::atomic<bool> m_DictionaryLoading = false;
+    inline static bool              UseBatches          = false;
 
     FileLoader();
     virtual ~FileLoader();

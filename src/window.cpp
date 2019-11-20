@@ -1,6 +1,8 @@
 #include <Windows.h>
 #include <shellapi.h>
 
+#include <rapidjson/document.h>
+
 #include <httplib.h>
 #ifdef DEBUG
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -316,6 +318,11 @@ void Window::SwitchMode(GameMode mode)
     // TODO: check if we are idle.
     // nothing should be loading at this point.
 
+    if (FileLoader::m_DictionaryLoading) {
+        SPDLOG_ERROR("m_DictionaryLoading is true!");
+        return;
+    }
+
     g_IsJC4Mode = (mode == GameMode::GameMode_JustCause4);
 
     // select the directory for the current game
@@ -361,10 +368,10 @@ void Window::SelectJustCauseDirectory(bool override_mode, bool jc3_mode)
             return SelectJustCauseDirectory(override_mode, jc3_mode);
         }
 
-        Settings::Get()->SetValue(is_jc4_mode ? "jc4_directory" : "jc3_directory", selected.string());
+        Settings::Get()->SetValue(is_jc4_mode ? "jc4_directory" : "jc3_directory", selected.string().c_str());
     } else {
-        const auto& jc_directory =
-            Settings::Get()->GetValue<std::string>(is_jc4_mode ? "jc4_directory" : "jc3_directory");
+        const std::string jc_directory =
+            Settings::Get()->GetValue<const char*>(is_jc4_mode ? "jc4_directory" : "jc3_directory", "");
         if (jc_directory.empty()) {
             ShowMessageBox("Unable to find Just Cause root directory.\n\nSome features will be disabled.");
         }
@@ -373,7 +380,7 @@ void Window::SelectJustCauseDirectory(bool override_mode, bool jc3_mode)
 
 std::filesystem::path Window::GetJustCauseDirectory()
 {
-    return Settings::Get()->GetValue<std::string>(g_IsJC4Mode ? "jc4_directory" : "jc3_directory");
+    return Settings::Get()->GetValue<const char*>(g_IsJC4Mode ? "jc4_directory" : "jc3_directory", "");
 }
 
 void Window::CheckForUpdates(bool show_no_update_messagebox)
@@ -385,8 +392,10 @@ void Window::CheckForUpdates(bool show_no_update_messagebox)
             httplib::Client client("kirkh.am");
             const auto      res = client.get("/jc-model-renderer/latest.json");
             if (res && res->status == 200) {
-                const auto& data        = nlohmann::json::parse(res->body);
-                const auto& version_str = data["version"].get<std::string>();
+                rapidjson::Document doc;
+                doc.Parse(res->body.c_str());
+
+                const auto version_str = std::string(doc["version"].GetString());
 
                 int32_t latest_version[3] = {0};
                 std::sscanf(version_str.c_str(), "%d.%d.%d", &latest_version[0], &latest_version[1],

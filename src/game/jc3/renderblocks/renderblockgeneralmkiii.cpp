@@ -291,22 +291,30 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
         packed_data.emplace_back(std::move(gsp));
     }
 
-    // load texture
-    if (materials->size() > 0) {
-        const auto& filename = materials->at(0);
-        auto&       texture  = TextureManager::Get()->GetTexture(filename.filename());
-        if (texture) {
-            texture->LoadFromFile(filename);
+    // load textures
+    for (const auto& mat : *materials) {
+        const auto& [type, filename] = mat;
+        auto& texture                = TextureManager::Get()->GetTexture(filename.filename());
+        assert(texture);
+        texture->LoadFromFile(filename);
+
+        printf("[%s] %s\n", type.c_str(), filename.generic_string().c_str());
+
+        if (type == "diff") {
             m_Textures[0] = std::move(texture);
+        } else if (type == "bump") {
+            m_Textures[3] = std::move(texture);
+        } else if (type == "spec") {
+            m_Textures[2] = std::move(texture);
         }
     }
 
     // TEMP TEXTURE HOLDERS
     // TODO: probably not this, but we want the slots to show up in the UI
     // so we can drag & drop stuff. that only works if the texture pointer is valid
-    m_Textures[1] = std::make_shared<Texture>("");
-    m_Textures[2] = std::make_shared<Texture>("");
-    m_Textures[3] = std::make_shared<Texture>("");
+    // m_Textures[1] = std::make_shared<Texture>("");
+    // m_Textures[2] = std::make_shared<Texture>("");
+    // m_Textures[3] = std::make_shared<Texture>("");
 
     m_VertexBuffer     = Renderer::Get()->CreateBuffer(packed_vertices.data(), packed_vertices.size(),
                                                    sizeof(PackedVertexPosition), VERTEX_BUFFER);
