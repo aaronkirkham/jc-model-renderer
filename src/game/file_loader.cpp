@@ -1,6 +1,8 @@
 #include <AvaFormatLib.h>
 #include <sstream>
 
+#include <rapidjson/document.h>
+
 #include "../vendor/ava-format-lib/include/archives/legacy/archive_table.h"
 #include "../vendor/ava-format-lib/include/util/byte_array_buffer.h"
 #include "../vendor/ava-format-lib/include/util/byte_vector_writer.h"
@@ -22,15 +24,7 @@
 #include "game/render_block_factory.h"
 #include "game/types.h"
 
-#include "../import_export/import_export_manager.h"
-
-//#include "../vendor/rapidjson/include/rapidjson/document.h"
-//#include "../vendor/rapidjson/include/rapidjson/rapidjson.h"
-
-#include <rapidjson/document.h>
-
-// Credit to gibbed for most of the file formats
-// http://gib.me
+#include "import_export/import_export_manager.h"
 
 static uint64_t g_ArchiveLoadCount = 0;
 extern bool     g_IsJC4Mode;
@@ -305,6 +299,10 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultC
 
     // finally, lets read it directory from the arc file
     std::thread([this, filename, callback, status_text_id] {
+        while (m_DictionaryLoading) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+
         const auto& [directory_name, archive_name, namehash] = LocateFileInDictionary(filename);
         if (!directory_name.empty()) {
             std::vector<uint8_t> buffer;

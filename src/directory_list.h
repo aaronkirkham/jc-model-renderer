@@ -3,15 +3,15 @@
 #include <filesystem>
 
 struct tree_node {
-    std::string              folder_name;
+    std::string              name;
     std::vector<tree_node>   folders;
     std::vector<std::string> files;
 
     tree_node() = default;
-    tree_node(const std::string& folder_name, const std::string& files)
-        : folder_name(folder_name)
+    tree_node(const std::string& folder_name, const std::string& remaining)
+        : name(folder_name)
     {
-        add(files);
+        add(remaining);
     }
 
     void add(const std::string& filepath)
@@ -19,15 +19,15 @@ struct tree_node {
         auto slash_pos = filepath.find('/');
         if (slash_pos != std::string::npos) {
             auto directory = filepath.substr(0, slash_pos);
-            auto remain    = filepath.substr(slash_pos + 1, filepath.length());
+            auto remaining = filepath.substr(slash_pos + 1, filepath.length());
 
             auto it = std::find_if(folders.begin(), folders.end(),
-                                   [&](const tree_node& f) { return directory == f.folder_name; });
+                                   [&](const tree_node& folder) { return directory == folder.name; });
 
             if (it == folders.end()) {
-                folders.emplace_back(tree_node{directory, remain});
+                folders.emplace_back(tree_node{directory, remaining});
             } else {
-                (*it).add(remain);
+                (*it).add(remaining);
             }
         } else {
             files.push_back(filepath);

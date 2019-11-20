@@ -1,12 +1,5 @@
-# to build the dictionary, you must:
-
-# (1) compile the lookup3 module
-# git clone https://github.com/aaronkirkham/py-lookup3
-# python setup.py install
-
 import sys
 import os
-# import lookup3
 import json
 import argparse
 from pathlib import Path
@@ -81,4 +74,4 @@ with open("{0}/dictionary.json".format(ASSETS), "w") as file:
   if args.pretty:
     file.write(json.dumps(FILELIST, indent=4, sort_keys=True))
   else:
-    json.dump(FILELIST, file)
+    file.write(json.dumps(FILELIST, sort_keys=True))

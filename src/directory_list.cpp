@@ -29,7 +29,7 @@ void DirectoryList::Draw(AvalancheArchive* current_archive, std::string acc_file
 
     // draw folders
     for (auto&& folder : tree->folders) {
-        const auto& key = folder.folder_name;
+        const auto& key = folder.name;
 
         // check if the current directory is open
         const auto id      = ImGui::GetID(key.c_str());

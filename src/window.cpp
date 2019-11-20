@@ -315,9 +315,6 @@ void Window::OpenUrl(const std::string& url)
 
 void Window::SwitchMode(GameMode mode)
 {
-    // TODO: check if we are idle.
-    // nothing should be loading at this point.
-
     if (FileLoader::m_DictionaryLoading) {
         SPDLOG_ERROR("m_DictionaryLoading is true!");
         return;
