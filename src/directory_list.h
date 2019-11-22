@@ -33,6 +33,19 @@ struct tree_node {
             files.push_back(filepath);
         }
     }
+
+    static bool sort_function(const tree_node& lhs, const tree_node& rhs)
+    {
+        return lhs.name < rhs.name;
+    }
+
+    void sort()
+    {
+        std::sort(folders.begin(), folders.end(), sort_function);
+        for (auto& folder : folders) {
+            folder.sort();
+        }
+    }
 };
 
 class AvalancheArchive;
@@ -49,6 +62,16 @@ class DirectoryList
     void Add(const std::string& filepath)
     {
         m_Tree.add(filepath);
+    }
+
+    void Sort()
+    {
+        m_Tree.sort();
+    }
+
+    void Clear()
+    {
+        m_Tree = {};
     }
 
     void Draw(AvalancheArchive* current_archive = nullptr, std::string acc_filepath = "", tree_node* tree = nullptr);

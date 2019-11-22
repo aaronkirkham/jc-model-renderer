@@ -103,6 +103,8 @@ class UI : public Singleton<UI>
     UI();
     virtual ~UI() = default;
 
+    void Shutdown();
+
     virtual UIEvents& Events()
     {
         return m_UIEvents;

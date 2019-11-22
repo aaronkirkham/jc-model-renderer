@@ -108,6 +108,12 @@ UI::UI()
     }
 }
 
+void UI::Shutdown()
+{
+    m_GameSelectionIcons[0].reset();
+    m_GameSelectionIcons[1].reset();
+}
+
 void UI::Render(RenderContext_t* context)
 {
     const auto& window_size = Window::Get()->GetSize();
@@ -1069,7 +1075,7 @@ void UI::RenderSpinner(const std::string& str)
 {
     ImGuiCustom::ImRotateStart();
     ImGui::Text(ICON_FA_SPINNER);
-    ImGuiCustom::ImRotateEnd(-0.005f * GetTickCount());
+    ImGuiCustom::ImRotateEnd(-0.005f * GetTickCount64());
 
     ImGui::SameLine();
     ImGui::Text(str.c_str());

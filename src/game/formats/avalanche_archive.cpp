@@ -46,7 +46,7 @@ void AvalancheArchive::Parse(const std::vector<uint8_t>& buffer, ParseCallback_t
 
     char magic[4];
     std::memcpy(&magic, buffer.data(), sizeof(magic));
-    const bool needs_aaf_decompress = strncmp(magic, "AAF", 4) == 0;
+    const bool needs_aaf_decompress = memcmp(magic, "AAF", 4) == 0;
 
     std::thread([&, needs_aaf_decompress, buffer, callback] {
         try {
@@ -54,7 +54,6 @@ void AvalancheArchive::Parse(const std::vector<uint8_t>& buffer, ParseCallback_t
                 std::vector<uint8_t> out_buffer;
                 ava::AvalancheArchiveFormat::Decompress(buffer, &out_buffer);
                 ava::StreamArchive::Parse(out_buffer, &m_Entries);
-
                 m_Buffer = std::move(out_buffer);
             } else {
                 ava::StreamArchive::Parse(buffer, &m_Entries);
@@ -66,6 +65,9 @@ void AvalancheArchive::Parse(const std::vector<uint8_t>& buffer, ParseCallback_t
                 auto toc_filename = m_Filename;
                 toc_filename += ".toc";
 
+                // add entries to the filelist
+                UpdateFilelistEntries();
+
                 return FileLoader::Get()->ReadFile(
                     toc_filename, [&, callback](bool success, std::vector<uint8_t> data) {
                         if (success) {
@@ -74,12 +76,12 @@ void AvalancheArchive::Parse(const std::vector<uint8_t>& buffer, ParseCallback_t
 
                             m_UsingTOC = true;
 
-                            SPDLOG_INFO("Added {} and patched {} files from TOC.", num_added, num_patched);
-                        }
+                            // if we added files, update the file list
+                            if (num_added > 0) {
+                                UpdateFilelistEntries();
+                            }
 
-                        // add entries to the filelist
-                        for (const auto& entry : m_Entries) {
-                            m_FileList->Add(entry.m_Filename);
+                            SPDLOG_INFO("Added {} and patched {} files from TOC.", num_added, num_patched);
                         }
 
                         if (callback) {
@@ -89,9 +91,7 @@ void AvalancheArchive::Parse(const std::vector<uint8_t>& buffer, ParseCallback_t
             }
 
             // add entries to the filelist
-            for (const auto& entry : m_Entries) {
-                m_FileList->Add(entry.m_Filename);
-            }
+            UpdateFilelistEntries();
 
             if (callback) {
                 callback(true);
@@ -109,7 +109,7 @@ void AvalancheArchive::ReadFileCallback(const std::filesystem::path& filename, c
                                         bool external)
 {
     if (!AvalancheArchive::exists(filename.string())) {
-        AvalancheArchive::make(filename, data, external);
+        auto arc = AvalancheArchive::make(filename, data, external);
     }
 }
 
@@ -122,8 +122,9 @@ bool AvalancheArchive::SaveFileCallback(const std::filesystem::path& filename, c
         std::string status_text    = "Repacking \"" + path.filename().string() + "\"...";
         const auto  status_text_id = UI::Get()->PushStatusText(status_text);
 
-        // TODO: we should read the archive filelist, grab a list of files which have offset 0 (in patches)
-        // and check if we have edited any of those files. if so we need to include it in the repack of the SARC
+        // TODO: we should read the archive filelist, grab a list of files which have offset
+        // 0 (in patches) and check if we have edited any of those files. if so we need to
+        // include it in the repack of the SARC
 
         std::thread([archive, path, status_text_id] {
             try {
@@ -223,4 +224,15 @@ bool AvalancheArchive::HasFile(const std::filesystem::path& filename)
                                  [_filename](const ArchiveEntry& item) { return item.m_Filename == _filename; });
 
     return it != m_Entries.end();
+}
+
+void AvalancheArchive::UpdateFilelistEntries()
+{
+    m_FileList->Clear();
+
+    for (const auto& entry : m_Entries) {
+        m_FileList->Add(entry.m_Filename);
+    }
+
+    m_FileList->Sort();
 }

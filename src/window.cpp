@@ -126,6 +126,7 @@ void Window::Shutdown()
     RuntimeContainer::Instances.clear();
     RenderBlockModel::Instances.clear();
     AvalancheArchive::Instances.clear();
+    AvalancheModelFormat::Instances.clear();
 
     Renderer::Get()->Shutdown();
 

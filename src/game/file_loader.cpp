@@ -39,7 +39,7 @@ FileLoader::FileLoader()
     // load ADF type libraries
     std::vector<uint8_t> buffer;
     if (Window::Get()->LoadInternalResource(103, &buffer)) {
-        m_AdfTypeLibraries = std::make_unique<AvalancheArchive>("adf-type-libraries.ee", buffer);
+        m_AdfTypeLibraries = std::make_unique<AvalancheArchive>("adf-type-libraries.ee", buffer, true);
     }
 
     // TODO: move the events to a better location?
@@ -879,13 +879,12 @@ bool FileLoader::ReadArchiveTable(const std::filesystem::path&                  
     stream.read((char*)buffer.data(), size);
     stream.close();
 
-    using namespace ava;
     try {
         if (g_IsJC4Mode) {
-            ArchiveTable::Parse(buffer, output, output_blocks);
+            ava::ArchiveTable::Parse(buffer, output, output_blocks);
         } else {
-            std::vector<legacy::ArchiveTable::TabEntry> entries;
-            legacy::ArchiveTable::Parse(buffer, &entries);
+            std::vector<ava::legacy::ArchiveTable::TabEntry> entries;
+            ava::legacy::ArchiveTable::Parse(buffer, &entries);
 
             // legacy TabEntry convert
             output->reserve(entries.size());

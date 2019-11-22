@@ -186,7 +186,7 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
             }
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-            D3D_SET_OBJECT_NAME_A(vs->m_Shader, name.c_str());
+            D3D_SET_OBJECT_NAME_A(ps->m_Shader, name.c_str());
 #endif
 
             m_PixelShaders[key] = std::move(ps);

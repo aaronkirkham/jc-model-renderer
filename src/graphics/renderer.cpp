@@ -111,6 +111,7 @@ bool Renderer::Initialise(const HWND& hwnd)
 
 void Renderer::Shutdown()
 {
+    UI::Get()->Shutdown();
     TextureManager::Get()->Shutdown();
     ShaderManager::Get()->Shutdown();
 

@@ -22,6 +22,8 @@ class AvalancheArchive : public Factory<AvalancheArchive>
     bool                                          m_UsingTOC           = false;
     bool                                          m_FromExternalSource = false;
 
+    void UpdateFilelistEntries();
+
   public:
     AvalancheArchive(const std::filesystem::path& filename);
     AvalancheArchive(const std::filesystem::path& filename, const std::vector<uint8_t>& buffer, bool external = false);

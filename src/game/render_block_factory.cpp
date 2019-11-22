@@ -15,7 +15,7 @@
 #include "jc4/renderblocks/renderblockcarpaint.h"
 #include "jc4/renderblocks/renderblockcharacter.h"
 
-#include <AvaFormatLib.h>
+#include "../vendor/ava-format-lib/include/util/hashlittle.h"
 
 IRenderBlock* RenderBlockFactory::CreateRenderBlock(const uint32_t type, bool jc4)
 {
