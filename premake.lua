@@ -48,8 +48,8 @@ project "jc-model-renderer"
     "vendor/ksignals/include/ksignals",
     "vendor/spdlog/include",
     "vendor/tinyxml2",
-    "vendor/zlib",
-    "vendor/ava-format-lib/include"
+    "vendor/ava-format-lib/include",
+    "vendor/ava-format-lib/deps/zlib"
   }
 
   disablewarnings { "4200", "4244", "4267", "6031", "6262" }
