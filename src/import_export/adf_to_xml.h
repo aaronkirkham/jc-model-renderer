@@ -21,45 +21,18 @@ namespace ImportExport
 class ADF2XML : public IImportExporter
 {
   private:
-#if 0
-    template <typename T> inline void WriteScalarToPayload(T value, const char* payload, uint32_t payload_offset)
+    // @NOTE: helper class just so we can access protected ADF class members!
+    class ADF2XMLHelper : public ava::AvalancheDataFormat::ADF
     {
-        std::memcpy((char*)payload + payload_offset, &value, sizeof(T));
-    }
+      public:
+        ADF2XMLHelper()  = default;
+        ~ADF2XMLHelper() = default;
 
-    void WriteScalarToPayloadFromString(const jc::AvalancheDataFormat::Type* type, const char* payload,
-                                        uint32_t payload_offset, const std::string& data)
-    {
-        using namespace jc::AvalancheDataFormat;
-
-        // clang-format off
-        switch (type->m_ScalarType) {
-        case ScalarType::Signed:
-            switch (type->m_Size) {
-                case sizeof(int8_t):	WriteScalarToPayload<int8_t>(std::stoi(data), payload, payload_offset); break;
-                case sizeof(int16_t):	WriteScalarToPayload<int16_t>(std::stoi(data), payload, payload_offset); break;
-                case sizeof(int32_t):	WriteScalarToPayload<int32_t>(std::stol(data), payload, payload_offset); break;
-                case sizeof(int64_t):	WriteScalarToPayload<int64_t>(std::stoll(data), payload, payload_offset); break;
-            }
-            break;
-        case ScalarType::Unsigned:
-            switch (type->m_Size) {
-                case sizeof(uint8_t):	WriteScalarToPayload<uint8_t>(std::stoi(data), payload, payload_offset); break;
-                case sizeof(uint16_t):	WriteScalarToPayload<uint16_t>(std::stoi(data), payload, payload_offset); break;
-                case sizeof(uint32_t):	WriteScalarToPayload<uint32_t>(std::stoul(data), payload, payload_offset); break;
-                case sizeof(uint64_t):	WriteScalarToPayload<uint64_t>(std::stoull(data), payload, payload_offset); break;
-            }
-            break;
-        case ScalarType::Float:
-            switch (type->m_Size) {
-                case sizeof(float):		WriteScalarToPayload(std::stof(data), payload, payload_offset); break;
-                case sizeof(double):	WriteScalarToPayload(std::stod(data), payload, payload_offset); break;
-            }
-            break;
+        void PushType(ava::AvalancheDataFormat::AdfType* type)
+        {
+            m_Types.push_back(type);
         }
-        // clang-format on
-    }
-#endif
+    };
 
   public:
     ADF2XML()          = default;

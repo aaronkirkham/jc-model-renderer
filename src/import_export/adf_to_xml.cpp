@@ -4,6 +4,9 @@
 #include <spdlog/spdlog.h>
 #include <tinyxml2.h>
 
+#include <algorithm>
+#include <numeric>
+
 #include "adf_to_xml.h"
 #include "util.h"
 #include "version.h"
@@ -21,21 +24,23 @@ namespace ImportExport
 #define XmlForeachChild(parent, name)                                                                                  \
     for (auto child = parent->FirstChildElement(name); child != nullptr; child = child->NextSiblingElement(name))
 
-static std::vector<uint32_t>           m_RefsToFix;
-static std::map<std::string, uint32_t> m_StringRefs;
+static std::vector<std::string>        Strings;
+static std::map<uint32_t, std::string> StringHashes;
+static std::vector<uint32_t>           RefsToFix;
+static std::map<std::string, uint32_t> StringRefs;
 
-static void PrefetchStringHashes(ava::AvalancheDataFormat::ADF *adf, tinyxml2::XMLElement *el)
+static void PrefetchStringHashes(tinyxml2::XMLElement *el)
 {
     if (!strcmp(el->Name(), "stringhash")) {
         const auto text = el->GetText();
         if (text && strlen(text) > 0) {
-            const auto hash = ava::hashlittle(text);
-            // adf->m_StringHashes[hash] = text;
+            const auto hash    = ava::hashlittle(text);
+            StringHashes[hash] = text;
         }
     }
 
     for (auto child = el->FirstChildElement(); child != nullptr; child = child->NextSiblingElement()) {
-        PrefetchStringHashes(adf, child);
+        PrefetchStringHashes(child);
     }
 }
 
@@ -163,6 +168,12 @@ static uint32_t ReadInstance(tinyxml2::XMLElement *el, ava::AvalancheDataFormat:
                 const uint32_t real_data_offset =
                     ava::math::align(data_offset + current_data_offset, member_type->m_Align);
 
+                SPDLOG_INFO("Struct {} @ {:x}", Strings[type->m_Name], real_data_offset);
+
+                if (type->m_Name == 1) {
+                    assert(real_data_offset != 0x2408);
+                }
+
                 if (member_type->m_Type == ADF_TYPE_BITFIELD) {
                     // get the current bit value
                     uint64_t value = 0;
@@ -180,6 +191,10 @@ static uint32_t ReadInstance(tinyxml2::XMLElement *el, ava::AvalancheDataFormat:
                     // read child instance
                     current_data_offset +=
                         ReadInstance(child, adf, header, member_type, data, real_payload_offset, real_data_offset);
+
+                    if (current_data_offset == 0) {
+                        __debugbreak();
+                    }
 
                     // next member offset
                     member_offset += (member_type->m_Size + alignment);
@@ -216,7 +231,7 @@ static uint32_t ReadInstance(tinyxml2::XMLElement *el, ava::AvalancheDataFormat:
             std::memcpy((char *)data + offset + sizeof(data_offset) + sizeof(next_offset), &type_hash,
                         sizeof(type_hash));
 
-            m_RefsToFix.push_back(offset);
+            RefsToFix.push_back(offset);
 
             // read the pointer instance
             const uint32_t deferred_data_offset = (data_offset + deferred_type->m_Size);
@@ -254,6 +269,7 @@ static uint32_t ReadInstance(tinyxml2::XMLElement *el, ava::AvalancheDataFormat:
             uint32_t written = 0;
             if (sub_type->m_Type == ADF_TYPE_SCALAR) {
                 const auto &str_data = util::split(array_el->GetText(), " ");
+                assert(str_data.size() == count);
                 for (uint32_t i = 0; i < count; ++i) {
                     WriteScalarFromString(sub_type, data, (data_offset + (sub_type->m_Size * i)), str_data[i]);
                 }
@@ -265,6 +281,12 @@ static uint32_t ReadInstance(tinyxml2::XMLElement *el, ava::AvalancheDataFormat:
                 uint32_t   current_data_offset = 0;
                 const auto array_member_el     = array_el->FirstChildElement();
 
+                SPDLOG_INFO("Array {}", Strings[type->m_Name]);
+
+                if (data_offset == 0x2110) {
+                    __debugbreak();
+                }
+
                 for (auto child = array_member_el; child != nullptr; child = child->NextSiblingElement()) {
                     // calculate data
                     const uint32_t member_data_offset =
@@ -273,6 +295,9 @@ static uint32_t ReadInstance(tinyxml2::XMLElement *el, ava::AvalancheDataFormat:
                     // write the instance
                     current_data_offset += ReadInstance(child, adf, header, sub_type, data,
                                                         (data_offset + member_offset), member_data_offset);
+
+                    SPDLOG_INFO(" - {} Offset={:x}, DataOffset={:x}", Strings[sub_type->m_Name],
+                                (data_offset + member_offset), member_data_offset);
 
                     // next
                     member_offset += sub_type->m_Size;
@@ -287,7 +312,7 @@ static uint32_t ReadInstance(tinyxml2::XMLElement *el, ava::AvalancheDataFormat:
             std::memcpy((char *)data + offset + sizeof(data_offset), &next_offset, sizeof(next_offset));
             std::memcpy((char *)data + offset + sizeof(data_offset) + sizeof(next_offset), &count, sizeof(count));
 
-            m_RefsToFix.push_back(offset);
+            RefsToFix.push_back(offset);
             return written;
         }
 
@@ -341,20 +366,21 @@ static uint32_t ReadInstance(tinyxml2::XMLElement *el, ava::AvalancheDataFormat:
             std::string value    = el_value ? el_value : "";
 
             static const uint32_t next_offset = -1;
-            m_RefsToFix.push_back(offset);
+            RefsToFix.push_back(offset);
 
             // if we didn't already write this string, write it now!
-            const auto it = m_StringRefs.find(value);
-            if (it == m_StringRefs.end()) {
+            const auto it = StringRefs.find(value);
+            if (it == StringRefs.end()) {
                 // write the string to the data offset
                 std::memcpy((char *)data + data_offset, value.data(), value.size());
-                m_StringRefs[value] = data_offset;
+                // StringRefs[value] = data_offset;
+
+                // @TODO: look at this!
+                //	      Disabled string refs for now..
 
                 // write the reference in the payload offset
                 std::memcpy((char *)data + offset, &data_offset, sizeof(data_offset));
                 std::memcpy((char *)data + offset + sizeof(data_offset), &next_offset, sizeof(next_offset));
-
-                // @NOTE: Return aligned string length
                 return ava::math::align(((uint32_t)value.length() + 1), type->m_Align);
             }
 
@@ -387,9 +413,7 @@ static uint32_t ReadInstance(tinyxml2::XMLElement *el, ava::AvalancheDataFormat:
                 const uint32_t hash = ava::hashlittle(string);
                 std::memcpy((char *)data + offset, &hash, sizeof(hash));
 
-#ifdef _DEBUG
-                printf("stringhash - %s (%#u)\n", string, hash);
-#endif
+                SPDLOG_INFO("StringHash: {} ({:x})", string, hash);
             }
 
             break;
@@ -427,16 +451,20 @@ void ADF2XML::Import(const std::filesystem::path &filename, ImportFinishedCallba
     util::replace(library, ", ", "\n");
 
     if (version != 4) {
-        SPDLOG_ERROR("Unexpected adf version.");
+        SPDLOG_ERROR("Unsupported adf version.");
         return callback(false, filename, 0);
     }
 
     // create adf
     // NOTE: this will load type libraries for us
-    // std::filesystem::path adf_filename = filename.stem().replace_extension(extension);
+    std::filesystem::path adf_filename = filename.stem().replace_extension(extension);
     // const auto            adf          = AvalancheDataFormat::make(adf_filename, FileBuffer{});
 
-    // ADF adf{};
+    ADF2XMLHelper adf{};
+
+    static auto StringIndex = [&](const char *value) -> uint64_t {
+        return std::distance(Strings.begin(), std::find(Strings.begin(), Strings.end(), value));
+    };
 
     // load instances
     std::vector<AdfInstance> instances;
@@ -444,7 +472,7 @@ void ADF2XML::Import(const std::filesystem::path &filename, ImportFinishedCallba
     {
         // add the instance name to the strings pool
         const auto instance_name = child->Attribute("name");
-        // VectorPushIfNotExists(adf->m_Strings, instance_name);
+        VectorPushIfNotExists(Strings, instance_name);
         // VectorPushIfNotExists(adf->m_InternalStrings, instance_name);
 
         // load the instance
@@ -453,12 +481,12 @@ void ADF2XML::Import(const std::filesystem::path &filename, ImportFinishedCallba
         instance.m_TypeHash      = child->UnsignedAttribute("typehash");
         instance.m_PayloadOffset = child->UnsignedAttribute("offset");
         instance.m_PayloadSize   = child->UnsignedAttribute("size");
-        // instance.m_Name          = adf->GetStringIndex(instance_name);
+        instance.m_Name          = StringIndex(instance_name);
         instances.emplace_back(std::move(instance));
 
         // load string hashes early
         // NOTE: we need to do this so we can calculate the expected file size before we start parsing the types
-        // PrefetchStringHashes(adf.get(), child);
+        PrefetchStringHashes(child);
     }
 
     // right now we only support single instances.
@@ -471,7 +499,6 @@ void ADF2XML::Import(const std::filesystem::path &filename, ImportFinishedCallba
     }
 
     // load types
-    uint32_t               types_count      = 0;
     uint32_t               total_types_size = 0;
     std::vector<AdfType *> types;
     const auto             types_el = root->FirstChildElement("types");
@@ -479,7 +506,7 @@ void ADF2XML::Import(const std::filesystem::path &filename, ImportFinishedCallba
         XmlForeachChild(types_el, "type")
         {
             const char *name = child->Attribute("name");
-            // VectorPushIfNotExists(m_Strings, name);
+            VectorPushIfNotExists(Strings, name);
             // VectorPushIfNotExists(m_InternalStrings, name);
 
             // count members
@@ -494,16 +521,20 @@ void ADF2XML::Import(const std::filesystem::path &filename, ImportFinishedCallba
             // allocate space for the type and members
             const size_t size = (sizeof(AdfType) + (member_count * (is_enum ? sizeof(AdfEnum) : sizeof(AdfMember))));
             auto         type = (AdfType *)std::malloc(size);
+            if (!type) {
+                SPDLOG_ERROR("Can't allocate enough space for type.");
+                return callback(false, filename, {});
+            }
 
             // track the total allocated size for the ADF header generation later.
             total_types_size += (uint32_t)size;
 
             // initialise the type
-            type->m_Type     = adf_type;
-            type->m_Size     = child->UnsignedAttribute("size");
-            type->m_Align    = child->UnsignedAttribute("align");
-            type->m_TypeHash = child->UnsignedAttribute("typehash");
-            // type->m_Name        = GetStringIndex(m_InternalStrings, name);
+            type->m_Type        = adf_type;
+            type->m_Size        = child->UnsignedAttribute("size");
+            type->m_Align       = child->UnsignedAttribute("align");
+            type->m_TypeHash    = child->UnsignedAttribute("typehash");
+            type->m_Name        = StringIndex(name);
             type->m_Flags       = (uint16_t)child->UnsignedAttribute("flags");
             type->m_ScalarType  = (EAdfScalarType)child->UnsignedAttribute("scalartype");
             type->m_SubTypeHash = child->UnsignedAttribute("subtypehash");
@@ -515,16 +546,16 @@ void ADF2XML::Import(const std::filesystem::path &filename, ImportFinishedCallba
             const auto member_el    = child->FirstChildElement("member");
             for (auto member = member_el; member != nullptr; member = member->NextSiblingElement("member")) {
                 const char *name = member->Attribute("name");
-                // VectorPushIfNotExists(m_Strings, name);
+                VectorPushIfNotExists(Strings, name);
                 // VectorPushIfNotExists(m_InternalStrings, name);
 
                 if (is_enum) {
                     AdfEnum &memb = type->Enum(member_index);
-                    // memb.m_Name   = GetStringIndex(m_InternalStrings, name);
-                    memb.m_Value = member->IntAttribute("value");
+                    memb.m_Name   = StringIndex(name);
+                    memb.m_Value  = member->IntAttribute("value");
                 } else {
-                    AdfMember &memb = type->m_Members[member_index];
-                    // memb.m_Name               = GetStringIndex(m_InternalStrings, name);
+                    AdfMember &memb     = type->m_Members[member_index];
+                    memb.m_Name         = StringIndex(name);
                     memb.m_TypeHash     = member->UnsignedAttribute("typehash");
                     memb.m_Align        = member->UnsignedAttribute("align");
                     memb.m_Offset       = member->UnsignedAttribute("offset");
@@ -537,61 +568,58 @@ void ADF2XML::Import(const std::filesystem::path &filename, ImportFinishedCallba
             }
 
             //
-            // m_Types.push_back(type);
+            adf.PushType(type);
             types.push_back(type);
         }
     }
 
-#if 0
     // calculate string hashes lengths
     const auto string_hashes_lengths =
-        std::accumulate(adf->m_StringHashes.begin(), adf->m_StringHashes.end(), 0,
+        std::accumulate(StringHashes.begin(), StringHashes.end(), 0,
                         [](int32_t accumulator, const std::pair<uint32_t, std::string> &item) {
                             return accumulator + (item.second.length() + 1);
                         });
 
     // calculate string lengths
     const auto string_lengths =
-        std::accumulate(adf->m_InternalStrings.begin(), adf->m_InternalStrings.end(), 0,
+        std::accumulate(Strings.begin(), Strings.end(), 0,
                         [](int32_t accumulator, const std::string &str) { return accumulator + (str.length() + 1); });
 
     // calculate the first instance write offset
     const auto first_instance = instances.front();
     const auto first_instance_offset =
-        jc::ALIGN_TO_BOUNDARY(first_instance.m_PayloadOffset + first_instance.m_PayloadSize
-                                  + ((flags & EHeaderFlags::RELATIVE_OFFSETS_EXISTS) ? sizeof(uint32_t) : 0),
-                              8);
+        ava::math::align(first_instance.m_PayloadOffset + first_instance.m_PayloadSize
+                             + ((flags & E_ADF_HEADER_FLAG_RELATIVE_OFFSETS_EXISTS) ? sizeof(uint32_t) : 0),
+                         8);
 
     //
-    const auto total_string_hashes      = static_cast<uint32_t>(adf->m_StringHashes.size());
+    const auto total_string_hashes      = static_cast<uint32_t>(StringHashes.size());
     const auto total_string_hashes_size = ((sizeof(uint64_t) * total_string_hashes) + string_hashes_lengths);
 
     // TODO: support multiple instances.
 
     // figure out how much data we need
-    const auto     total_strings = static_cast<uint32_t>(adf->m_InternalStrings.size());
-    const uint32_t file_size     = first_instance_offset + (sizeof(Instance) * instances.size()) + total_types_size
+    const auto     total_strings = static_cast<uint32_t>(Strings.size());
+    const uint32_t file_size     = first_instance_offset + (sizeof(AdfInstance) * instances.size()) + total_types_size
                                + total_string_hashes_size + ((sizeof(uint8_t) * total_strings) + string_lengths);
 
     //
-    adf->m_Buffer.resize(file_size);
+    std::vector<uint8_t> buffer(file_size);
 
     // generate the header
-    Header header{};
-    header.m_Magic                 = 0x41444620;
+    AdfHeader header{};
+    header.m_Magic                 = ADF_MAGIC;
     header.m_Version               = 4;
     header.m_InstanceCount         = instances.size();
     header.m_FirstInstanceOffset   = first_instance_offset;
-    header.m_TypeCount             = types_count;
-    header.m_FirstTypeOffset       = (header.m_FirstInstanceOffset + (sizeof(Instance) * header.m_InstanceCount));
-    header.m_StringHashCount       = static_cast<uint32_t>(adf->m_StringHashes.size());
+    header.m_TypeCount             = static_cast<uint32_t>(types.size());
+    header.m_FirstTypeOffset       = (header.m_FirstInstanceOffset + (sizeof(AdfInstance) * header.m_InstanceCount));
+    header.m_StringHashCount       = static_cast<uint32_t>(StringHashes.size());
     header.m_FirstStringHashOffset = (header.m_FirstTypeOffset + total_types_size);
-    header.m_StringCount           = static_cast<uint32_t>(adf->m_InternalStrings.size());
+    header.m_StringCount           = static_cast<uint32_t>(Strings.size());
     header.m_FirstStringDataOffset = (header.m_FirstStringHashOffset + total_string_hashes_size);
     header.m_FileSize              = file_size;
-    header.unknown                 = 0;
     header.m_Flags                 = flags;
-    header.m_IncludedLibraries     = 0;
 
     // reset the first type offset.
     // NOTE: we set the first type offset so then the string data offset can use the correct offset
@@ -605,108 +633,104 @@ void ADF2XML::Import(const std::filesystem::path &filename, ImportFinishedCallba
     }
 
     // write the header
-    std::memcpy(adf->m_Buffer.data(), &header, sizeof(header));
-    std::memcpy(adf->m_Buffer.data() + offsetof(Header, m_Description), library.data(), library.length());
+    std::memcpy(buffer.data(), &header, sizeof(header));
+    std::memcpy(buffer.data() + offsetof(AdfHeader, m_Description), library.data(), library.length());
 
     // read type members
     for (auto child = root->FirstChildElement("instance"); child != nullptr;
          child      = child->NextSiblingElement("instance")) {
-        const auto namehash = hashlittle(child->Attribute("name"));
+        const auto namehash = ava::hashlittle(child->Attribute("name"));
         const auto it       = std::find_if(instances.begin(), instances.end(),
-                                     [namehash](const Instance &item) { return item.m_NameHash == namehash; });
+                                     [namehash](const AdfInstance &item) { return item.m_NameHash == namehash; });
 
         if (it == instances.end()) {
             break;
         }
 
-        const auto type = adf->FindType((*it).m_TypeHash);
+        const auto type = adf.FindType((*it).m_TypeHash);
         if (type) {
-            XmlReadInstance(adf.get(), child, &header, type, (const char *)&adf->m_Buffer[(*it).m_PayloadOffset], 0,
-                            type->m_Size);
+            ReadInstance(child, &adf, &header, type, (const char *)&buffer[(*it).m_PayloadOffset], 0, type->m_Size);
 
-            // fix references
-            // TODO: only if header flag 1 is set.
-            // TODO: this won't work for ADFs with multiple instances - fix it.
-            std::sort(m_RefsToFix.begin(), m_RefsToFix.end());
-            for (uint32_t i = 0; i < m_RefsToFix.size(); ++i) {
-                const uint32_t offset      = m_RefsToFix[i];
-                uint32_t       next_offset = 0;
+            // fix relative offsets
+            if (header.m_Flags & E_ADF_HEADER_FLAG_RELATIVE_OFFSETS_EXISTS) {
+                // TODO: this won't work for ADFs with multiple instances - fix it.
+                std::sort(RefsToFix.begin(), RefsToFix.end());
+                for (uint32_t i = 0; i < RefsToFix.size(); ++i) {
+                    const uint32_t offset      = RefsToFix[i];
+                    uint32_t       next_offset = 0;
 
-                if (i != (m_RefsToFix.size() - 1)) {
-                    next_offset = (m_RefsToFix[i + 1] - offset);
+                    if (i != (RefsToFix.size() - 1)) {
+                        next_offset = (RefsToFix[i + 1] - offset);
+                    }
+
+                    // update the current reference
+                    // NOTE: +4 to skip the reference offset
+                    *(uint32_t *)&buffer[(*it).m_PayloadOffset + (offset + 4)] = next_offset;
                 }
-
-                // update the current reference
-                // NOTE: +4 to skip the reference offset
-                *(uint32_t *)&adf->m_Buffer[(*it).m_PayloadOffset + (offset + 4)] = next_offset;
             }
         }
 
         // TODO: figure out what this is
-        if (flags & EHeaderFlags::RELATIVE_OFFSETS_EXISTS) {
-            const auto unknown = child->UnsignedAttribute("unknown");
-            *(uint32_t *)&adf->m_Buffer[(*it).m_PayloadOffset + (*it).m_PayloadSize] = unknown;
+        if (flags & E_ADF_HEADER_FLAG_RELATIVE_OFFSETS_EXISTS) {
+            const auto unknown                                                = child->UnsignedAttribute("unknown");
+            *(uint32_t *)&buffer[(*it).m_PayloadOffset + (*it).m_PayloadSize] = unknown;
         }
     }
 
     // write the instances
-    std::memcpy(adf->m_Buffer.data() + header.m_FirstInstanceOffset, instances.data(),
-                (sizeof(Instance) * instances.size()));
+    std::memcpy(buffer.data() + header.m_FirstInstanceOffset, instances.data(),
+                (sizeof(AdfInstance) * instances.size()));
 
     // write the types
     uint32_t cur_type_offset = 0;
     for (const auto type : types) {
-        const uint32_t size = type->Size();
-        std::memcpy(adf->m_Buffer.data() + header.m_FirstTypeOffset + cur_type_offset, (char *)type, size);
+        const uint32_t size = type->DataSize();
+        std::memcpy(buffer.data() + header.m_FirstTypeOffset + cur_type_offset, (char *)type, size);
         cur_type_offset += size;
     }
 
     // write the string hashes
     uint32_t cur_string_hash_offset = 0;
-    for (auto it = adf->m_StringHashes.begin(); it != adf->m_StringHashes.end(); ++it) {
+    for (auto it = StringHashes.begin(); it != StringHashes.end(); ++it) {
         const auto  hash   = (*it).first;
         const auto &string = (*it).second;
 
         // write the string
-        std::memcpy(adf->m_Buffer.data() + header.m_FirstStringHashOffset + cur_string_hash_offset, string.data(),
+        std::memcpy(buffer.data() + header.m_FirstStringHashOffset + cur_string_hash_offset, string.data(),
                     string.size());
         cur_string_hash_offset += (string.length() + 1);
 
         // write the string hash
         // NOTE: format uses uint64_t NOT uint32_t
-        std::memcpy(adf->m_Buffer.data() + header.m_FirstStringHashOffset + cur_string_hash_offset, &hash,
-                    sizeof(hash));
+        std::memcpy(buffer.data() + header.m_FirstStringHashOffset + cur_string_hash_offset, &hash, sizeof(hash));
         cur_string_hash_offset += sizeof(uint64_t);
     }
 
     // write the strings
     uint32_t total_lengths     = (sizeof(uint8_t) * total_strings);
     uint32_t cur_string_offset = 0;
-    for (uint32_t i = 0; i < adf->m_InternalStrings.size(); ++i) {
-        const auto &string = adf->m_InternalStrings[i];
+    for (uint32_t i = 0; i < Strings.size(); ++i) {
+        const auto &string = Strings[i];
         uint8_t     length = string.length();
 
         // write the string length
-        std::memcpy(adf->m_Buffer.data() + header.m_FirstStringDataOffset + (sizeof(uint8_t) * i), &length,
-                    sizeof(length));
+        std::memcpy(buffer.data() + header.m_FirstStringDataOffset + (sizeof(uint8_t) * i), &length, sizeof(length));
 
         // write the string
-        std::memcpy(adf->m_Buffer.data() + header.m_FirstStringDataOffset + total_lengths + cur_string_offset,
-                    string.data(), length + 1);
+        std::memcpy(buffer.data() + header.m_FirstStringDataOffset + total_lengths + cur_string_offset, string.data(),
+                    length + 1);
 
         cur_string_offset += length + 1;
     }
 
-
-    //
-    m_StringRefs.clear();
-    m_RefsToFix.clear();
+    // clear temp storage
+    Strings.clear();
+    StringHashes.clear();
+    StringRefs.clear();
+    RefsToFix.clear();
 
     auto new_filename = filename.parent_path() / adf_filename;
-    return callback(true, new_filename, adf->m_Buffer);
-#endif
-
-    return callback(false, "", {});
+    return callback(true, new_filename, buffer);
 }
 
 static void WriteInstance(tinyxml2::XMLPrinter &printer, ava::AvalancheDataFormat::ADF *adf,
@@ -771,8 +795,8 @@ static void WriteInstance(tinyxml2::XMLPrinter &printer, ava::AvalancheDataForma
                 const AdfType *  member_type = adf->FindType(member.m_TypeHash);
 
                 if (!member_type) {
-                    printf("Unknown member type in structure! Member=%s, TypeHash=%u\n",
-                           adf->GetString(member.m_Name).c_str(), member.m_TypeHash);
+                    SPDLOG_ERROR("Unknown member type in struct! (Member={}, TypeHash={:x})",
+                                 adf->GetString(member.m_Name), member.m_TypeHash);
                     continue;
                 }
 
@@ -783,11 +807,8 @@ static void WriteInstance(tinyxml2::XMLPrinter &printer, ava::AvalancheDataForma
                     const uint32_t count    = member_type->m_BitCount;
                     const uint64_t bit_data = *(uint64_t *)&data[(offset + member.m_Offset)];
 
-#pragma warning(push) // '<<': result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?)
-#pragma warning(disable : 4334)
                     const int64_t v26 = (1 << count);
                     int64_t       v27 = (v26 - 1) & (bit_data >> member.m_BitOffset);
-#pragma warning(pop)
 
                     if (member_type->m_ScalarType == ADF_SCALARTYPE_SIGNED
                         && _bittest64((long long *)&v27, (count - 1))) {
@@ -843,8 +864,8 @@ static void WriteInstance(tinyxml2::XMLPrinter &printer, ava::AvalancheDataForma
 
             const AdfType *sub_type = adf->FindType(type->m_SubTypeHash);
             if (!sub_type) {
-                printf("Unknown sub type in array! Type=%s, SubTypeHash=%u\n", adf->GetString(type->m_Name).c_str(),
-                       type->m_SubTypeHash);
+                SPDLOG_ERROR("Unknown SubType in array! (Type={}, SubTypeHash={:x})", adf->GetString(type->m_Name),
+                             type->m_SubTypeHash);
                 break;
             }
 
@@ -873,8 +894,8 @@ static void WriteInstance(tinyxml2::XMLPrinter &printer, ava::AvalancheDataForma
         case ADF_TYPE_INLINE_ARRAY: {
             const AdfType *sub_type = adf->FindType(type->m_SubTypeHash);
             if (!sub_type) {
-                printf("Unknown sub type in inline_array! Type=%s, SubTypeHash=%u\n",
-                       adf->GetString(type->m_Name).c_str(), type->m_SubTypeHash);
+                SPDLOG_ERROR("Unknown SubType in inline_array! (Type={}, SubTypeHash={:x})",
+                             adf->GetString(type->m_Name), type->m_SubTypeHash);
                 break;
             }
 
@@ -1074,7 +1095,7 @@ static void DoExport(tinyxml2::XMLPrinter &printer, const std::filesystem::path 
                         const AdfMember &member = type->m_Members[y];
                         XmlPushAttribute("name", adf.GetString(member.m_Name).c_str());
                         XmlPushAttribute("typehash", member.m_TypeHash);
-                        XmlPushAttribute("alignment", member.m_Align);
+                        XmlPushAttribute("align", member.m_Align);
                         XmlPushAttribute("offset", member.m_Offset);
                         XmlPushAttribute("bitoffset", member.m_BitOffset);
                         XmlPushAttribute("flags", member.m_Flags);
@@ -1105,18 +1126,23 @@ void ADF2XML::Export(const std::filesystem::path &filename, const std::filesyste
 
     FileLoader::Get()->ReadFile(filename, [&, filename, path, callback](bool success, std::vector<uint8_t> data) {
         if (success) {
-            tinyxml2::XMLPrinter printer;
-            DoExport(printer, filename, data);
+            try {
+                tinyxml2::XMLPrinter printer;
+                DoExport(printer, filename, data);
 
-            // write outfile file
-            std::ofstream out_stream(path);
-            if (!out_stream.fail()) {
+                // write outfile file
+                std::ofstream out_stream(path);
                 out_stream << printer.CStr();
                 out_stream.close();
+                return callback(true);
+            } catch (const std::exception &e) {
+                SPDLOG_ERROR(e.what());
             }
-        }
 
-        callback(success);
+            return callback(false);
+        } else {
+            return callback(false);
+        }
     });
 }
 }; // namespace ImportExport
