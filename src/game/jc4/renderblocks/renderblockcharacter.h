@@ -83,41 +83,89 @@ class RenderBlockCharacter : public IRenderBlock
 {
   private:
 #pragma pack(push, 1)
-    struct cbLocalConsts {
+    struct cbVertexPerDraw {
         glm::mat4 WorldViewProjection;
-        glm::mat4 World;
-    } m_cbLocalConsts;
+        glm::mat4 ModelWorld;
+    } m_VertexPerDrawConsts;
 
     struct cbSkinningConsts {
         glm::mat3x4 MatrixPalette[70];
     } m_cbSkinningConsts;
 
-    struct cbInstanceConsts {
-        glm::vec2 TilingUV = glm::vec2(1, 1);
-        glm::vec2 Unknown;
-        glm::vec4 Scale = glm::vec4(1, 1, 1, 1);
-    } m_cbInstanceConsts;
+    struct FurConsts {
+        glm::vec3 FurGravity;
+        float     FurLayer;
+        float     FurOcclusion;
+        float     FurLength;
+        char      _pad[8];
+    };
 
-    struct cbDefaultConstants {
-        float     DirtFactor    = 0;
-        float     WetFactor     = 0;
-        float     LodFade       = 0;
-        float     AlphaFade     = 0;
-        float     SnowFactor    = 0;
-        float     _unknown[4]   = {0};
-        int32_t   UseDetail     = 0;
-        int32_t   UseDecal      = 0;
-        int32_t   UseTint       = 0;
-        int32_t   UseSoftTint   = 0;
-        float     _unknown2[15] = {0};
-        glm::vec4 DebugColor    = {0, 0, 0, 1};
-        glm::vec4 TintColor1    = {0, 0, 0, 0};
-        glm::vec4 TintColor2    = {0, 0, 0, 0};
-        glm::vec4 TintColor3    = {0, 0, 0, 0};
-        float     AlphaTestRef  = 0.5f;
-        float     _unknown3[3]  = {0};
-        char      FurConsts[32] = {0};
-    } m_cbDefaultConstants;
+    static_assert(sizeof(FurConsts) == 0x20);
+
+    struct cbMaterialConsts {
+        glm::vec2 UVScale1 = {1, 1};
+        glm::vec2 UVScale2 = {1, 1};
+        float     Scale    = 1.0f;
+
+        int32_t   IsHeadMaterial;
+        glm::vec2 DetailTileFactor;
+        glm::vec2 DecalBlendFactor;
+        float     RoughnessModulator;
+        float     MetallicModulator;
+        float     DielectricReflectance;
+        float     DiffuseRoughness;
+        float     Transmission;
+        float     TransmissionModulator;
+        float     SpecularAniso;
+        float     EmissiveIntensity;
+        float     AnisotropicStrength;
+        float     AnisotropicX;
+        float     AnisotropicY;
+        float     DirtFactor;
+        float     SkinTranslucencyScale;
+        int32_t   SkinEnableCameraLight;
+        float     EyeGlossiness;
+        float     EyeSpecularIntensity;
+        float     EyeReflectIntensity;
+        float     EyeReflectThreshold;
+        float     EyeGlossShadowIntensity;
+        float     HairSpecularMultiplier;
+        float     HairScatteringMultiplier;
+        float     HairShiftFactor;
+        float     SpecularMultiplier;
+        float     ScatteringMultiplier;
+        float     FurThickness;
+        float     FurRoughness;
+        float     FurSize;
+        int       m_Padding0;
+    } m_cbMaterialConsts;
+
+    // static_assert(sizeof(cbMaterialConsts) == 0xA0);
+
+    struct cbDefaultPerDrawConstants {
+        float     DirtFactor         = 0;
+        float     WetFactor          = 0;
+        float     LodFade            = 0;
+        float     AlphaFade          = 0;
+        float     SnowFactor         = 0;
+        float     _unknown[2]        = {0};
+        int32_t   UseMPMChannelInput = 0;
+        int32_t   UseTransmission    = 0;
+        int32_t   UseDetail          = 0;
+        int32_t   UseDecal           = 0;
+        int32_t   UseTint            = 0;
+        int32_t   UseTintSoftBlend   = 0;
+        float     _unknown2[15]      = {0};
+        glm::vec4 DebugColor         = {0, 0, 0, 1};
+        glm::vec4 TintColor1         = {0, 0, 0, 0};
+        glm::vec4 TintColor2         = {0, 0, 0, 0};
+        glm::vec4 TintColor3         = {0, 0, 0, 0};
+        float     AlphaTestRef       = 0.5f;
+        float     _unknown3[3]       = {0};
+        FurConsts FurConsts          = {};
+    } m_DefaultPerDrawConstants;
+
+    static_assert(sizeof(m_DefaultPerDrawConstants) == 0xE0);
 
     struct cbHairConstants {
     } m_cbHairConstants;
@@ -269,6 +317,13 @@ class RenderBlockCharacter : public IRenderBlock
         }
 
         return {vertices, indices};
+    }
+
+    rb_textures_t GetTextures() override final
+    {
+        rb_textures_t result;
+        result.push_back({"diffuse", m_Textures[0]});
+        return result;
     }
 };
 } // namespace jc4

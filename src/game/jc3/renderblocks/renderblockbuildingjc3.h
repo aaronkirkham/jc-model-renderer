@@ -116,7 +116,7 @@ class RenderBlockBuildingJC3 : public IRenderBlock
     }
 
     virtual void Setup(RenderContext_t* context) override final;
-	// Draw
+    // Draw
 
     virtual void DrawContextMenu() override final {}
     virtual void DrawUI() override final {}
@@ -127,6 +127,11 @@ class RenderBlockBuildingJC3 : public IRenderBlock
     }
 
     virtual std::tuple<vertices_t, uint16s_t> GetData() override final
+    {
+        return {};
+    }
+
+    rb_textures_t GetTextures() override final
     {
         return {};
     }

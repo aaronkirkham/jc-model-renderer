@@ -212,21 +212,22 @@ void RenderBlockCharacterSkin::Setup(RenderContext_t* context)
 
     IRenderBlock::Setup(context);
 
-    const auto flags = m_Block.attributes.flags;
+    const auto  flags = m_Block.m_Attributes.m_Flags;
+    static auto world = glm::mat4(1);
 
-    // setup the constant buffer
-    {
-        const auto  scale = m_Block.attributes.scale;
-        static auto world = glm::mat4(1);
+    // local consts
+    m_cbLocalConsts.World               = world;
+    m_cbLocalConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
+    m_cbLocalConsts.Scale               = glm::vec4{m_Block.m_Attributes.m_Scale};
+    context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbLocalConsts);
 
-        // set vertex shader constants
-        m_cbLocalConsts.World               = world;
-        m_cbLocalConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
-        m_cbLocalConsts.Scale               = glm::vec4(m_Block.attributes.scale * m_ScaleModifier);
+    // instance consts
+    context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbInstanceConsts);
 
-        // set fragment shader constants
-        //
-    }
+    // material consts
+    m_cbMaterialConsts.m_DetailTilingFactorUV = m_Block.m_Attributes.m_DetailTilingFactorUV;
+    m_cbMaterialConsts.m_DecalBlendFactors    = m_Block.m_Attributes.m_DecalBlendFactors;
+    context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts);
 
     // set the textures
     for (int i = 0; i < 5; ++i) {
@@ -240,11 +241,6 @@ void RenderBlockCharacterSkin::Setup(RenderContext_t* context)
     if (flags & USE_WRINKLE_MAP) {
         IRenderBlock::BindTexture(8, 6, m_SamplerState);
     }
-
-    // set the constant buffers
-    context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbLocalConsts);
-    context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbInstanceConsts);
-    context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts);
 
     // set the culling mode
     context->m_Renderer->SetCullMode((!(flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
@@ -269,13 +265,18 @@ void RenderBlockCharacterSkin::DrawContextMenu()
     };
     // clang-format on
 
-    ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    ImGuiCustom::DropDownFlags(m_Block.m_Attributes.m_Flags, flag_labels);
 }
 
 void RenderBlockCharacterSkin::DrawUI()
 {
     ImGui::Text(ICON_FA_COGS "  Attributes");
-    ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
+    ImGui::DragFloat("Scale", &m_Block.m_Attributes.m_Scale, 1.0f, 0.0f);
+    ImGui::DragFloat2("Detail Tiling Factor UV", glm::value_ptr(m_Block.m_Attributes.m_DetailTilingFactorUV));
+    ImGui::DragFloat2("Decal Blend Factors", glm::value_ptr(m_Block.m_Attributes.m_DecalBlendFactors));
+    ImGui::DragFloat("Diffuse Roughness", &m_Block.m_Attributes.m_DiffuseRoughness, 0.01f, 0.0f, 1.0f);
+    ImGui::DragFloat("Diffuse Wrap", &m_Block.m_Attributes.m_DiffuseWrap, 1.0f);
+    ImGui::DragFloat("Dirt Factor", &m_Block.m_Attributes.m_DirtFactor, 0.01f, -1.0f, 1.0f);
 
     // Textures
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
@@ -287,11 +288,11 @@ void RenderBlockCharacterSkin::DrawUI()
         IRenderBlock::DrawUI_Texture("DetailDiffuseMap", 3);
         IRenderBlock::DrawUI_Texture("DetailNormalMap", 4);
 
-        if (m_Block.attributes.flags & USE_FEATURE_MAP) {
+        if (m_Block.m_Attributes.m_Flags & USE_FEATURE_MAP) {
             IRenderBlock::DrawUI_Texture("FeatureMap", 7);
         }
 
-        if (m_Block.attributes.flags & USE_WRINKLE_MAP) {
+        if (m_Block.m_Attributes.m_Flags & USE_WRINKLE_MAP) {
             IRenderBlock::DrawUI_Texture("WrinkleMap", 8);
         }
     }

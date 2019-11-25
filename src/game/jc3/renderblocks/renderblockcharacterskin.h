@@ -4,11 +4,15 @@
 
 #pragma pack(push, 1)
 struct CharacterSkinAttributes {
-    uint32_t  flags;
-    float     scale;
-    glm::vec2 _unknown;
-    glm::vec2 _unknown2;
-    char      pad[0x20];
+    uint32_t  m_Flags;
+    float     m_Scale;
+    glm::vec2 m_DetailTilingFactorUV;
+    glm::vec2 m_DecalBlendFactors;
+    float     m_DiffuseRoughness;
+    float     m_DiffuseWrap;
+    float     m_DirtFactor;
+    char      pad[0x10];
+    float     m_TranslucencyScale;
 };
 
 static_assert(sizeof(CharacterSkinAttributes) == 0x38, "CharacterSkinAttributes alignment is wrong!");
@@ -18,8 +22,8 @@ namespace jc::RenderBlocks
 static constexpr uint8_t CHARACTERSKIN_VERSION = 6;
 
 struct CharacterSkin {
-    uint8_t                 version;
-    CharacterSkinAttributes attributes;
+    uint8_t                 m_Version;
+    CharacterSkinAttributes m_Attributes;
 };
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
@@ -44,15 +48,25 @@ class RenderBlockCharacterSkin : public IRenderBlock
         glm::mat3x4 MatrixPalette[70];
     } m_cbLocalConsts;
 
+    static_assert(sizeof(cbLocalConsts) == 0xDB0);
+
     struct cbInstanceConsts {
-        glm::vec4 MotionBlur = glm::vec4(0);
+        float _unknown  = 0.0f;
+        float _unknown2 = 0.0f;
+        float _unknown3 = 0.0f;
+        float _unknown4 = 0.0f;
     } m_cbInstanceConsts;
 
+    static_assert(sizeof(cbInstanceConsts) == 0x10);
+
     struct cbMaterialConsts {
-        glm::vec4 EyeGloss = glm::vec4(0);
+        glm::vec2 m_DetailTilingFactorUV;
+        glm::vec2 m_DecalBlendFactors;
         glm::vec4 _unknown_;
         glm::vec4 _unknown[3];
     } m_cbMaterialConsts;
+
+    static_assert(sizeof(cbMaterialConsts) == 0x50);
 
     jc::RenderBlocks::CharacterSkin  m_Block;
     std::vector<jc3::CSkinBatch>     m_SkinBatches;
@@ -86,7 +100,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
-        if (m_Block.version != jc::RenderBlocks::CHARACTERSKIN_VERSION) {
+        if (m_Block.m_Version != jc::RenderBlocks::CHARACTERSKIN_VERSION) {
             __debugbreak();
         }
 
@@ -94,7 +108,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
         ReadMaterials(stream);
 
         // get the vertices stride
-        const auto flags = m_Block.attributes.flags;
+        const auto flags = m_Block.m_Attributes.m_Flags;
         m_Stride         = (3 * ((flags >> 2) & 1) + ((flags >> 1) & 1) + ((flags >> 4) & 1));
 
         // read vertex data
@@ -188,6 +202,14 @@ class RenderBlockCharacterSkin : public IRenderBlock
         }
 
         return {vertices, indices};
+    }
+
+    rb_textures_t GetTextures() override final
+    {
+        rb_textures_t result;
+        result.push_back({"diffuse", m_Textures[0]});
+        result.push_back({"normal", m_Textures[1]});
+        return result;
     }
 };
 } // namespace jc3

@@ -73,7 +73,7 @@ void RenderBlockGeneralMkIII::Create()
         Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts2, 18, "RenderBlockGeneralMkIII MaterialConsts2");
 
     // create skinning palette buffer
-    if (m_Block.attributes.flags & (IS_SKINNED | DESTRUCTION)) {
+    if (m_Block.m_Attributes.m_Flags & (IS_SKINNED | DESTRUCTION)) {
         m_VertexShaderConstants[2] =
             Renderer::Get()->CreateConstantBuffer(m_cbSkinningConsts, "RenderBlockGeneralMkIII SkinningConsts");
 
@@ -107,7 +107,7 @@ void RenderBlockGeneralMkIII::Read(std::istream& stream)
     // read the block attributes
     stream.read((char*)&m_Block, sizeof(m_Block));
 
-    if (m_Block.version != jc::RenderBlocks::GENERALMKIII_VERSION) {
+    if (m_Block.m_Version != jc::RenderBlocks::GENERALMKIII_VERSION) {
         __debugbreak();
     }
 
@@ -119,11 +119,11 @@ void RenderBlockGeneralMkIII::Read(std::istream& stream)
 
     // models/jc_environments/structures/military/shared/textures/metal_grating_001_alpha_dif.ddsc
     if (m_Textures[0] && m_Textures[0]->GetHash() == 0x7D1AF10D) {
-        m_Block.attributes.flags |= ANISOTROPIC_FILTERING;
+        m_Block.m_Attributes.m_Flags |= ANISOTROPIC_FILTERING;
     }
 
     // read the vertex buffer
-    if (m_Block.attributes.flags & IS_SKINNED) {
+    if (m_Block.m_Attributes.m_Flags & IS_SKINNED) {
         m_VertexBuffer = ReadVertexBuffer<UnpackedVertexPositionXYZW>(stream);
     } else {
         m_VertexBuffer = ReadVertexBuffer<PackedVertexPosition>(stream);
@@ -133,7 +133,7 @@ void RenderBlockGeneralMkIII::Read(std::istream& stream)
     m_VertexBufferData = ReadVertexBuffer<GeneralShortPacked>(stream);
 
     // read skin batches
-    if (m_Block.attributes.flags & (IS_SKINNED | DESTRUCTION)) {
+    if (m_Block.m_Attributes.m_Flags & (IS_SKINNED | DESTRUCTION)) {
         ReadSkinBatch(stream, &m_SkinBatches);
     }
 
@@ -149,34 +149,41 @@ void RenderBlockGeneralMkIII::Setup(RenderContext_t* context)
 
     IRenderBlock::Setup(context);
 
-    // setup the constant buffer
-    {
-        static auto world = glm::mat4(1);
+    const auto  flags = m_Block.m_Attributes.m_Flags;
+    static auto world = glm::mat4(1);
 
-        // set vertex shader constants
-        m_cbRBIInfo.ModelWorldMatrix     = world;
-        m_cbInstanceAttributes.UVScale   = {m_Block.attributes.packed.uv0Extent, m_Block.attributes.packed.uv1Extent};
-        m_cbInstanceAttributes.DepthBias = m_Block.attributes.depthBias;
-        m_cbInstanceAttributes.QuantizationScale = m_Block.attributes.packed.scale * m_ScaleModifier;
-        m_cbInstanceAttributes.EmissiveTODScale =
-            (m_Block.attributes.flags & DYNAMIC_EMISSIVE ? m_Block.attributes.emissiveTODScale : 1.0f);
-        m_cbInstanceAttributes.EmissiveStartFadeDistSq = m_Block.attributes.emissiveStartFadeDistSq;
+    // rbi info consts
+    m_cbRBIInfo.ModelWorldMatrix = world;
+    context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 12, m_cbRBIInfo);
+
+    // instance consts
+    {
+        m_cbInstanceAttributes.UVScale                 = {m_Block.m_Attributes.m_Packed.uv0Extent,
+                                          m_Block.m_Attributes.m_Packed.uv1Extent};
+        m_cbInstanceAttributes.DepthBias               = m_Block.m_Attributes.m_DepthBias;
+        m_cbInstanceAttributes.QuantizationScale       = m_Block.m_Attributes.m_Packed.scale;
+        m_cbInstanceAttributes.EmissiveStartFadeDistSq = m_Block.m_Attributes.m_EmissiveStartFadeDistSq;
+        m_cbInstanceAttributes.EmissiveTODScale        = 1.0f;
+
+        if (m_Block.m_Attributes.m_Flags & DYNAMIC_EMISSIVE) {
+            m_cbInstanceAttributes.EmissiveTODScale = m_Block.m_Attributes.m_EmissiveTODScale;
+        }
+
+        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[1], 2, m_cbInstanceAttributes);
     }
+
+    // material consts
+    context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbMaterialConsts);
+    context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts2);
 
     // set the textures
     for (int i = 0; i < 4; ++i) {
         IRenderBlock::BindTexture(i, m_SamplerState);
     }
 
-    // set the constant buffers
-    context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 12, m_cbRBIInfo);
-    context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[1], 2, m_cbInstanceAttributes);
-    context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbMaterialConsts);
-    context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts2);
-
     // set the culling mode
-    context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
-                                                                                              : D3D11_CULL_NONE);
+    context->m_Renderer->SetCullMode((!(m_Block.m_Attributes.m_Flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
+                                                                                                  : D3D11_CULL_NONE);
 
     // set the 2nd vertex buffers
     context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
@@ -188,7 +195,7 @@ void RenderBlockGeneralMkIII::Draw(RenderContext_t* context)
         return;
     }
 
-    if (m_Block.attributes.flags & DESTRUCTION) {
+    if (m_Block.m_Attributes.m_Flags & DESTRUCTION) {
         // skin batches
         for (auto& batch : m_SkinBatches) {
             // set the skinning palette data
@@ -197,7 +204,7 @@ void RenderBlockGeneralMkIII::Draw(RenderContext_t* context)
             // draw the skin batch
             context->m_Renderer->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
         }
-    } else if (m_Block.attributes.flags & IS_SKINNED) {
+    } else if (m_Block.m_Attributes.m_Flags & IS_SKINNED) {
         // TODO: skinning palette data
         IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
     } else {
@@ -216,20 +223,31 @@ void RenderBlockGeneralMkIII::DrawContextMenu()
     };
     // clang-format on
 
-    ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    ImGuiCustom::DropDownFlags(m_Block.m_Attributes.m_Flags, flag_labels);
 }
 
 void RenderBlockGeneralMkIII::DrawUI()
 {
     ImGui::Text(ICON_FA_COGS "  Attributes");
+    ImGui::DragFloat("Scale", &m_Block.m_Attributes.m_Packed.scale, 1.0f, 0.0f);
+    ImGui::DragFloat("Depth Bias", &m_Block.m_Attributes.m_DepthBias, 0.01f, 0.0f, 1.0f);
+    ImGui::DragFloat("Emissive Start Fade Dist", &m_Block.m_Attributes.m_EmissiveStartFadeDistSq, 0.01f, 0.0f, 1.0f);
 
-    ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
-
-    ImGui::SliderFloat("Depth Bias", &m_Block.attributes.depthBias, 0, 1);
-
-    ImGuiCustom::PushDisabled(!(m_Block.attributes.flags & DYNAMIC_EMISSIVE));
-    ImGui::SliderFloat("Emissive Scale", &m_Block.attributes.emissiveTODScale, 0, 1);
+    ImGuiCustom::PushDisabled(!(m_Block.m_Attributes.m_Flags & DYNAMIC_EMISSIVE));
+    ImGui::DragFloat("Emissive Time of Day Scale", &m_Block.m_Attributes.m_EmissiveTODScale, 0.01f, 0.0f, 1.0f);
     ImGuiCustom::PopDisabled();
+
+#if 0
+    if (ImGui::TreeNode("Material Constants")) {
+        ImGui::DragFloat("Roughness_1", &m_cbMaterialConsts2.Roughness_1);
+        ImGui::DragFloat("DiffuseWrap_1", &m_cbMaterialConsts2.DiffuseWrap_1);
+        ImGui::DragFloat("Emissive_1", &m_cbMaterialConsts2.Emissive_1);
+        ImGui::DragFloat("Transmission_1", &m_cbMaterialConsts2.Transmission_1);
+        ImGui::DragFloat("ClearCoat_1", &m_cbMaterialConsts2.ClearCoat_1);
+
+        ImGui::TreePop();
+    }
+#endif
 
     // Textures
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
@@ -247,16 +265,16 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
 {
     using namespace jc::Vertex;
 
-    memset(&m_Block.attributes, 0, sizeof(m_Block.attributes));
+    memset(&m_Block.m_Attributes, 0, sizeof(m_Block.m_Attributes));
     memset(&m_cbMaterialConsts2, 0, sizeof(m_cbMaterialConsts2));
 
-    m_Block.version                            = jc::RenderBlocks::GENERALMKIII_VERSION;
-    m_Block.attributes.packed.scale            = 1.f;
-    m_Block.attributes.packed.uv0Extent        = {1.f, 1.f};
-    m_Block.attributes.emissiveStartFadeDistSq = 2000.f;
+    m_Block.m_Version                              = jc::RenderBlocks::GENERALMKIII_VERSION;
+    m_Block.m_Attributes.m_Packed.scale            = 1.f;
+    m_Block.m_Attributes.m_Packed.uv0Extent        = {1.f, 1.f};
+    m_Block.m_Attributes.m_EmissiveStartFadeDistSq = 2000.f;
 
     // temp
-    m_Block.attributes.flags |= DISABLE_BACKFACE_CULLING;
+    m_Block.m_Attributes.m_Flags |= DISABLE_BACKFACE_CULLING;
 
     // test
     m_MaterialParams[0] = 1.0f;
@@ -300,21 +318,14 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
 
         printf("[%s] %s\n", type.c_str(), filename.generic_string().c_str());
 
-        if (type == "diff") {
+        if (type == "diffuse") {
             m_Textures[0] = std::move(texture);
-        } else if (type == "bump") {
+        } else if (type == "normal") {
             m_Textures[3] = std::move(texture);
-        } else if (type == "spec") {
-            m_Textures[2] = std::move(texture);
+        } else if (type == "specular") {
+            m_Textures[1] = std::move(texture);
         }
     }
-
-    // TEMP TEXTURE HOLDERS
-    // TODO: probably not this, but we want the slots to show up in the UI
-    // so we can drag & drop stuff. that only works if the texture pointer is valid
-    // m_Textures[1] = std::make_shared<Texture>("");
-    // m_Textures[2] = std::make_shared<Texture>("");
-    // m_Textures[3] = std::make_shared<Texture>("");
 
     m_VertexBuffer     = Renderer::Get()->CreateBuffer(packed_vertices.data(), packed_vertices.size(),
                                                    sizeof(PackedVertexPosition), VERTEX_BUFFER);

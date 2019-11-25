@@ -135,5 +135,12 @@ class RenderBlockLandmark : public IRenderBlock
     {
         return {};
     }
+
+    rb_textures_t GetTextures() override final
+    {
+        rb_textures_t result;
+        result.push_back({"diffuse", m_Textures[0]});
+        return result;
+    }
 };
 } // namespace jc3

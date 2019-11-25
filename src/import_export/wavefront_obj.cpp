@@ -30,6 +30,43 @@ bool Wavefront_Obj::DrawSettingsUI()
     return ImGui::Button("Export");
 }
 
+materials_map_t Wavefront_Obj::ImportMaterials(const std::filesystem::path& filename)
+{
+    if (!std::filesystem::exists(filename)) {
+        return {};
+    }
+
+    std::ifstream stream(filename);
+    if (stream.fail()) {
+        return {};
+    }
+
+    materials_map_t materials;
+
+    std::string line;
+    std::string current_mtl;
+    while (std::getline(stream, line)) {
+        const auto& type = line.substr(0, line.find_first_of(' '));
+        if (type == "newmtl") {
+            current_mtl = line.substr(7, line.length());
+        } else if (type == "map_Kd") {
+            auto diffuse = filename;
+            diffuse.replace_filename(line.substr(7, line.length()));
+            materials[current_mtl].push_back(std::pair{"diffuse", diffuse});
+        } else if (type == "map_bump") {
+            auto bump = filename;
+            bump.replace_filename(line.substr(9, line.length()));
+            materials[current_mtl].push_back(std::pair{"normal", bump});
+        } else if (type == "map_Ks") {
+            auto specular = filename;
+            specular.replace_filename(line.substr(7, line.length()));
+            materials[current_mtl].push_back(std::pair{"specular", specular});
+        }
+    }
+
+    return materials;
+}
+
 void Wavefront_Obj::Import(const std::filesystem::path& filename, ImportFinishedCallback callback)
 {
     SPDLOG_INFO("Importing \"{}\"", filename.string());
@@ -156,9 +193,8 @@ void Wavefront_Obj::Import(const std::filesystem::path& filename, ImportFinished
 void Wavefront_Obj::WriteModelFile(const std::filesystem::path& filename, const std::filesystem::path& path,
                                    const std::vector<IRenderBlock*>& render_blocks)
 {
-    std::filesystem::path       mtl_path = path / (filename.stem().string() + ".mtl");
-    std::map<uint32_t, int32_t> _seen;
-    uint32_t                    _num_vertices = 0;
+    std::filesystem::path mtl_path      = path / (filename.stem().string() + ".mtl");
+    uint32_t              _num_vertices = 0;
 
     // set the merge flag if we only have 1 render block
     if (render_blocks.size() == 1) {
@@ -170,29 +206,40 @@ void Wavefront_Obj::WriteModelFile(const std::filesystem::path& filename, const 
         std::ofstream            mtl_stream(mtl_path);
         std::vector<std::string> _materials;
 
-        for (const auto& block : render_blocks) {
-            const auto& textures                 = block->GetTextures();
-            const auto& diffuse_texture          = textures[0];
-            const auto& diffuse_texture_filename = diffuse_texture->GetFileName().stem();
+        uint32_t id = 0;
+        for (const auto& render_block : render_blocks) {
+            const auto& textures      = render_block->GetTextures();
+            std::string material_name = "mtl_" + std::string(render_block->GetTypeName()) + "_" + std::to_string(id);
 
-            // only write unique materials
-            if (std::find(_materials.begin(), _materials.end(), diffuse_texture_filename.string())
-                == _materials.end()) {
-                // write the block material
-                mtl_stream << "newmtl " << diffuse_texture_filename.string() << std::endl;
-                mtl_stream << "Kd 1.0 1.0 1.0" << std::endl;
-                mtl_stream << "Ks 0.0 0.0 0.0" << std::endl;
-                mtl_stream << "d " << (block->IsOpaque() ? "1.0" : "0.0") << std::endl;
-                mtl_stream << "Tr " << (block->IsOpaque() ? "0.0" : "1.0") << std::endl;
-                mtl_stream << "map_Kd " << diffuse_texture_filename.string() << ".dds" << std::endl << std::endl;
+            // create a new material for this render block
+            mtl_stream << "newmtl " << material_name << std::endl;
+            mtl_stream << "Kd 1.0 1.0 1.0" << std::endl;
+            mtl_stream << "Ks 0.0 0.0 0.0" << std::endl;
+            mtl_stream << "d " << (render_block->IsOpaque() ? "1.0" : "0.0") << std::endl;
+            mtl_stream << "Tr " << (render_block->IsOpaque() ? "0.0" : "1.0") << std::endl;
+
+            static auto MatTypeToObjMatType = [](const std::string& type) {
+                if (type == "normal") {
+                    return "map_bump";
+                } else if (type == "specular") {
+                    return "map_Ks";
+                }
+
+                return "map_Kd";
+            };
+
+            // write textures
+            for (const auto& texture : textures) {
+                auto tex_filename = texture.second->GetFileName().stem();
+                mtl_stream << MatTypeToObjMatType(texture.first) << " " << tex_filename.string() << ".dds" << std::endl;
 
                 // export the texture
-                std::filesystem::path texture_path = path / diffuse_texture_filename;
-                WriteBufferToFile(texture_path.string() + ".dds", diffuse_texture->GetBuffer());
-
-                //
-                _materials.emplace_back(diffuse_texture_filename.string());
+                std::filesystem::path texture_path = path / tex_filename;
+                WriteBufferToFile(texture_path.string() + ".dds", texture.second->GetBuffer());
             }
+
+            mtl_stream << std::endl;
+            ++id;
         }
     }
 
@@ -212,9 +259,15 @@ void Wavefront_Obj::WriteModelFile(const std::filesystem::path& filename, const 
     }
 
     // export the render blocks
-    for (const auto& block : render_blocks) {
-        const auto& textures   = block->GetTextures();
-        std::string block_name = std::string(block->GetTypeName()) + "." + std::to_string(_seen[block->GetTypeHash()]);
+    uint32_t id = 0;
+    // std::map<uint32_t, int32_t> _seen;
+    for (const auto& render_block : render_blocks) {
+        // const auto& textures = render_block->GetTextures();
+        /*std::string block_name =
+            std::string(render_block->GetTypeName()) + "." + std::to_string(_seen[render_block->GetTypeHash()]);*/
+
+        std::string block_name    = std::string(render_block->GetTypeName()) + "_" + std::to_string(id);
+        std::string material_name = "mtl_" + std::string(render_block->GetTypeName()) + "_" + std::to_string(id);
 
         // not merging blocks, create a new file
         if (!(m_ExporterFlags & WavefrontExporterFlags_MergeBlocks)) {
@@ -227,7 +280,7 @@ void Wavefront_Obj::WriteModelFile(const std::filesystem::path& filename, const 
             // link the material library
             if (m_ExporterFlags & WavefrontExporterFlags_ExportTextures) {
                 out_stream << "mtllib " << mtl_path.filename().string() << std::endl;
-                out_stream << "usemtl " << textures[0]->GetFileName().stem().string() << std::endl << std::endl;
+                out_stream << "usemtl " << material_name << std::endl << std::endl;
             }
         }
 
@@ -236,14 +289,14 @@ void Wavefront_Obj::WriteModelFile(const std::filesystem::path& filename, const 
             out_stream << "o " << block_name << std::endl << std::endl;
 
             if (m_ExporterFlags & WavefrontExporterFlags_ExportTextures) {
-                out_stream << "usemtl " << textures[0]->GetFileName().stem().string() << std::endl << std::endl;
+                out_stream << "usemtl " << material_name << std::endl << std::endl;
             }
         }
 
         // TODO: optimize this a little, we should parse the vertices before writing and remove duplicate
         // pos/uv/normal and rebuild the index buffer. This will reduce our output .OBJ file size
 
-        auto [vertices, indices] = block->GetData();
+        auto [vertices, indices] = render_block->GetData();
         for (auto& vertex : vertices) {
             out_stream << "v " << vertex.pos.x << " " << vertex.pos.y << " " << vertex.pos.z << std::endl;
             out_stream << "vt " << vertex.uv.x << " " << (1.0f - vertex.uv.y) << std::endl;
@@ -267,7 +320,8 @@ void Wavefront_Obj::WriteModelFile(const std::filesystem::path& filename, const 
         }
 
         _num_vertices += vertices.size();
-        _seen[block->GetTypeHash()]++;
+        // _seen[render_block->GetTypeHash()]++;
+        ++id;
     }
 
     // reset the export flags

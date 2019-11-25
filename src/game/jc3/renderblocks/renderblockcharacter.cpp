@@ -42,8 +42,8 @@ void RenderBlockCharacter::CreateBuffers(std::vector<uint8_t>* vertex_buffer, st
     m_IndexBuffer = Renderer::Get()->CreateBuffer(index_buffer->data(), (index_buffer->size() / sizeof(uint16_t)),
                                                   sizeof(uint16_t), INDEX_BUFFER);
 
-    m_Block                  = {};
-    m_Block.attributes.scale = 1.0f;
+    m_Block                      = {};
+    m_Block.m_Attributes.m_Scale = 1.0f;
 
     Create();
 }
@@ -51,7 +51,7 @@ void RenderBlockCharacter::CreateBuffers(std::vector<uint8_t>* vertex_buffer, st
 void RenderBlockCharacter::Create()
 {
     m_PixelShader = ShaderManager::Get()->GetPixelShader(
-        (m_Block.attributes.flags & BODY_PART) != HAIR ? "character" : "characterhair_msk");
+        (m_Block.m_Attributes.m_Flags & BODY_PART) != HAIR ? "character" : "characterhair_msk");
 
     switch (m_Stride) {
             // Packed4Bones1UV
@@ -230,23 +230,42 @@ void RenderBlockCharacter::Setup(RenderContext_t* context)
 
     IRenderBlock::Setup(context);
 
-    const auto flags = m_Block.attributes.flags;
-
-    // setup the constant buffer
+    const auto  flags = m_Block.m_Attributes.m_Flags;
     static auto world = glm::mat4(1);
 
     // set the textures
     IRenderBlock::BindTexture(0, m_SamplerState);
 
-    // set vertex shader constants
+    // local consts
     m_cbLocalConsts.World               = world;
     m_cbLocalConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
-    m_cbLocalConsts.Scale               = glm::vec4(m_Block.attributes.scale * m_ScaleModifier);
+    m_cbLocalConsts.Scale               = glm::vec4{m_Block.m_Attributes.m_Scale};
     context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbLocalConsts);
 
-    // set pixel shader constants
+    // instance consts
     context->m_Renderer->SetPixelShaderConstants(m_PixelShaderConstants[0], 1, m_cbInstanceConsts);
-    context->m_Renderer->SetPixelShaderConstants(m_PixelShaderConstants[1], 2, m_cbMaterialConsts);
+
+    // material consts
+    {
+        if ((flags & BODY_PART) == EYES) {
+            m_cbMaterialConsts.DetailTilingFactorUV = {600.0f, 1.0f};
+            m_cbMaterialConsts.DecalBlendFactors    = {1.0f, 0.0f};
+        } else {
+            m_cbMaterialConsts.DetailTilingFactorUV = m_Block.m_Attributes.m_DetailTilingFactorUV;
+            m_cbMaterialConsts.DecalBlendFactors    = m_Block.m_Attributes.m_DecalBlendFactors;
+        }
+
+        m_cbMaterialConsts._unknown         = m_Block.m_Attributes._unknown;
+        m_cbMaterialConsts.SpecularGloss    = m_Block.m_Attributes.m_SpecularGloss;
+        m_cbMaterialConsts.Transmission     = m_Block.m_Attributes.m_Transmission;
+        m_cbMaterialConsts.SpecularFresnel  = m_Block.m_Attributes.m_SpecularFresnel;
+        m_cbMaterialConsts.DiffuseWrap      = (flags & BODY_PART) == HAIR ? m_Block.m_Attributes.m_DiffuseWrap : 0.0f;
+        m_cbMaterialConsts.DiffuseRoughness = m_Block.m_Attributes.m_DiffuseRoughness;
+        m_cbMaterialConsts.DirtFactor       = m_Block.m_Attributes.m_DirtFactor;
+        m_cbMaterialConsts.Emissive         = m_Block.m_Attributes.m_Emissive;
+
+        context->m_Renderer->SetPixelShaderConstants(m_PixelShaderConstants[1], 2, m_cbMaterialConsts);
+    }
 
     // set the culling mode
     context->m_Renderer->SetCullMode((!(flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
@@ -280,7 +299,7 @@ void RenderBlockCharacter::Setup(RenderContext_t* context)
                 IRenderBlock::BindTexture(8, m_SamplerState);
             }
 
-            if (m_Block.attributes.flags & TRANSPARENCY_ALPHABLENDING) {
+            if (m_Block.m_Attributes.m_Flags & TRANSPARENCY_ALPHABLENDING) {
                 context->m_Renderer->SetBlendingEnabled(true);
                 context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_INV_SRC_ALPHA,
                                                      D3D11_BLEND_ONE);
@@ -291,7 +310,7 @@ void RenderBlockCharacter::Setup(RenderContext_t* context)
         }
 
         case EYES: {
-            if (m_Block.attributes.flags & USE_EYE_REFLECTION) {
+            if (m_Block.m_Attributes.m_Flags & USE_EYE_REFLECTION) {
                 IRenderBlock::BindTexture(10, 11, m_SamplerState);
             }
 
@@ -305,7 +324,7 @@ void RenderBlockCharacter::Setup(RenderContext_t* context)
             IRenderBlock::BindTexture(1, m_SamplerState);
             IRenderBlock::BindTexture(2, m_SamplerState);
 
-            if (m_Block.attributes.flags & TRANSPARENCY_ALPHABLENDING) {
+            if (m_Block.m_Attributes.m_Flags & TRANSPARENCY_ALPHABLENDING) {
                 context->m_Renderer->SetBlendingEnabled(true);
                 context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_INV_SRC_ALPHA,
                                                      D3D11_BLEND_ONE);
@@ -326,34 +345,29 @@ void RenderBlockCharacter::DrawContextMenu()
     };
     // clang-format on
 
-    ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    ImGuiCustom::DropDownFlags(m_Block.m_Attributes.m_Flags, flag_labels);
 }
 
 void RenderBlockCharacter::DrawUI()
 {
+    const auto flags = m_Block.m_Attributes.m_Flags;
+
     ImGui::Text(ICON_FA_COGS "  Attributes");
-    ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
-
-    /*if (ImGui::RadioButton("Gear", ((m_Block.attributes.flags & BODY_PART) == GEAR))) {}
-
-    ImGui::SameLine();
-
-    if (ImGui::RadioButton("Eyes", ((m_Block.attributes.flags & BODY_PART) == EYES))) {}
-
-    ImGui::SameLine();
-
-    if (ImGui::RadioButton("Hair", ((m_Block.attributes.flags & BODY_PART) == HAIR))) {}*/
-
-    ImGui::SliderFloat4("Unknown #1", glm::value_ptr(m_cbInstanceConsts._unknown), 0, 1);
-    ImGui::ColorEdit4("Diffuse Colour", glm::value_ptr(m_cbInstanceConsts.DiffuseColour));
-    ImGui::SliderFloat4("Unknown #2", glm::value_ptr(m_cbInstanceConsts._unknown2), 0, 1);
+    ImGui::DragFloat("Scale", &m_Block.m_Attributes.m_Scale, 1.0f, 0.0f);
+    ImGui::DragFloat2("Detail Tiling Factor UV", glm::value_ptr(m_Block.m_Attributes.m_DetailTilingFactorUV));
+    ImGui::DragFloat2("Decal Blend Factors", glm::value_ptr(m_Block.m_Attributes.m_DecalBlendFactors));
+    ImGui::DragFloat("Specular Gloss", &m_Block.m_Attributes.m_SpecularGloss, 0.01f, 0.0f, 20.0f);
+    ImGui::DragFloat("Transmission", &m_Block.m_Attributes.m_Transmission, 1.0f);
+    ImGui::DragFloat("Specular Fresnel", &m_Block.m_Attributes.m_SpecularFresnel, 1.0f);
+    ImGui::DragFloat("Diffuse Roughness", &m_Block.m_Attributes.m_DiffuseRoughness, 0.01f, 0.0f, 1.0f);
+    ImGui::DragFloat("Diffuse Wrap", &m_Block.m_Attributes.m_DiffuseWrap, 1.0f);
+    ImGui::DragFloat("Dirt Factor", &m_Block.m_Attributes.m_DirtFactor, 0.01f, -1.0f, 1.0f);
+    ImGui::DragFloat("Emissive", &m_Block.m_Attributes.m_Emissive, 1.0f);
 
     // Textures
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
     ImGui::Columns(3, nullptr, false);
     {
-        const auto flags = m_Block.attributes.flags;
-
         IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
 
         if ((flags & BODY_PART) == GEAR || (flags & BODY_PART) == HAIR) {
@@ -365,15 +379,15 @@ void RenderBlockCharacter::DrawUI()
             IRenderBlock::DrawUI_Texture("DetailDiffuseMap", 3);
             IRenderBlock::DrawUI_Texture("DetailNormalMap", 4);
 
-            if (m_Block.attributes.flags & USE_FEATURE_MAP) {
+            if (m_Block.m_Attributes.m_Flags & USE_FEATURE_MAP) {
                 IRenderBlock::DrawUI_Texture("FeatureMap", 5);
             }
 
-            if (m_Block.attributes.flags & USE_WRINKLE_MAP) {
+            if (m_Block.m_Attributes.m_Flags & USE_WRINKLE_MAP) {
                 IRenderBlock::DrawUI_Texture("WrinkleMap", 7);
             }
 
-            if (m_Block.attributes.flags & USE_CAMERA_LIGHTING) {
+            if (m_Block.m_Attributes.m_Flags & USE_CAMERA_LIGHTING) {
                 IRenderBlock::DrawUI_Texture("CameraMap", 8);
             }
 

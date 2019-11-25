@@ -171,5 +171,17 @@ class RenderBlockProp : public IRenderBlock
 
         return {vertices, indices};
     }
+
+    rb_textures_t GetTextures() override final
+    {
+        rb_textures_t result;
+        result.push_back({"diffuse", m_Textures[0]});
+
+		if (!(m_Block.attributes.flags & SUPPORT_OVERLAY)) {
+            result.push_back({"normal", m_Textures[1]});
+		}
+
+        return result;
+    }
 };
 } // namespace jc3

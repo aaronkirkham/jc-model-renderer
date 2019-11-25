@@ -4,14 +4,14 @@
 
 #pragma pack(push, 1)
 struct GeneralMkIIIAttributes {
-    float                        depthBias;
+    float                        m_DepthBias;
     char                         _pad[0x8];
-    float                        emissiveTODScale;
-    float                        emissiveStartFadeDistSq;
+    float                        m_EmissiveTODScale;
+    float                        m_EmissiveStartFadeDistSq;
     char                         _pad2[0x10];
-    jc::Vertex::SPackedAttribute packed;
+    jc::Vertex::SPackedAttribute m_Packed;
     char                         _pad3[0x4];
-    uint32_t                     flags;
+    uint32_t                     m_Flags;
     char                         _pad4[0x1C];
 };
 
@@ -22,8 +22,8 @@ namespace jc::RenderBlocks
 static constexpr uint8_t GENERALMKIII_VERSION = 5;
 
 struct GeneralMkIII {
-    uint8_t                version;
-    GeneralMkIIIAttributes attributes;
+    uint8_t                m_Version;
+    GeneralMkIIIAttributes m_Attributes;
 };
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
@@ -174,7 +174,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
     virtual bool IsOpaque() override final
     {
-        return ~m_Block.attributes.flags & TRANSPARENCY_ALPHABLENDING;
+        return ~m_Block.m_Attributes.m_Flags & TRANSPARENCY_ALPHABLENDING;
     }
 
     virtual void Create() override final;
@@ -197,7 +197,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         WriteBuffer(stream, m_VertexBufferData);
 
         // write the skin batches
-        if (m_Block.attributes.flags & (IS_SKINNED | DESTRUCTION)) {
+        if (m_Block.m_Attributes.m_Flags & (IS_SKINNED | DESTRUCTION)) {
             WriteSkinBatch(stream, &m_SkinBatches);
         }
 
@@ -220,7 +220,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         vertices_t vertices;
         uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
 
-        if (m_Block.attributes.flags & IS_SKINNED) {
+        if (m_Block.m_Attributes.m_Flags & IS_SKINNED) {
             const auto& vb = m_VertexBuffer->CastData<UnpackedVertexPositionXYZW>();
             vertices.reserve(vb.size());
 
@@ -243,11 +243,21 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         const auto& vbdata = m_VertexBufferData->CastData<GeneralShortPacked>();
         for (auto i = 0; i < vbdata.size(); ++i) {
             vertices[i].uv =
-                glm::vec2{unpack(vbdata[i].u0), unpack(vbdata[i].v0)} * m_Block.attributes.packed.uv0Extent;
+                glm::vec2{unpack(vbdata[i].u0), unpack(vbdata[i].v0)} * m_Block.m_Attributes.m_Packed.uv0Extent;
             vertices[i].normal = unpack_normal(vbdata[i].n);
         }
 
         return {vertices, indices};
+    }
+
+    rb_textures_t GetTextures() override final
+    {
+        rb_textures_t result;
+        result.push_back({"diffuse", m_Textures[0]});
+        result.push_back({"normal", m_Textures[3]});
+        result.push_back({"specular", m_Textures[1]});
+
+        return result;
     }
 };
 } // namespace jc3

@@ -6,19 +6,19 @@ extern bool g_IsJC4Mode;
 
 #pragma pack(push, 1)
 struct CharacterAttributes {
-    uint32_t  flags;
-    float     scale;
-    glm::vec2 _unknown;
-    glm::vec2 _unknown2;
-    float     _unknown3;
-    float     specularGloss;
-    float     transmission;
-    float     specularFresnel;
-    float     diffuseRoughness;
-    float     diffuseWrap;
-    float     _unknown4;
-    float     dirtFactor;
-    float     emissive;
+    uint32_t  m_Flags;
+    float     m_Scale;
+    glm::vec2 m_DetailTilingFactorUV;
+    glm::vec2 m_DecalBlendFactors;
+    float     _unknown;
+    float     m_SpecularGloss;
+    float     m_Transmission;
+    float     m_SpecularFresnel;
+    float     m_DiffuseRoughness;
+    float     m_DiffuseWrap;
+    float     _unknown2;
+    float     m_DirtFactor;
+    float     m_Emissive;
     char      pad2[0x30];
 };
 
@@ -29,8 +29,8 @@ namespace jc::RenderBlocks
 static constexpr uint8_t CHARACTER_VERSION = 9;
 
 struct Character {
-    uint8_t             version;
-    CharacterAttributes attributes;
+    uint8_t             m_Version;
+    CharacterAttributes m_Attributes;
 };
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
@@ -65,15 +65,37 @@ class RenderBlockCharacter : public jc3::IRenderBlock
         glm::mat3x4 MatrixPalette[70];
     } m_cbLocalConsts;
 
+    static_assert(sizeof(cbLocalConsts) == 0xDB0);
+
     struct cbInstanceConsts {
-        glm::vec4 _unknown      = glm::vec4(0);
-        glm::vec4 DiffuseColour = glm::vec4(0, 0, 0, 1);
-        glm::vec4 _unknown2     = glm::vec4(0); // .w is some kind of snow factor???
+        float     _unknown              = 0.0f;
+        float     _unknown2             = 0.0f;
+        float     EnableHairDebug       = 0.0f;
+        float     EnableCameraHairLight = 0.0f;
+        glm::vec4 DiffuseColour         = glm::vec4(0, 0, 0, 1);
+        float     _unknown3             = 0.0f;
+        float     _unknown4             = 0.0f;
+        float     _unknown5             = 0.0f;
+        float     SnowFactor            = 0.0f;
     } m_cbInstanceConsts;
 
+    static_assert(sizeof(cbInstanceConsts) == 0x30);
+
     struct cbMaterialConsts {
-        glm::vec4 unknown[10];
+        glm::vec2 DetailTilingFactorUV;
+        glm::vec2 DecalBlendFactors;
+        float     _unknown;
+        float     SpecularGloss;
+        float     Transmission;
+        float     SpecularFresnel;
+        float     DiffuseWrap;
+        float     DiffuseRoughness;
+        float     DirtFactor;
+        float     Emissive;
+        glm::vec4 unknown[7];
     } m_cbMaterialConsts;
+
+    static_assert(sizeof(cbMaterialConsts) == 0xA0);
 
     jc::RenderBlocks::Character      m_Block;
     std::vector<jc3::CSkinBatch>     m_SkinBatches;
@@ -94,7 +116,7 @@ class RenderBlockCharacter : public jc3::IRenderBlock
 
     virtual bool IsOpaque() override final
     {
-        const auto flags = m_Block.attributes.flags;
+        const auto flags = m_Block.m_Attributes.m_Flags;
         return ((flags & BODY_PART) == GEAR || (flags & BODY_PART) == HAIR) && !(flags & TRANSPARENCY_ALPHABLENDING);
     }
 
@@ -110,7 +132,7 @@ class RenderBlockCharacter : public jc3::IRenderBlock
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
-        if (m_Block.version != jc::RenderBlocks::CHARACTER_VERSION) {
+        if (m_Block.m_Version != jc::RenderBlocks::CHARACTER_VERSION) {
             __debugbreak();
         }
 
@@ -118,7 +140,7 @@ class RenderBlockCharacter : public jc3::IRenderBlock
         ReadMaterials(stream);
 
         // get the vertices stride
-        const auto flags = m_Block.attributes.flags;
+        const auto flags = m_Block.m_Attributes.m_Flags;
         m_Stride         = (3 * ((flags >> 1) & 1) + ((flags >> 4) & 1) + ((flags >> 5) & 1));
 
         // read vertex data
@@ -213,6 +235,19 @@ class RenderBlockCharacter : public jc3::IRenderBlock
         }
 
         return {vertices, indices};
+    }
+
+    rb_textures_t GetTextures() override final
+    {
+        rb_textures_t result;
+        result.push_back({"diffuse", m_Textures[0]});
+
+        const auto flags = m_Block.m_Attributes.m_Flags;
+        if ((flags & BODY_PART) == GEAR || (flags & BODY_PART) == HAIR) {
+            result.push_back({"normal", m_Textures[1]});
+        }
+
+        return result;
     }
 };
 } // namespace jc3

@@ -5,10 +5,14 @@
 class IRenderBlock;
 namespace ImportExport
 {
+using materials_map_t = std::map<std::string, std::vector<std::pair<std::string, std::filesystem::path>>>;
+
 class Wavefront_Obj : public IImportExporter
 {
   private:
     uint32_t m_ExporterFlags = 0;
+
+    materials_map_t ImportMaterials(const std::filesystem::path& filename);
 
   public:
     enum WavefrontExporterFlags {
@@ -51,45 +55,6 @@ class Wavefront_Obj : public IImportExporter
     }
 
     bool DrawSettingsUI() override final;
-
-    using materials_map_t = std::map<std::string, std::vector<std::pair<std::string, std::filesystem::path>>>;
-
-    materials_map_t ImportMaterials(const std::filesystem::path& filename)
-    {
-        if (!std::filesystem::exists(filename)) {
-            return {};
-        }
-
-        std::ifstream stream(filename);
-        if (stream.fail()) {
-            return {};
-        }
-
-        materials_map_t materials;
-
-        std::string line;
-        std::string current_mtl;
-        while (std::getline(stream, line)) {
-            const auto& type = line.substr(0, line.find_first_of(' '));
-            if (type == "newmtl") {
-                current_mtl = line.substr(7, line.length());
-            } else if (type == "map_Kd") {
-                auto diffuse = filename;
-                diffuse.replace_filename(line.substr(7, line.length()));
-                materials[current_mtl].push_back(std::pair{"diff", diffuse});
-            } else if (type == "map_bump") {
-                auto bump = filename;
-                bump.replace_filename(line.substr(9, line.length()));
-                materials[current_mtl].push_back(std::pair{"bump", bump});
-            } else if (type == "map_Ks") {
-                auto specular = filename;
-                specular.replace_filename(line.substr(7, line.length()));
-                materials[current_mtl].push_back(std::pair{"spec", specular});
-            }
-        }
-
-        return materials;
-    }
 
     void Import(const std::filesystem::path& filename, ImportFinishedCallback callback) override final;
 
