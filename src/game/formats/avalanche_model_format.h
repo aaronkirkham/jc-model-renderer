@@ -26,12 +26,11 @@ class AvalancheModelFormat : public Factory<AvalancheModelFormat>
     using ParseCallback_t = std::function<void(bool)>;
 
   private:
-    std::filesystem::path                          m_Filename = "";
-    std::shared_ptr<AvalancheArchive>              m_ParentArchive;
-    std::shared_ptr<ava::AvalancheDataFormat::ADF> m_ModelAdf;
-    std::shared_ptr<ava::AvalancheDataFormat::ADF> m_MeshAdf;
-    std::shared_ptr<ava::AvalancheDataFormat::ADF> m_HighResMeshAdf;
-
+    std::filesystem::path                       m_Filename = "";
+    std::shared_ptr<AvalancheArchive>           m_ParentArchive;
+    ava::AvalancheDataFormat::ADF*              m_ModelAdf        = nullptr;
+    ava::AvalancheDataFormat::ADF*              m_MeshAdf         = nullptr;
+    ava::AvalancheDataFormat::ADF*              m_HRMeshAdf       = nullptr;
     ava::AvalancheModelFormat::SAmfModel*       m_AmfModel        = nullptr;
     ava::AvalancheModelFormat::SAmfMeshHeader*  m_AmfMeshHeader   = nullptr;
     ava::AvalancheModelFormat::SAmfMeshBuffers* m_LowMeshBuffers  = nullptr;
@@ -76,17 +75,17 @@ class AvalancheModelFormat : public Factory<AvalancheModelFormat>
 
     ava::AvalancheDataFormat::ADF* GetModelAdf()
     {
-        return m_ModelAdf.get();
+        return m_ModelAdf;
     }
 
     ava::AvalancheDataFormat::ADF* GetMeshAdf()
     {
-        return m_MeshAdf.get();
+        return m_MeshAdf;
     }
 
     ava::AvalancheDataFormat::ADF* GetHighResMeshAdf()
     {
-        return m_HighResMeshAdf.get();
+        return m_HRMeshAdf;
     }
 
     const std::vector<IRenderBlock*>& GetRenderBlocks()

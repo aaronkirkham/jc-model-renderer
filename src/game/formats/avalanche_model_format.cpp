@@ -40,6 +40,9 @@ AvalancheModelFormat::~AvalancheModelFormat()
     SAFE_DELETE(m_AmfMeshHeader);
     SAFE_DELETE(m_LowMeshBuffers);
     SAFE_DELETE(m_HighMeshBuffers);
+    SAFE_DELETE(m_ModelAdf);
+    SAFE_DELETE(m_MeshAdf);
+    SAFE_DELETE(m_HRMeshAdf);
 }
 
 void AvalancheModelFormat::ReadFileCallback(const std::filesystem::path& filename, const std::vector<uint8_t>& data,
@@ -84,20 +87,17 @@ void AvalancheModelFormat::Parse(const std::vector<uint8_t>& data, ParseCallback
     using namespace ava::AvalancheDataFormat;
 
     std::thread([&, data, callback] {
-        m_ModelAdf = std::make_shared<ADF>(data);
-
-        SInstanceInfo instance_info;
-        m_ModelAdf->GetInstance(0, &instance_info);
-        m_ModelAdf->ReadInstance(instance_info.m_NameHash, 0xF7C20A69, (void**)&m_AmfModel);
+        ava::AvalancheModelFormat::ParseModelc(data, &m_ModelAdf, &m_AmfModel);
 
         // create render blocks
         for (uint32_t i = 0; i < m_AmfModel->m_Materials.m_Count; ++i) {
             auto& material = m_AmfModel->m_Materials.m_Data[i];
 
-            const auto name            = m_ModelAdf->HashLookup(material.m_Name);
-            const auto render_block_id = m_ModelAdf->HashLookup(material.m_RenderBlockId);
+            const auto name = m_ModelAdf->HashLookup(material.m_Name);
+            // const auto render_block_id = m_ModelAdf->HashLookup(material.m_RenderBlockId);
 
-            const auto render_block = RenderBlockFactory::CreateRenderBlock(render_block_id, true);
+            // const auto render_block = RenderBlockFactory::CreateRenderBlock(render_block_id, true);
+            const auto render_block = RenderBlockFactory::CreateRenderBlock(material.m_RenderBlockId, true);
             assert(render_block != nullptr);
 
             // load textures
@@ -118,12 +118,7 @@ void AvalancheModelFormat::Parse(const std::vector<uint8_t>& data, ParseCallback
         FileLoader::Get()->ReadFile(
             mesh_filename, [&, callback, mesh_filename](bool success, std::vector<uint8_t> data) {
                 if (success) {
-                    m_MeshAdf = std::make_shared<ADF>(data);
-
-                    SInstanceInfo instance_info;
-                    m_MeshAdf->GetInstance(0, &instance_info);
-                    m_MeshAdf->ReadInstance(instance_info.m_NameHash, 0xEA60065D, (void**)&m_AmfMeshHeader);
-                    m_MeshAdf->ReadInstance(instance_info.m_NameHash, 0x67B3A453, (void**)&m_LowMeshBuffers);
+                    ava::AvalancheModelFormat::ParseMeshc(data, &m_MeshAdf, &m_AmfMeshHeader, &m_LowMeshBuffers);
 
                     // get the high LOD mesh name (remove the leading "intermediate" path)
                     auto hrmesh_filename = std::string(m_MeshAdf->HashLookup(m_AmfMeshHeader->m_HighLodPath));
@@ -137,12 +132,7 @@ void AvalancheModelFormat::Parse(const std::vector<uint8_t>& data, ParseCallback
                             if (success) {
                                 SPDLOG_INFO("Will use high resolution mesh! ({})", hrmesh_filename);
 
-                                m_HighResMeshAdf = std::make_shared<ADF>(data);
-
-                                SInstanceInfo instance_info;
-                                m_HighResMeshAdf->GetInstance(0, &instance_info);
-                                m_HighResMeshAdf->ReadInstance(instance_info.m_NameHash, 0x67B3A453,
-                                                               (void**)&m_HighMeshBuffers);
+                                ava::AvalancheModelFormat::ParseHrmeshc(data, &m_HRMeshAdf, &m_HighMeshBuffers);
                             } else {
                                 SPDLOG_INFO("No high resolution mesh available. Using low resolution instead. ({})",
                                             hrmesh_filename);
