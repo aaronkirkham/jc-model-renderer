@@ -1,39 +1,37 @@
-#include <Windows.h>
-#include <atomic>
-#include <shellapi.h>
-
-#include "camera.h"
-#include "imgui/fonts/fontawesome5_icons.h"
-#include "imgui/imgui_rotate.h"
-#include "imgui/imgui_tabscrollcontent.h"
-#include "imgui/imgui_textalign.h"
-#include "renderer.h"
-#include "texture_manager.h"
-#include "ui.h"
-
-#include "../settings.h"
-#include "../util.h"
-#include "../version.h"
-#include "../window.h"
-
-#include "../game/file_loader.h"
-#include "../game/formats/avalanche_archive.h"
-#include "../game/formats/avalanche_model_format.h"
-#include "../game/formats/render_block_model.h"
-#include "../game/formats/runtime_container.h"
-#include "../game/irenderblock.h"
-#include "../game/render_block_factory.h"
-
-#include "../game/jc3/renderblocks/irenderblock.h"
-#include "../game/jc4/renderblocks/irenderblock.h"
-
-#include "../game/hashlittle.h"
-
-#include "../import_export/import_export_manager.h"
-
+#include <AvaFormatLib.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
+
+#include "directory_list.h"
+#include "settings.h"
+#include "util.h"
+#include "version.h"
+#include "window.h"
+
+#include "graphics/camera.h"
+#include "graphics/imgui/fonts/fontawesome5_icons.h"
+#include "graphics/imgui/imgui_buttondropdown.h"
+#include "graphics/imgui/imgui_rotate.h"
+#include "graphics/imgui/imgui_tabscrollcontent.h"
+#include "graphics/imgui/imgui_textalign.h"
+#include "graphics/renderer.h"
+#include "graphics/shader_manager.h"
+#include "graphics/texture.h"
+#include "graphics/texture_manager.h"
+#include "graphics/ui.h"
+
+#include "game/file_loader.h"
+#include "game/formats/avalanche_archive.h"
+#include "game/formats/avalanche_model_format.h"
+#include "game/formats/render_block_model.h"
+#include "game/formats/runtime_container.h"
+#include "game/render_block_factory.h"
+
+#include "game/jc3/renderblocks/irenderblock.h"
+#include "game/jc4/renderblocks/irenderblock.h"
+
+#include "import_export/import_export_manager.h"
 
 extern bool g_IsJC4Mode;
 extern bool g_DrawBoundingBoxes;
@@ -42,8 +40,9 @@ static bool g_ShowSettingsWindow = false;
 static bool g_ShowAboutWindow    = false;
 static bool g_ShowNameHashWindow = false;
 
-#ifdef DEBUG
+#ifdef _DEBUG
 static bool g_CheckForUpdatesEnabled = false;
+static bool g_ShowImGuiDemoWindow    = false;
 #else
 static bool g_CheckForUpdatesEnabled = true;
 #endif
@@ -107,6 +106,12 @@ UI::UI()
     if (Window::Get()->LoadInternalResource(102, &buffer)) {
         m_GameSelectionIcons[1] = std::make_unique<Texture>("jc4-icon.dds", &buffer);
     }
+}
+
+void UI::Shutdown()
+{
+    m_GameSelectionIcons[0].reset();
+    m_GameSelectionIcons[1].reset();
 }
 
 void UI::Render(RenderContext_t* context)
@@ -175,8 +180,8 @@ void UI::Render(RenderContext_t* context)
         ImGui::SetNextWindowSize({448, 133});
         if (ImGui::BeginPopupModal("Settings", &g_ShowSettingsWindow,
                                    (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))) {
-            static std::string _jc3_path = Settings::Get()->GetValue<std::string>("jc3_directory");
-            static std::string _jc4_path = Settings::Get()->GetValue<std::string>("jc4_directory");
+            static std::string _jc3_path = Settings::Get()->GetValue<const char*>("jc3_directory", "");
+            static std::string _jc4_path = Settings::Get()->GetValue<const char*>("jc4_directory", "");
 
             // select jc3 path
             ImGui::Text("Just Cause 3 Path");
@@ -186,7 +191,7 @@ void UI::Render(RenderContext_t* context)
             ImGui::SameLine();
             if (ImGui::Button("...##select_jc3_path")) {
                 Window::Get()->SelectJustCauseDirectory(true, true);
-                _jc3_path = Settings::Get()->GetValue<std::string>("jc3_directory");
+                _jc3_path = Settings::Get()->GetValue<const char*>("jc3_directory", "");
             }
 
             ImGui::Separator();
@@ -199,7 +204,7 @@ void UI::Render(RenderContext_t* context)
             ImGui::SameLine();
             if (ImGui::Button("...##select_jc4_path")) {
                 Window::Get()->SelectJustCauseDirectory(true, false);
-                _jc4_path = Settings::Get()->GetValue<std::string>("jc4_directory");
+                _jc4_path = Settings::Get()->GetValue<const char*>("jc4_directory", "");
             }
 
             ImGui::EndPopup();
@@ -304,7 +309,7 @@ void UI::Render(RenderContext_t* context)
             static uint32_t    _hash   = 0;
 
             if (ImGui::InputText("Text to Hash", &_string)) {
-                _hash = _string.length() > 0 ? hashlittle(_string.c_str()) : 0;
+                _hash = _string.length() > 0 ? ava::hashlittle(_string.c_str()) : 0;
             }
 
             ImGui::InputInt("Result", (int32_t*)&_hash, 0, 0,
@@ -362,10 +367,10 @@ void UI::Render(RenderContext_t* context)
                 // draw text
                 if (m_NewTextureSettings.Texture) {
                     const auto desc = m_NewTextureSettings.Texture->GetDesc();
-                    ImGui::Text("Width: %d", desc->Width);
-                    ImGui::Text("Height: %d", desc->Height);
-                    ImGui::Text("Format: %d (%s)", desc->Format, TextureManager::GetFormatString(desc->Format));
-                    ImGui::Text("MipLevels: %d", desc->MipLevels);
+                    ImGui::Text("Width: %d", desc.Width);
+                    ImGui::Text("Height: %d", desc.Height);
+                    ImGui::Text("Format: %d (%s)", desc.Format, TextureManager::GetFormatString(desc.Format));
+                    ImGui::Text("MipLevels: %d", desc.MipLevels);
 
                     // save texture as...
                     if (ImGui::Button(ICON_FA_SAVE "  Save as...")) {
@@ -480,7 +485,7 @@ void UI::Render(RenderContext_t* context)
 
     // runtime container editor
     for (auto it = RuntimeContainer::Instances.begin(); it != RuntimeContainer::Instances.end();) {
-        std::string title = "Runtime Container Editor - " + (*it).second->GetFileName().filename().string();
+        std::string title = "Runtime Container Editor - " + (*it).second->GetFilePath().filename().string();
 
         bool open = true;
         ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
@@ -495,6 +500,12 @@ void UI::Render(RenderContext_t* context)
         } else
             ++it;
     }
+
+#ifdef _DEBUG
+    if (g_ShowImGuiDemoWindow) {
+        ImGui::ShowDemoWindow(&g_ShowImGuiDemoWindow);
+    }
+#endif
 }
 
 void UI::RenderMenuBar()
@@ -504,7 +515,7 @@ void UI::RenderMenuBar()
 
         // file
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem(ICON_FA_GAMEPAD "  Select Game")) {
+            if (ImGui::MenuItem(ICON_FA_GAMEPAD "  Select Game", nullptr, nullptr, !FileLoader::m_DictionaryLoading)) {
                 ShowGameSelection();
             }
 
@@ -583,7 +594,7 @@ void UI::RenderMenuBar()
                                                   || AvalancheModelFormat::Instances.size() > 0))) {
                     for (const auto& model : RenderBlockModel::Instances) {
                         if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
-                            Camera::Get()->FocusOn(model.second->GetBoundingBox());
+                            // Camera::Get()->FocusOn(model.second->GetBoundingBox());
                         }
                     }
 
@@ -659,14 +670,18 @@ void UI::RenderMenuBar()
             }
 
             if (ImGui::MenuItem(ICON_FA_EXTERNAL_LINK_ALT "  View on GitHub")) {
-                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc-model-renderer", nullptr, nullptr,
-                              SW_SHOWNORMAL);
+                Window::Get()->OpenUrl("https://github.com/aaronkirkham/jc-model-renderer");
             }
 
             if (ImGui::MenuItem(ICON_FA_BUG "  Report a Bug")) {
-                ShellExecuteA(nullptr, "open", "https://github.com/aaronkirkham/jc-model-renderer/issues/new", nullptr,
-                              nullptr, SW_SHOWNORMAL);
+                Window::Get()->OpenUrl("https://github.com/aaronkirkham/jc-model-renderer/issues/new");
             }
+
+#ifdef _DEBUG
+            if (ImGui::MenuItem("Show Demo Window")) {
+                g_ShowImGuiDemoWindow = !g_ShowImGuiDemoWindow;
+            }
+#endif
 
             ImGui::EndMenu();
         }
@@ -789,7 +804,8 @@ void UI::RenderFileTreeView(const glm::vec2& window_size)
             if (ImGuiCustom::TabItemScroll("File Explorer", m_TabToSwitch == TreeViewTab_FileExplorer)) {
                 const auto directory_list = FileLoader::Get()->GetDirectoryList();
                 if (directory_list) {
-                    directory_list->Draw(directory_list->GetTree());
+                    directory_list->Draw();
+                    // directory_list->Draw(directory_list->GetTree());
                 }
 
                 ImGuiCustom::EndTabItemScroll();
@@ -804,7 +820,8 @@ void UI::RenderFileTreeView(const glm::vec2& window_size)
                                            AvalancheArchive::Instances.size() == 0 ? ImGuiItemFlags_Disabled : 0)) {
                 for (auto it = AvalancheArchive::Instances.begin(); it != AvalancheArchive::Instances.end();) {
                     const auto& archive  = (*it).second;
-                    const auto& filename = archive->GetFilePath().filename();
+                    const auto& filepath = archive->GetFilePath();
+                    const auto& filename = filepath.filename();
 
                     // render the current directory
                     bool is_still_open = true;
@@ -813,17 +830,17 @@ void UI::RenderFileTreeView(const glm::vec2& window_size)
                     // drag drop target
                     if (const auto payload = UI::Get()->GetDropPayload()) {
                         for (const auto& file : payload->data) {
-                            archive->Add(file, file.parent_path());
+                            archive->AddFile(file, file.parent_path());
                         }
                     }
 
                     // context menu
-                    RenderContextMenu(archive->GetFilePath(), 0, ContextMenuFlags_Archive);
+                    RenderContextMenu(filepath, 0, ContextMenuFlags_Archive);
 
                     if (open && archive->GetDirectoryList()) {
                         // draw the directory list
                         ImGui::PushID(filename.string().c_str());
-                        archive->GetDirectoryList()->Draw(archive->GetDirectoryList()->GetTree(), archive.get());
+                        archive->GetDirectoryList()->Draw(archive.get());
                         ImGui::PopID();
                     }
 
@@ -1018,6 +1035,13 @@ void UI::RenderModelsTab_AMF()
 
                     // current block header
                     const auto tree_open = ImGui::TreeNode(label.c_str());
+
+                    // draw render block context menu
+                    if (ImGui::BeginPopupContextItem()) {
+                        render_block->DrawContextMenu();
+                        ImGui::EndPopup();
+                    }
+
                     if (tree_open) {
                         // draw model attributes ui
                         render_block->DrawUI();
@@ -1051,7 +1075,7 @@ void UI::RenderSpinner(const std::string& str)
 {
     ImGuiCustom::ImRotateStart();
     ImGui::Text(ICON_FA_SPINNER);
-    ImGuiCustom::ImRotateEnd(-0.005f * GetTickCount());
+    ImGuiCustom::ImRotateEnd(-0.005f * GetTickCount64());
 
     ImGui::SameLine();
     ImGui::Text(str.c_str());
@@ -1160,26 +1184,21 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
             const auto& texture_filename = payload->data[0];
             texture->LoadFromFile(texture_filename);
 
-#if 0
             // generate the new file path
-            const auto parent = render_block->GetParent();
-            if (parent) {
-                auto filename = parent->GetPath().parent_path();
+            const auto owner = render_block->GetOwner();
+            if (owner) {
+                auto filename = owner->GetPath().parent_path();
                 filename /= "textures" / texture_filename.filename();
 
                 // update the texture name
                 texture->SetFileName(filename);
-            }
-#endif
 
-            // TODO: do we want this??
-#if 0
-            // add the file to the parent archive
-            const auto archive = parent->GetParentArchive();
-            if (archive) {
-                archive->AddFile(filename, texture->GetBuffer());
+                // add the file to the parent archive
+                const auto archive = owner->GetParentArchive();
+                if (archive) {
+                    archive->AddFile(filename, texture->GetBuffer());
+                }
             }
-#endif
         }
     }
     ImGui::EndGroup();
@@ -1255,6 +1274,7 @@ void UI::DrawText(const std::string& text, const glm::vec3& position, const glm:
     }
 }
 
+#if 0
 void UI::DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour)
 {
     assert(m_SceneDrawList);
@@ -1277,3 +1297,4 @@ void UI::DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour)
         m_SceneDrawList->AddLine(points[i], points[4 + i], col);
     }
 }
+#endif

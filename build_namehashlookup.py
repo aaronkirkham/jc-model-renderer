@@ -1,14 +1,6 @@
-# to build the namehash lookup, you must:
-
-# (1) compile the lookup3 module
-# git clone https://github.com/aaronkirkham/py-lookup3
-# python setup.py build
-# python setup.py install
-
 import sys
 import os
 import struct
-import lookup3
 import json
 import argparse
 from decimal import Decimal
@@ -22,7 +14,7 @@ GENERATED_HASHES = "%s\\assets\\namehashlookup_generated.txt" % ROOT
 CUSTOM_HASHES = "%s\\assets\\namehashlookup_custom.txt" % ROOT
 JC4_HASHES = "%s\\assets\\namehashlookup_jc4.txt" % ROOT
 OUT_PATH = "%s\\assets\\" % ROOT
-DATA = {}
+DATA = []
 
 print ("Generating namehash lookup...")
 
@@ -33,8 +25,7 @@ def load_hints(filename):
     lines = list(line for line in lines if line)
 
     for line in lines:
-      line_hash = lookup3.hashlittle(line)
-      DATA[line_hash] = line
+      DATA.append(line)
 
 # load hints
 load_hints(GENERATED_HASHES)

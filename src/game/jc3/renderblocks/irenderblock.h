@@ -2,8 +2,28 @@
 
 #include "../../irenderblock.h"
 
+#include <fstream>
+
+struct RenderContext_t;
 namespace jc3
 {
+#pragma pack(push, 1)
+struct CSkinBatch {
+    int16_t* m_BatchLookup;
+    int32_t  m_BatchSize;
+    int32_t  m_Size;
+    int32_t  m_Offset;
+    char     pad2[4];
+};
+static_assert(sizeof(CSkinBatch) == 0x18, "CSkinBatch alignment is wrong!");
+
+struct CDeformTable {
+    uint16_t table[256];
+    uint8_t  size = 0;
+};
+static_assert(sizeof(CDeformTable) == 0x201, "CDeformTable alignment is wrong!");
+#pragma pack(pop)
+
 class IRenderBlock : public ::IRenderBlock
 {
   protected:
@@ -14,28 +34,9 @@ class IRenderBlock : public ::IRenderBlock
     virtual void Read(std::istream& stream)  = 0;
     virtual void Write(std::ostream& stream) = 0;
 
-    void DrawSkinBatches(RenderContext_t* context, const std::vector<jc::CSkinBatch>& skin_batches)
-    {
-        if (!m_Visible)
-            return;
+    void DrawSkinBatches(RenderContext_t* context, const std::vector<jc3::CSkinBatch>& skin_batches);
 
-        for (const auto& batch : skin_batches) {
-            context->m_Renderer->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
-        }
-    }
-
-    IBuffer_t* ReadBuffer(std::istream& stream, BufferType type, uint32_t stride)
-    {
-        assert(stride > 0);
-
-        uint32_t count;
-        stream.read((char*)&count, sizeof(count));
-
-        auto buffer = std::make_unique<char[]>(count * stride);
-        stream.read((char*)buffer.get(), (count * stride));
-
-        return Renderer::Get()->CreateBuffer(buffer.get(), count, stride, type, "IRenderBlock Buffer");
-    }
+    IBuffer_t* ReadBuffer(std::istream& stream, BufferType type, uint32_t stride);
 
     template <typename T> IBuffer_t* ReadVertexBuffer(std::istream& stream)
     {
@@ -55,64 +56,17 @@ class IRenderBlock : public ::IRenderBlock
         stream.write((char*)buffer->m_Data.data(), buffer->m_Data.size());
     }
 
-    void ReadMaterials(std::istream& stream)
-    {
-        uint32_t count;
-        stream.read((char*)&count, sizeof(count));
+    void ReadMaterials(std::istream& stream);
+    void WriteMaterials(std::ostream& stream);
 
-        m_Textures.resize(count);
-
-        for (uint32_t i = 0; i < count; ++i) {
-            uint32_t length;
-            stream.read((char*)&length, sizeof(length));
-
-            if (length == 0) {
-                continue;
-            }
-
-            auto filename = std::make_unique<char[]>(length + 1);
-            stream.read(filename.get(), length);
-            filename[length] = '\0';
-
-            auto texture = TextureManager::Get()->GetTexture(filename.get());
-            if (texture) {
-                m_Textures[i] = std::move(texture);
-            }
-        }
-
-        stream.read((char*)&m_MaterialParams, sizeof(m_MaterialParams));
-    }
-
-    void WriteMaterials(std::ostream& stream)
-    {
-        auto count = static_cast<uint32_t>(m_Textures.size());
-        stream.write((char*)&count, sizeof(count));
-
-        for (uint32_t i = 0; i < count; ++i) {
-            const auto& texture = m_Textures[i];
-            if (texture) {
-                const auto& filename = m_Textures[i]->GetFileName().generic_string();
-                const auto  length   = static_cast<uint32_t>(filename.length());
-
-                stream.write((char*)&length, sizeof(length));
-                stream.write(filename.c_str(), length);
-            } else {
-                static auto ZERO = 0;
-                stream.write((char*)&ZERO, sizeof(ZERO));
-            }
-        }
-
-        stream.write((char*)&m_MaterialParams, sizeof(m_MaterialParams));
-    }
-
-    void ReadSkinBatch(std::istream& stream, std::vector<jc::CSkinBatch>* skin_batches)
+    void ReadSkinBatch(std::istream& stream, std::vector<jc3::CSkinBatch>* skin_batches)
     {
         uint32_t count;
         stream.read((char*)&count, sizeof(count));
         skin_batches->reserve(count);
 
         for (uint32_t i = 0; i < count; ++i) {
-            jc::CSkinBatch batch;
+            jc3::CSkinBatch batch;
 
             stream.read((char*)&batch.m_Size, sizeof(batch.m_Size));
             stream.read((char*)&batch.m_Offset, sizeof(batch.m_Offset));
@@ -128,7 +82,7 @@ class IRenderBlock : public ::IRenderBlock
         }
     }
 
-    void WriteSkinBatch(std::ostream& stream, std::vector<jc::CSkinBatch>* skin_batches)
+    void WriteSkinBatch(std::ostream& stream, std::vector<jc3::CSkinBatch>* skin_batches)
     {
         uint32_t count = skin_batches->size();
         stream.write((char*)&count, sizeof(count));
@@ -144,7 +98,7 @@ class IRenderBlock : public ::IRenderBlock
         }
     }
 
-    void ReadDeformTable(std::istream& stream, jc::CDeformTable* deform_table)
+    void ReadDeformTable(std::istream& stream, jc3::CDeformTable* deform_table)
     {
         uint32_t deformTable[256];
         stream.read((char*)&deformTable, sizeof(deformTable));
@@ -159,7 +113,7 @@ class IRenderBlock : public ::IRenderBlock
         }
     }
 
-    void WriteDeformTable(std::ostream& stream, jc::CDeformTable* deform_table)
+    void WriteDeformTable(std::ostream& stream, jc3::CDeformTable* deform_table)
     {
         for (uint32_t i = 0; i < 256; ++i) {
             uint32_t data = deform_table->table[i];

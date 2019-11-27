@@ -1,11 +1,8 @@
 #pragma once
 
+#include "factory.h"
+
 #include <filesystem>
-
-#include "../../factory.h"
-#include "../../graphics/types.h"
-
-static constexpr auto RBM_END_OF_BLOCK = 0x89ABCDEF;
 
 class AvalancheArchive;
 class RuntimeContainer;
@@ -20,7 +17,7 @@ class RenderBlockModel : public Factory<RenderBlockModel>
     std::filesystem::path             m_Filename = "";
     std::vector<IRenderBlock*>        m_RenderBlocks;
     std::shared_ptr<AvalancheArchive> m_ParentArchive;
-    BoundingBox                       m_BoundingBox;
+    // BoundingBox                       m_BoundingBox;
 
   public:
     RenderBlockModel(const std::filesystem::path& filename);
@@ -31,15 +28,16 @@ class RenderBlockModel : public Factory<RenderBlockModel>
         return m_Filename.string();
     }
 
-    static void ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external);
+    static void ReadFileCallback(const std::filesystem::path& filename, const std::vector<uint8_t>& data,
+                                 bool external);
     static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path);
     static void ContextMenuUI(const std::filesystem::path& filename);
 
     static void Load(const std::filesystem::path& filename);
     static void LoadFromRuntimeContainer(const std::filesystem::path& filename, std::shared_ptr<RuntimeContainer> rc);
 
-    bool ParseLOD(const FileBuffer& buffer);
-    bool ParseRBM(const FileBuffer& buffer, bool add_to_render_list = true);
+    bool ParseLOD(const std::vector<uint8_t>& buffer);
+    bool ParseRBM(const std::vector<uint8_t>& buffer, bool add_to_render_list = true);
 
     inline static bool                     LoadingFromRuntimeContainer = false;
     inline static std::vector<std::string> SuppressedWarnings;
@@ -64,10 +62,10 @@ class RenderBlockModel : public Factory<RenderBlockModel>
         return m_Filename;
     }
 
-    BoundingBox* GetBoundingBox()
+    /*BoundingBox* GetBoundingBox()
     {
         return &m_BoundingBox;
-    }
+    }*/
 
     AvalancheArchive* GetParentArchive()
     {

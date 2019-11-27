@@ -1,14 +1,17 @@
-#include "texture_manager.h"
-#include "../fnv1.h"
-#include "../game/file_loader.h"
-#include "dds_texture_loader.h"
-#include "imgui/fonts/fontawesome5_icons.h"
-#include "renderer.h"
-#include "texture.h"
-#include "ui.h"
-#include "window.h"
-
+#include <algorithm>
 #include <imgui.h>
+#include <spdlog/spdlog.h>
+
+#include "fnv1.h"
+#include "texture.h"
+#include "texture_manager.h"
+
+#include "graphics/dds_texture_loader.h"
+#include "graphics/imgui/fonts/fontawesome5_icons.h"
+#include "graphics/renderer.h"
+#include "graphics/ui.h"
+
+#include "game/file_loader.h"
 
 TextureManager::TextureManager()
 {
@@ -102,7 +105,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path&
     return nullptr;
 }
 
-std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path& filename, FileBuffer* buffer,
+std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path& filename, std::vector<uint8_t>* buffer,
                                                     uint8_t flags)
 {
     const auto& name = filename.generic_string();

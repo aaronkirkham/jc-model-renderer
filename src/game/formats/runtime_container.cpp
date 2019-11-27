@@ -1,114 +1,509 @@
-#include "runtime_container.h"
-#include "../file_loader.h"
-#include "../hashlittle.h"
-#include "../name_hash_lookup.h"
-#include "render_block_model.h"
-
+#include <AvaFormatLib.h>
+#include <glm/gtc/type_ptr.hpp>
+#include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <spdlog/spdlog.h>
+
+#include "../vendor/ava-format-lib/include/util/byte_array_buffer.h"
+
+#include <queue>
+#include <sstream>
+
+#include <glm/glm.hpp>
+
+#include "runtime_container.h"
+#include "util.h"
+
+#include "game/file_loader.h"
+#include "game/formats/render_block_model.h"
+#include "game/name_hash_lookup.h"
+#include "game/types.h"
 
 extern bool g_IsJC4Mode;
 
 std::recursive_mutex                                  Factory<RuntimeContainer>::InstancesMutex;
 std::map<uint32_t, std::shared_ptr<RuntimeContainer>> Factory<RuntimeContainer>::Instances;
 
-RuntimeContainerProperty::RuntimeContainerProperty(uint32_t name_hash, uint8_t type)
-    : m_NameHash(name_hash)
-    , m_Type(static_cast<PropertyType>(type))
+void RuntimeContainer::Parse(const std::vector<uint8_t>& buffer, ParseCallback_t callback)
 {
-    m_Name = NameHashLookup::GetName(name_hash);
+    if (buffer.empty()) {
+        if (callback) {
+            callback(false);
+        }
+        return;
+    }
 
-    if (m_Name.empty()) {
-        std::stringstream ss;
-        ss << "Unknown (" << std::hex << std::setw(4) << name_hash << ")";
-        m_Name = ss.str();
+    using namespace ava::RuntimePropertyContainer;
+
+    std::thread([&, buffer, callback] {
+        byte_array_buffer buf(buffer);
+        std::istream      stream(&buf);
+
+        // @TODO: most of this should be inside of AvaFormatLib.
+
+        // read header
+        RtpcHeader header{};
+        stream.read((char*)&header, sizeof(RtpcHeader));
+        if (header.m_Magic != RTPC_MAGIC) {
+#ifdef _DEBUG
+            __debugbreak();
+#endif
+            if (callback) {
+                callback(false);
+            }
+            return;
+        }
+
+        SPDLOG_INFO("RTPC v{}", header.m_Version);
+
+        // read the root container
+        RtpcContainer root_container{};
+        stream.read((char*)&root_container, sizeof(RtpcContainer));
+
+        m_Root = std::make_unique<RTPC::Container>(std::move(root_container));
+
+        std::queue<RTPC::Container*> container_queue;
+        container_queue.push(m_Root.get());
+
+        while (!container_queue.empty()) {
+            const auto container = container_queue.front();
+
+            // read all the container variants
+            for (decltype(container->m_NumVariants) i = 0; i < container->m_NumVariants; ++i) {
+                stream.seekg(container->m_DataOffset + (i * sizeof(RtpcContainerVariant)));
+
+                RtpcContainerVariant variant{};
+                stream.read((char*)&variant, sizeof(RtpcContainerVariant));
+
+                // seek to the variant data offset
+                if (variant.m_Type != T_VARIANT_INTEGER && variant.m_Type != T_VARIANT_FLOAT) {
+                    stream.seekg(variant.m_DataOffset);
+                }
+
+                auto variant_wrapper = std::make_unique<RTPC::Variant>(variant);
+                switch (variant.m_Type) {
+                    case T_VARIANT_INTEGER: {
+                        variant_wrapper->m_Value = *(int32_t*)&variant.m_DataOffset;
+                        break;
+                    }
+
+                    case T_VARIANT_FLOAT: {
+                        variant_wrapper->m_Value = *(float*)&variant.m_DataOffset;
+                        break;
+                    }
+
+                    case T_VARIANT_STRING: {
+                        std::string value;
+                        std::getline(stream, value, '\0');
+                        variant_wrapper->m_Value = value;
+                        break;
+                    }
+
+                    case T_VARIANT_VEC2: {
+                        glm::vec2 value{};
+                        stream.read((char*)&value, sizeof(glm::vec2));
+                        variant_wrapper->m_Value = value;
+                        break;
+                    }
+
+                    case T_VARIANT_VEC3: {
+                        glm::vec3 value{};
+                        stream.read((char*)&value, sizeof(glm::vec3));
+                        variant_wrapper->m_Value = value;
+                        break;
+                    }
+
+                    case T_VARIANT_VEC4: {
+                        glm::vec4 value{};
+                        stream.read((char*)&value, sizeof(glm::vec4));
+                        variant_wrapper->m_Value = value;
+                        break;
+                    }
+
+                    case T_VARIANT_MAT4x4: {
+                        glm::mat4x4 value{};
+                        stream.read((char*)&value, sizeof(glm::mat4x4));
+                        variant_wrapper->m_Value = value;
+                        break;
+                    }
+
+                    case T_VARIANT_VEC_INTS: {
+                        int32_t count;
+                        stream.read((char*)&count, sizeof(int32_t));
+
+                        std::vector<int32_t> value(count);
+                        stream.read((char*)value.data(), (count * sizeof(int32_t)));
+                        variant_wrapper->m_Value = value;
+                        break;
+                    }
+
+                    case T_VARIANT_VEC_FLOATS: {
+                        int32_t count;
+                        stream.read((char*)&count, sizeof(int32_t));
+
+                        std::vector<float> value(count);
+                        stream.read((char*)value.data(), (count * sizeof(float)));
+                        variant_wrapper->m_Value = value;
+                        break;
+                    }
+
+                    case T_VARIANT_VEC_BYTES: {
+                        int32_t count;
+                        stream.read((char*)&count, sizeof(int32_t));
+
+                        std::vector<uint8_t> value(count);
+                        stream.read((char*)value.data(), (count * sizeof(uint8_t)));
+
+                        if (variant_wrapper->m_Flags & RTPC::E_VARIANT_IS_GUID) {
+                            assert(value.size() == sizeof(GUID)); // vector size should always be 16 here!
+                            variant_wrapper->m_Value = *(GUID*)value.data();
+                        } else {
+#if 0
+                            // PROBABY A GUID. TAKE NOTE OF THE NAME AND ADD THE HASH IN THE VARIANT CONSTRUCTOR!
+                            if (value.size() == sizeof(GUID)) {
+                                __debugbreak();
+                            }
+#endif
+                            variant_wrapper->m_Value = value;
+                        }
+                        break;
+                    }
+
+                    case T_VARIANT_OBJECTID: {
+                        jc::SObjectID value{};
+                        stream.read((char*)&value, sizeof(jc::SObjectID));
+                        variant_wrapper->m_Value = value;
+                        break;
+                    }
+
+                    case T_VARIANT_VEC_EVENTS: {
+                        int32_t count = 0;
+                        stream.read((char*)&count, sizeof(int32_t));
+
+                        std::vector<jc::SObjectID> value(count);
+                        stream.read((char*)value.data(), (count * sizeof(jc::SObjectID)));
+                        variant_wrapper->m_Value = value;
+                        break;
+                    }
+                }
+
+                container->m_Variants.push_back(std::move(variant_wrapper));
+            }
+
+            const uint32_t pos = container->m_DataOffset + (container->m_NumVariants * sizeof(RtpcContainerVariant));
+            stream.seekg(ava::math::align(pos));
+
+            // read all sub containers
+            for (decltype(container->m_NumContainers) i = 0; i < container->m_NumContainers; ++i) {
+                RtpcContainer sub_container{};
+                stream.read((char*)&sub_container, sizeof(RtpcContainer));
+
+                auto sub_container_wrapper = std::make_unique<RTPC::Container>(std::move(sub_container));
+                container_queue.push(sub_container_wrapper.get());
+
+                container->m_Containers.push_back(std::move(sub_container_wrapper));
+            }
+
+            container_queue.pop();
+        }
+
+        // update all container display names
+        m_Root->UpdateDisplayName();
+
+        if (callback) {
+            callback(true);
+        }
+    }).detach();
+}
+
+void RuntimeContainer::ReadFileCallback(const std::filesystem::path& filename, const std::vector<uint8_t>& data,
+                                        bool external)
+{
+    if (!RuntimeContainer::exists(filename.string())) {
+        auto rtpc = RuntimeContainer::make(filename);
+        rtpc->Parse(data);
     }
 }
 
-RuntimeContainer::RuntimeContainer(uint32_t name_hash, const std::filesystem::path& filename)
-    : m_NameHash(name_hash)
-    , m_Filename(filename)
+bool RuntimeContainer::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path)
 {
-    m_Name = NameHashLookup::GetName(name_hash);
+#if 0
+    if (auto rc = RuntimeContainer::get(filename.string())) {
+        using namespace ava::RuntimePropertyContainer;
+
+        std::ofstream stream(path, std::ios::binary);
+        if (stream.fail()) {
+            return false;
+        }
+
+        // generate the header
+        RtpcHeader header;
+        stream.write((char*)&header, sizeof(header));
+
+        //
+        std::vector<std::pair<uint32_t, RtpcContainer>> raw_nodes;
+        std::unordered_map<std::string, uint32_t>       string_offsets;
+
+        const auto current_pos = static_cast<uint32_t>(stream.tellp());
+        stream.seekp(current_pos + sizeof(RtpcContainer));
+
+        RtpcContainer _node{rc->GetNameHash(), (current_pos + sizeof(RtpcContainer)),
+                            static_cast<uint16_t>(rc->GetProperties().size()),
+                            static_cast<uint16_t>(rc->GetContainers().size())};
+        raw_nodes.emplace_back(std::make_pair(current_pos, std::move(_node)));
+
+        WriteNode(stream, rc.get(), string_offsets, raw_nodes);
+
+        // write the nodes
+        for (const auto& node : raw_nodes) {
+            stream.seekp(node.first);
+            stream.write((char*)&node.second, sizeof(node.second));
+        }
+
+        stream.close();
+        return true;
+    }
+#endif
+    return false;
 }
 
-RuntimeContainer::~RuntimeContainer()
+void RuntimeContainer::Load(const std::filesystem::path& filename, LoadCallback_t callback)
 {
-    // delete all the properties
-    for (auto& prop : m_Properties) {
-        delete prop;
+    if (RuntimeContainer::exists(filename.string())) {
+        callback(true, RuntimeContainer::get(filename.string()));
+    } else {
+        FileLoader::Get()->ReadFile(filename, [&, filename, callback](bool success, std::vector<uint8_t> buffer) {
+            if (success) {
+                auto rtpc = RuntimeContainer::make(filename);
+                rtpc->Parse(buffer, [&, rtpc, callback](bool success) { callback(success, rtpc); });
+            } else {
+                SPDLOG_ERROR("Failed to read RuntimeContainer \"{}\"", filename.string());
+            }
+        });
     }
-
-    // delete all the containers
-    for (auto& container : m_Containers) {
-        delete container;
-    }
-
-    m_Properties.clear();
-    m_Containers.clear();
 }
 
-void RuntimeContainer::GenerateBetterNames()
+void RuntimeContainer::DrawUI(RTPC::Container* container, int32_t index, uint8_t depth)
 {
-    std::string tmp;
-    auto        _name  = GetProperty("name", false);
-    auto        _class = GetProperty("_class", false);
+    using namespace ava::RuntimePropertyContainer;
+    using namespace RTPC;
+
+    if (!container) {
+        // draw root container children
+        if (m_Root) {
+            for (size_t i = 0; i < m_Root->m_Containers.size(); ++i) {
+                DrawUI(m_Root->m_Containers[i].get(), i, (depth + 1));
+            }
+        }
+        return;
+    }
+
+    std::string title = container->m_Name + "##" + std::to_string(index);
+    if (ImGui::TreeNode(title.c_str())) {
+        // draw variants
+        for (const auto& variant : container->m_Variants) {
+            switch (variant->m_Type) {
+                case T_VARIANT_INTEGER: {
+                    auto value = variant->Value<int32_t>();
+                    if (ImGui::InputInt(variant->m_Name.c_str(), &value, 0, 0,
+                                        (variant->m_Flags & E_VARIANT_IS_HASH) ? ImGuiInputTextFlags_CharsHexadecimal
+                                                                               : ImGuiInputTextFlags_CharsDecimal)) {
+                        variant->m_Value = value;
+                    }
+                    break;
+                }
+
+                case T_VARIANT_FLOAT: {
+                    auto value = variant->Value<float>();
+                    if (ImGui::InputFloat(variant->m_Name.c_str(), &value)) {
+                        variant->m_Value = value;
+                    }
+                    break;
+                }
+
+                case T_VARIANT_STRING: {
+                    auto& value = variant->Value<std::string>();
+                    if (ImGui::InputText(variant->m_Name.c_str(), &value)) {
+                        variant->m_Value = value;
+                    }
+                    break;
+                }
+
+                case T_VARIANT_VEC2: {
+                    auto& value = variant->Value<glm::vec2>();
+                    if (ImGui::InputFloat2(variant->m_Name.c_str(), glm::value_ptr(value))) {
+                        variant->m_Value = value;
+                    }
+                    break;
+                }
+
+                case T_VARIANT_VEC3: {
+                    auto& value = variant->Value<glm::vec3>();
+                    if (variant->m_Flags & E_VARIANT_IS_COLOR
+                            ? ImGui::ColorEdit3(variant->m_Name.c_str(), glm::value_ptr(value))
+                            : ImGui::InputFloat3(variant->m_Name.c_str(), glm::value_ptr(value))) {
+                        variant->m_Value = value;
+                    }
+                    break;
+                }
+
+                case T_VARIANT_VEC4: {
+                    auto& value = variant->Value<glm::vec4>();
+                    if (variant->m_Flags & E_VARIANT_IS_COLOR
+                            ? ImGui::ColorEdit4(variant->m_Name.c_str(), glm::value_ptr(value))
+                            : ImGui::InputFloat4(variant->m_Name.c_str(), glm::value_ptr(value))) {
+                        variant->m_Value = value;
+                    }
+                    break;
+                }
+
+                case T_VARIANT_MAT4x4: {
+                    auto& value = variant->Value<glm::mat4x4>();
+                    for (uint8_t i = 0; i < 4; ++i) {
+                        auto title = util::format("%s [%d]", variant->m_Name.c_str(), i);
+                        ImGui::InputFloat4(title.c_str(), glm::value_ptr(value[i]));
+                    }
+                    break;
+                }
+
+                case T_VARIANT_VEC_INTS: {
+                    auto& value = variant->Value<std::vector<int32_t>>();
+                    for (size_t i = 0; i < value.size(); ++i) {
+                        auto title = util::format("%s [%d]", variant->m_Name.c_str(), i);
+                        if (ImGui::InputScalarN(title.c_str(), ImGuiDataType_S32, (void*)&value[i], 1, nullptr, nullptr,
+                                                "%08X")) {
+                            variant->m_Value = value;
+                        }
+                    }
+                    break;
+                }
+
+                case T_VARIANT_VEC_FLOATS: {
+                    auto& value = variant->Value<std::vector<float>>();
+                    for (size_t i = 0; i < value.size(); ++i) {
+                        auto title = util::format("%s [%d]", variant->m_Name.c_str(), i);
+                        if (ImGui::InputScalarN(title.c_str(), ImGuiDataType_Float, (void*)&value[i], 1)) {
+                            variant->m_Value = value;
+                        }
+                    }
+                    break;
+                }
+
+                case T_VARIANT_VEC_BYTES: {
+                    // special case for GUIDs
+                    if (variant->m_Flags & E_VARIANT_IS_GUID) {
+                        auto& value       = variant->Value<GUID>();
+                        auto  guid_string = util::GUID_to_string(value);
+                        if (ImGui::InputText(variant->m_Name.c_str(), &guid_string)) {
+                            variant->m_Value = util::GUID_from_string(guid_string, value);
+                        }
+                    } else {
+                        auto& value = variant->Value<std::vector<uint8_t>>();
+                        for (size_t i = 0; i < value.size(); ++i) {
+                            auto title = util::format("%s [%d] (bytes)", variant->m_Name.c_str(), i);
+                            if (ImGui::InputScalarN(title.c_str(), ImGuiDataType_U8, (void*)&value[i], 1, nullptr,
+                                                    nullptr, "%02X", ImGuiInputTextFlags_CharsHexadecimal)) {
+                                variant->m_Value = value;
+                            }
+                        }
+                    }
+                    break;
+                }
+
+                case T_VARIANT_OBJECTID: {
+                    auto& value = variant->Value<jc::SObjectID>();
+                    if (ImGui::InputScalarN(variant->m_Name.c_str(), ImGuiDataType_U16, (void*)&value, 4, nullptr,
+                                            nullptr, "%04X", ImGuiInputTextFlags_CharsHexadecimal)) {
+                        variant->m_Value = value;
+                    }
+                    break;
+                }
+
+                case T_VARIANT_VEC_EVENTS: {
+                    auto& value = variant->Value<std::vector<jc::SObjectID>>();
+                    for (size_t i = 0; i < value.size(); ++i) {
+                        auto title = util::format("%s [%d]", variant->m_Name.c_str(), i);
+                        if (ImGui::InputScalarN(title.c_str(), ImGuiDataType_U16, (void*)&value[i], 4, nullptr, nullptr,
+                                                "%04X", ImGuiInputTextFlags_CharsHexadecimal)) {
+                            variant->m_Value = value;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        // draw child containers
+        for (size_t i = 0; i < container->m_Containers.size(); ++i) {
+            DrawUI(container->m_Containers[i].get(), i, (depth + 1));
+        }
+
+        ImGui::TreePop();
+    }
+}
+
+RTPC::Container::Container(const ava::RuntimePropertyContainer::RtpcContainer& container)
+{
+    m_Name          = NameHashLookup::GetName(container.m_Key);
+    m_Key           = container.m_Key;
+    m_DataOffset    = container.m_DataOffset;
+    m_NumVariants   = container.m_NumVariants;
+    m_NumContainers = container.m_NumContainers;
+}
+
+void RTPC::Container::UpdateDisplayName()
+{
+    const auto name       = GetVariant("name"_hash_little, false);
+    const auto class_name = GetVariant("_class"_hash_little, false);
+    const auto class_hash = GetVariant("_class_hash"_hash_little, false);
+
+    std::stringstream ss;
+    bool              has_name = (name != nullptr);
 
     // append the real name
-    if (_name) {
-        tmp.append(_name->GetValue<std::string>());
+    if (has_name) {
+        ss << name->Value<std::string>();
     }
 
     // append the class name
-    if (_class) {
-        if (_name) {
-            tmp.append(" (");
-        }
-
-        tmp.append(_class->GetValue<std::string>());
-
-        if (_name) {
-            tmp.append(")");
-        }
-    }
-    // if we don't have a class name, look for the class hash (mainly used in jc4)
-    else if (_class = GetProperty("_class_hash", false)) {
-        if (_name) {
-            tmp.append(" (");
-        }
-
-        tmp.append(NameHashLookup::GetName(_class->GetValue<int32_t>()));
-
-        if (_name) {
-            tmp.append(")");
+    if (class_name || class_hash) {
+        if (class_name) {
+            ss << (has_name ? " (" : "") << class_name->Value<std::string>() << (has_name ? ")" : "");
+        } else if (class_hash) {
+            auto class_hash_name = NameHashLookup::GetName(class_hash->Value<int32_t>());
+            if (!class_hash_name.empty()) {
+                ss << (has_name ? " (" : "") << class_hash_name << (has_name ? ")" : "");
+            }
         }
     }
 
     if (m_Name.empty()) {
-        m_Name = tmp;
+        m_Name = ss.str();
     } else {
-        m_Name = tmp + " (" + m_Name + ")";
+        m_Name = ss.str() + " (" + m_Name + ")";
+    }
+
+    // if the name is still empty, write the namehash
+    if (m_Name.empty()) {
+        m_Name = util::format("Unknown (%08x)", m_Key);
     }
 
     for (const auto& container : m_Containers) {
-        container->GenerateBetterNames();
+        container->UpdateDisplayName();
     }
 }
 
-RuntimeContainerProperty* RuntimeContainer::GetProperty(uint32_t name_hash, bool include_children)
+RTPC::Container* RTPC::Container::GetContainer(const uint32_t name_hash, bool recursive)
 {
-    // find the property
-    for (auto& prop : m_Properties) {
-        if (prop->GetNameHash() == name_hash) {
-            return prop;
+    for (const auto& container : m_Containers) {
+        if (container->m_Key == name_hash) {
+            return container.get();
         }
-    }
 
-    if (include_children) {
-        // try find the property in child containers
-        for (auto& container : m_Containers) {
-            auto prop = container->GetProperty(name_hash);
-            if (prop) {
-                return prop;
+        // search child containers
+        if (recursive) {
+            if (auto child = container->GetContainer(name_hash)) {
+                return child;
             }
         }
     }
@@ -116,24 +511,19 @@ RuntimeContainerProperty* RuntimeContainer::GetProperty(uint32_t name_hash, bool
     return nullptr;
 }
 
-RuntimeContainerProperty* RuntimeContainer::GetProperty(const std::string& name, bool include_children)
+RTPC::Variant* RTPC::Container::GetVariant(const uint32_t name_hash, bool recursive)
 {
-    return GetProperty(hashlittle(name.c_str()), include_children);
-}
-
-RuntimeContainer* RuntimeContainer::GetContainer(uint32_t name_hash, bool include_children)
-{
-    // find the container
-    for (auto& container : m_Containers) {
-        if (container->GetNameHash() == name_hash) {
-            return container;
+    for (const auto& variant : m_Variants) {
+        if (variant->m_Key == name_hash) {
+            return variant.get();
         }
+    }
 
-        if (include_children) {
-            // if the container has a child we're looking for, use that
-            auto child_container = container->GetContainer(name_hash);
-            if (child_container) {
-                return child_container;
+    // search child containers
+    if (recursive) {
+        for (const auto& container : m_Containers) {
+            if (auto variant = container->GetVariant(name_hash)) {
+                return variant;
             }
         }
     }
@@ -141,66 +531,56 @@ RuntimeContainer* RuntimeContainer::GetContainer(uint32_t name_hash, bool includ
     return nullptr;
 }
 
-RuntimeContainer* RuntimeContainer::GetContainer(const std::string& name, bool include_children)
+RTPC::Variant::Variant(const ava::RuntimePropertyContainer::RtpcContainerVariant& variant)
 {
-    return GetContainer(hashlittle(name.c_str()), include_children);
-}
+    m_Name       = NameHashLookup::GetName(variant.m_Key);
+    m_Key        = variant.m_Key;
+    m_DataOffset = variant.m_DataOffset;
+    m_Type       = variant.m_Type;
 
-std::vector<RuntimeContainer*> RuntimeContainer::GetAllContainers(const std::string& class_name)
-{
-    std::vector<RuntimeContainer*> result;
-
-    const auto _class = GetProperty("_class");
-    assert(_class);
-
-    //
-    auto _class_name = _class->GetValue<std::string>();
-    if (_class_name == class_name) {
-        result.emplace_back(this);
+    if (m_Name.empty()) {
+        m_Name = util::format("Unknown (%08x)", m_Key);
     }
 
-    for (const auto& child : m_Containers) {
-        auto r = child->GetAllContainers(class_name);
-        std::copy(r.begin(), r.end(), std::back_inserter(result));
-    }
+    // common variant names that contain hashes
+    static std::array hash_keys{
+        "ragdoll"_hash_little,  "skeleton"_hash_little,   "model"_hash_little,
+        "filepath"_hash_little, "layer_name"_hash_little, "EffectUsage"_hash_little,
+    };
 
-    return result;
-}
+    // common variant names that contain GUIDs
+    static std::array guid_keys{
+        "Sound"_hash_little,
+        "FMODEvent"_hash_little,
+    };
 
-std::vector<RuntimeContainerProperty*> RuntimeContainer::GetSortedProperties()
-{
-    auto properties = GetProperties();
-    std::sort(properties.begin(), properties.end(), [&](RuntimeContainerProperty* a, RuntimeContainerProperty* b) {
-        auto& name_a = a->GetName();
-        auto& name_b = b->GetName();
+#define InKeys(keys) std::find(keys.begin(), keys.end(), m_Key) != keys.end()
 
-        return std::lexicographical_compare(name_a.begin(), name_a.end(), name_b.begin(), name_b.end());
-    });
-
-    return properties;
-}
-
-void RuntimeContainer::ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external)
-{
-    if (!RuntimeContainer::exists(filename.string())) {
-        const auto rtpc = FileLoader::Get()->ParseRuntimeContainer(filename, data);
+    if (InKeys(hash_keys) || util::find(m_Name, "hash")) {
+        m_Flags |= E_VARIANT_IS_HASH;
+    } else if (InKeys(guid_keys)) {
+        m_Flags |= E_VARIANT_IS_GUID;
+    } else if (util::find(m_Name, "color")) {
+        m_Flags |= E_VARIANT_IS_COLOR;
     }
 }
 
+#if 0
+// @TODO: move inside AvaFormatLib
 void WriteNode(std::ofstream& stream, RuntimeContainer* node, std::unordered_map<std::string, uint32_t>& string_offsets,
-               std::vector<std::pair<uint32_t, jc::RuntimeContainer::Node>>& raw_nodes)
+               std::vector<std::pair<uint32_t, ava::RuntimePropertyContainer::RtpcContainer>>& raw_nodes)
 {
-    using namespace jc::RuntimeContainer;
+    using namespace ava::RuntimePropertyContainer;
 
     auto properties = node->GetProperties();
     auto containers = node->GetContainers();
 
     const uint32_t prop_offset            = static_cast<uint32_t>(stream.tellp());
-    const uint32_t _child_offset_no_align = (prop_offset + (sizeof(Property) * properties.size()));
-    uint32_t       child_offset           = jc::ALIGN_TO_BOUNDARY(_child_offset_no_align);
-    const uint32_t prop_data_offset       = (child_offset + (sizeof(Node) * containers.size()));
+    const uint32_t _child_offset_no_align = (prop_offset + (sizeof(RtpcContainerVariant) * properties.size()));
+    uint32_t       child_offset           = ava::math::align(_child_offset_no_align);
+    const uint32_t prop_data_offset       = (child_offset + (sizeof(RtpcContainer) * containers.size()));
 
-    std::vector<Property> _raw_properties;
+    std::vector<RtpcContainerVariant> _raw_properties;
     _raw_properties.reserve(properties.size());
 
     if (g_IsJC4Mode) {
@@ -217,15 +597,15 @@ void WriteNode(std::ofstream& stream, RuntimeContainer* node, std::unordered_map
         const auto type        = prop->GetType();
 
         // alignment
-        if (type != RTPC_TYPE_INTEGER && type != RTPC_TYPE_FLOAT && type != RTPC_TYPE_STRING) {
+        if (type != T_VARIANT_INTEGER && type != T_VARIANT_FLOAT && type != T_VARIANT_STRING) {
             uint32_t alignment = 4;
 
-            if (type == RTPC_TYPE_VEC4 || type == RTPC_TYPE_MAT4X4) {
+            if (type == T_VARIANT_VEC4 || type == T_VARIANT_MAT4x4) {
                 alignment = 16;
             }
 
             // write padding bytes
-            auto padding = jc::DISTANCE_TO_BOUNDARY(current_pos, alignment);
+            uint32_t padding = ava::math::align_distance(current_pos, alignment);
             current_pos += padding;
 
             static uint8_t PADDING_BYTE = 0x50;
@@ -234,21 +614,21 @@ void WriteNode(std::ofstream& stream, RuntimeContainer* node, std::unordered_map
             }
         }
 
-        Property _raw_property{prop->GetNameHash(), current_pos, prop->GetType()};
+        RtpcContainerVariant _raw_property{prop->GetNameHash(), current_pos, prop->GetType()};
         switch (type) {
-            case RTPC_TYPE_INTEGER: {
+            case T_VARIANT_INTEGER: {
                 auto value                 = std::any_cast<int32_t>(prop->GetValue());
                 _raw_property.m_DataOffset = static_cast<uint32_t>(value);
                 break;
             }
 
-            case RTPC_TYPE_FLOAT: {
+            case T_VARIANT_FLOAT: {
                 auto value                 = std::any_cast<float>(prop->GetValue());
                 _raw_property.m_DataOffset = *(uint32_t*)&value;
                 break;
             }
 
-            case RTPC_TYPE_STRING: {
+            case T_VARIANT_STRING: {
                 auto& value = std::any_cast<std::string>(prop->GetValue());
 
                 auto it = string_offsets.find(value);
@@ -267,20 +647,20 @@ void WriteNode(std::ofstream& stream, RuntimeContainer* node, std::unordered_map
                 break;
             }
 
-            case RTPC_TYPE_VEC2:
-            case RTPC_TYPE_VEC3:
-            case RTPC_TYPE_VEC4:
-            case RTPC_TYPE_MAT4X4: {
-                if (type == RTPC_TYPE_VEC2) {
+            case T_VARIANT_VEC2:
+            case T_VARIANT_VEC3:
+            case T_VARIANT_VEC4:
+            case T_VARIANT_MAT4x4: {
+                if (type == T_VARIANT_VEC2) {
                     auto& value = std::any_cast<glm::vec2>(prop->GetValue());
                     stream.write((char*)&value.x, sizeof(value));
-                } else if (type == RTPC_TYPE_VEC3) {
+                } else if (type == T_VARIANT_VEC3) {
                     auto& value = std::any_cast<glm::vec3>(prop->GetValue());
                     stream.write((char*)&value.x, sizeof(value));
-                } else if (type == RTPC_TYPE_VEC4) {
+                } else if (type == T_VARIANT_VEC4) {
                     auto& value = std::any_cast<glm::vec4>(prop->GetValue());
                     stream.write((char*)&value.x, sizeof(value));
-                } else if (type == RTPC_TYPE_MAT4X4) {
+                } else if (type == T_VARIANT_MAT4x4) {
                     auto& value = std::any_cast<glm::mat4x4>(prop->GetValue());
                     stream.write((char*)&value[0], sizeof(value));
                 }
@@ -288,22 +668,22 @@ void WriteNode(std::ofstream& stream, RuntimeContainer* node, std::unordered_map
                 break;
             }
 
-            case RTPC_TYPE_LIST_INTEGERS:
-            case RTPC_TYPE_LIST_FLOATS:
-            case RTPC_TYPE_LIST_BYTES: {
-                if (type == RTPC_TYPE_LIST_INTEGERS) {
+            case T_VARIANT_VEC_INTS:
+            case T_VARIANT_VEC_FLOATS:
+            case T_VARIANT_VEC_BYTES: {
+                if (type == T_VARIANT_VEC_INTS) {
                     auto& value = std::any_cast<std::vector<int32_t>>(prop->GetValue());
                     auto  count = static_cast<int32_t>(value.size());
 
                     stream.write((char*)&count, sizeof(count));
                     stream.write((char*)value.data(), (count * sizeof(int32_t)));
-                } else if (type == RTPC_TYPE_LIST_FLOATS) {
+                } else if (type == T_VARIANT_VEC_FLOATS) {
                     auto& value = std::any_cast<std::vector<float>>(prop->GetValue());
                     auto  count = static_cast<int32_t>(value.size());
 
                     stream.write((char*)&count, sizeof(count));
                     stream.write((char*)value.data(), (count * sizeof(float)));
-                } else if (type == RTPC_TYPE_LIST_BYTES) {
+                } else if (type == T_VARIANT_VEC_BYTES) {
                     auto& value = std::any_cast<std::vector<uint8_t>>(prop->GetValue());
                     auto  count = static_cast<int32_t>(value.size());
 
@@ -314,13 +694,13 @@ void WriteNode(std::ofstream& stream, RuntimeContainer* node, std::unordered_map
                 break;
             }
 
-            case RTPC_TYPE_OBJECT_ID: {
+            case T_VARIANT_OBJECTID: {
                 auto& value = std::any_cast<std::pair<uint32_t, uint32_t>>(prop->GetValue());
                 stream.write((char*)&value.first, (sizeof(uint32_t) * 2));
                 break;
             }
 
-            case RTPC_TYPE_EVENTS: {
+            case T_VARIANT_VEC_EVENTS: {
                 auto& value = std::any_cast<std::vector<std::pair<uint32_t, uint32_t>>>(prop->GetValue());
                 auto  count = static_cast<int32_t>(value.size());
 
@@ -337,214 +717,22 @@ void WriteNode(std::ofstream& stream, RuntimeContainer* node, std::unordered_map
 
     // write properties
     stream.seekp(prop_offset);
-    stream.write((char*)_raw_properties.data(), (sizeof(Property) * _raw_properties.size()));
+    stream.write((char*)_raw_properties.data(), (sizeof(RtpcContainerVariant) * _raw_properties.size()));
 
     std::sort(containers.begin(), containers.end(),
               [](const RuntimeContainer* a, const RuntimeContainer* b) { return a->GetNameHash() < b->GetNameHash(); });
 
     // write child containers
-    stream.seekp(jc::ALIGN_TO_BOUNDARY(child_data_offset));
+    stream.seekp(ava::math::align(child_data_offset));
     for (auto child : containers) {
-        Node _node{child->GetNameHash(), static_cast<uint32_t>(stream.tellp()),
-                   static_cast<uint16_t>(child->GetProperties().size()),
-                   static_cast<uint16_t>(child->GetContainers().size())};
+        RtpcContainer _node{child->GetNameHash(), static_cast<uint32_t>(stream.tellp()),
+                            static_cast<uint16_t>(child->GetProperties().size()),
+                            static_cast<uint16_t>(child->GetContainers().size())};
         raw_nodes.emplace_back(std::make_pair(child_offset, std::move(_node)));
 
-        child_offset += sizeof(Node);
+        child_offset += sizeof(RtpcContainer);
 
         WriteNode(stream, child, string_offsets, raw_nodes);
-    }
-}
-
-bool RuntimeContainer::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path)
-{
-    if (auto rc = RuntimeContainer::get(filename.string())) {
-        using namespace jc::RuntimeContainer;
-
-        std::ofstream stream(path, std::ios::binary);
-        if (stream.fail()) {
-            return false;
-        }
-
-        // generate the header
-        Header header;
-        header.m_Version = 1;
-        stream.write((char*)&header, sizeof(header));
-
-        //
-        std::vector<std::pair<uint32_t, Node>>    raw_nodes;
-        std::unordered_map<std::string, uint32_t> string_offsets;
-
-        const auto current_pos = static_cast<uint32_t>(stream.tellp());
-        stream.seekp(current_pos + sizeof(Node));
-
-        Node _node{rc->GetNameHash(), (current_pos + sizeof(Node)), static_cast<uint16_t>(rc->GetProperties().size()),
-                   static_cast<uint16_t>(rc->GetContainers().size())};
-        raw_nodes.emplace_back(std::make_pair(current_pos, std::move(_node)));
-
-        WriteNode(stream, rc.get(), string_offsets, raw_nodes);
-
-        // write the nodes
-        for (const auto& node : raw_nodes) {
-            stream.seekp(node.first);
-            stream.write((char*)&node.second, sizeof(node.second));
-        }
-
-        stream.close();
-        return true;
-    }
-
-    return false;
-}
-
-void RuntimeContainer::DrawUI(int32_t index, uint8_t depth)
-{
-    // skip "root"
-    if (m_NameHash == 0xAA7D522A) {
-        // draw children
-        if (m_Containers.size() > 0) {
-            auto _depth = ++depth;
-            for (int i = 0; i < m_Containers.size(); ++i) {
-                m_Containers[i]->DrawUI(i, _depth);
-            }
-        }
-
-        return;
-    }
-
-    std::string title = m_Name + "##" + std::to_string(index);
-
-    if (ImGui::TreeNode(title.c_str())) {
-        for (const auto& prop : GetSortedProperties()) {
-            // special case for hashes
-            // TODO: Move into a function which gets run once, we need lots of custom cases for these (vehicles)
-            // instead of just showing the hash, we should do a NameHashLookup and show the string value. If the
-            // string is changed, when we save the EPE we need to convert the string back to a hash and save that
-            if (prop->GetType() == RTPC_TYPE_INTEGER
-                && (prop->GetNameHash() == 0x932E9257 || // ragdoll
-                    prop->GetNameHash() == 0x26FA86FE || // skeleton
-                    prop->GetNameHash() == 0x0F94740B || // model
-                    prop->GetNameHash() == 0xB498C27D || // filepath
-                    prop->GetName().rfind("hash") != std::string::npos)) {
-                auto value = std::any_cast<int32_t>(prop->GetValue());
-                ImGui::InputInt(prop->GetName().c_str(), (int32_t*)&value, 0, 0,
-                                ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_ReadOnly);
-                continue;
-            }
-
-            switch (prop->GetType()) {
-                case RTPC_TYPE_INTEGER: {
-                    auto value = std::any_cast<int32_t>(prop->GetValue());
-                    if (ImGui::InputInt(prop->GetName().c_str(), &value)) {
-                        prop->SetValue(value);
-                    }
-                    break;
-                }
-
-                case RTPC_TYPE_FLOAT: {
-                    auto value = std::any_cast<float>(prop->GetValue());
-                    if (ImGui::InputFloat(prop->GetName().c_str(), &value)) {
-                        prop->SetValue(value);
-                    }
-                    break;
-                }
-
-                case RTPC_TYPE_STRING: {
-                    auto& value = std::any_cast<std::string>(prop->GetValue());
-                    if (ImGui::InputText(prop->GetName().c_str(), &value)) {
-                        prop->SetValue(value);
-                    }
-                    break;
-                }
-
-                case RTPC_TYPE_VEC2: {
-                    auto& value = std::any_cast<glm::vec2>(prop->GetValue());
-                    if (ImGui::InputFloat2(prop->GetName().c_str(), &value.x)) {
-                        prop->SetValue(glm::vec2{value.x, value.y});
-                    }
-                    break;
-                }
-
-                case RTPC_TYPE_VEC3: {
-                    auto& value = std::any_cast<glm::vec3>(prop->GetValue());
-                    if (ImGui::InputFloat3(prop->GetName().c_str(), &value.x)) {
-                        prop->SetValue(glm::vec3{value.x, value.y, value.z});
-                    }
-                    break;
-                }
-
-                case RTPC_TYPE_VEC4: {
-                    auto& value = std::any_cast<glm::vec4>(prop->GetValue());
-                    if (ImGui::InputFloat4(prop->GetName().c_str(), &value.x)) {
-                        prop->SetValue(glm::vec4{value.x, value.y, value.z, value.w});
-                    }
-                    break;
-                }
-
-                case RTPC_TYPE_MAT4X4: {
-                    auto& value = prop->GetValue<glm::mat4>();
-                    ImGui::Text(prop->GetName().c_str());
-                    ImGui::InputFloat4("m0", &value[0][0]);
-                    ImGui::InputFloat4("m1", &value[1][0]);
-                    ImGui::InputFloat4("m2", &value[2][0]);
-                    ImGui::InputFloat4("m3", &value[3][0]);
-                    break;
-                }
-
-                case RTPC_TYPE_LIST_INTEGERS: {
-                    auto& values = prop->GetValue<std::vector<int32_t>>();
-                    ImGui::Text(prop->GetName().c_str());
-                    ImGui::Text(RuntimeContainerProperty::GetTypeName(prop->GetType()).c_str());
-                    for (auto& value : values) {
-                        ImGui::InputInt(".", &value);
-                    }
-                    break;
-                }
-
-                case RTPC_TYPE_LIST_FLOATS: {
-                    auto& values = prop->GetValue<std::vector<float>>();
-                    ImGui::Text(prop->GetName().c_str());
-                    ImGui::Text(RuntimeContainerProperty::GetTypeName(prop->GetType()).c_str());
-                    for (auto& value : values) {
-                        ImGui::InputFloat(".", &value);
-                    }
-                    break;
-                }
-
-                case RTPC_TYPE_LIST_BYTES: {
-                    auto& values = prop->GetValue<std::vector<uint8_t>>();
-                    ImGui::Text(prop->GetName().c_str());
-                    ImGui::Text(RuntimeContainerProperty::GetTypeName(prop->GetType()).c_str());
-                    // for (auto& value : values) {
-                    // ImGui::InputInt(".", &value);
-                    //}
-                    break;
-                }
-
-                case RTPC_TYPE_OBJECT_ID: {
-                    auto& value = prop->GetValue<std::pair<uint32_t, uint32_t>>();
-                    if (ImGui::InputScalarN(prop->GetName().c_str(), ImGuiDataType_U32, (void*)&value.first, 2)) {
-                        prop->SetValue(std::make_pair(value.first, value.second));
-                    }
-
-                    break;
-                }
-
-                case RTPC_TYPE_EVENTS: {
-                    break;
-                }
-            }
-        }
-
-        // draw children
-        if (m_Containers.size() > 0) {
-            auto _depth = ++depth;
-            for (int i = 0; i < m_Containers.size(); ++i) {
-                m_Containers[i]->DrawUI(i, _depth);
-            }
-        }
-
-        ImGui::TreePop();
     }
 }
 
@@ -565,16 +753,4 @@ void RuntimeContainer::ContextMenuUI(const std::filesystem::path& filename)
         }
     }
 }
-
-void RuntimeContainer::Load(const std::filesystem::path&                           filename,
-                            std::function<void(std::shared_ptr<RuntimeContainer>)> callback)
-{
-    FileLoader::Get()->ReadFile(filename, [&, filename, callback](bool success, FileBuffer data) {
-        if (success) {
-            auto result = FileLoader::Get()->ParseRuntimeContainer(filename, data);
-            callback(result);
-        } else {
-            SPDLOG_ERROR("Failed to read runtime container \"{}\"", filename.string());
-        }
-    });
-}
+#endif

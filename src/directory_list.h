@@ -1,134 +1,78 @@
 #pragma once
 
 #include <filesystem>
-#include <json.hpp>
 
-#include "graphics/imgui/fonts/fontawesome5_icons.h"
-#include "graphics/ui.h"
+struct tree_node {
+    std::string              name;
+    std::vector<tree_node>   folders;
+    std::vector<std::string> files;
 
-#include <imgui.h>
-
-static constexpr auto DIRECTORYLIST_ROOT = "zzzzz_root";
-
-class DirectoryList
-{
-  private:
-    nlohmann::json m_Structure;
-
-    void split(std::string str, nlohmann::json& current)
+    tree_node() = default;
+    tree_node(const std::string& folder_name, const std::string& remaining)
+        : name(folder_name)
     {
-        auto current_pos = str.find('/');
-        if (current_pos != std::string::npos) {
-            auto directory = str.substr(0, current_pos);
-            str.erase(0, current_pos + 1);
+        add(remaining);
+    }
 
-            if (current.is_object() || current.is_null()) {
-                split(str, current[directory]);
+    void add(const std::string& filepath)
+    {
+        auto slash_pos = filepath.find('/');
+        if (slash_pos != std::string::npos) {
+            auto directory = filepath.substr(0, slash_pos);
+            auto remaining = filepath.substr(slash_pos + 1, filepath.length());
+
+            auto it = std::find_if(folders.begin(), folders.end(),
+                                   [&](const tree_node& folder) { return directory == folder.name; });
+
+            if (it == folders.end()) {
+                folders.emplace_back(tree_node{directory, remaining});
             } else {
-                auto temp                   = current;
-                current                     = nullptr;
-                current[DIRECTORYLIST_ROOT] = temp;
-                split(str, current[directory]);
+                (*it).add(remaining);
             }
         } else {
-            if (!current.is_object()) {
-                current.emplace_back(str);
-            } else {
-                current[DIRECTORYLIST_ROOT].emplace_back(str);
-            }
+            files.push_back(filepath);
         }
     }
 
-    inline const char* GetFileTypeIcon(const std::filesystem::path& filename)
+    static bool sort_function(const tree_node& lhs, const tree_node& rhs)
     {
-        const auto& ext = filename.extension();
-
-        if (ext == ".ee" || ext == ".bl" || ext == ".nl" || ext == ".fl")
-            return ICON_FA_FILE_ARCHIVE;
-        else if (ext == ".dds" || ext == ".ddsc" || ext == ".hmddsc" || ext == ".atx1" || ext == ".atx2")
-            return ICON_FA_FILE_IMAGE;
-        else if (ext == ".bank")
-            return ICON_FA_FILE_AUDIO;
-        else if (ext == ".bikc")
-            return ICON_FA_FILE_VIDEO;
-
-        return ICON_FA_FILE;
+        return lhs.name < rhs.name;
     }
+
+    void sort()
+    {
+        std::sort(folders.begin(), folders.end(), sort_function);
+        for (auto& folder : folders) {
+            folder.sort();
+        }
+    }
+};
+
+class AvalancheArchive;
+class DirectoryList
+{
+  private:
+    tree_node   m_Tree;
+    const char* GetFileTypeIcon(const std::filesystem::path& filename);
 
   public:
     DirectoryList()          = default;
     virtual ~DirectoryList() = default;
 
-    void Add(const std::string& filename)
+    void Add(const std::string& filepath)
     {
-        split(filename, m_Structure);
+        m_Tree.add(filepath);
     }
 
-    void Parse(nlohmann::json* tree)
+    void Sort()
     {
-        if (tree) {
-            m_Structure.clear();
-
-            for (auto it = tree->begin(); it != tree->end(); ++it) {
-                split(it.key(), m_Structure);
-            }
-        }
+        m_Tree.sort();
     }
 
-    void Draw(nlohmann::json* tree, AvalancheArchive* current_archive = nullptr, std::string acc_filepath = "")
+    void Clear()
     {
-        // current tree is a directory
-        if (tree->is_object()) {
-            for (auto& it = tree->cbegin(); it != tree->cend(); ++it) {
-                const auto& key = it.key();
-
-                // render the directory root filelist
-                if (key == DIRECTORYLIST_ROOT) {
-                    Draw(&(*tree)[key], current_archive, acc_filepath);
-                    continue;
-                }
-
-                // check if the current directory is open
-                const auto id      = ImGui::GetID(key.c_str());
-                const auto is_open = ImGui::GetStateStorage()->GetBool(id);
-
-                if (ImGui::TreeNodeEx(key.c_str(), 0, "%s  %s", is_open ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER,
-                                      key.c_str())) {
-                    Draw(&(*tree)[key], current_archive, acc_filepath.length() ? acc_filepath + "/" + key : key);
-
-                    ImGui::TreePop();
-                }
-            }
-        }
-        // current tree is a filelist
-        else if (tree->is_array()) {
-            for (const auto& value : *tree) {
-                const auto& filename           = value.get<std::string>();
-                const auto& filename_with_path = acc_filepath.length() ? acc_filepath + "/" + filename : filename;
-
-                ImGui::TreeNodeEx(filename.c_str(), (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen),
-                                  "%s  %s", GetFileTypeIcon(filename), filename.c_str());
-
-                // render tooltip
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip(filename.c_str());
-                }
-
-                // selection events
-                if (ImGui::IsItemClicked()) {
-                    UI::Get()->Events().FileTreeItemSelected(filename_with_path, current_archive);
-                }
-
-                // render context menu
-                UI::Get()->RenderContextMenu(filename_with_path, 0,
-                                             current_archive ? ContextMenuFlags_File | ContextMenuFlags_Archive
-                                                             : ContextMenuFlags_File);
-            }
-        }
+        m_Tree = {};
     }
 
-    nlohmann::json* GetTree()
-    {
-        return &m_Structure;
-    }
+    void Draw(AvalancheArchive* current_archive = nullptr, std::string acc_filepath = "", tree_node* tree = nullptr);
 };

@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "../singleton.h"
-#include "iimportexporter.h"
 
+class IImportExporter;
 class ImportExportManager : public Singleton<ImportExportManager>
 {
   private:

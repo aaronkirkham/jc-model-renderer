@@ -1,17 +1,18 @@
-#include "renderer.h"
-#include "../game/irenderblock.h"
-#include "../window.h"
-#include "camera.h"
-#include "shader_manager.h"
-#include "texture_manager.h"
-#include "types.h"
-#include "ui.h"
+#include <glm/gtc/type_ptr.hpp>
+#include <imgui.h>
 
 #include <examples/imgui_impl_dx11.h>
 #include <examples/imgui_impl_win32.h>
-#include <imgui.h>
 
-#include <glm/gtc/type_ptr.hpp>
+#include "renderer.h"
+#include "window.h"
+
+#include "graphics/camera.h"
+#include "graphics/shader_manager.h"
+#include "graphics/texture_manager.h"
+#include "graphics/ui.h"
+
+#include "game/irenderblock.h"
 
 void SetupImGuiStyle();
 
@@ -110,6 +111,7 @@ bool Renderer::Initialise(const HWND& hwnd)
 
 void Renderer::Shutdown()
 {
+    UI::Get()->Shutdown();
     TextureManager::Get()->Shutdown();
     ShaderManager::Get()->Shutdown();
 

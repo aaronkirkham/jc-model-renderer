@@ -3,7 +3,6 @@
 #include <shlobj.h>
 
 #include "drop_target.h"
-#include "graphics/renderer.h"
 #include "window.h"
 
 DropTarget::DropTarget(HWND hwnd)

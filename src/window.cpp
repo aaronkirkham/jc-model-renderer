@@ -1,29 +1,27 @@
-#include <ShlObj.h>
 #include <Windows.h>
-#include <commdlg.h>
 #include <shellapi.h>
 
-#include "game/file_loader.h"
-#include "graphics/renderer.h"
-#include "graphics/shader_manager.h"
-#include "graphics/texture_manager.h"
+#include <rapidjson/document.h>
+
+#include <httplib.h>
+#ifdef DEBUG
+#include <spdlog/sinks/stdout_color_sinks.h>
+#endif
+
 #include "settings.h"
 #include "version.h"
 #include "window.h"
 
+#include "graphics/renderer.h"
+#include "graphics/shader_manager.h"
+#include "graphics/texture_manager.h"
+#include "graphics/ui.h"
+
+#include "game/file_loader.h"
 #include "game/formats/avalanche_archive.h"
 #include "game/formats/avalanche_model_format.h"
 #include "game/formats/render_block_model.h"
 #include "game/formats/runtime_container.h"
-
-#include <examples/imgui_impl_win32.h>
-#include <imgui.h>
-
-#include <httplib.h>
-
-#ifdef DEBUG
-#include <spdlog/sinks/stdout_color_sinks.h>
-#endif
 
 extern bool g_IsJC4Mode;
 
@@ -125,10 +123,10 @@ void Window::Shutdown()
     m_Running = false;
 
     // clear factories
-    AvalancheDataFormat::Instances.clear();
     RuntimeContainer::Instances.clear();
     RenderBlockModel::Instances.clear();
     AvalancheArchive::Instances.clear();
+    AvalancheModelFormat::Instances.clear();
 
     Renderer::Get()->Shutdown();
 
@@ -311,10 +309,17 @@ std::filesystem::path Window::ShowSaveDialog(const std::string& title, const Fil
     return CreateFileDialog(CLSID_FileSaveDialog, title, params, (flags | FOS_OVERWRITEPROMPT));
 }
 
+void Window::OpenUrl(const std::string& url)
+{
+    ShellExecuteA(nullptr, "open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+}
+
 void Window::SwitchMode(GameMode mode)
 {
-    // TODO: check if we are idle.
-    // nothing should be loading at this point.
+    if (FileLoader::m_DictionaryLoading) {
+        SPDLOG_ERROR("m_DictionaryLoading is true!");
+        return;
+    }
 
     g_IsJC4Mode = (mode == GameMode::GameMode_JustCause4);
 
@@ -326,7 +331,6 @@ void Window::SwitchMode(GameMode mode)
     }
 
     // reset factories
-    AvalancheDataFormat::Instances.clear();
     RuntimeContainer::Instances.clear();
     RenderBlockModel::Instances.clear();
     AvalancheArchive::Instances.clear();
@@ -362,10 +366,10 @@ void Window::SelectJustCauseDirectory(bool override_mode, bool jc3_mode)
             return SelectJustCauseDirectory(override_mode, jc3_mode);
         }
 
-        Settings::Get()->SetValue(is_jc4_mode ? "jc4_directory" : "jc3_directory", selected.string());
+        Settings::Get()->SetValue(is_jc4_mode ? "jc4_directory" : "jc3_directory", selected.string().c_str());
     } else {
-        const auto& jc_directory =
-            Settings::Get()->GetValue<std::string>(is_jc4_mode ? "jc4_directory" : "jc3_directory");
+        const std::string jc_directory =
+            Settings::Get()->GetValue<const char*>(is_jc4_mode ? "jc4_directory" : "jc3_directory", "");
         if (jc_directory.empty()) {
             ShowMessageBox("Unable to find Just Cause root directory.\n\nSome features will be disabled.");
         }
@@ -374,7 +378,7 @@ void Window::SelectJustCauseDirectory(bool override_mode, bool jc3_mode)
 
 std::filesystem::path Window::GetJustCauseDirectory()
 {
-    return Settings::Get()->GetValue<std::string>(g_IsJC4Mode ? "jc4_directory" : "jc3_directory");
+    return Settings::Get()->GetValue<const char*>(g_IsJC4Mode ? "jc4_directory" : "jc3_directory", "");
 }
 
 void Window::CheckForUpdates(bool show_no_update_messagebox)
@@ -386,8 +390,10 @@ void Window::CheckForUpdates(bool show_no_update_messagebox)
             httplib::Client client("kirkh.am");
             const auto      res = client.get("/jc-model-renderer/latest.json");
             if (res && res->status == 200) {
-                const auto& data        = nlohmann::json::parse(res->body);
-                const auto& version_str = data["version"].get<std::string>();
+                rapidjson::Document doc;
+                doc.Parse(res->body.c_str());
+
+                const auto version_str = std::string(doc["version"].GetString());
 
                 int32_t latest_version[3] = {0};
                 std::sscanf(version_str.c_str(), "%d.%d.%d", &latest_version[0], &latest_version[1],
@@ -399,9 +405,7 @@ void Window::CheckForUpdates(bool show_no_update_messagebox)
                     msg.append("Do you want to go to the release page on GitHub?");
 
                     if (Window::Get()->ShowMessageBox(msg, MB_ICONQUESTION | MB_YESNO) == IDYES) {
-                        ShellExecuteA(nullptr, "open",
-                                      "https://github.com/aaronkirkham/jc-model-renderer/releases/latest", nullptr,
-                                      nullptr, SW_SHOWNORMAL);
+                        Window::Get()->OpenUrl("https://github.com/aaronkirkham/jc-model-renderer/releases/latest");
                     }
                 } else if (show_no_update_messagebox) {
                     Window::Get()->ShowMessageBox("You have the latest version!", MB_ICONINFORMATION);
@@ -428,8 +432,10 @@ bool Window::LoadInternalResource(int32_t resource_id, std::vector<uint8_t>* out
         return false;
     }
 
-    const auto resource = LockResource(data);
-    *out_buffer         = {(char*)resource, (char*)resource + SizeofResource(handle, rc)};
+    const void* ptr = LockResource(data);
+
+    out_buffer->resize(SizeofResource(handle, rc));
+    std::memcpy(out_buffer->data(), ptr, out_buffer->size());
     return true;
 }
 

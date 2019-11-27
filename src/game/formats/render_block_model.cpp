@@ -1,17 +1,21 @@
+#include <AvaFormatLib.h>
+#include <imgui.h>
+#include <spdlog/spdlog.h>
+
+#include "../vendor/ava-format-lib/include/util/byte_array_buffer.h"
+
 #include "render_block_model.h"
-#include "avalanche_archive.h"
-#include "runtime_container.h"
+#include "window.h"
 
-#include "../file_loader.h"
-#include "../render_block_factory.h"
+#include "graphics/camera.h"
+#include "graphics/renderer.h"
 
-#include "../jc3/renderblocks/irenderblock.h"
-
-#include "../../graphics/camera.h"
-#include "../../graphics/renderer.h"
-#include "../../graphics/ui.h"
-#include "../../util.h"
-#include "../../window.h"
+#include "game/file_loader.h"
+#include "game/formats/avalanche_archive.h"
+#include "game/formats/runtime_container.h"
+#include "game/jc3/renderblocks/irenderblock.h"
+#include "game/render_block_factory.h"
+#include "game/types.h"
 
 extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;
@@ -23,7 +27,6 @@ RenderBlockModel::RenderBlockModel(const std::filesystem::path& filename)
     : m_Filename(filename)
 {
     // find the parent archive
-    // TODO: better way.
     std::lock_guard<std::recursive_mutex> _lk{AvalancheArchive::InstancesMutex};
     for (const auto& archive : AvalancheArchive::Instances) {
         if (archive.second->HasFile(filename)) {
@@ -44,11 +47,11 @@ RenderBlockModel::~RenderBlockModel()
     }
 }
 
-bool RenderBlockModel::ParseLOD(const FileBuffer& buffer)
+bool RenderBlockModel::ParseLOD(const std::vector<uint8_t>& buffer)
 {
-    util::byte_array_buffer buf(buffer.data(), buffer.size());
-    std::istream            stream(&buf);
-    std::string             line;
+    byte_array_buffer buf(buffer);
+    std::istream      stream(&buf);
+    std::string       line;
 
     while (std::getline(stream, line)) {
         SPDLOG_INFO(line);
@@ -57,16 +60,20 @@ bool RenderBlockModel::ParseLOD(const FileBuffer& buffer)
     return true;
 }
 
-bool RenderBlockModel::ParseRBM(const FileBuffer& buffer, bool add_to_render_list)
+bool RenderBlockModel::ParseRBM(const std::vector<uint8_t>& buffer, bool add_to_render_list)
 {
-    util::byte_array_buffer buf(buffer.data(), buffer.size());
-    std::istream            stream(&buf);
+    // @TODO: use ava::RenderBlockModel::Parse when it's finished.
+
+    using namespace ava::RenderBlockModel;
+
+    byte_array_buffer buf(buffer);
+    std::istream      stream(&buf);
 
     bool parse_success = true;
 
     // read the model header
-    jc::RBMHeader header;
-    stream.read((char*)&header, sizeof(header));
+    RbmHeader header{};
+    stream.read((char*)&header, sizeof(RbmHeader));
 
     // ensure the header magic is correct
     if (strncmp((char*)&header.m_Magic, "RBMDL", 5) != 0) {
@@ -75,8 +82,8 @@ bool RenderBlockModel::ParseRBM(const FileBuffer& buffer, bool add_to_render_lis
         goto end;
     }
 
-    SPDLOG_INFO("RBM v{}.{}.{}. NumberOfBlocks={}, Flags={}", header.m_VersionMajor, header.m_VersionMinor,
-                header.m_VersionRevision, header.m_NumberOfBlocks, header.m_Flags);
+    SPDLOG_INFO("RBM v{}.{}.{}. NumberOfBlocks={}, Tag={}", header.m_VersionMajor, header.m_VersionMinor,
+                header.m_VersionRevision, header.m_NumberOfBlocks, header.m_Tag);
 
     // ensure we can read the file version
     if (header.m_VersionMajor != 1 && header.m_VersionMinor != 16) {
@@ -89,12 +96,12 @@ bool RenderBlockModel::ParseRBM(const FileBuffer& buffer, bool add_to_render_lis
     m_RenderBlocks.reserve(header.m_NumberOfBlocks);
 
     // store the bounding box
-    m_BoundingBox.m_Min = header.m_BoundingBoxMin;
-    m_BoundingBox.m_Max = header.m_BoundingBoxMax;
+    // m_BoundingBox.m_Min = header.m_BoundingBoxMin;
+    // m_BoundingBox.m_Max = header.m_BoundingBoxMax;
 
     // focus on the bounding box
     if (RenderBlockModel::Instances.size() == 1) {
-        Camera::Get()->FocusOn(&m_BoundingBox);
+        // Camera::Get()->FocusOn(&m_BoundingBox);
     }
 
     // use file batches
@@ -109,7 +116,7 @@ bool RenderBlockModel::ParseRBM(const FileBuffer& buffer, bool add_to_render_lis
 
         const auto render_block = (jc3::IRenderBlock*)RenderBlockFactory::CreateRenderBlock(hash);
         if (render_block) {
-            // render_block->SetParent(this);
+            render_block->SetOwner(this);
             render_block->Read(stream);
             render_block->Create();
 
@@ -117,7 +124,7 @@ bool RenderBlockModel::ParseRBM(const FileBuffer& buffer, bool add_to_render_lis
             stream.read((char*)&checksum, sizeof(uint32_t));
 
             // did we read the block correctly?
-            if (checksum != RBM_END_OF_BLOCK) {
+            if (checksum != RBM_BLOCK_CHECKSUM) {
                 SPDLOG_ERROR("Failed to read render block \"{}\" (checksum mismatch)",
                              RenderBlockFactory::GetRenderBlockName(hash));
                 parse_success = false;
@@ -194,7 +201,8 @@ void RenderBlockModel::DrawGizmos()
 }
 #endif
 
-void RenderBlockModel::ReadFileCallback(const std::filesystem::path& filename, const FileBuffer& data, bool external)
+void RenderBlockModel::ReadFileCallback(const std::filesystem::path& filename, const std::vector<uint8_t>& data,
+                                        bool external)
 {
     if (!RenderBlockModel::exists(filename.string())) {
         if (const auto rbm = RenderBlockModel::make(filename)) {
@@ -209,6 +217,8 @@ void RenderBlockModel::ReadFileCallback(const std::filesystem::path& filename, c
 
 bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path)
 {
+    using namespace ava::RenderBlockModel;
+
     const auto rbm = RenderBlockModel::get(filename.string());
     if (rbm) {
         std::ofstream stream(path, std::ios::binary);
@@ -219,11 +229,10 @@ bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, c
         const auto& render_blocks = rbm->GetRenderBlocks();
 
         // generate the rbm header
-        jc::RBMHeader header;
-        header.m_BoundingBoxMin = rbm->GetBoundingBox()->GetMin();
-        header.m_BoundingBoxMax = rbm->GetBoundingBox()->GetMax();
+        RbmHeader header;
+        // header.m_BoundingBoxMin = rbm->GetBoundingBox()->GetMin();
+        // header.m_BoundingBoxMax = rbm->GetBoundingBox()->GetMax();
         header.m_NumberOfBlocks = render_blocks.size();
-        header.m_Flags          = 8;
 
         // write the header
         stream.write((char*)&header, sizeof(header));
@@ -237,7 +246,7 @@ bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, c
             ((jc3::IRenderBlock*)render_block)->Write(stream);
 
             // write the end of block checksum
-            stream.write((char*)&RBM_END_OF_BLOCK, sizeof(RBM_END_OF_BLOCK));
+            stream.write((char*)&RBM_BLOCK_CHECKSUM, sizeof(uint32_t));
         }
 
         stream.close();
@@ -279,6 +288,8 @@ void RenderBlockModel::Load(const std::filesystem::path& filename)
 void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&      filename,
                                                 std::shared_ptr<RuntimeContainer> rc)
 {
+    // @TODO: refactor
+#if 0
     assert(rc);
 
     auto path = filename.parent_path().string();
@@ -311,4 +322,5 @@ void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&    
         error << "\nA model might still be rendered, but some parts of it may be missing.";
         Window::Get()->ShowMessageBox(error.str(), MB_ICONINFORMATION | MB_OK);
     }).detach();
+#endif
 }

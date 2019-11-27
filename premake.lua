@@ -18,11 +18,10 @@ workspace "jc-model-renderer"
   filter "configurations:Release"
     optimize "On"
 
--- Application
 project "jc-model-renderer"
   kind "WindowedApp"
   defines "CPPHTTPLIB_ZLIB_SUPPORT"
-  dependson { "imgui", "zlib", "tinyxml2" }
+  dependson { "imgui", "zlib", "tinyxml2", "AvaFormatLib" }
   links {
     "Advapi32",
     "Comdlg32",
@@ -33,9 +32,9 @@ project "jc-model-renderer"
     "Ole32",
     "Shell32",
     "ws2_32",
-    "out/%{cfg.buildcfg}/imgui",
-    "out/%{cfg.buildcfg}/zlib",
-    "out/%{cfg.buildcfg}/tinyxml2"
+    "imgui",
+    "tinyxml2",
+    "AvaFormatLib"
   }
   files { "src/assets.rc", "src/**.h", "src/**.cpp" }
 
@@ -45,48 +44,50 @@ project "jc-model-renderer"
     "vendor/glm",
     "vendor/httplib",
     "vendor/imgui",
-    "vendor/json/single_include/nlohmann",
+    "vendor/rapidjson/include",
     "vendor/ksignals/include/ksignals",
     "vendor/spdlog/include",
     "vendor/tinyxml2",
-    "vendor/zlib"
+    "vendor/ava-format-lib/include",
+    "vendor/ava-format-lib/deps/zlib"
   }
 
   disablewarnings { "4200", "4244", "4267", "6031", "6262" }
 
--- ImGui
-project "imgui"
-  kind "StaticLib"
-  defines "IMGUI_DISABLE_OBSOLETE_FUNCTIONS"
-  files {
-    "vendor/imgui/*.h",
-    "vendor/imgui/*.cpp",
-    "vendor/imgui/examples/imgui_impl_win32.cpp",
-    "vendor/imgui/examples/imgui_impl_win32.h",
-    "vendor/imgui/examples/imgui_impl_dx11.cpp",
-    "vendor/imgui/examples/imgui_impl_dx11.h",
-    "vendor/imgui/misc/cpp/imgui_stdlib.cpp",
-    "vendor/imgui/misc/cpp/imgui_stdlib.h"
-  }
-  removefiles { "vendor/imgui/imgui_demo.cpp" }
+  filter "configurations:Debug"
+    defines "SPDLOG_ACTIVE_LEVEL=1"
 
-  includedirs {
-    "vendor/imgui",
-    "vendor/imgui/examples",
-    "vendor/imgui/misc/cpp"
-  }
+group "vendor"
+  project "imgui"
+    kind "StaticLib"
+    defines "IMGUI_DISABLE_OBSOLETE_FUNCTIONS"
+    files {
+      "vendor/imgui/*.h",
+      "vendor/imgui/*.cpp",
+      "vendor/imgui/examples/imgui_impl_win32.cpp",
+      "vendor/imgui/examples/imgui_impl_win32.h",
+      "vendor/imgui/examples/imgui_impl_dx11.cpp",
+      "vendor/imgui/examples/imgui_impl_dx11.h",
+      "vendor/imgui/misc/cpp/imgui_stdlib.cpp",
+      "vendor/imgui/misc/cpp/imgui_stdlib.h"
+    }
+    -- removefiles { "vendor/imgui/imgui_demo.cpp" }
 
--- zlib
-project "zlib"
-  kind "StaticLib"
-  defines "DEF_WBITS=-15"
-  files { "vendor/zlib/*.c", "vendor/zlib/*.h" }
-  includedirs { "vendor/zlib" }
-  disablewarnings { "4996", "4267" }
+    includedirs {
+      "vendor/imgui",
+      "vendor/imgui/examples",
+      "vendor/imgui/misc/cpp"
+    }
 
--- tinyxml2
-project "tinyxml2"
-kind "StaticLib"
-files { "vendor/tinyxml2/tinyxml2.cpp", "vendor/tinyxml2/tinyxml2.h" }
-includedirs { "vendor/tinyxml2" }
--- disablewarnings { "4996", "4267" }
+  project "tinyxml2"
+    kind "StaticLib"
+    files { "vendor/tinyxml2/tinyxml2.cpp", "vendor/tinyxml2/tinyxml2.h" }
+    includedirs { "vendor/tinyxml2" }
+
+  project "AvaFormatLib"
+    kind "StaticLib"
+    includedirs "vendor/ava-format-lib/deps"
+    files { "vendor/ava-format-lib/src/**.cpp", "vendor/ava-format-lib/include/**.h" }
+    files { "vendor/ava-format-lib/deps/zlib/*.c", "vendor/ava-format-lib/zlib/*.h" }
+    disablewarnings { "4267", "4996" }
+group ""

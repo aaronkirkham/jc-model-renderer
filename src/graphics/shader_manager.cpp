@@ -1,12 +1,13 @@
-#include <fstream>
+#include <AvaFormatLib.h>
 
-#include "../fnv1.h"
-#include "../game/file_loader.h"
-#include "../settings.h"
-#include "../window.h"
-#include "renderer.h"
+#include "fnv1.h"
 #include "shader_manager.h"
-#include "types.h"
+#include "window.h"
+
+#include "graphics/renderer.h"
+#include "graphics/ui.h"
+
+#include "game/file_loader.h"
 
 extern bool g_IsJC4Mode;
 
@@ -17,6 +18,8 @@ extern bool g_IsJC4Mode;
 
 void ShaderManager::Init()
 {
+    using namespace ava::AvalancheDataFormat;
+
     auto& filename = Window::Get()->GetJustCauseDirectory();
     filename /= g_IsJC4Mode ? "ShadersDX11_F.shader_bundle" : "Shaders_F.shader_bundle";
 
@@ -26,10 +29,10 @@ void ShaderManager::Init()
     // read the shader bundle
     FileLoader::Get()->ReadFileFromDisk(filename, [&, filename, status_text_id](bool success, FileBuffer data) {
         if (success) {
-            m_ShaderBundle = AvalancheDataFormat::make(filename, std::move(data));
+            m_ShaderBundle = std::make_shared<ADF>(data);
 
             // read the shader bundle data
-            jc::AvalancheDataFormat::SInstanceInfo instance_info;
+            SInstanceInfo instance_info;
             m_ShaderBundle->GetInstance(0, &instance_info);
             m_ShaderBundle->ReadInstance(instance_info.m_NameHash, 0xF2923B32, (void**)&m_ShaderLibrary);
         } else {
@@ -183,7 +186,7 @@ std::shared_ptr<PixelShader_t> ShaderManager::GetPixelShader(const std::string& 
             }
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
-            D3D_SET_OBJECT_NAME_A(vs->m_Shader, name.c_str());
+            D3D_SET_OBJECT_NAME_A(ps->m_Shader, name.c_str());
 #endif
 
             m_PixelShaders[key] = std::move(ps);

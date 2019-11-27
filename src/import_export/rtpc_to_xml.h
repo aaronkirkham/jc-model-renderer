@@ -2,13 +2,8 @@
 
 #include "iimportexporter.h"
 
-#include "../window.h"
-
-#include "../game/file_loader.h"
-
 namespace ImportExport
 {
-
 class RTPC2XML : public IImportExporter
 {
   public:
@@ -56,5 +51,4 @@ class RTPC2XML : public IImportExporter
         return;
     }
 };
-
 }; // namespace ImportExport

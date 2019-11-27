@@ -2,26 +2,27 @@
 
 #include <unordered_map>
 
-#include "../game/formats/avalanche_data_format.h"
-#include "../singleton.h"
+#include "singleton.h"
+
+#include "../vendor/ava-format-lib/include/avalanche_data_format.h"
 
 #pragma pack(push, 8)
 struct SShader {
-    uint32_t           m_NameHash;
-    const char*        m_Name;
-    uint32_t           m_DataHash;
-    SAdfArray<uint8_t> m_BinaryData;
+    uint32_t                                     m_NameHash;
+    const char*                                  m_Name;
+    uint32_t                                     m_DataHash;
+    ava::AvalancheDataFormat::SAdfArray<uint8_t> m_BinaryData;
 };
 
 struct SShaderLibrary {
-    const char*        m_Name;
-    const char*        m_BuildTime;
-    SAdfArray<SShader> m_VertexShaders;
-    SAdfArray<SShader> m_FragmentShaders;
-    SAdfArray<SShader> m_ComputeShaders;
-    SAdfArray<SShader> m_GeometryShaders;
-    SAdfArray<SShader> m_HullShaders;
-    SAdfArray<SShader> m_DomainShaders;
+    const char*                                  m_Name;
+    const char*                                  m_BuildTime;
+    ava::AvalancheDataFormat::SAdfArray<SShader> m_VertexShaders;
+    ava::AvalancheDataFormat::SAdfArray<SShader> m_FragmentShaders;
+    ava::AvalancheDataFormat::SAdfArray<SShader> m_ComputeShaders;
+    ava::AvalancheDataFormat::SAdfArray<SShader> m_GeometryShaders;
+    ava::AvalancheDataFormat::SAdfArray<SShader> m_HullShaders;
+    ava::AvalancheDataFormat::SAdfArray<SShader> m_DomainShaders;
 };
 
 static_assert(sizeof(SShader) == 0x28, "SShader alignment is wrong!");
@@ -36,8 +37,8 @@ class ShaderManager : public Singleton<ShaderManager>
     std::unordered_map<uint32_t, std::shared_ptr<VertexShader_t>> m_VertexShaders;
     std::unordered_map<uint32_t, std::shared_ptr<PixelShader_t>>  m_PixelShaders;
 
-    std::shared_ptr<AvalancheDataFormat> m_ShaderBundle  = nullptr;
-    SShaderLibrary*                      m_ShaderLibrary = nullptr;
+    std::shared_ptr<ava::AvalancheDataFormat::ADF> m_ShaderBundle  = nullptr;
+    SShaderLibrary*                                m_ShaderLibrary = nullptr;
 
   public:
     ShaderManager()          = default;

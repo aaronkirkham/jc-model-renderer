@@ -1,8 +1,10 @@
 #pragma once
 
 #include <glm/glm.hpp>
+
+#include "singleton.h"
+
 #include <memory>
-#include <singleton.h>
 
 struct RenderContext_t;
 struct BoundingBox;
@@ -34,7 +36,7 @@ class Camera : public Singleton<Camera>
     glm::vec2 WorldToScreen(const glm::vec3& world);
     glm::vec3 ScreenToWorld(const glm::vec2& screen);
 
-    void                              FocusOn(BoundingBox* box);
+    // void                              FocusOn(BoundingBox* box);
     std::shared_ptr<RenderBlockModel> Pick(const glm::vec2& mouse);
 
     void OnMousePress(int32_t button, bool is_button_down, const glm::vec2& position);

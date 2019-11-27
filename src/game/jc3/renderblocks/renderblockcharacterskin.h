@@ -4,11 +4,15 @@
 
 #pragma pack(push, 1)
 struct CharacterSkinAttributes {
-    uint32_t  flags;
-    float     scale;
-    glm::vec2 _unknown;
-    glm::vec2 _unknown2;
-    char      pad[0x20];
+    uint32_t  m_Flags;
+    float     m_Scale;
+    glm::vec2 m_DetailTilingFactorUV;
+    glm::vec2 m_DecalBlendFactors;
+    float     m_DiffuseRoughness;
+    float     m_DiffuseWrap;
+    float     m_DirtFactor;
+    char      pad[0x10];
+    float     m_TranslucencyScale;
 };
 
 static_assert(sizeof(CharacterSkinAttributes) == 0x38, "CharacterSkinAttributes alignment is wrong!");
@@ -18,8 +22,8 @@ namespace jc::RenderBlocks
 static constexpr uint8_t CHARACTERSKIN_VERSION = 6;
 
 struct CharacterSkin {
-    uint8_t                 version;
-    CharacterSkinAttributes attributes;
+    uint8_t                 m_Version;
+    CharacterSkinAttributes m_Attributes;
 };
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
@@ -44,224 +48,49 @@ class RenderBlockCharacterSkin : public IRenderBlock
         glm::mat3x4 MatrixPalette[70];
     } m_cbLocalConsts;
 
+    static_assert(sizeof(cbLocalConsts) == 0xDB0);
+
     struct cbInstanceConsts {
-        glm::vec4 MotionBlur = glm::vec4(0);
+        float _unknown  = 0.0f;
+        float _unknown2 = 0.0f;
+        float _unknown3 = 0.0f;
+        float _unknown4 = 0.0f;
     } m_cbInstanceConsts;
 
+    static_assert(sizeof(cbInstanceConsts) == 0x10);
+
     struct cbMaterialConsts {
-        glm::vec4 EyeGloss = glm::vec4(0);
+        glm::vec2 m_DetailTilingFactorUV;
+        glm::vec2 m_DecalBlendFactors;
         glm::vec4 _unknown_;
         glm::vec4 _unknown[3];
     } m_cbMaterialConsts;
 
+    static_assert(sizeof(cbMaterialConsts) == 0x50);
+
     jc::RenderBlocks::CharacterSkin  m_Block;
-    std::vector<jc::CSkinBatch>      m_SkinBatches;
+    std::vector<jc3::CSkinBatch>     m_SkinBatches;
     ConstantBuffer_t*                m_VertexShaderConstants   = nullptr;
     std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = {nullptr};
     int32_t                          m_Stride                  = 0;
 
   public:
     RenderBlockCharacterSkin() = default;
-    virtual ~RenderBlockCharacterSkin()
-    {
-        // delete the skin batch lookup
-        for (auto& batch : m_SkinBatches) {
-            SAFE_DELETE(batch.m_BatchLookup);
-        }
-
-        // destroy shader constants
-        Renderer::Get()->DestroyBuffer(m_VertexShaderConstants);
-        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[0]);
-        Renderer::Get()->DestroyBuffer(m_FragmentShaderConstants[1]);
-    }
+    virtual ~RenderBlockCharacterSkin();
 
     virtual const char* GetTypeName() override final
     {
         return "RenderBlockCharacterSkin";
     }
 
-    virtual uint32_t GetTypeHash() const override final
-    {
-        return RenderBlockFactory::RB_CHARACTERSKIN;
-    }
+    virtual uint32_t GetTypeHash() const override final;
 
     virtual bool IsOpaque() override final
     {
         return true;
     }
 
-    virtual void Create() override final
-    {
-        m_PixelShader = ShaderManager::Get()->GetPixelShader("characterskin");
-
-        switch (m_Stride) {
-                // 4bones1uv
-            case 0: {
-                m_VertexShader = ShaderManager::Get()->GetVertexShader("characterskin");
-
-                // create the element input desc
-                // clang-format off
-                D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                    { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   4,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                };
-                // clang-format on
-
-                // create the vertex declaration
-                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(),
-                                                                               "RenderBlockCharacterSkin (4bones1uv)");
-                break;
-            }
-
-                // 4bones2uvs
-            case 1: {
-                m_VertexShader = ShaderManager::Get()->GetVertexShader("characterskin2uvs");
-
-                // create the element input desc
-                // clang-format off
-                D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                    { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                };
-                // clang-format on
-
-                // create the vertex declaration
-                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(),
-                                                                               "RenderBlockCharacterSkin (4bones2uvs)");
-                break;
-            }
-
-                // 4bones3uvs
-            case 2: {
-                m_VertexShader = ShaderManager::Get()->GetVertexShader("characterskin3uvs");
-
-                // create the element input desc
-                // clang-format off
-                D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                    { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   5,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                };
-                // clang-format on
-
-                // create the vertex declaration
-                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(),
-                                                                               "RenderBlockCharacterSkin (4bones3uvs)");
-                break;
-            }
-
-                // 8bones1uv
-            case 3: {
-                m_VertexShader = ShaderManager::Get()->GetVertexShader("characterskin8");
-
-                // create the element input desc
-                // clang-format off
-                D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                    { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   4,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                };
-                // clang-format on
-
-                // create the vertex declaration
-                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(),
-                                                                               "RenderBlockCharacterSkin (8bones1uv)");
-                break;
-            }
-
-                // 8bones2uvs
-            case 4: {
-                m_VertexShader = ShaderManager::Get()->GetVertexShader("characterskin82uvs");
-
-                // create the element input desc
-                // clang-format off
-                D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                    { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                };
-                // clang-format on
-
-                // create the vertex declaration
-                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(),
-                                                                               "RenderBlockCharacterSkin (8bones3uvs)");
-                break;
-            }
-
-                // 8bones3uvs
-            case 5: {
-                m_VertexShader = ShaderManager::Get()->GetVertexShader("characterskin83uvs");
-
-                // create the element input desc
-                // clang-format off
-                D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-                    { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   0,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   1,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   2,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   3,  DXGI_FORMAT_R8G8B8A8_UINT,          0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   4,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   5,  DXGI_FORMAT_R16G16_SNORM,           0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                    { "TEXCOORD",   6,  DXGI_FORMAT_R8G8B8A8_UNORM,         0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-                };
-                // clang-format on
-
-                // create the vertex declaration
-                m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 8, m_VertexShader.get(),
-                                                                               "RenderBlockCharacterSkin (8bones3uvs)");
-                break;
-            }
-        }
-
-        // create the constant buffer
-        m_VertexShaderConstants =
-            Renderer::Get()->CreateConstantBuffer(m_cbLocalConsts, "RenderBlockCharacterSkin cbLocalConsts");
-        m_FragmentShaderConstants[0] =
-            Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockCharacterSkin cbInstanceConsts");
-        m_FragmentShaderConstants[1] =
-            Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockCharacterSkin cbMaterialConsts");
-
-        // identity the palette data
-        for (int i = 0; i < 70; ++i) {
-            m_cbLocalConsts.MatrixPalette[i] = glm::mat3x4(1);
-        }
-
-        //
-        memset(&m_cbMaterialConsts._unknown, 0, sizeof(m_cbMaterialConsts._unknown));
-
-        // create the sampler states
-        {
-            D3D11_SAMPLER_DESC params{};
-            params.Filter         = D3D11_FILTER_ANISOTROPIC;
-            params.AddressU       = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.AddressV       = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.AddressW       = D3D11_TEXTURE_ADDRESS_WRAP;
-            params.MipLODBias     = 0.0f;
-            params.MaxAnisotropy  = 8;
-            params.ComparisonFunc = D3D11_COMPARISON_NEVER;
-            params.MinLOD         = 0.0f;
-            params.MaxLOD         = 13.0f;
-
-            m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCharacterSkin");
-        }
-    }
+    virtual void Create() override final;
 
     virtual void Read(std::istream& stream) override final
     {
@@ -271,7 +100,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
 
-        if (m_Block.version != jc::RenderBlocks::CHARACTERSKIN_VERSION) {
+        if (m_Block.m_Version != jc::RenderBlocks::CHARACTERSKIN_VERSION) {
             __debugbreak();
         }
 
@@ -279,7 +108,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
         ReadMaterials(stream);
 
         // get the vertices stride
-        const auto flags = m_Block.attributes.flags;
+        const auto flags = m_Block.m_Attributes.m_Flags;
         m_Stride         = (3 * ((flags >> 2) & 1) + ((flags >> 1) & 1) + ((flags >> 4) & 1));
 
         // read vertex data
@@ -310,60 +139,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
         WriteBuffer(stream, m_IndexBuffer);
     }
 
-    virtual void Setup(RenderContext_t* context) override final
-    {
-        if (!m_Visible)
-            return;
-
-        IRenderBlock::Setup(context);
-
-        const auto flags = m_Block.attributes.flags;
-
-        // setup the constant buffer
-        {
-            const auto  scale = m_Block.attributes.scale;
-            static auto world = glm::mat4(1);
-
-            // set vertex shader constants
-            m_cbLocalConsts.World               = world;
-            m_cbLocalConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
-            m_cbLocalConsts.Scale               = glm::vec4(m_Block.attributes.scale * m_ScaleModifier);
-
-            // set fragment shader constants
-            //
-        }
-
-        // set the textures
-        for (int i = 0; i < 5; ++i) {
-            IRenderBlock::BindTexture(i, m_SamplerState);
-        }
-
-        if (flags & USE_FEATURE_MAP) {
-            IRenderBlock::BindTexture(7, 5, m_SamplerState);
-        }
-
-        if (flags & USE_WRINKLE_MAP) {
-            IRenderBlock::BindTexture(8, 6, m_SamplerState);
-        }
-
-        // set the constant buffers
-        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbLocalConsts);
-        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[0], 1, m_cbInstanceConsts);
-        context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts);
-
-        // set the culling mode
-        context->m_Renderer->SetCullMode((!(flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
-
-        // setup blending
-        if (flags & ALPHA_MASK) {
-            context->m_Renderer->SetBlendingEnabled(false);
-            context->m_Renderer->SetAlphaTestEnabled(false);
-        }
-
-        context->m_Renderer->SetBlendingEnabled(true);
-        context->m_Renderer->SetBlendingFunc(D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_INV_SRC_ALPHA,
-                                             D3D11_BLEND_ONE);
-    }
+    virtual void Setup(RenderContext_t* context) override final;
 
     virtual void Draw(RenderContext_t* context) override final
     {
@@ -373,45 +149,10 @@ class RenderBlockCharacterSkin : public IRenderBlock
         IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
     }
 
-    virtual void DrawContextMenu() override final
-    {
-        // clang-format off
-        static std::array flag_labels = {
-            "Disable Backface Culling",     "Use Wrinkle Map",              "Eight Bones",                  "",
-            "Use Feature Map",              "Use Alpha Mask",               "",                             "",
-        };
-        // clang-format on
+    virtual void DrawContextMenu() override final;
+    virtual void DrawUI() override final;
 
-        ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
-    }
-
-    virtual void DrawUI() override final
-    {
-        ImGui::Text(ICON_FA_COGS "  Attributes");
-        ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.0f, 20.0f);
-
-        // Textures
-        ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
-        ImGui::Columns(3, nullptr, false);
-        {
-            IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
-            IRenderBlock::DrawUI_Texture("NormalMap", 1);
-            IRenderBlock::DrawUI_Texture("PropertiesMap", 2);
-            IRenderBlock::DrawUI_Texture("DetailDiffuseMap", 3);
-            IRenderBlock::DrawUI_Texture("DetailNormalMap", 4);
-
-            if (m_Block.attributes.flags & USE_FEATURE_MAP) {
-                IRenderBlock::DrawUI_Texture("FeatureMap", 7);
-            }
-
-            if (m_Block.attributes.flags & USE_WRINKLE_MAP) {
-                IRenderBlock::DrawUI_Texture("WrinkleMap", 8);
-            }
-        }
-        ImGui::EndColumns();
-    }
-
-	virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
     {
         //
     }
@@ -461,6 +202,14 @@ class RenderBlockCharacterSkin : public IRenderBlock
         }
 
         return {vertices, indices};
+    }
+
+    rb_textures_t GetTextures() override final
+    {
+        rb_textures_t result;
+        result.push_back({"diffuse", m_Textures[0]});
+        result.push_back({"normal", m_Textures[1]});
+        return result;
     }
 };
 } // namespace jc3

@@ -2,14 +2,13 @@
 
 #include "iimportexporter.h"
 
-#include "../window.h"
+#include "game/file_loader.h"
+#include "game/formats/avalanche_archive.h"
 
-#include "../game/file_loader.h"
-#include "../game/formats/avalanche_archive.h"
+#include "../vendor/ava-format-lib/include/archives/stream_archive.h"
 
 namespace ImportExport
 {
-
 class AvalancheArchive : public IImportExporter
 {
   public:
@@ -47,62 +46,65 @@ class AvalancheArchive : public IImportExporter
             return;
         }
 
-        // create the directory if we need to
-        if (!std::filesystem::exists(path)) {
-            std::filesystem::create_directory(path);
-        }
+        try {
+            // create the directory if we need to
+            if (!std::filesystem::exists(path)) {
+                std::filesystem::create_directory(path);
+            }
 
-        // write files
-        for (const auto& entry : archive->GetEntries()) {
-            const auto& file_path = path / entry.m_Filename;
+            // write files
+            for (const auto& entry : archive->GetEntries()) {
+                const auto& file_path = path / entry.m_Filename;
 
-            if (entry.m_Offset != 0 && entry.m_Offset != -1) {
-                const auto& buffer = archive->GetEntryBuffer(entry);
-                WriteBufferToFile(file_path, &buffer);
-            } else {
-                auto [directory, archive, namehash] = FileLoader::Get()->LocateFileInDictionary(entry.m_Filename);
+                if (entry.m_Offset != 0 && entry.m_Offset != -1) {
+                    std::vector<uint8_t> buffer;
+                    ava::StreamArchive::ReadEntry(archive->GetBuffer(), entry, &buffer);
+                    WriteBufferToFile(file_path, buffer);
+                }
+                // read patched files directly from the table archive
+                else {
+                    const auto& [directory, archive, namehash] =
+                        FileLoader::Get()->LocateFileInDictionary(entry.m_Filename);
 
-                FileBuffer buffer;
-                if (FileLoader::Get()->ReadFileFromArchive(directory, archive, namehash, &buffer)) {
-                    WriteBufferToFile(file_path, &buffer);
+                    std::vector<uint8_t> buffer;
+                    if (FileLoader::Get()->ReadFileFromArchive(directory, archive, namehash, &buffer)) {
+                        WriteBufferToFile(file_path, buffer);
+                    }
                 }
             }
+        } catch (const std::exception&) {
         }
     }
 
-    void Import(const std::filesystem::path& filename, ImportFinishedCallback callback) override final
-    {
-        //
-    }
+    void Import(const std::filesystem::path& filename, ImportFinishedCallback callback) override final {}
 
     void Export(const std::filesystem::path& filename, const std::filesystem::path& to,
                 ExportFinishedCallback callback) override final
     {
         const auto& path = to / filename.stem();
-        SPDLOG_INFO("Exporting archive to \"{}\"", path.string());
 
         auto archive = ::AvalancheArchive::get(filename.string());
         if (archive) {
             WriteArchiveFiles(path, archive.get());
             callback(true);
         } else {
-            FileLoader::Get()->ReadFile(filename, [&, filename, path, callback](bool success, FileBuffer data) {
-                if (success) {
-                    auto arc = new ::AvalancheArchive(filename);
-                    arc->Parse(data, [&, path, callback, arc](bool success) {
-                        if (success) {
-                            WriteArchiveFiles(path, arc);
-                        }
+            FileLoader::Get()->ReadFile(filename,
+                                        [&, filename, path, callback](bool success, std::vector<uint8_t> data) {
+                                            if (success) {
+                                                auto arc = new ::AvalancheArchive(filename);
+                                                arc->Parse(data, [&, path, callback, arc](bool success) {
+                                                    if (success) {
+                                                        WriteArchiveFiles(path, arc);
+                                                    }
 
-                        delete arc;
-                        callback(success);
-                    });
-                } else {
-                    callback(false);
-                }
-            });
+                                                    delete arc;
+                                                    callback(success);
+                                                });
+                                            } else {
+                                                callback(false);
+                                            }
+                                        });
         }
     }
 };
-
 }; // namespace ImportExport

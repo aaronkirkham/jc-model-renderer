@@ -1,14 +1,12 @@
-#include "camera.h"
-#include "../window.h"
-#include "types.h"
-
-#include "../game/formats/avalanche_model_format.h"
-#include "../game/formats/render_block_model.h"
-
+#include <glm/gtc/matrix_transform.hpp>
 #include <imgui.h>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include "camera.h"
+#include "window.h"
+
+#include "graphics/types.h"
+
+#include "game/formats/render_block_model.h"
 
 static constexpr auto g_MouseSensitivity       = 0.0025f;
 static constexpr auto g_MovementSensitivity    = 0.05f;
@@ -87,6 +85,7 @@ glm::vec3 Camera::ScreenToWorld(const glm::vec2& screen)
     return world;
 }
 
+#if 0
 void Camera::FocusOn(BoundingBox* box)
 {
     // TODO: make better, doesn't work well in every situation
@@ -107,9 +106,11 @@ void Camera::FocusOn(BoundingBox* box)
     m_Position = glm::vec3{0, (dimensions.y / 2), -(distance + 0.5f)};
     m_Rotation = glm::vec3(0);
 }
+#endif
 
 std::shared_ptr<RenderBlockModel> Camera::Pick(const glm::vec2& mouse)
 {
+#if 0
     Ray                                                ray(m_Position, ScreenToWorld(mouse));
     std::map<float, std::shared_ptr<RenderBlockModel>> hits;
 
@@ -125,6 +126,8 @@ std::shared_ptr<RenderBlockModel> Camera::Pick(const glm::vec2& mouse)
     }
 
     return !hits.empty() ? hits.begin()->second : nullptr;
+#endif
+    return nullptr;
 }
 
 void Camera::OnMousePress(int32_t button, bool is_button_down, const glm::vec2& position)

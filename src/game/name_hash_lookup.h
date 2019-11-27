@@ -1,8 +1,11 @@
 #pragma once
 
-#include "../window.h"
+#include "window.h"
 
-#include <json.hpp>
+#include <util/byte_array_buffer.h>
+
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
 
 class NameHashLookup
 {
@@ -16,31 +19,26 @@ class NameHashLookup
     {
         std::thread([&] {
             try {
-                const auto handle = GetModuleHandle(nullptr);
-                const auto rc     = FindResource(handle, MAKEINTRESOURCE(512), RT_RCDATA);
-                if (rc == nullptr) {
-                    throw std::runtime_error("FindResource failed");
+                std::vector<uint8_t> buffer;
+                if (!Window::Get()->LoadInternalResource(512, &buffer)) {
+                    throw std::runtime_error("LoadInternalResource failed.");
                 }
 
-                const auto res_data = LoadResource(handle, rc);
-                if (res_data == nullptr) {
-                    throw std::runtime_error("LoadResource failed");
-                }
+                byte_array_buffer         buf(buffer);
+                std::istream              stream(&buf);
+                rapidjson::IStreamWrapper stream_wrapper(stream);
 
-                const void* ptr = LockResource(res_data);
-                if (ptr == nullptr) {
-                    throw std::runtime_error("LockResource failed");
-                }
+                rapidjson::Document doc;
+                doc.ParseStream(stream_wrapper);
 
-                // parse the file list json
-                std::vector<uint8_t> buffer(SizeofResource(handle, rc));
-                memcpy(buffer.data(), ptr, buffer.size());
-                const auto& dictionary = nlohmann::json::parse(buffer.begin(), buffer.end());
+                assert(doc.IsArray());
+                LookupTable.reserve(doc.Size());
 
                 // generate the lookup table
-                for (auto& it = dictionary.begin(); it != dictionary.end(); ++it) {
-                    const auto namehash = static_cast<uint32_t>(std::stoul(it.key(), nullptr, 16));
-                    LookupTable.insert(std::make_pair(namehash, it.value().get<std::string>()));
+                for (auto itr = doc.Begin(); itr != doc.End(); ++itr) {
+                    assert(itr->IsString());
+                    const uint32_t name_hash = ava::hashlittle(itr->GetString());
+                    LookupTable[name_hash]   = itr->GetString();
                 }
             } catch (const std::exception& e) {
                 SPDLOG_ERROR("Failed to load lookup table.");

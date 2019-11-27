@@ -1,15 +1,14 @@
 #pragma once
 
 #include "iimportexporter.h"
+#include "util.h"
 
-#include "../window.h"
+#include "../vendor/ava-format-lib/include/util/byte_array_buffer.h"
 
-#include "../game/file_loader.h"
-#include "../game/name_hash_lookup.h"
+#include "game/name_hash_lookup.h"
 
 namespace ImportExport
 {
-
 class ResourceBundle : public IImportExporter
 {
   private:
@@ -57,64 +56,57 @@ class ResourceBundle : public IImportExporter
             return;
         }
 
-        auto path = filename.parent_path();
-        auto _fn  = filename.filename().string();
-        util::replace(_fn, "_resourcebundle", "");
-        _fn += ".resourcebundle";
+        auto path      = filename.parent_path();
+        auto file_name = filename.filename().string();
+        util::replace(file_name, "_resourcebundle", "");
+        file_name += ".resourcebundle";
 
-        auto          out_filename = path / _fn;
-        std::ofstream stream(out_filename, std::ios::binary);
-        if (stream.fail()) {
+        try {
+            std::vector<uint8_t> out_buffer;
+
+            // add each file in the directory to the stream
+            // TODO: maybe some sanitization? this is not recursive, so atleast we have that.
+            for (const auto& filepath : std::filesystem::directory_iterator(filename)) {
+                // skip none regular files
+                if (!std::filesystem::is_regular_file(filepath)) {
+                    continue;
+                }
+
+                const auto&    current_filename = filepath.path();
+                const uint32_t file_size        = filepath.file_size();
+
+                // read the file buffer
+                FileBuffer    in_buffer(file_size);
+                std::ifstream in_stream(current_filename, std::ios::binary);
+                in_stream.read((char*)in_buffer.data(), file_size);
+                in_stream.close();
+
+                // @TODO: fix filename if a hex string is passed!
+                // const uint32_t path_hash = (!is_number(filename_str) ? hashlittle(filename_str.c_str()) :
+                // std::stoul(filename_str));
+
+                ava::ResourceBundle::WriteEntry(&out_buffer, current_filename, in_buffer);
+            }
+
+            std::ofstream stream(path / file_name, std::ios::binary);
+            stream.write((char*)out_buffer.data(), out_buffer.size());
+            stream.close();
+
+            if (callback) {
+                callback(true, filename, {});
+            }
+        } catch (const std::exception&) {
             if (callback) {
                 callback(false, filename, {});
             }
-
-            return;
-        }
-
-        // add each file in the directory to the stream
-        // TODO: maybe some sanitization? this is not recursive, so atleast we have that.
-        for (const auto& filepath : std::filesystem::directory_iterator(filename)) {
-            // skip none regular files
-            if (!std::filesystem::is_regular_file(filepath)) {
-                continue;
-            }
-
-            const auto&    current_filename = filepath.path();
-            const uint32_t file_size        = filepath.file_size();
-
-            // read the file buffer
-            FileBuffer    buffer(file_size);
-            std::ifstream in_stream(current_filename, std::ios::binary);
-            if (in_stream.fail()) {
-                continue;
-            }
-
-            in_stream.read((char*)buffer.data(), file_size);
-            in_stream.close();
-
-            // generate path and extension hashes
-            const auto     filename_str = current_filename.stem().string();
-            const uint32_t path_hash =
-                (!is_number(filename_str) ? hashlittle(filename_str.c_str()) : std::stoul(filename_str));
-            const uint32_t extension_hash = hashlittle(current_filename.extension().string().c_str());
-
-            // write file info
-            stream.write((char*)&path_hash, sizeof(path_hash));
-            stream.write((char*)&extension_hash, sizeof(extension_hash));
-            stream.write((char*)&file_size, sizeof(file_size));
-            stream.write((char*)buffer.data(), file_size);
-        }
-
-        stream.close();
-        if (callback) {
-            callback(true, filename, {});
         }
     }
 
     void Export(const std::filesystem::path& filename, const std::filesystem::path& to,
                 ExportFinishedCallback callback) override final
     {
+        using namespace ava::ResourceBundle;
+
         const auto& path = to / (filename.stem().string() + "_resourcebundle");
         SPDLOG_INFO("Exporting resource bundle to \"{}\"", path.string());
 
@@ -123,28 +115,27 @@ class ResourceBundle : public IImportExporter
             std::filesystem::create_directory(path);
         }
 
-        FileLoader::Get()->ReadFile(filename, [&, filename, path, callback](bool success, FileBuffer data) {
+        FileLoader::Get()->ReadFile(filename, [&, filename, path, callback](bool success, std::vector<uint8_t> data) {
             if (success) {
-                uint64_t current_read_offset = 0;
-                while (current_read_offset < data.size()) {
-                    const uint32_t path_hash      = *(uint32_t*)&data[current_read_offset];
-                    const uint32_t extension_hash = *(uint32_t*)&data[current_read_offset + 4];
-                    const uint32_t file_size      = *(uint32_t*)&data[current_read_offset + 8];
+                byte_array_buffer buf(data);
+                std::istream      stream(&buf);
 
-                    FileBuffer file_buffer(file_size);
-                    std::memcpy(file_buffer.data(), &data[current_read_offset + 12], file_size);
+                // @TODO: probably should do a better way.
+                while ((size_t)stream.tellg() < data.size()) {
+                    ResourceEntry entry{};
+                    stream.read((char*)&entry, sizeof(ResourceEntry));
 
-                    const auto&           extension = NameHashLookup::GetName(extension_hash);
-                    std::filesystem::path filename  = path / (std::to_string(path_hash) + extension);
+                    std::vector<uint8_t> file_buffer(entry.m_Size);
+                    stream.read((char*)file_buffer.data(), entry.m_Size);
+
+                    const auto&           extension = NameHashLookup::GetName(entry.m_ExtensionHash);
+                    std::filesystem::path filename  = path / (std::to_string(entry.m_NameHash) + extension);
 
                     std::ofstream stream(filename, std::ios::binary);
                     if (!stream.fail()) {
                         stream.write((char*)file_buffer.data(), file_buffer.size());
                         stream.close();
                     }
-
-                    // NOTE: file size + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t)
-                    current_read_offset += (file_size + 12);
                 }
             }
 
@@ -152,5 +143,4 @@ class ResourceBundle : public IImportExporter
         });
     }
 };
-
 }; // namespace ImportExport

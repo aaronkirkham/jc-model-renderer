@@ -3,12 +3,15 @@
 #include <DbgHelp.h>
 #include <shellapi.h>
 
+#include <AvaFormatLib.h>
+
 #include "settings.h"
 #include "version.h"
 #include "window.h"
 
 #include "graphics/renderer.h"
 #include "graphics/texture_manager.h"
+#include "graphics/ui.h"
 
 #include "game/file_loader.h"
 #include "game/formats/avalanche_archive.h"
@@ -119,8 +122,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 if (GetAsyncKeyState(VK_F1)) {
                     std::filesystem::path filename = "editor/entities/characters/main_characters/sheldon.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
+                        assert(success);
                         const auto archive = AvalancheArchive::make(filename);
                         archive->Parse(data, [&](bool success) {
+                            assert(success);
                             std::filesystem::path model =
                                 "models/characters/main_characters/sheldon/sheldon_body_002.modelc";
                             AvalancheModelFormat::Load(model);
@@ -131,8 +136,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 if (GetAsyncKeyState(VK_F2) & 1) {
                     std::filesystem::path filename = "editor/entities/gameobjects/main_character.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
+                        assert(success);
                         const auto archive = AvalancheArchive::make(filename);
                         archive->Parse(data, [&](bool success) {
+                            assert(success);
                             std::filesystem::path rbm = "models/jc_characters/main_characters/rico/rico_body_lod1.rbm";
                             RenderBlockModel::Load(rbm);
                         });
@@ -181,9 +188,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                             if (rc) {
                                 RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
                             } else {
-                                RuntimeContainer::Load(epe, [&, epe](std::shared_ptr<RuntimeContainer> rc) {
+                                /*RuntimeContainer::Load(epe, [&, epe](std::shared_ptr<RuntimeContainer> rc) {
                                     RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
-                                });
+                                });*/
                             }
                         });
                     });
@@ -201,50 +208,30 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                             if (rc) {
                                 RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
                             } else {
-                                RuntimeContainer::Load(epe, [&, epe](std::shared_ptr<RuntimeContainer> rc) {
+                                /*RuntimeContainer::Load(epe, [&, epe](std::shared_ptr<RuntimeContainer> rc) {
                                     RenderBlockModel::LoadFromRuntimeContainer(epe, rc);
-                                });
+                                });*/
                             }
                         });
                     });
                 }
 
                 if (GetAsyncKeyState(VK_F7) & 1) {
-                    /*std::filesystem::path filename = "editor/entities/gameobjects/main_character.epe";
-                    RuntimeContainer::Load(filename, [&](std::shared_ptr<RuntimeContainer> rc) {
+                    // std::filesystem::path filename = "editor/entities/gameobjects/main_character.epe";
+                    /*RuntimeContainer::Load(filename, [&](std::shared_ptr<RuntimeContainer> rc) {
                         FileLoader::Get()->WriteRuntimeContainer(rc.get());
                     });*/
 
-#if 0
-                    const auto& importers = ImportExportManager::Get()->GetImportersFor(".rbm");
-                    importers[0]->Import("C:/users/aaron/desktop/nanos cube/nanos.obj",
-                                         [&](bool success, std::filesystem::path filename, std::any data) {
-                                             const auto rbm = RenderBlockModel::make("nanos.rbm");
-                                             const auto render_block =
-                                                 RenderBlockFactory::CreateRenderBlock("GeneralMkIII");
-
-                                             rbm->GetRenderBlocks().emplace_back(render_block);
-
-                                             auto& [vertices, indices, materials] =
-                                                 std::any_cast<std::tuple<vertices_t, uint16s_t, materials_t>>(data);
-
-                                             /*render_block->SetData(&vertices, &indices, &materials);
-                                             render_block->Create();*/
-
-                                             // Renderer::Get()->AddToRenderList(render_block);
-                                         });
-#endif
-
-                    const auto& importers = ImportExportManager::Get()->GetImportersFor(".adf");
-                    importers[0]->Import("C:/users/aaron/desktop/export.xml",
-                                         [](bool success, std::filesystem::path filename, std::any data) {
-                                             const auto adf = std::any_cast<std::shared_ptr<AvalancheDataFormat>>(data);
-
-                                             std::ofstream out_stream("C:/users/aaron/desktop/imported.bin",
-                                                                      std::ios::binary);
-                                             out_stream.write((char*)adf->m_Buffer.data(), adf->m_Buffer.size());
-                                             out_stream.close();
-                                         });
+                    std::filesystem::path filename = "c:/users/aaron/desktop/main_character.epe";
+                    FileLoader::Get()->ReadFile(filename, [&, filename](bool success, std::vector<uint8_t> buffer) {
+                        auto rtpc = RuntimeContainer::make(filename);
+                        rtpc->Parse(buffer, [rtpc](bool success) {
+                            assert(success);
+                            auto variant = rtpc->GetVariant(0x30a89270);
+                            assert(variant);
+                            assert(variant->Value<std::string>() == "grappling_device_jc2_default");
+                        });
+                    });
                 }
 
                 if (GetAsyncKeyState(VK_F10)) {
@@ -284,25 +271,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         }
                     });*/
 
-                    std::filesystem::path filename = "editor/entities/characters/main_characters/rico.epe_adf";
-                    FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
-                        if (success) {
-                            const auto adf = AvalancheDataFormat::make(filename, data);
 #if 0
-                            if (adf->Parse(data)) {
-                                const auto health = adf->GetMember("Health");
-                                if (health) {
-                                    auto val = health->As<int16_t>();
-                                    __debugbreak();
-                                }
-
-                                __debugbreak();
-                            }
+                    std::filesystem::path filename = "editor/entities/characters/main_characters/rico.epe_adf";
+                    FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) { });
 #endif
-                        } else {
-                            __debugbreak();
-                        }
-                    });
                 }
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -317,23 +289,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterReadCallback({".epe", ".blo"}, RuntimeContainer::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback(
             {".dds", ".ddsc", ".hmddsc", ".atx1", ".atx2"},
-            [&](const std::filesystem::path& filename, FileBuffer data, bool external) {
+            [&](const std::filesystem::path& filename, std::vector<uint8_t> data, bool external) {
                 const uint8_t flags = (TextureManager::TextureCreateFlags_CreateIfNotExists
                                        | TextureManager::TextureCreateFlags_IsUIRenderable);
 
                 // parse the compressed texture if the file was loaded from an external source
                 if (external) {
                     if (filename.extension() == ".ddsc") {
-                        FileBuffer out;
-                        if (FileLoader::Get()->ReadAVTX(&data, &out)) {
-                            TextureManager::Get()->GetTexture(filename, &out, flags);
+                        std::vector<uint8_t> out_buffer;
+                        if (FileLoader::Get()->ReadAVTX(data, &out_buffer)) {
+                            TextureManager::Get()->GetTexture(filename, &out_buffer, flags);
                             return true;
                         }
                     } else if (filename.extension() == ".hmddsc" || filename.extension() == ".atx1"
                                || filename.extension() == ".atx2") {
-                        FileBuffer out;
-                        FileLoader::Get()->ReadHMDDSC(&data, &out);
-                        TextureManager::Get()->GetTexture(filename, &out, flags);
+                        std::vector<uint8_t> out_buffer;
+                        FileLoader::Get()->ParseTextureSource(&data, &out_buffer);
+                        TextureManager::Get()->GetTexture(filename, &out_buffer, flags);
                         return true;
                     }
                 }
@@ -351,18 +323,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         // register file type context menu callbacks
         UI::Get()->RegisterContextMenuCallback({".rbm"}, RenderBlockModel::ContextMenuUI);
         // UI::Get()->RegisterContextMenuCallback({".modelc"}, AvalancheModelFormat::ContextMenuUI);
-        UI::Get()->RegisterContextMenuCallback({".epe"}, RuntimeContainer::ContextMenuUI);
+        // UI::Get()->RegisterContextMenuCallback({".epe"}, RuntimeContainer::ContextMenuUI);
 
         // register importers and exporters
-        ImportExportManager::Get()->Register<ImportExport::Wavefront_Obj>();
-        ImportExportManager::Get()->Register<ImportExport::DDSC>();
-        ImportExportManager::Get()->Register<ImportExport::AvalancheArchive>();
         ImportExportManager::Get()->Register<ImportExport::ADF2XML>();
-        ImportExportManager::Get()->Register<ImportExport::ResourceBundle>();
         ImportExportManager::Get()->Register<ImportExport::ArchiveTable>();
+        ImportExportManager::Get()->Register<ImportExport::AvalancheArchive>();
+        ImportExportManager::Get()->Register<ImportExport::DDSC>();
+        ImportExportManager::Get()->Register<ImportExport::ResourceBundle>();
         // ImportExportManager::Get()->Register<ImportExport::RTPC2XML>();
+        ImportExportManager::Get()->Register<ImportExport::Wavefront_Obj>();
 
         // draw gizmos
+#if 0
         Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {
             static auto white = glm::vec4{1, 1, 1, 0.6};
             static auto red   = glm::vec4{1, 0, 0, 1};
@@ -400,6 +373,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 }
             }
         });
+#endif
 
         // run!
         Window::Get()->Run();

@@ -44,6 +44,7 @@ increment_seconds
 open_hook_model
 closed_hook_model
 character_attach_hook_model
+character_alias
 .acsb
 .afsmb
 .aicoversettings

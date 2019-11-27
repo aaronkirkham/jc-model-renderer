@@ -2,13 +2,10 @@
 
 #include "iimportexporter.h"
 
-#include "../window.h"
-
-#include "../game/file_loader.h"
+#include "game/file_loader.h"
 
 namespace ImportExport
 {
-
 class DDSC : public IImportExporter
 {
   public:
@@ -30,7 +27,7 @@ class DDSC : public IImportExporter
         return {".ddsc", ".hmddsc", ".atx1", ".atx2"};
     }
 
-	const char* GetExportName() override final
+    const char* GetExportName() override final
     {
         return "DirectDraw Surface";
     }
@@ -42,8 +39,6 @@ class DDSC : public IImportExporter
 
     void Import(const std::filesystem::path& filename, ImportFinishedCallback callback) override final
     {
-        SPDLOG_INFO("Importing \"{}\"", filename.string());
-
         if (!std::filesystem::exists(filename)) {
             return callback(false, filename, 0);
         }
@@ -55,8 +50,7 @@ class DDSC : public IImportExporter
 
         const auto size = std::filesystem::file_size(filename);
 
-        FileBuffer buffer;
-        buffer.resize(size);
+        std::vector<uint8_t> buffer(size);
         stream.read((char*)buffer.data(), size);
         stream.close();
 
@@ -68,16 +62,14 @@ class DDSC : public IImportExporter
     {
         auto& path = to / filename.stem();
         path += GetExportExtension();
-        SPDLOG_INFO("Exporting texture to \"{}\"", path.string());
 
-        FileLoader::Get()->ReadFile(filename, [&, path, callback](bool success, FileBuffer data) {
+        FileLoader::Get()->ReadFile(filename, [&, path, callback](bool success, std::vector<uint8_t> data) {
             if (success) {
-                WriteBufferToFile(path, &data);
+                WriteBufferToFile(path, data);
             }
 
             callback(success);
         });
     }
 };
-
 }; // namespace ImportExport
