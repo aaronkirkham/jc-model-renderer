@@ -161,6 +161,8 @@ class RenderBlockGeneralMkIII : public IRenderBlock
     std::array<ConstantBuffer_t*, 3> m_VertexShaderConstants   = {nullptr};
     std::array<ConstantBuffer_t*, 2> m_FragmentShaderConstants = {nullptr};
 
+    bool show_material_consts = false;
+
   public:
     RenderBlockGeneralMkIII() = default;
     virtual ~RenderBlockGeneralMkIII();
@@ -254,8 +256,9 @@ class RenderBlockGeneralMkIII : public IRenderBlock
     {
         rb_textures_t result;
         result.push_back({"diffuse", m_Textures[0]});
-        result.push_back({"normal", m_Textures[3]});
         result.push_back({"specular", m_Textures[1]});
+        result.push_back({"metallic", m_Textures[2]});
+        result.push_back({"normal", m_Textures[3]});
 
         return result;
     }

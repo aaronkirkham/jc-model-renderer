@@ -237,17 +237,86 @@ void RenderBlockGeneralMkIII::DrawUI()
     ImGui::DragFloat("Emissive Time of Day Scale", &m_Block.m_Attributes.m_EmissiveTODScale, 0.01f, 0.0f, 1.0f);
     ImGuiCustom::PopDisabled();
 
-#if 0
-    if (ImGui::TreeNode("Material Constants")) {
-        ImGui::DragFloat("Roughness_1", &m_cbMaterialConsts2.Roughness_1);
-        ImGui::DragFloat("DiffuseWrap_1", &m_cbMaterialConsts2.DiffuseWrap_1);
-        ImGui::DragFloat("Emissive_1", &m_cbMaterialConsts2.Emissive_1);
-        ImGui::DragFloat("Transmission_1", &m_cbMaterialConsts2.Transmission_1);
-        ImGui::DragFloat("ClearCoat_1", &m_cbMaterialConsts2.ClearCoat_1);
-
-        ImGui::TreePop();
+    if (ImGui::Button("Material Consts")) {
+        show_material_consts = !show_material_consts;
     }
-#endif
+
+    if (show_material_consts) {
+        ImGui::SetNextWindowSize({560, 460}, ImGuiCond_Appearing);
+        if (ImGui::Begin("Material Consts", &show_material_consts, ImGuiWindowFlags_NoCollapse)) {
+            ImGui::DragFloat("NormalStrength", &m_cbMaterialConsts2.NormalStrength);
+            ImGui::DragFloat("Reflectivity_1", &m_cbMaterialConsts2.Reflectivity_1);
+            ImGui::DragFloat("Roughness_1", &m_cbMaterialConsts2.Roughness_1);
+            ImGui::DragFloat("DiffuseWrap_1", &m_cbMaterialConsts2.DiffuseWrap_1);
+            ImGui::DragFloat("Emissive_1", &m_cbMaterialConsts2.Emissive_1);
+            ImGui::DragFloat("Transmission_1", &m_cbMaterialConsts2.Transmission_1);
+            ImGui::DragFloat("ClearCoat_1", &m_cbMaterialConsts2.ClearCoat_1);
+            ImGui::DragFloat("Roughness_2", &m_cbMaterialConsts2.Roughness_2);
+            ImGui::DragFloat("DiffuseWrap_2", &m_cbMaterialConsts2.DiffuseWrap_2);
+            ImGui::DragFloat("Emissive_2", &m_cbMaterialConsts2.Emissive_2);
+            ImGui::DragFloat("Transmission_2", &m_cbMaterialConsts2.Transmission_2);
+            ImGui::DragFloat("Reflectivity_2", &m_cbMaterialConsts2.Reflectivity_2);
+            ImGui::DragFloat("ClearCoat_2", &m_cbMaterialConsts2.ClearCoat_2);
+            ImGui::DragFloat("Roughness_3", &m_cbMaterialConsts2.Roughness_3);
+            ImGui::DragFloat("DiffuseWrap_3", &m_cbMaterialConsts2.DiffuseWrap_3);
+            ImGui::DragFloat("Emissive_3", &m_cbMaterialConsts2.Emissive_3);
+            ImGui::DragFloat("Transmission_3", &m_cbMaterialConsts2.Transmission_3);
+            ImGui::DragFloat("Reflectivity_3", &m_cbMaterialConsts2.Reflectivity_3);
+            ImGui::DragFloat("ClearCoat_3", &m_cbMaterialConsts2.ClearCoat_3);
+            ImGui::DragFloat("Roughness_4", &m_cbMaterialConsts2.Roughness_4);
+            ImGui::DragFloat("DiffuseWrap_4", &m_cbMaterialConsts2.DiffuseWrap_4);
+            ImGui::DragFloat("Emissive_4", &m_cbMaterialConsts2.Emissive_4);
+            ImGui::DragFloat("Transmission_4", &m_cbMaterialConsts2.Transmission_4);
+            ImGui::DragFloat("Reflectivity_4", &m_cbMaterialConsts2.Reflectivity_4);
+            ImGui::DragFloat("ClearCoat_4", &m_cbMaterialConsts2.ClearCoat_4);
+            ImGui::DragFloat("LayeredHeightMapUVScale", &m_cbMaterialConsts2.LayeredHeightMapUVScale);
+            ImGui::DragFloat("LayeredUVScale", &m_cbMaterialConsts2.LayeredUVScale);
+            ImGui::DragFloat("LayeredHeight1Influence", &m_cbMaterialConsts2.LayeredHeight1Influence);
+            ImGui::DragFloat("LayeredHeight2Influence", &m_cbMaterialConsts2.LayeredHeight2Influence);
+            ImGui::DragFloat("LayeredHeightMapInfluence", &m_cbMaterialConsts2.LayeredHeightMapInfluence);
+            ImGui::DragFloat("LayeredMaskInfluence", &m_cbMaterialConsts2.LayeredMaskInfluence);
+            ImGui::DragFloat("LayeredShift", &m_cbMaterialConsts2.LayeredShift);
+            ImGui::DragFloat("LayeredRoughness", &m_cbMaterialConsts2.LayeredRoughness);
+            ImGui::DragFloat("LayeredDiffuseWrap", &m_cbMaterialConsts2.LayeredDiffuseWrap);
+            ImGui::DragFloat("LayeredEmissive", &m_cbMaterialConsts2.LayeredEmissive);
+            ImGui::DragFloat("LayeredTransmission", &m_cbMaterialConsts2.LayeredTransmission);
+            ImGui::DragFloat("LayeredReflectivity", &m_cbMaterialConsts2.LayeredReflectivity);
+            ImGui::DragFloat("LayeredClearCoat", &m_cbMaterialConsts2.LayeredClearCoat);
+            ImGui::DragFloat("DecalBlend", &m_cbMaterialConsts2.DecalBlend);
+            ImGui::DragFloat("DecalBlendNormal", &m_cbMaterialConsts2.DecalBlendNormal);
+            ImGui::DragFloat("DecalReflectivity", &m_cbMaterialConsts2.DecalReflectivity);
+            ImGui::DragFloat("DecalRoughness", &m_cbMaterialConsts2.DecalRoughness);
+            ImGui::DragFloat("DecalDiffuseWrap", &m_cbMaterialConsts2.DecalDiffuseWrap);
+            ImGui::DragFloat("DecalEmissive", &m_cbMaterialConsts2.DecalEmissive);
+            ImGui::DragFloat("DecalTransmission", &m_cbMaterialConsts2.DecalTransmission);
+            ImGui::DragFloat("DecalClearCoat", &m_cbMaterialConsts2.DecalClearCoat);
+            ImGui::DragFloat("OverlayHeightInfluence", &m_cbMaterialConsts2.OverlayHeightInfluence);
+            ImGui::DragFloat("OverlayHeightMapInfluence", &m_cbMaterialConsts2.OverlayHeightMapInfluence);
+            ImGui::DragFloat("OverlayMaskInfluence", &m_cbMaterialConsts2.OverlayMaskInfluence);
+            ImGui::DragFloat("OverlayShift", &m_cbMaterialConsts2.OverlayShift);
+            ImGui::DragFloat("OverlayColorR", &m_cbMaterialConsts2.OverlayColorR);
+            ImGui::DragFloat("OverlayColorG", &m_cbMaterialConsts2.OverlayColorG);
+            ImGui::DragFloat("OverlayColorB", &m_cbMaterialConsts2.OverlayColorB);
+            ImGui::DragFloat("OverlayBrightness", &m_cbMaterialConsts2.OverlayBrightness);
+            ImGui::DragFloat("OverlayGloss", &m_cbMaterialConsts2.OverlayGloss);
+            ImGui::DragFloat("OverlayMetallic", &m_cbMaterialConsts2.OverlayMetallic);
+            ImGui::DragFloat("OverlayReflectivity", &m_cbMaterialConsts2.OverlayReflectivity);
+            ImGui::DragFloat("OverlayRoughness", &m_cbMaterialConsts2.OverlayRoughness);
+            ImGui::DragFloat("OverlayDiffuseWrap", &m_cbMaterialConsts2.OverlayDiffuseWrap);
+            ImGui::DragFloat("OverlayEmissive", &m_cbMaterialConsts2.OverlayEmissive);
+            ImGui::DragFloat("OverlayTransmission", &m_cbMaterialConsts2.OverlayTransmission);
+            ImGui::DragFloat("OverlayClearCoat", &m_cbMaterialConsts2.OverlayClearCoat);
+            ImGui::DragFloat("DamageReflectivity", &m_cbMaterialConsts2.DamageReflectivity);
+            ImGui::DragFloat("DamageRoughness", &m_cbMaterialConsts2.DamageRoughness);
+            ImGui::DragFloat("DamageDiffuseWrap", &m_cbMaterialConsts2.DamageDiffuseWrap);
+            ImGui::DragFloat("DamageEmissive", &m_cbMaterialConsts2.DamageEmissive);
+            ImGui::DragFloat("DamageTransmission", &m_cbMaterialConsts2.DamageTransmission);
+            ImGui::DragFloat("DamageHeightInfluence", &m_cbMaterialConsts2.DamageHeightInfluence);
+            ImGui::DragFloat("DamageMaskInfluence", &m_cbMaterialConsts2.DamageMaskInfluence);
+            ImGui::DragFloat("DamageClearCoat", &m_cbMaterialConsts2.DamageClearCoat);
+        }
+        ImGui::End();
+    }
 
     // Textures
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
@@ -320,10 +389,12 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
 
         if (type == "diffuse") {
             m_Textures[0] = std::move(texture);
-        } else if (type == "normal") {
-            m_Textures[3] = std::move(texture);
         } else if (type == "specular") {
             m_Textures[1] = std::move(texture);
+        } else if (type == "metallic") {
+            m_Textures[2] = std::move(texture);
+        } else if (type == "normal") {
+            m_Textures[3] = std::move(texture);
         }
     }
 
