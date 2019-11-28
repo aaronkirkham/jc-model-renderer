@@ -61,6 +61,10 @@ materials_map_t Wavefront_Obj::ImportMaterials(const std::filesystem::path& file
             auto specular = filename;
             specular.replace_filename(line.substr(7, line.length()));
             materials[current_mtl].push_back(std::pair{"specular", specular});
+        } else if (type == "map_Ka") {
+            auto ambient = filename;
+            ambient.replace_filename(line.substr(7, line.length()));
+            materials[current_mtl].push_back(std::pair{"metallic", ambient});
         }
     }
 
