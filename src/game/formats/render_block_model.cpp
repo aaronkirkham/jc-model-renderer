@@ -2,6 +2,8 @@
 #include <imgui.h>
 #include <spdlog/spdlog.h>
 
+#include <glm/gtc/type_ptr.hpp>
+
 #include "../vendor/ava-format-lib/include/util/byte_array_buffer.h"
 
 #include "render_block_model.h"
@@ -96,12 +98,12 @@ bool RenderBlockModel::ParseRBM(const std::vector<uint8_t>& buffer, bool add_to_
     m_RenderBlocks.reserve(header.m_NumberOfBlocks);
 
     // store the bounding box
-    // m_BoundingBox.m_Min = header.m_BoundingBoxMin;
-    // m_BoundingBox.m_Max = header.m_BoundingBoxMax;
+    m_BoundingBox.m_Min = glm::make_vec3(header.m_BoundingBoxMin);
+    m_BoundingBox.m_Max = glm::make_vec3(header.m_BoundingBoxMax);
 
     // focus on the bounding box
     if (RenderBlockModel::Instances.size() == 1) {
-        // Camera::Get()->FocusOn(&m_BoundingBox);
+        Camera::Get()->FocusOn(m_BoundingBox);
     }
 
     // use file batches
@@ -181,26 +183,6 @@ end:
     return parse_success;
 }
 
-#if 0
-void RenderBlockModel::DrawGizmos()
-{
-    auto largest_scale = 0.0f;
-    for (auto& render_block : m_RenderBlocks) {
-        if (render_block->IsVisible()) {
-            const auto scale = render_block->GetScale();
-
-            // keep the biggest scale
-            if (scale > largest_scale) {
-                largest_scale = scale;
-            }
-        }
-    }
-
-    // hack to fix GetCenter
-    m_BoundingBox.SetScale(largest_scale);
-}
-#endif
-
 void RenderBlockModel::ReadFileCallback(const std::filesystem::path& filename, const std::vector<uint8_t>& data,
                                         bool external)
 {
@@ -226,12 +208,16 @@ bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, c
             return false;
         }
 
+        // recalculate bounding box before save
+        // rbm->RecalculateBoundingBox();
+
         const auto& render_blocks = rbm->GetRenderBlocks();
+        const auto& bounding_box  = rbm->GetBoundingBox();
 
         // generate the rbm header
         RbmHeader header;
-        // header.m_BoundingBoxMin = rbm->GetBoundingBox()->GetMin();
-        // header.m_BoundingBoxMax = rbm->GetBoundingBox()->GetMax();
+        memcpy(&header.m_BoundingBoxMin, glm::value_ptr(bounding_box.GetMin()), sizeof(glm::vec3));
+        memcpy(&header.m_BoundingBoxMax, glm::value_ptr(bounding_box.GetMax()), sizeof(glm::vec3));
         header.m_NumberOfBlocks = render_blocks.size();
 
         // write the header
@@ -239,7 +225,7 @@ bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, c
 
         for (const auto& render_block : render_blocks) {
             // write the block type hash
-            const auto& type_hash = render_block->GetTypeHash();
+            const uint32_t type_hash = render_block->GetTypeHash();
             stream.write((char*)&type_hash, sizeof(type_hash));
 
             // write the block data
@@ -323,4 +309,28 @@ void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&    
         Window::Get()->ShowMessageBox(error.str(), MB_ICONINFORMATION | MB_OK);
     }).detach();
 #endif
+}
+
+void RenderBlockModel::DrawGizmos()
+{
+    // @TODO: use std::max_element
+    auto largest_scale = 0.0f;
+    for (auto& render_block : m_RenderBlocks) {
+        if (render_block->IsVisible()) {
+            const auto scale = render_block->GetScale();
+
+            // keep the biggest scale
+            if (scale > largest_scale) {
+                largest_scale = scale;
+            }
+        }
+    }
+
+    // hack to fix GetCenter
+    m_BoundingBox.SetScale(largest_scale);
+}
+
+void RenderBlockModel::RecalculateBoundingBox()
+{
+    //
 }

@@ -335,7 +335,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         ImportExportManager::Get()->Register<ImportExport::Wavefront_Obj>();
 
         // draw gizmos
-#if 0
         Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {
             static auto white = glm::vec4{1, 1, 1, 0.6};
             static auto red   = glm::vec4{1, 0, 0, 1};
@@ -344,22 +343,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 for (const auto& model : AvalancheModelFormat::Instances) {
                     // bounding boxes
                     if (g_DrawBoundingBoxes) {
-                        UI::Get()->DrawBoundingBox(*model.second->GetBoundingBox(), red);
+                        // UI::Get()->DrawBoundingBox(model.second->GetBoundingBox(), red);
                     }
                 }
             } else {
                 // TODO: move the RenderBlockModel::DrawGizmos stuff in here.
                 for (const auto& model : RenderBlockModel::Instances) {
-                    const auto bounding_box = model.second->GetBoundingBox();
+                    const auto& bounding_box = model.second->GetBoundingBox();
 
                     // model labels
                     if (g_ShowModelLabels) {
-                        UI::Get()->DrawText(model.second->GetFileName(), bounding_box->GetCenter(), white, true);
+                        UI::Get()->DrawText(model.second->GetFileName(), bounding_box.GetCenter(), white, true);
                     }
 
                     // bounding boxes
                     if (g_DrawBoundingBoxes) {
-                        UI::Get()->DrawBoundingBox(*bounding_box, red);
+                        UI::Get()->DrawBoundingBox(bounding_box, red);
 
                         // auto mouse_pos = Input::Get()->GetMouseWorldPosition();
 
@@ -373,7 +372,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 }
             }
         });
-#endif
 
         // run!
         Window::Get()->Run();

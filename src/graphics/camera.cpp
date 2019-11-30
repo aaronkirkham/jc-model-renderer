@@ -85,8 +85,7 @@ glm::vec3 Camera::ScreenToWorld(const glm::vec2& screen)
     return world;
 }
 
-#if 0
-void Camera::FocusOn(BoundingBox* box)
+void Camera::FocusOn(const BoundingBox& box)
 {
     // TODO: make better, doesn't work well in every situation
     // and some times doesn't zoom in far enough!
@@ -94,19 +93,16 @@ void Camera::FocusOn(BoundingBox* box)
     // We should look at the current camera rotation and zoom to the
     // side of the bounding box we are facing.
 
-    assert(box);
-
 #undef max
 
     // calculate how far we need to translate to get the model in view
-    const auto& dimensions = box->GetSize();
+    const auto& dimensions = box.GetSize();
     const float distance =
         ((glm::max(glm::max(dimensions.x, dimensions.y), dimensions.z) / 2) / glm::sin(glm::radians(m_FOV) / 2));
 
     m_Position = glm::vec3{0, (dimensions.y / 2), -(distance + 0.5f)};
     m_Rotation = glm::vec3(0);
 }
-#endif
 
 std::shared_ptr<RenderBlockModel> Camera::Pick(const glm::vec2& mouse)
 {

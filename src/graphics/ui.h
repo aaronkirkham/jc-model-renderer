@@ -136,7 +136,7 @@ class UI : public Singleton<UI>
 
 #undef DrawText
     void DrawText(const std::string& text, const glm::vec3& position, const glm::vec4& colour, bool center);
-    // void DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour);
+    void DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour);
 
     inline void ShowGameSelection()
     {

@@ -594,7 +594,7 @@ void UI::RenderMenuBar()
                                                   || AvalancheModelFormat::Instances.size() > 0))) {
                     for (const auto& model : RenderBlockModel::Instances) {
                         if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
-                            // Camera::Get()->FocusOn(model.second->GetBoundingBox());
+                            Camera::Get()->FocusOn(model.second->GetBoundingBox());
                         }
                     }
 
@@ -604,12 +604,14 @@ void UI::RenderMenuBar()
                             Camera::Get()->FocusOn(model.second->GetBoundingBox());
                         }*/
 
+                        /*
                         for (const auto& render_block : model.second->GetRenderBlocks()) {
                             const auto& name = ((jc4::IRenderBlock*)render_block)->m_Name;
                             if (ImGui::MenuItem(name)) {
-                                // Camera::Get()->FocusOn(mesh->GetBoundingBox());
+                                Camera::Get()->FocusOn(model.second->GetBoundingBox());
                             }
                         }
+                        */
                     }
 
                     ImGui::EndMenu();
@@ -805,7 +807,6 @@ void UI::RenderFileTreeView(const glm::vec2& window_size)
                 const auto directory_list = FileLoader::Get()->GetDirectoryList();
                 if (directory_list) {
                     directory_list->Draw();
-                    // directory_list->Draw(directory_list->GetTree());
                 }
 
                 ImGuiCustom::EndTabItemScroll();
@@ -902,7 +903,7 @@ void UI::RenderModelsTab_RBM()
                 auto& render_blocks = (*it).second->GetRenderBlocks();
 
 #ifdef ENABLE_ASSET_CREATOR
-                if (render_blocks.size() == 0) {
+                if (render_blocks.empty()) {
                     static auto red = ImVec4{1, 0, 0, 1};
                     ImGui::TextColored(red, "This model doesn't have any Render Blocks!");
 
@@ -911,9 +912,12 @@ void UI::RenderModelsTab_RBM()
                         for (const auto& block_name : RenderBlockFactory::GetValidRenderBlocks()) {
                             if (ImGui::MenuItem(block_name)) {
                                 const auto render_block = RenderBlockFactory::CreateRenderBlock(block_name);
-                                assert(render_block);
-                                // render_block->SetParent((*it).second.get());
-                                render_blocks.emplace_back(render_block);
+                                if (render_block) {
+                                    render_block->SetOwner((*it).second.get());
+                                    render_blocks.emplace_back(render_block);
+                                } else {
+                                    SPDLOG_ERROR("Failed to create render block with type \"{}\"!", block_name);
+                                }
                             }
                         }
 
@@ -959,13 +963,21 @@ void UI::RenderModelsTab_RBM()
                                             UI::Events().ImportFileRequest(importer, [&](bool                  success,
                                                                                          std::filesystem::path filename,
                                                                                          std::any              data) {
-                                                auto& [vertices, indices, materials] =
-                                                    std::any_cast<std::tuple<vertices_t, uint16s_t, materials_t>>(data);
+                                                if (success) {
+                                                    auto& [vertices, indices, materials] =
+                                                        std::any_cast<std::tuple<vertices_t, uint16s_t, materials_t>>(
+                                                            data);
 
-                                                render_block->SetData(&vertices, &indices, &materials);
-                                                ((jc3::IRenderBlock*)render_block)->Create();
+                                                    // @TODO: just pass std::any into SetData..
+                                                    render_block->SetData(&vertices, &indices, &materials);
+                                                    ((jc3::IRenderBlock*)render_block)->Create();
 
-                                                Renderer::Get()->AddToRenderList(render_block);
+                                                    // @TODO: should be handled by the RenderBlockModel class.
+                                                    Renderer::Get()->AddToRenderList(render_block);
+
+                                                    // Update model bounding box
+                                                    (*it).second->RecalculateBoundingBox();
+                                                }
                                             });
                                         }
                                     }
@@ -1274,7 +1286,6 @@ void UI::DrawText(const std::string& text, const glm::vec3& position, const glm:
     }
 }
 
-#if 0
 void UI::DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour)
 {
     assert(m_SceneDrawList);
@@ -1297,4 +1308,3 @@ void UI::DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour)
         m_SceneDrawList->AddLine(points[i], points[4 + i], col);
     }
 }
-#endif

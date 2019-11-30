@@ -109,7 +109,6 @@ struct SamplerState_t {
     ID3D11SamplerState* m_SamplerState = nullptr;
 };
 
-#if 0
 struct BoundingBox {
     glm::vec3 m_Min;
     glm::vec3 m_Max;
@@ -158,9 +157,7 @@ struct BoundingBox {
         return (m_Max * m_Scale);
     }
 };
-#endif
 
-#if 0
 struct Ray {
     glm::vec3 m_Origin;
     glm::vec3 m_End;
@@ -243,4 +240,3 @@ struct Ray {
         return dist;
     }
 };
-#endif

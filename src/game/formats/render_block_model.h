@@ -2,6 +2,8 @@
 
 #include "factory.h"
 
+#include "graphics/types.h"
+
 #include <filesystem>
 
 class AvalancheArchive;
@@ -17,7 +19,7 @@ class RenderBlockModel : public Factory<RenderBlockModel>
     std::filesystem::path             m_Filename = "";
     std::vector<IRenderBlock*>        m_RenderBlocks;
     std::shared_ptr<AvalancheArchive> m_ParentArchive;
-    // BoundingBox                       m_BoundingBox;
+    BoundingBox                       m_BoundingBox;
 
   public:
     RenderBlockModel(const std::filesystem::path& filename);
@@ -38,6 +40,9 @@ class RenderBlockModel : public Factory<RenderBlockModel>
 
     bool ParseLOD(const std::vector<uint8_t>& buffer);
     bool ParseRBM(const std::vector<uint8_t>& buffer, bool add_to_render_list = true);
+
+    void DrawGizmos();
+    void RecalculateBoundingBox();
 
     inline static bool                     LoadingFromRuntimeContainer = false;
     inline static std::vector<std::string> SuppressedWarnings;
@@ -62,10 +67,10 @@ class RenderBlockModel : public Factory<RenderBlockModel>
         return m_Filename;
     }
 
-    /*BoundingBox* GetBoundingBox()
+    const BoundingBox& GetBoundingBox()
     {
-        return &m_BoundingBox;
-    }*/
+        return m_BoundingBox;
+    }
 
     AvalancheArchive* GetParentArchive()
     {

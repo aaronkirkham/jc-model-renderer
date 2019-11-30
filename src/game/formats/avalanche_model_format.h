@@ -21,6 +21,7 @@ namespace AvalancheModelFormat
 
 class AvalancheArchive;
 class IRenderBlock;
+
 class AvalancheModelFormat : public Factory<AvalancheModelFormat>
 {
     using ParseCallback_t = std::function<void(bool)>;
@@ -37,7 +38,6 @@ class AvalancheModelFormat : public Factory<AvalancheModelFormat>
     ava::AvalancheModelFormat::SAmfMeshBuffers* m_HighMeshBuffers = nullptr;
 
     std::vector<IRenderBlock*> m_RenderBlocks;
-    // BoundingBox                m_BoundingBox;
 
   public:
     AvalancheModelFormat(const std::filesystem::path& filename);
@@ -92,9 +92,4 @@ class AvalancheModelFormat : public Factory<AvalancheModelFormat>
     {
         return m_RenderBlocks;
     }
-
-    /*BoundingBox* GetBoundingBox()
-    {
-        return &m_BoundingBox;
-    }*/
 };
