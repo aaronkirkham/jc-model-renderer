@@ -83,25 +83,25 @@ void RenderBlockWindow::Setup(RenderContext_t* context)
 
     // setup the constant buffer
     {
-        static const auto world = glm::mat4(1);
+        static const auto world = glm::scale(glm::mat4(1), glm::vec3{m_ScaleModifier});
 
         // set vertex shader constants
         m_cbInstanceConsts.World               = world;
         m_cbInstanceConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
 
         // set fragment shaders constants
-        m_cbMaterialConsts.SpecGloss       = m_Block.attributes.SpecGloss;
-        m_cbMaterialConsts.SpecFresnel     = m_Block.attributes.SpecFresnel;
-        m_cbMaterialConsts.DiffuseRougness = m_Block.attributes.DiffuseRougness;
-        m_cbMaterialConsts.TintPower       = m_Block.attributes.TintPower;
-        m_cbMaterialConsts.MinAlpha        = m_Block.attributes.MinAlpha;
-        m_cbMaterialConsts.UVScale         = m_Block.attributes.UVScale;
+        m_cbMaterialConsts.SpecGloss       = m_Block.m_Attributes.m_SpecGloss;
+        m_cbMaterialConsts.SpecFresnel     = m_Block.m_Attributes.m_SpecFresnel;
+        m_cbMaterialConsts.DiffuseRougness = m_Block.m_Attributes.m_DiffuseRougness;
+        m_cbMaterialConsts.TintPower       = m_Block.m_Attributes.m_TintPower;
+        m_cbMaterialConsts.MinAlpha        = m_Block.m_Attributes.m_MinAlpha;
+        m_cbMaterialConsts.UVScale         = m_Block.m_Attributes.m_UVScale;
     }
 
     // set the textures
     IRenderBlock::BindTexture(0, m_SamplerState);
 
-    if (!(m_Block.attributes.flags & SIMPLE)) {
+    if (!(m_Block.m_Attributes.m_Flags & SIMPLE)) {
         IRenderBlock::BindTexture(1, 2, m_SamplerState);
         IRenderBlock::BindTexture(2, 3, m_SamplerState);
     }
@@ -132,7 +132,7 @@ void RenderBlockWindow::Setup(RenderContext_t* context)
     context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants, 1, m_cbMaterialConsts);
 
     // set the culling mode
-    if (m_Block.attributes.flags & ENABLE_BACKFACE_CULLING) {
+    if (m_Block.m_Attributes.m_Flags & ENABLE_BACKFACE_CULLING) {
         context->m_Renderer->SetCullMode(D3D11_CULL_BACK);
     }
 }
@@ -143,7 +143,7 @@ void RenderBlockWindow::Draw(RenderContext_t* context)
         return;
     }
 
-    if (!(m_Block.attributes.flags & ENABLE_BACKFACE_CULLING)) {
+    if (!(m_Block.m_Attributes.m_Flags & ENABLE_BACKFACE_CULLING)) {
         context->m_Renderer->SetCullMode(D3D11_CULL_FRONT);
         IRenderBlock::Draw(context);
         context->m_Renderer->SetCullMode(D3D11_CULL_BACK);
@@ -161,20 +161,19 @@ void RenderBlockWindow::DrawContextMenu()
     };
     // clang-format on
 
-    ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    ImGuiCustom::DropDownFlags(m_Block.m_Attributes.m_Flags, flag_labels);
 }
 
 void RenderBlockWindow::DrawUI()
 {
     ImGui::Text(ICON_FA_COGS "  Attributes");
-
-    ImGui::SliderFloat("Specular Gloss", &m_Block.attributes.SpecGloss, 0, 1);
-    ImGui::SliderFloat("Specular Fresnel", &m_Block.attributes.SpecFresnel, 0, 1);
-    ImGui::SliderFloat("Diffuse Rougness", &m_Block.attributes.DiffuseRougness, 0, 1);
-    ImGui::SliderFloat("Tint Power", &m_Block.attributes.TintPower, 0, 10);
-    ImGui::SliderFloat("Min Alpha", &m_Block.attributes.MinAlpha, 0, 1);
-    ImGui::SliderFloat("UV Scale", &m_Block.attributes.UVScale, 0, 1);
-    ImGui::SliderFloat("Alpha", &m_cbMaterialConsts.Alpha, 0, 1);
+    ImGui::DragFloat("Specular Gloss", &m_Block.m_Attributes.m_SpecGloss, 0, 1);
+    ImGui::DragFloat("Specular Fresnel", &m_Block.m_Attributes.m_SpecFresnel, 0, 1);
+    ImGui::DragFloat("Diffuse Rougness", &m_Block.m_Attributes.m_DiffuseRougness, 0, 1);
+    ImGui::DragFloat("Tint Power", &m_Block.m_Attributes.m_TintPower, 0, 10);
+    ImGui::DragFloat("Min Alpha", &m_Block.m_Attributes.m_MinAlpha, 0, 1);
+    ImGui::DragFloat("UV Scale", &m_Block.m_Attributes.m_UVScale, 0, 1);
+    ImGui::DragFloat("Alpha", &m_cbMaterialConsts.Alpha, 0, 1);
 
     // Textures
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
@@ -182,7 +181,7 @@ void RenderBlockWindow::DrawUI()
     {
         IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
 
-        if (!(m_Block.attributes.flags & SIMPLE)) {
+        if (!(m_Block.m_Attributes.m_Flags & SIMPLE)) {
             IRenderBlock::DrawUI_Texture("NormalMap", 1);
             IRenderBlock::DrawUI_Texture("PropertyMap", 2);
         }

@@ -4,12 +4,12 @@
 
 #pragma pack(push, 1)
 struct GeneralAttributes {
-    float                        depthBias;
-    float                        specularGloss;
-    jc::Vertex::SPackedAttribute packed;
-    uint32_t                     flags;
-    glm::vec3                    boundingBoxMin;
-    glm::vec3                    boundingBoxMax;
+    float                        m_DepthBias;
+    float                        m_SpecularGloss;
+    jc::Vertex::SPackedAttribute m_Packed;
+    uint32_t                     m_Flags;
+    glm::vec3                    m_BoundingBoxMin;
+    glm::vec3                    m_BoundingBoxMax;
 };
 
 namespace jc::RenderBlocks
@@ -17,8 +17,8 @@ namespace jc::RenderBlocks
 static constexpr uint8_t GENERAL_VERSION = 6;
 
 struct General {
-    uint8_t           version;
-    GeneralAttributes attributes;
+    uint8_t           m_Version;
+    GeneralAttributes m_Attributes;
 };
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
@@ -77,7 +77,7 @@ class RenderBlockGeneral : public IRenderBlock
 
     virtual bool IsOpaque() override final
     {
-        return ~m_Block.attributes.flags & TRANSPARENCY_ALPHABLENDING;
+        return ~m_Block.m_Attributes.m_Flags & TRANSPARENCY_ALPHABLENDING;
     }
 
     void CreateBuffers(std::vector<uint8_t>* vertex_buffer, std::vector<uint8_t>* vertex_data_buffer,
@@ -91,16 +91,13 @@ class RenderBlockGeneral : public IRenderBlock
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
-
-        if (m_Block.version != jc::RenderBlocks::GENERAL_VERSION) {
-            __debugbreak();
-        }
+        assert(m_Block.m_Version == jc::RenderBlocks::GENERAL_VERSION);
 
         // read the block materials
         ReadMaterials(stream);
 
         // read the vertex buffers
-        if (m_Block.attributes.packed.format != 1) {
+        if (m_Block.m_Attributes.m_Packed.m_Format == PACKED_FORMAT_FLOAT) {
             m_VertexBuffer = ReadVertexBuffer<UnpackedVertexPosition2UV>(stream);
         } else {
             m_VertexBuffer     = ReadVertexBuffer<PackedVertexPosition>(stream);
@@ -113,6 +110,8 @@ class RenderBlockGeneral : public IRenderBlock
 
     virtual void Write(std::ostream& stream) override final
     {
+        using namespace jc::Vertex;
+
         // write the block attributes
         stream.write((char*)&m_Block, sizeof(m_Block));
 
@@ -120,7 +119,7 @@ class RenderBlockGeneral : public IRenderBlock
         WriteMaterials(stream);
 
         // write vertex buffers
-        if (m_Block.attributes.packed.format != 1) {
+        if (m_Block.m_Attributes.m_Packed.m_Format == PACKED_FORMAT_FLOAT) {
             WriteBuffer(stream, m_VertexBuffer);
         } else {
             WriteBuffer(stream, m_VertexBuffer);
@@ -156,14 +155,14 @@ class RenderBlockGeneral : public IRenderBlock
         vertices_t vertices;
         uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
 
-        if (m_Block.attributes.packed.format != 1) {
+        if (m_Block.m_Attributes.m_Packed.m_Format == PACKED_FORMAT_FLOAT) {
             const auto& vb = m_VertexBuffer->CastData<UnpackedVertexPosition2UV>();
             vertices.reserve(vb.size());
 
             for (const auto& vertex : vb) {
                 vertex_t v;
                 v.pos    = {vertex.x, vertex.y, vertex.z};
-                v.uv     = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)} * m_Block.attributes.packed.uv0Extent;
+                v.uv     = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)} * m_Block.m_Attributes.m_Packed.m_UV0Extent;
                 v.normal = unpack_normal(vertex.n);
                 vertices.emplace_back(std::move(v));
             }
@@ -178,7 +177,7 @@ class RenderBlockGeneral : public IRenderBlock
 
                 vertex_t v;
                 v.pos    = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
-                v.uv     = glm::vec2{unpack(data.u0), unpack(data.v0)} * m_Block.attributes.packed.uv0Extent;
+                v.uv     = glm::vec2{unpack(data.u0), unpack(data.v0)} * m_Block.m_Attributes.m_Packed.m_UV0Extent;
                 v.normal = unpack_normal(data.n);
                 vertices.emplace_back(std::move(v));
             }

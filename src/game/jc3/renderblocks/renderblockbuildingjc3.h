@@ -83,7 +83,7 @@ class RenderBlockBuildingJC3 : public IRenderBlock
 
 #if 0
         // read the vertex buffers
-        if (m_Block.attributes.packed.format == 1) {
+        if (m_Block.m_Attributes.m_Packed.m_Format == PACKED_FORMAT_INT16) {
             std::vector<PackedVertexPosition> vertices;
             ReadVertexBuffer<PackedVertexPosition>(stream, &m_VertexBuffer);
 

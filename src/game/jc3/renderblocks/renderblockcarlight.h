@@ -5,13 +5,13 @@
 #pragma pack(push, 1)
 struct CarLightAttributes {
     float     _unused;
-    float     specularGloss;
-    float     reflectivity;
+    float     m_SpecularGloss;
+    float     m_Reflectivity;
     char      _pad[16];
-    float     specularFresnel;
-    glm::vec4 diffuseModulator;
-    glm::vec2 tilingUV;
-    uint32_t  flags;
+    float     m_SpecularFresnel;
+    glm::vec4 m_DiffuseModulator;
+    glm::vec2 m_TilingUV;
+    uint32_t  m_Flags;
 };
 
 static_assert(sizeof(CarLightAttributes) == 0x3C, "CarLightAttributes alignment is wrong!");
@@ -21,8 +21,8 @@ namespace jc::RenderBlocks
 static constexpr uint8_t CARLIGHT_VERSION = 1;
 
 struct CarLight {
-    uint8_t            version;
-    CarLightAttributes attributes;
+    uint8_t            m_Version;
+    CarLightAttributes m_Attributes;
 };
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
@@ -98,10 +98,7 @@ class RenderBlockCarLight : public IRenderBlock
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
-
-        if (m_Block.version != jc::RenderBlocks::CARLIGHT_VERSION) {
-            __debugbreak();
-        }
+        assert(m_Block.m_Version == jc::RenderBlocks::CARLIGHT_VERSION);
 
         // read the deform table
         ReadDeformTable(stream, &m_DeformTable);
@@ -110,10 +107,10 @@ class RenderBlockCarLight : public IRenderBlock
         ReadMaterials(stream);
 
         // read vertex buffers
-        if (m_Block.attributes.flags & IS_SKINNED) {
+        if (m_Block.m_Attributes.m_Flags & IS_SKINNED) {
             m_VertexBuffer     = ReadVertexBuffer<UnpackedVertexWithNormal1>(stream);
             m_VertexBufferData = ReadVertexBuffer<UnpackedNormals>(stream);
-        } else if (m_Block.attributes.flags & IS_DEFORM) {
+        } else if (m_Block.m_Attributes.m_Flags & IS_DEFORM) {
             m_VertexBuffer     = ReadVertexBuffer<VertexDeformPos>(stream);
             m_VertexBufferData = ReadVertexBuffer<VertexDeformNormal2>(stream);
         } else {
@@ -122,7 +119,7 @@ class RenderBlockCarLight : public IRenderBlock
         }
 
         // read skin batches
-        if (m_Block.attributes.flags & IS_SKINNED) {
+        if (m_Block.m_Attributes.m_Flags & IS_SKINNED) {
             ReadSkinBatch(stream, &m_SkinBatches);
         }
 
@@ -146,7 +143,7 @@ class RenderBlockCarLight : public IRenderBlock
         WriteBuffer(stream, m_VertexBufferData);
 
         // write skin batches
-        if (m_Block.attributes.flags & IS_SKINNED) {
+        if (m_Block.m_Attributes.m_Flags & IS_SKINNED) {
             WriteSkinBatch(stream, &m_SkinBatches);
         }
 
@@ -162,7 +159,7 @@ class RenderBlockCarLight : public IRenderBlock
             return;
         }
 
-        if (m_Block.attributes.flags & IS_SKINNED) {
+        if (m_Block.m_Attributes.m_Flags & IS_SKINNED) {
             IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
         } else {
             IRenderBlock::Draw(context);
@@ -184,7 +181,7 @@ class RenderBlockCarLight : public IRenderBlock
         vertices_t vertices;
         uint16s_t  indices = m_IndexBuffer->CastData<uint16_t>();
 
-        if (m_Block.attributes.flags & IS_SKINNED) {
+        if (m_Block.m_Attributes.m_Flags & IS_SKINNED) {
             const auto& vb     = m_VertexBuffer->CastData<UnpackedVertexWithNormal1>();
             const auto& vbdata = m_VertexBufferData->CastData<UnpackedNormals>();
 
@@ -198,7 +195,7 @@ class RenderBlockCarLight : public IRenderBlock
                 v.normal = unpack_normal(vbdata[i].n);
                 vertices.emplace_back(std::move(v));
             }
-        } else if (m_Block.attributes.flags & IS_DEFORM) {
+        } else if (m_Block.m_Attributes.m_Flags & IS_DEFORM) {
             const auto& vb     = m_VertexBuffer->CastData<VertexDeformPos>();
             const auto& vbdata = m_VertexBufferData->CastData<VertexDeformNormal2>();
 

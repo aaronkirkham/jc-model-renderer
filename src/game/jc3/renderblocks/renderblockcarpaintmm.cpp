@@ -149,14 +149,14 @@ void RenderBlockCarPaintMM::Setup(RenderContext_t* context)
     }
 
     // set the layered albedo map texture
-    if (m_Block.attributes.flags & SUPPORT_LAYERED) {
+    if (m_Block.m_Attributes.m_Flags & SUPPORT_LAYERED) {
         IRenderBlock::BindTexture(10, 16);
     } else {
         context->m_Renderer->ClearTexture(16);
     }
 
     // set the overlay albedo map texture
-    if (m_Block.attributes.flags & SUPPORT_OVERLAY) {
+    if (m_Block.m_Attributes.m_Flags & SUPPORT_OVERLAY) {
         IRenderBlock::BindTexture(11, 17);
     } else {
         context->m_Renderer->ClearTexture(17);
@@ -172,8 +172,8 @@ void RenderBlockCarPaintMM::Setup(RenderContext_t* context)
     context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[3], 8, m_cbRBIInfo);
 
     // set the culling mode
-    context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
-                                                                                              : D3D11_CULL_NONE);
+    context->m_Renderer->SetCullMode((!(m_Block.m_Attributes.m_Flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
+                                                                                                  : D3D11_CULL_NONE);
 
     // set the 2nd and 3rd vertex buffers
     context->m_Renderer->SetVertexStream(m_VertexBufferData[0], 1);
@@ -191,14 +191,14 @@ void RenderBlockCarPaintMM::DrawContextMenu()
     };
     // clang-format on
 
-    if (ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels)) {
+    if (ImGuiCustom::DropDownFlags(m_Block.m_Attributes.m_Flags, flag_labels)) {
         // update static material params
-        m_cbStaticMaterialParams.SupportDecals   = m_Block.attributes.flags & SUPPORT_DECALS;
-        m_cbStaticMaterialParams.SupportDmgBlend = m_Block.attributes.flags & SUPPORT_DAMAGE_BLEND;
-        m_cbStaticMaterialParams.SupportLayered  = m_Block.attributes.flags & SUPPORT_LAYERED;
-        m_cbStaticMaterialParams.SupportOverlay  = m_Block.attributes.flags & SUPPORT_OVERLAY;
-        m_cbStaticMaterialParams.SupportDirt     = m_Block.attributes.flags & SUPPORT_DIRT;
-        m_cbStaticMaterialParams.SupportSoftTint = m_Block.attributes.flags & SUPPORT_SOFT_TINT;
+        m_cbStaticMaterialParams.SupportDecals   = m_Block.m_Attributes.m_Flags & SUPPORT_DECALS;
+        m_cbStaticMaterialParams.SupportDmgBlend = m_Block.m_Attributes.m_Flags & SUPPORT_DAMAGE_BLEND;
+        m_cbStaticMaterialParams.SupportLayered  = m_Block.m_Attributes.m_Flags & SUPPORT_LAYERED;
+        m_cbStaticMaterialParams.SupportOverlay  = m_Block.m_Attributes.m_Flags & SUPPORT_OVERLAY;
+        m_cbStaticMaterialParams.SupportDirt     = m_Block.m_Attributes.m_Flags & SUPPORT_DIRT;
+        m_cbStaticMaterialParams.SupportSoftTint = m_Block.m_Attributes.m_Flags & SUPPORT_SOFT_TINT;
     }
 }
 
@@ -217,7 +217,7 @@ void RenderBlockCarPaintMM::DrawUI()
     ImGui::SliderFloat4("Diffuse Wrap", glm::value_ptr(m_cbStaticMaterialParams.m_DiffuseWrap), 0, 1);
 
     // supports decals
-    ImGuiCustom::PushDisabled(!(m_Block.attributes.flags & SUPPORT_DECALS));
+    ImGuiCustom::PushDisabled(!(m_Block.m_Attributes.m_Flags & SUPPORT_DECALS));
     {
         ImGui::SliderFloat4("Decal Index", glm::value_ptr(m_cbDynamicObjectParams.m_DecalIndex), 0, 1);
         ImGui::SliderFloat4("Decal Width", glm::value_ptr(m_cbStaticMaterialParams.m_DecalWidth), 0, 1);
@@ -230,7 +230,7 @@ void RenderBlockCarPaintMM::DrawUI()
     ImGuiCustom::PopDisabled();
 
     // suports damage
-    ImGuiCustom::PushDisabled(!(m_Block.attributes.flags & SUPPORT_DAMAGE_BLEND));
+    ImGuiCustom::PushDisabled(!(m_Block.m_Attributes.m_Flags & SUPPORT_DAMAGE_BLEND));
     {
         ImGui::SliderFloat4("Damage", glm::value_ptr(m_cbStaticMaterialParams.m_Damage), 0, 1);
         ImGui::SliderFloat4("Damage Blend", glm::value_ptr(m_cbStaticMaterialParams.m_DamageBlend), 0, 1);
@@ -239,7 +239,7 @@ void RenderBlockCarPaintMM::DrawUI()
     ImGuiCustom::PopDisabled();
 
     // supports dirt
-    ImGuiCustom::PushDisabled(!(m_Block.attributes.flags & SUPPORT_DIRT));
+    ImGuiCustom::PushDisabled(!(m_Block.m_Attributes.m_Flags & SUPPORT_DIRT));
     {
         ImGui::SliderFloat("Dirt Amount", &m_cbDynamicObjectParams.m_DirtAmount, 0, 5);
         ImGui::SliderFloat4("Dirt Params", glm::value_ptr(m_cbStaticMaterialParams.m_DirtParams), 0, 1);
@@ -272,11 +272,11 @@ void RenderBlockCarPaintMM::DrawUI()
         IRenderBlock::DrawUI_Texture("DecalNormalMap", 8);
         IRenderBlock::DrawUI_Texture("DecalPropertyMap", 9);
 
-        if (m_Block.attributes.flags & SUPPORT_LAYERED) {
+        if (m_Block.m_Attributes.m_Flags & SUPPORT_LAYERED) {
             IRenderBlock::DrawUI_Texture("LayeredAlbedoMap", 10);
         }
 
-        if (m_Block.attributes.flags & SUPPORT_OVERLAY) {
+        if (m_Block.m_Attributes.m_Flags & SUPPORT_OVERLAY) {
             IRenderBlock::DrawUI_Texture("OverlayAlbedoMap", 11);
         }
     }

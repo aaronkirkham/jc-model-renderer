@@ -313,23 +313,14 @@ void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&    
 #endif
 }
 
-void RenderBlockModel::DrawGizmos()
+void RenderBlockModel::UpdateBoundingBoxScale()
 {
-    // @TODO: use std::max_element
-    auto largest_scale = 0.0f;
-    for (auto& render_block : m_RenderBlocks) {
-        if (render_block->IsVisible()) {
-            const auto scale = render_block->GetScale();
+    const auto render_block =
+        std::max_element(m_RenderBlocks.begin(), m_RenderBlocks.end(),
+                         [](const IRenderBlock* a, const IRenderBlock* b) { return a->GetScale() < b->GetScale(); });
 
-            // keep the biggest scale
-            if (scale > largest_scale) {
-                largest_scale = scale;
-            }
-        }
-    }
-
-    // hack to fix GetCenter
-    m_BoundingBox.SetScale(largest_scale);
+    assert(render_block != m_RenderBlocks.end());
+    m_BoundingBox.SetScale((*render_block)->GetScale());
 }
 
 void RenderBlockModel::RecalculateBoundingBox()
@@ -346,7 +337,7 @@ void RenderBlockModel::RecalculateBoundingBox()
         }
     }
 
-    m_BoundingBox.m_Min   = min_;
-    m_BoundingBox.m_Max   = max_;
-    m_BoundingBox.m_Scale = 1.0f;
+    m_BoundingBox.m_Min = min_;
+    m_BoundingBox.m_Max = max_;
+    UpdateBoundingBoxScale();
 }

@@ -106,10 +106,7 @@ void RenderBlockGeneralMkIII::Read(std::istream& stream)
 
     // read the block attributes
     stream.read((char*)&m_Block, sizeof(m_Block));
-
-    if (m_Block.m_Version != jc::RenderBlocks::GENERALMKIII_VERSION) {
-        __debugbreak();
-    }
+    assert(m_Block.m_Version == jc::RenderBlocks::GENERALMKIII_VERSION);
 
     // read constant buffer data
     stream.read((char*)&m_cbMaterialConsts2, sizeof(m_cbMaterialConsts2));
@@ -158,10 +155,10 @@ void RenderBlockGeneralMkIII::Setup(RenderContext_t* context)
 
     // instance consts
     {
-        m_cbInstanceAttributes.UVScale                 = {m_Block.m_Attributes.m_Packed.uv0Extent,
-                                          m_Block.m_Attributes.m_Packed.uv1Extent};
+        m_cbInstanceAttributes.UVScale                 = {m_Block.m_Attributes.m_Packed.m_UV0Extent,
+                                          m_Block.m_Attributes.m_Packed.m_UV1Extent};
         m_cbInstanceAttributes.DepthBias               = m_Block.m_Attributes.m_DepthBias;
-        m_cbInstanceAttributes.QuantizationScale       = m_Block.m_Attributes.m_Packed.scale;
+        m_cbInstanceAttributes.QuantizationScale       = m_Block.m_Attributes.m_Packed.m_Scale;
         m_cbInstanceAttributes.EmissiveStartFadeDistSq = m_Block.m_Attributes.m_EmissiveStartFadeDistSq;
         m_cbInstanceAttributes.EmissiveTODScale        = 1.0f;
 
@@ -229,7 +226,7 @@ void RenderBlockGeneralMkIII::DrawContextMenu()
 void RenderBlockGeneralMkIII::DrawUI()
 {
     ImGui::Text(ICON_FA_COGS "  Attributes");
-    ImGui::DragFloat("Scale", &m_Block.m_Attributes.m_Packed.scale, 1.0f, 0.0f);
+    ImGui::DragFloat("Scale", &m_Block.m_Attributes.m_Packed.m_Scale, 1.0f, 0.0f);
     ImGui::DragFloat("Depth Bias", &m_Block.m_Attributes.m_DepthBias, 0.01f, 0.0f, 1.0f);
     ImGui::DragFloat("Emissive Start Fade Dist", &m_Block.m_Attributes.m_EmissiveStartFadeDistSq, 0.01f, 0.0f, 1.0f);
 
@@ -338,8 +335,8 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
     memset(&m_cbMaterialConsts2, 0, sizeof(m_cbMaterialConsts2));
 
     m_Block.m_Version                              = jc::RenderBlocks::GENERALMKIII_VERSION;
-    m_Block.m_Attributes.m_Packed.scale            = 1.f;
-    m_Block.m_Attributes.m_Packed.uv0Extent        = {1.f, 1.f};
+    m_Block.m_Attributes.m_Packed.m_Scale          = 1.0f;
+    m_Block.m_Attributes.m_Packed.m_UV0Extent      = {1.0f, 1.0f};
     m_Block.m_Attributes.m_EmissiveStartFadeDistSq = 2000.f;
 
     // temp

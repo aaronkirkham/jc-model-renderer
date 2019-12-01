@@ -104,10 +104,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
-
-        if (m_Block.m_Version != jc::RenderBlocks::CHARACTERSKIN_VERSION) {
-            __debugbreak();
-        }
+        assert(m_Block.m_Version == jc::RenderBlocks::CHARACTERSKIN_VERSION);
 
         // read the materials
         ReadMaterials(stream);

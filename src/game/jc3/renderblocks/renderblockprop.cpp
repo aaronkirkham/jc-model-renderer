@@ -32,12 +32,14 @@ uint32_t RenderBlockProp::GetTypeHash() const
 
 void RenderBlockProp::Create()
 {
+    using namespace jc::Vertex;
+
     // load shaders
     m_VertexShader = ShaderManager::Get()->GetVertexShader("prop");
     m_PixelShader  = ShaderManager::Get()->GetPixelShader("prop");
 
     // create the input desc
-    if (m_Block.attributes.packed.format != 1) {
+    if (m_Block.m_Attributes.m_Packed.m_Format == PACKED_FORMAT_FLOAT) {
         // clang-format off
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
             { "POSITION",   0,  DXGI_FORMAT_R32G32B32_FLOAT,        0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
@@ -75,6 +77,8 @@ void RenderBlockProp::Create()
 
 void RenderBlockProp::Setup(RenderContext_t* context)
 {
+    using namespace jc::Vertex;
+
     if (!m_Visible) {
         return;
     }
@@ -83,14 +87,13 @@ void RenderBlockProp::Setup(RenderContext_t* context)
 
     // setup the constant buffer
     {
-        const auto scale = m_Block.attributes.packed.scale * m_ScaleModifier;
-        const auto world = glm::scale(glm::mat4(1), {scale, scale, scale});
+        const auto world = glm::scale(glm::mat4(1), glm::vec3{m_Block.m_Attributes.m_Packed.m_Scale});
 
         // set vertex shader constants
         m_cbVertexInstanceConsts.ViewProjection = context->m_viewProjectionMatrix;
         m_cbVertexInstanceConsts.World          = world;
         m_cbVertexInstanceConsts.Colour         = {0, 0, 0, 1};
-        m_cbVertexMaterialConsts.DepthBias      = {m_Block.attributes.depthBias, 0, 0, 0};
+        m_cbVertexMaterialConsts.DepthBias      = {m_Block.m_Attributes.m_DepthBias, 0, 0, 0};
         // m_cbVertexMaterialConsts.uv0Extent      = m_Block.attributes.packed.uv0Extent;
         // m_cbVertexMaterialConsts.uv1Extent      = m_Block.attributes.packed.uv1Extent;
 
@@ -101,17 +104,17 @@ void RenderBlockProp::Setup(RenderContext_t* context)
     // set the diffuse texture
     IRenderBlock::BindTexture(0, m_SamplerState);
 
-    if (!(m_Block.attributes.flags & SUPPORT_OVERLAY)) {
+    if (!(m_Block.m_Attributes.m_Flags & SUPPORT_OVERLAY)) {
         // set the culling mode
-        context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
-                                                                                                  : D3D11_CULL_NONE);
+        context->m_Renderer->SetCullMode(
+            (!(m_Block.m_Attributes.m_Flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 
         // set the normals & properties textures
         IRenderBlock::BindTexture(1, m_SamplerState);
         IRenderBlock::BindTexture(2, m_SamplerState);
 
         // set the decal textures
-        if (m_Block.attributes.flags & SUPPORT_DECALS) {
+        if (m_Block.m_Attributes.m_Flags & SUPPORT_DECALS) {
             IRenderBlock::BindTexture(3, 4, m_SamplerState);
             IRenderBlock::BindTexture(4, 5, m_SamplerState);
             IRenderBlock::BindTexture(5, 6, m_SamplerState);
@@ -124,7 +127,7 @@ void RenderBlockProp::Setup(RenderContext_t* context)
     context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants, 1, m_cbFragmentMaterialConsts);
 
     // if we are using packed vertices, set the 2nd vertex buffer
-    if (m_Block.attributes.packed.format == 1) {
+    if (m_Block.m_Attributes.m_Packed.m_Format == PACKED_FORMAT_INT16) {
         context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
     }
 }
@@ -137,15 +140,14 @@ void RenderBlockProp::DrawContextMenu()
     };
     // clang-format on
 
-    ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    ImGuiCustom::DropDownFlags(m_Block.m_Attributes.m_Flags, flag_labels);
 }
 
 void RenderBlockProp::DrawUI()
 {
     ImGui::Text(ICON_FA_COGS "  Attributes");
-
-    ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.1f, 10.0f);
-    ImGui::SliderFloat("Depth Bias", &m_Block.attributes.depthBias, 0.0f, 10.0f);
+    ImGui::DragFloat("Scale", &m_Block.m_Attributes.m_Packed.m_Scale, 0.1f, 10.0f);
+    ImGui::DragFloat("Depth Bias", &m_Block.m_Attributes.m_DepthBias, 0.0f, 10.0f);
 
     // Textures
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
@@ -153,11 +155,11 @@ void RenderBlockProp::DrawUI()
     {
         IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
 
-        if (!(m_Block.attributes.flags & SUPPORT_OVERLAY)) {
+        if (!(m_Block.m_Attributes.m_Flags & SUPPORT_OVERLAY)) {
             IRenderBlock::DrawUI_Texture("NormalMap", 1);
             IRenderBlock::DrawUI_Texture("PropertiesMap", 2);
 
-            if (m_Block.attributes.flags & SUPPORT_DECALS) {
+            if (m_Block.m_Attributes.m_Flags & SUPPORT_DECALS) {
                 IRenderBlock::DrawUI_Texture("DecalDiffuseMap", 3);
                 IRenderBlock::DrawUI_Texture("DecalNormalMap", 4);
                 IRenderBlock::DrawUI_Texture("DecalPropertiesMap", 5);

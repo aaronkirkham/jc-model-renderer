@@ -33,12 +33,14 @@ uint32_t RenderBlockGeneralJC3::GetTypeHash() const
 
 void RenderBlockGeneralJC3::Create()
 {
+    using namespace jc::Vertex;
+
     // load shaders
     m_VertexShader = ShaderManager::Get()->GetVertexShader("generaljc3");
     m_PixelShader  = ShaderManager::Get()->GetPixelShader("generaljc3");
 
     // create the input desc
-    if (m_Block.attributes.packed.format != 1) {
+    if (m_Block.m_Attributes.m_Packed.m_Format == PACKED_FORMAT_FLOAT) {
         // clang-format off
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
             { "POSITION",   0,  DXGI_FORMAT_R32G32B32_FLOAT,        0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
@@ -75,6 +77,8 @@ void RenderBlockGeneralJC3::Create()
 
 void RenderBlockGeneralJC3::Setup(RenderContext_t* context)
 {
+    using namespace jc::Vertex;
+
     if (!m_Visible) {
         return;
     }
@@ -83,25 +87,25 @@ void RenderBlockGeneralJC3::Setup(RenderContext_t* context)
 
     // setup the constant buffer
     {
-        const auto scale = m_Block.attributes.packed.scale * m_ScaleModifier;
+        const auto world = glm::scale(glm::mat4(1), glm::vec3{m_Block.m_Attributes.m_Packed.m_Scale});
 
         // set vertex shader constants
         m_cbVertexInstanceConsts.viewProjection          = context->m_viewProjectionMatrix;
-        m_cbVertexInstanceConsts.world                   = glm::scale(glm::mat4(1), {scale, scale, scale});
+        m_cbVertexInstanceConsts.world                   = world;
         m_cbVertexInstanceConsts.colour                  = glm::vec4(1, 1, 1, 1);
         m_cbVertexInstanceConsts._thing                  = glm::vec4(0, 1, 2, 1);
-        m_cbVertexMaterialConsts.DepthBias               = m_Block.attributes.depthBias;
-        m_cbVertexMaterialConsts.EmissiveStartFadeDistSq = m_Block.attributes.startFadeOutDistanceEmissiveSq;
+        m_cbVertexMaterialConsts.DepthBias               = m_Block.m_Attributes.m_DepthBias;
+        m_cbVertexMaterialConsts.EmissiveStartFadeDistSq = m_Block.m_Attributes.m_StartFadeOutDistanceEmissiveSq;
         m_cbVertexMaterialConsts._unknown                = 0;
         m_cbVertexMaterialConsts._unknown2               = 0;
-        m_cbVertexMaterialConsts.uv0Extent               = m_Block.attributes.packed.uv0Extent;
-        m_cbVertexMaterialConsts.uv1Extent               = m_Block.attributes.packed.uv1Extent;
+        m_cbVertexMaterialConsts.uv0Extent               = m_Block.m_Attributes.m_Packed.m_UV0Extent;
+        m_cbVertexMaterialConsts.uv1Extent               = m_Block.m_Attributes.m_Packed.m_UV1Extent;
 
         // set fragment shader constants
-        m_cbFragmentMaterialConsts.specularGloss    = m_Block.attributes.specularGloss;
-        m_cbFragmentMaterialConsts.reflectivity     = m_Block.attributes.reflectivity;
-        m_cbFragmentMaterialConsts.specularFresnel  = m_Block.attributes.specularFresnel;
-        m_cbFragmentMaterialConsts.diffuseModulator = m_Block.attributes.diffuseModulator;
+        m_cbFragmentMaterialConsts.specularGloss    = m_Block.m_Attributes.m_SpecularGloss;
+        m_cbFragmentMaterialConsts.reflectivity     = m_Block.m_Attributes.m_Reflectivity;
+        m_cbFragmentMaterialConsts.specularFresnel  = m_Block.m_Attributes.m_SpecularFresnel;
+        m_cbFragmentMaterialConsts.diffuseModulator = m_Block.m_Attributes.m_DiffuseModulator;
         m_cbFragmentInstanceConsts.colour           = glm::vec4(1, 1, 1, 0);
     }
 
@@ -117,11 +121,11 @@ void RenderBlockGeneralJC3::Setup(RenderContext_t* context)
     context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbFragmentInstanceConsts);
 
     // set the culling mode
-    context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
-                                                                                              : D3D11_CULL_NONE);
+    context->m_Renderer->SetCullMode((!(m_Block.m_Attributes.m_Flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
+                                                                                                  : D3D11_CULL_NONE);
 
     // if we are using packed vertices, set the 2nd vertex buffer
-    if (m_Block.attributes.packed.format == 1) {
+    if (m_Block.m_Attributes.m_Packed.m_Format == PACKED_FORMAT_INT16) {
         context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
     }
 }
@@ -135,24 +139,23 @@ void RenderBlockGeneralJC3::DrawContextMenu()
     };
     // clang-format on
 
-    ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    ImGuiCustom::DropDownFlags(m_Block.m_Attributes.m_Flags, flag_labels);
 }
 
 void RenderBlockGeneralJC3::DrawUI()
 {
     ImGui::Text(ICON_FA_COGS "  Attributes");
-
-    ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.1f, 10.0f);
-    ImGui::SliderFloat("Depth Bias", &m_Block.attributes.depthBias, 0.0f, 10.0f);
-    ImGui::SliderFloat("Specular Gloss", &m_Block.attributes.specularGloss, 0.0f, 10.0f);
-    ImGui::SliderFloat("Reflectivity", &m_Block.attributes.reflectivity, 0.0f, 10.0f);
-    ImGui::SliderFloat("Emissive", &m_Block.attributes.emmissive, 0.0f, 10.0f);
-    ImGui::SliderFloat("Diffuse Wrap", &m_Block.attributes.diffuseWrap, 0.0f, 10.0f);
-    ImGui::SliderFloat("Specular Fresnel", &m_Block.attributes.specularFresnel, 0.0f, 10.0f);
-    ImGui::ColorEdit3("Diffuse Modulator", glm::value_ptr(m_Block.attributes.diffuseModulator));
-    ImGui::SliderFloat("Back Light", &m_Block.attributes.backLight, 0.0f, 10.0f);
-    ImGui::SliderFloat("Unknown #2", &m_Block.attributes._unknown2, 0.0f, 10.0f);
-    ImGui::InputFloat("Fade Out Distance Emissive", &m_Block.attributes.startFadeOutDistanceEmissiveSq);
+    ImGui::DragFloat("Scale", &m_Block.m_Attributes.m_Packed.m_Scale, 1.0f, 0.0f);
+    ImGui::DragFloat("Depth Bias", &m_Block.m_Attributes.m_DepthBias, 0.0f, 10.0f);
+    ImGui::DragFloat("Specular Gloss", &m_Block.m_Attributes.m_SpecularGloss, 0.0f, 10.0f);
+    ImGui::DragFloat("Reflectivity", &m_Block.m_Attributes.m_Reflectivity, 0.0f, 10.0f);
+    ImGui::DragFloat("Emissive", &m_Block.m_Attributes.m_Emmissive, 0.0f, 10.0f);
+    ImGui::DragFloat("Diffuse Wrap", &m_Block.m_Attributes.m_DiffuseWrap, 0.0f, 10.0f);
+    ImGui::DragFloat("Specular Fresnel", &m_Block.m_Attributes.m_SpecularFresnel, 0.0f, 10.0f);
+    ImGui::ColorEdit3("Diffuse Modulator", glm::value_ptr(m_Block.m_Attributes.m_DiffuseModulator));
+    ImGui::DragFloat("Back Light", &m_Block.m_Attributes.m_BackLight, 0.0f, 10.0f);
+    ImGui::DragFloat("Unknown #2", &m_Block.m_Attributes._unknown2, 0.0f, 10.0f);
+    ImGui::DragFloat("Fade Out Distance Emissive", &m_Block.m_Attributes.m_StartFadeOutDistanceEmissiveSq);
 
     // Textures
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");

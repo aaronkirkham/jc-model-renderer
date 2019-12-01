@@ -101,11 +101,11 @@ void RenderBlockCarLight::Setup(RenderContext_t* context)
         m_cbRBIInfo.ModelWorldMatrix = glm::scale(world, {1, 1, 1});
 
         // set fragment shaders constants
-        m_cbMaterialConsts.SpecularGloss    = m_Block.attributes.specularGloss;
-        m_cbMaterialConsts.Reflectivity     = m_Block.attributes.reflectivity;
-        m_cbMaterialConsts.SpecularFresnel  = m_Block.attributes.specularFresnel;
-        m_cbMaterialConsts.DiffuseModulator = m_Block.attributes.diffuseModulator;
-        m_cbMaterialConsts.TilingUV         = {m_Block.attributes.tilingUV, 1, 0};
+        m_cbMaterialConsts.SpecularGloss    = m_Block.m_Attributes.m_SpecularGloss;
+        m_cbMaterialConsts.Reflectivity     = m_Block.m_Attributes.m_Reflectivity;
+        m_cbMaterialConsts.SpecularFresnel  = m_Block.m_Attributes.m_SpecularFresnel;
+        m_cbMaterialConsts.DiffuseModulator = m_Block.m_Attributes.m_DiffuseModulator;
+        m_cbMaterialConsts.TilingUV         = {m_Block.m_Attributes.m_TilingUV, 1, 0};
     }
 
     // set the textures
@@ -120,8 +120,8 @@ void RenderBlockCarLight::Setup(RenderContext_t* context)
     context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants, 2, m_cbMaterialConsts);
 
     // set the culling mode
-    context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
-                                                                                              : D3D11_CULL_NONE);
+    context->m_Renderer->SetCullMode((!(m_Block.m_Attributes.m_Flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
+                                                                                                  : D3D11_CULL_NONE);
 
     // set the 2nd and 3rd vertex buffers
     context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
@@ -137,18 +137,18 @@ void RenderBlockCarLight::DrawContextMenu()
     };
     // clang-format on
 
-    ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    ImGuiCustom::DropDownFlags(m_Block.m_Attributes.m_Flags, flag_labels);
 }
 
 void RenderBlockCarLight::DrawUI()
 {
     ImGui::Text(ICON_FA_COGS "  Attributes");
 
-    ImGui::SliderFloat("Specular Gloss", &m_Block.attributes.specularGloss, 0, 1);
-    ImGui::SliderFloat("Reflectivity", &m_Block.attributes.reflectivity, 0, 1);
-    ImGui::SliderFloat("Specular Fresnel", &m_Block.attributes.specularFresnel, 0, 1);
-    ImGui::ColorEdit3("Diffuse Modulator", glm::value_ptr(m_Block.attributes.diffuseModulator));
-    ImGui::SliderFloat2("Tiling", glm::value_ptr(m_Block.attributes.tilingUV), 0, 10);
+    ImGui::SliderFloat("Specular Gloss", &m_Block.m_Attributes.m_SpecularGloss, 0, 1);
+    ImGui::SliderFloat("Reflectivity", &m_Block.m_Attributes.m_Reflectivity, 0, 1);
+    ImGui::SliderFloat("Specular Fresnel", &m_Block.m_Attributes.m_SpecularFresnel, 0, 1);
+    ImGui::ColorEdit3("Diffuse Modulator", glm::value_ptr(m_Block.m_Attributes.m_DiffuseModulator));
+    ImGui::SliderFloat2("Tiling", glm::value_ptr(m_Block.m_Attributes.m_TilingUV), 0, 10);
 
     // Textures
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");

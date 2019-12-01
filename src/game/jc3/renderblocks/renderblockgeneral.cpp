@@ -32,6 +32,8 @@ uint32_t RenderBlockGeneral::GetTypeHash() const
 void RenderBlockGeneral::CreateBuffers(std::vector<uint8_t>* vertex_buffer, std::vector<uint8_t>* vertex_data_buffer,
                                        std::vector<uint8_t>* index_buffer)
 {
+    using namespace jc::Vertex;
+
     uint32_t stride_1 = sizeof(jc::Vertex::PackedVertexPosition);
     uint32_t stride_2 = sizeof(jc::Vertex::GeneralShortPacked);
 
@@ -42,22 +44,24 @@ void RenderBlockGeneral::CreateBuffers(std::vector<uint8_t>* vertex_buffer, std:
     m_IndexBuffer      = Renderer::Get()->CreateBuffer(index_buffer->data(), index_buffer->size() / sizeof(uint16_t),
                                                   sizeof(uint16_t), INDEX_BUFFER);
 
-    m_Block                             = {};
-    m_Block.attributes.packed.format    = 1;
-    m_Block.attributes.packed.scale     = 1.0f;
-    m_Block.attributes.packed.uv0Extent = {1.0f, 1.0f};
+    m_Block                                   = {};
+    m_Block.m_Attributes.m_Packed.m_Format    = PACKED_FORMAT_INT16;
+    m_Block.m_Attributes.m_Packed.m_Scale     = 1.0f;
+    m_Block.m_Attributes.m_Packed.m_UV0Extent = {1.0f, 1.0f};
 
     Create();
 }
 
 void RenderBlockGeneral::Create()
 {
+    using namespace jc::Vertex;
+
     // load shaders
     m_VertexShader = ShaderManager::Get()->GetVertexShader("general");
     m_PixelShader  = ShaderManager::Get()->GetPixelShader("general");
 
     // create the input desc
-    if (m_Block.attributes.packed.format != 1) {
+    if (m_Block.m_Attributes.m_Packed.m_Format == PACKED_FORMAT_FLOAT) {
         // clang-format off
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
             { "POSITION",   0,  DXGI_FORMAT_R32G32B32_FLOAT,        0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
@@ -92,6 +96,8 @@ void RenderBlockGeneral::Create()
 
 void RenderBlockGeneral::Setup(RenderContext_t* context)
 {
+    using namespace jc::Vertex;
+
     if (!m_Visible) {
         return;
     }
@@ -100,8 +106,7 @@ void RenderBlockGeneral::Setup(RenderContext_t* context)
 
     // setup the constant buffer
     {
-        const auto scale = m_Block.attributes.packed.scale * m_ScaleModifier;
-        const auto world = glm::scale(glm::mat4(1), {scale, scale, scale});
+        const auto world = glm::scale(glm::mat4(1), glm::vec3{m_Block.m_Attributes.m_Packed.m_Scale});
 
         // set vertex shader constants
         m_cbVertexInstanceConsts.ViewProjection = world * context->m_viewProjectionMatrix;
@@ -110,12 +115,12 @@ void RenderBlockGeneral::Setup(RenderContext_t* context)
         // m_cbVertexInstanceConsts._thing         = glm::vec4(0, 1, 2, 1);
         m_cbVertexInstanceConsts._thing    = glm::vec4(0, 0, 0, 1);
         m_cbVertexInstanceConsts._thing2   = world;
-        m_cbVertexMaterialConsts.DepthBias = {m_Block.attributes.depthBias, 0, 0, 0};
-        m_cbVertexMaterialConsts.uv0Extent = m_Block.attributes.packed.uv0Extent;
-        m_cbVertexMaterialConsts.uv1Extent = m_Block.attributes.packed.uv1Extent;
+        m_cbVertexMaterialConsts.DepthBias = {m_Block.m_Attributes.m_DepthBias, 0, 0, 0};
+        m_cbVertexMaterialConsts.uv0Extent = m_Block.m_Attributes.m_Packed.m_UV0Extent;
+        m_cbVertexMaterialConsts.uv1Extent = m_Block.m_Attributes.m_Packed.m_UV1Extent;
 
         // set fragment shader constants
-        m_cbFragmentMaterialConsts.specularGloss = m_Block.attributes.specularGloss;
+        m_cbFragmentMaterialConsts.specularGloss = m_Block.m_Attributes.m_SpecularGloss;
     }
 
     // set the textures
@@ -129,11 +134,11 @@ void RenderBlockGeneral::Setup(RenderContext_t* context)
     context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstant, 2, m_cbFragmentMaterialConsts);
 
     // set the culling mode
-    context->m_Renderer->SetCullMode((!(m_Block.attributes.flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
-                                                                                              : D3D11_CULL_NONE);
+    context->m_Renderer->SetCullMode((!(m_Block.m_Attributes.m_Flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
+                                                                                                  : D3D11_CULL_NONE);
 
     // if we are using packed vertices, set the 2nd vertex buffer
-    if (m_Block.attributes.packed.format == 1) {
+    if (m_Block.m_Attributes.m_Packed.m_Format == PACKED_FORMAT_INT16) {
         context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
     }
 }
@@ -147,16 +152,15 @@ void RenderBlockGeneral::DrawContextMenu()
     };
     // clang-format on
 
-    ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    ImGuiCustom::DropDownFlags(m_Block.m_Attributes.m_Flags, flag_labels);
 }
 
 void RenderBlockGeneral::DrawUI()
 {
     ImGui::Text(ICON_FA_COGS "  Attributes");
-
-    ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.1f, 10.0f);
-    ImGui::SliderFloat("Depth Bias", &m_Block.attributes.depthBias, 0.0f, 10.0f);
-    ImGui::SliderFloat("Specular Gloss", &m_Block.attributes.specularGloss, 0.0f, 10.0f);
+    ImGui::DragFloat("Scale", &m_Block.m_Attributes.m_Packed.m_Scale, 1.0f, 0.0f);
+    ImGui::DragFloat("Depth Bias", &m_Block.m_Attributes.m_DepthBias, 0.0f, 10.0f);
+    ImGui::DragFloat("Specular Gloss", &m_Block.m_Attributes.m_SpecularGloss, 0.0f, 10.0f);
 
     // Textures
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");

@@ -24,13 +24,18 @@ struct SObjectID {
 }; // namespace jc
 namespace jc::Vertex
 {
+enum EPackedFormat {
+    PACKED_FORMAT_FLOAT = 0,
+    PACKED_FORMAT_INT16 = 1,
+};
+
 struct SPackedAttribute {
-    int32_t   format;
-    float     scale = 1.0f;
-    glm::vec2 uv0Extent;
-    glm::vec2 uv1Extent;
-    float     colourExtent;
-    uint8_t   colour[4];
+    int32_t   m_Format;
+    float     m_Scale = 1.0f;
+    glm::vec2 m_UV0Extent;
+    glm::vec2 m_UV1Extent;
+    float     m_ColourExtent;
+    uint8_t   m_Colour[4];
 };
 static_assert(sizeof(SPackedAttribute) == 0x20, "SPackedAttribute alignment is wrong!");
 

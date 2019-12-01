@@ -181,7 +181,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
     virtual float GetScale() const override final
     {
-        return m_Block.m_Attributes.m_Packed.scale;
+        return m_Block.m_Attributes.m_Packed.m_Scale;
     }
 
     virtual void Create() override final;
@@ -250,7 +250,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         const auto& vbdata = m_VertexBufferData->CastData<GeneralShortPacked>();
         for (auto i = 0; i < vbdata.size(); ++i) {
             vertices[i].uv =
-                glm::vec2{unpack(vbdata[i].u0), unpack(vbdata[i].v0)} * m_Block.m_Attributes.m_Packed.uv0Extent;
+                glm::vec2{unpack(vbdata[i].u0), unpack(vbdata[i].v0)} * m_Block.m_Attributes.m_Packed.m_UV0Extent;
             vertices[i].normal = unpack_normal(vbdata[i].n);
         }
 

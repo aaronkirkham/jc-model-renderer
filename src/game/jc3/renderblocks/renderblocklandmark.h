@@ -4,26 +4,26 @@
 
 #pragma pack(push, 1)
 struct LandmarkAttributes {
-    float                        depthBias;
-    float                        specularGloss;
-    float                        reflectivity;
-    float                        emmissive;
-    float                        diffuseWrap;
-    float                        specularFresnel;
-    glm::vec4                    diffuseModulator;
-    float                        backLight;
+    float                        m_DepthBias;
+    float                        m_SpecularGloss;
+    float                        m_Reflectivity;
+    float                        m_Emmissive;
+    float                        m_DiffuseWrap;
+    float                        m_SpecularFresnel;
+    glm::vec4                    m_DiffuseModulator;
+    float                        m_BackLight;
     float                        _unknown2;
-    float                        startFadeOutDistanceEmissiveSq;
-    jc::Vertex::SPackedAttribute packed;
-    uint32_t                     flags;
+    float                        m_StartFadeOutDistanceEmissiveSq;
+    jc::Vertex::SPackedAttribute m_Packed;
+    uint32_t                     m_Flags;
 };
 namespace jc::RenderBlocks
 {
 static constexpr uint8_t LANDMARK_VERSION = 7;
 
 struct Landmark {
-    uint8_t            version;
-    LandmarkAttributes attributes;
+    uint8_t            m_Version;
+    LandmarkAttributes m_Attributes;
 };
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
@@ -89,10 +89,7 @@ class RenderBlockLandmark : public IRenderBlock
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
-
-        if (m_Block.version != jc::RenderBlocks::LANDMARK_VERSION) {
-            __debugbreak();
-        }
+        assert(m_Block.m_Version == jc::RenderBlocks::LANDMARK_VERSION);
 
         // read the materials
         ReadMaterials(stream);

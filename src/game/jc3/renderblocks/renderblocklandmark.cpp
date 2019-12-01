@@ -71,25 +71,24 @@ void RenderBlockLandmark::Setup(RenderContext_t* context)
 
     // setup the constant buffer
     {
-        const auto scale = m_Block.attributes.packed.scale * m_ScaleModifier;
-        const auto world = glm::scale(glm::mat4(1), {scale, scale, scale});
+        const auto world = glm::scale(glm::mat4(1), glm::vec3{m_Block.m_Attributes.m_Packed.m_Scale});
 
         // set vertex shader constants
         m_cbVertexInstanceConsts.worldViewProjection     = context->m_viewProjectionMatrix * world;
         m_cbVertexInstanceConsts.world                   = world;
         m_cbVertexInstanceConsts.colour                  = glm::vec4(0, 0, 0, 1);
-        m_cbVertexMaterialConsts.DepthBias               = m_Block.attributes.depthBias;
-        m_cbVertexMaterialConsts.EmissiveStartFadeDistSq = m_Block.attributes.startFadeOutDistanceEmissiveSq;
-        m_cbVertexMaterialConsts.UVScale                 = m_Block.attributes.packed.uv0Extent;
+        m_cbVertexMaterialConsts.DepthBias               = m_Block.m_Attributes.m_DepthBias;
+        m_cbVertexMaterialConsts.EmissiveStartFadeDistSq = m_Block.m_Attributes.m_StartFadeOutDistanceEmissiveSq;
+        m_cbVertexMaterialConsts.UVScale                 = m_Block.m_Attributes.m_Packed.m_UV0Extent;
 
         // set fragment shader constants
-        m_cbFragmentMaterialConsts.SpecularGloss    = m_Block.attributes.specularGloss;
-        m_cbFragmentMaterialConsts.Reflectivity     = m_Block.attributes.reflectivity;
-        m_cbFragmentMaterialConsts.Emissive         = m_Block.attributes.emmissive;
-        m_cbFragmentMaterialConsts.SpecularFresnel  = m_Block.attributes.specularFresnel;
-        m_cbFragmentMaterialConsts.DiffuseModulator = m_Block.attributes.diffuseModulator;
-        m_cbFragmentMaterialConsts.DiffuseWrap      = m_Block.attributes.diffuseWrap;
-        m_cbFragmentMaterialConsts.BackLight        = m_Block.attributes.backLight;
+        m_cbFragmentMaterialConsts.SpecularGloss    = m_Block.m_Attributes.m_SpecularGloss;
+        m_cbFragmentMaterialConsts.Reflectivity     = m_Block.m_Attributes.m_Reflectivity;
+        m_cbFragmentMaterialConsts.Emissive         = m_Block.m_Attributes.m_Emmissive;
+        m_cbFragmentMaterialConsts.SpecularFresnel  = m_Block.m_Attributes.m_SpecularFresnel;
+        m_cbFragmentMaterialConsts.DiffuseModulator = m_Block.m_Attributes.m_DiffuseModulator;
+        m_cbFragmentMaterialConsts.DiffuseWrap      = m_Block.m_Attributes.m_DiffuseWrap;
+        m_cbFragmentMaterialConsts.BackLight        = m_Block.m_Attributes.m_BackLight;
         m_cbFragmentInstanceConsts.DebugColor       = glm::vec4(1, 1, 1, 0);
     }
 
@@ -120,24 +119,23 @@ void RenderBlockLandmark::DrawContextMenu()
     };
     // clang-format on
 
-    ImGuiCustom::DropDownFlags(m_Block.attributes.flags, flag_labels);
+    ImGuiCustom::DropDownFlags(m_Block.m_Attributes.m_Flags, flag_labels);
 }
 
 void RenderBlockLandmark::DrawUI()
 {
     ImGui::Text(ICON_FA_COGS "  Attributes");
-
-    ImGui::SliderFloat("Scale", &m_ScaleModifier, 0.1f, 10.0f);
-    ImGui::SliderFloat("Depth Bias", &m_Block.attributes.depthBias, 0.0f, 10.0f);
-    ImGui::SliderFloat("Specular Gloss", &m_Block.attributes.specularGloss, 0.0f, 10.0f);
-    ImGui::SliderFloat("Reflectivity", &m_Block.attributes.reflectivity, 0.0f, 10.0f);
-    ImGui::SliderFloat("Emissive", &m_Block.attributes.emmissive, 0.0f, 10.0f);
-    ImGui::SliderFloat("Diffuse Wrap", &m_Block.attributes.diffuseWrap, 0.0f, 10.0f);
-    ImGui::SliderFloat("Specular Fresnel", &m_Block.attributes.specularFresnel, 0.0f, 10.0f);
-    ImGui::ColorEdit3("Diffuse Modulator", glm::value_ptr(m_Block.attributes.diffuseModulator));
-    ImGui::SliderFloat("Back Light", &m_Block.attributes.backLight, 0.0f, 10.0f);
-    ImGui::SliderFloat("Unknown #2", &m_Block.attributes._unknown2, 0.0f, 10.0f);
-    ImGui::InputFloat("Fade Out Distance Emissive", &m_Block.attributes.startFadeOutDistanceEmissiveSq);
+    ImGui::DragFloat("Scale", &m_Block.m_Attributes.m_Packed.m_Scale, 0.1f, 10.0f);
+    ImGui::DragFloat("Depth Bias", &m_Block.m_Attributes.m_DepthBias, 0.0f, 10.0f);
+    ImGui::DragFloat("Specular Gloss", &m_Block.m_Attributes.m_SpecularGloss, 0.0f, 10.0f);
+    ImGui::DragFloat("Reflectivity", &m_Block.m_Attributes.m_Reflectivity, 0.0f, 10.0f);
+    ImGui::DragFloat("Emissive", &m_Block.m_Attributes.m_Emmissive, 0.0f, 10.0f);
+    ImGui::DragFloat("Diffuse Wrap", &m_Block.m_Attributes.m_DiffuseWrap, 0.0f, 10.0f);
+    ImGui::DragFloat("Specular Fresnel", &m_Block.m_Attributes.m_SpecularFresnel, 0.0f, 10.0f);
+    ImGui::ColorEdit3("Diffuse Modulator", glm::value_ptr(m_Block.m_Attributes.m_DiffuseModulator));
+    ImGui::DragFloat("Back Light", &m_Block.m_Attributes.m_BackLight, 0.0f, 10.0f);
+    ImGui::DragFloat("Unknown #2", &m_Block.m_Attributes._unknown2, 0.0f, 10.0f);
+    ImGui::DragFloat("Fade Out Distance Emissive", &m_Block.m_Attributes.m_StartFadeOutDistanceEmissiveSq);
 
     // Textures
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");

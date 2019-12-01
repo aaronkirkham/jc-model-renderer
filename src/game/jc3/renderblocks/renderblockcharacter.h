@@ -136,10 +136,7 @@ class RenderBlockCharacter : public jc3::IRenderBlock
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
-
-        if (m_Block.m_Version != jc::RenderBlocks::CHARACTER_VERSION) {
-            __debugbreak();
-        }
+        assert(m_Block.m_Version == jc::RenderBlocks::CHARACTER_VERSION);
 
         // read the materials
         ReadMaterials(stream);

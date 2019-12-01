@@ -6,19 +6,19 @@
 struct WindowAttributes {
     union {
         struct {
-            float SpecGloss;
-            float SpecFresnel;
-            float DiffuseRougness;
-            float TintPower;
-            float MinAlpha;
-            float UVScale;
+            float m_SpecGloss;
+            float m_SpecFresnel;
+            float m_DiffuseRougness;
+            float m_TintPower;
+            float m_MinAlpha;
+            float m_UVScale;
         };
 
-        float data[6];
+        float m_Data[6];
     };
 
     glm::vec3 _unknown;
-    uint32_t  flags;
+    uint32_t  m_Flags;
 };
 
 static_assert(sizeof(WindowAttributes) == 0x28, "WindowAttributes alignment is wrong!");
@@ -28,8 +28,8 @@ namespace jc::RenderBlocks
 static constexpr uint8_t WINDOW_VERSION = 1;
 
 struct Window {
-    uint8_t          version;
-    WindowAttributes attributes;
+    uint8_t          m_Version;
+    WindowAttributes m_Attributes;
 };
 }; // namespace jc::RenderBlocks
 #pragma pack(pop)
@@ -92,10 +92,7 @@ class RenderBlockWindow : public IRenderBlock
 
         // read the block attributes
         stream.read((char*)&m_Block, sizeof(m_Block));
-
-        if (m_Block.version != jc::RenderBlocks::WINDOW_VERSION) {
-            __debugbreak();
-        }
+        assert(m_Block.m_Version == jc::RenderBlocks::WINDOW_VERSION);
 
         // read materials
         ReadMaterials(stream);
@@ -159,7 +156,7 @@ class RenderBlockWindow : public IRenderBlock
         rb_textures_t result;
         result.push_back({"diffuse", m_Textures[0]});
 
-        if (!(m_Block.attributes.flags & SIMPLE)) {
+        if (!(m_Block.m_Attributes.m_Flags & SIMPLE)) {
             result.push_back({"normal", m_Textures[1]});
         }
 
