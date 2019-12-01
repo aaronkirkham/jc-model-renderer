@@ -90,6 +90,11 @@ class RenderBlockCharacterSkin : public IRenderBlock
         return true;
     }
 
+    virtual float GetScale() const override final
+    {
+        return m_Block.m_Attributes.m_Scale;
+    }
+
     virtual void Create() override final;
 
     virtual void Read(std::istream& stream) override final
@@ -175,7 +180,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
                 vertices.reserve(vb.size());
                 for (const auto& vertex : vb) {
                     vertex_t v{};
-                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)} * GetScale();
                     v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
                     vertices.emplace_back(std::move(v));
                 }
@@ -192,7 +197,7 @@ class RenderBlockCharacterSkin : public IRenderBlock
                 vertices.reserve(vb.size());
                 for (const auto& vertex : vb) {
                     vertex_t v{};
-                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)} * GetScale();
                     v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
                     vertices.emplace_back(std::move(v));
                 }

@@ -120,6 +120,11 @@ class RenderBlockCharacter : public jc3::IRenderBlock
         return ((flags & BODY_PART) == GEAR || (flags & BODY_PART) == HAIR) && !(flags & TRANSPARENCY_ALPHABLENDING);
     }
 
+    virtual float GetScale() const override final
+    {
+        return m_Block.m_Attributes.m_Scale;
+    }
+
     void CreateBuffers(std::vector<uint8_t>* vertex_buffer, std::vector<uint8_t>* index_buffer);
 
     virtual void Create() override final;
@@ -208,7 +213,7 @@ class RenderBlockCharacter : public jc3::IRenderBlock
                 vertices.reserve(vb.size());
                 for (const auto& vertex : vb) {
                     vertex_t v{};
-                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)} * GetScale();
                     v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
                     vertices.emplace_back(std::move(v));
                 }
@@ -225,7 +230,7 @@ class RenderBlockCharacter : public jc3::IRenderBlock
                 vertices.reserve(vb.size());
                 for (const auto& vertex : vb) {
                     vertex_t v{};
-                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                    v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)} * GetScale();
                     v.uv  = glm::vec2{unpack(vertex.u0), unpack(vertex.v0)};
                     vertices.emplace_back(std::move(v));
                 }

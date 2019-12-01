@@ -976,7 +976,7 @@ void UI::RenderModelsTab_RBM()
                                                     Renderer::Get()->AddToRenderList(render_block);
 
                                                     // Update model bounding box
-                                                    (*it).second->RecalculateBoundingBox();
+                                                    render_block->GetOwner()->RecalculateBoundingBox();
                                                 }
                                             });
                                         }

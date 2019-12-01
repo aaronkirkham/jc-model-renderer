@@ -179,6 +179,11 @@ class RenderBlockGeneralMkIII : public IRenderBlock
         return ~m_Block.m_Attributes.m_Flags & TRANSPARENCY_ALPHABLENDING;
     }
 
+    virtual float GetScale() const override final
+    {
+        return m_Block.m_Attributes.m_Packed.scale;
+    }
+
     virtual void Create() override final;
 
     virtual void Read(std::istream& stream) override final;
@@ -228,7 +233,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
             for (const auto& vertex : vb) {
                 vertex_t v;
-                v.pos = {vertex.x, vertex.y, vertex.z};
+                v.pos = glm::vec3{vertex.x, vertex.y, vertex.z} * GetScale();
                 vertices.emplace_back(std::move(v));
             }
         } else {
@@ -237,7 +242,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
             for (const auto& vertex : vb) {
                 vertex_t v;
-                v.pos = {unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
+                v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)} * GetScale();
                 vertices.emplace_back(std::move(v));
             }
         }

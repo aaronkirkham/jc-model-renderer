@@ -209,7 +209,7 @@ bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, c
         }
 
         // recalculate bounding box before save
-        // rbm->RecalculateBoundingBox();
+        rbm->RecalculateBoundingBox();
 
         const auto& render_blocks = rbm->GetRenderBlocks();
         const auto& bounding_box  = rbm->GetBoundingBox();
@@ -251,8 +251,10 @@ void RenderBlockModel::ContextMenuUI(const std::filesystem::path& filename)
         for (const auto& block_name : RenderBlockFactory::GetValidRenderBlocks()) {
             if (ImGui::MenuItem(block_name)) {
                 const auto render_block = RenderBlockFactory::CreateRenderBlock(block_name);
-                assert(render_block);
-                rbm->GetRenderBlocks().emplace_back(render_block);
+                if (render_block) {
+                    render_block->SetOwner(rbm.get());
+                    rbm->GetRenderBlocks().emplace_back(render_block);
+                }
             }
         }
 
@@ -332,5 +334,19 @@ void RenderBlockModel::DrawGizmos()
 
 void RenderBlockModel::RecalculateBoundingBox()
 {
-    //
+    glm::vec3 min_{FLT_MAX};
+    glm::vec3 max_{-FLT_MAX};
+
+    for (const auto& render_block : m_RenderBlocks) {
+        auto& [vertices, indices] = render_block->GetData();
+
+        for (const auto& vertex : vertices) {
+            min_ = glm::min(min_, vertex.pos);
+            max_ = glm::max(max_, vertex.pos);
+        }
+    }
+
+    m_BoundingBox.m_Min   = min_;
+    m_BoundingBox.m_Max   = max_;
+    m_BoundingBox.m_Scale = 1.0f;
 }
