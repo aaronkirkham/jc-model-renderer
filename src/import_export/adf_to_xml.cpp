@@ -58,6 +58,7 @@ static void PushPrimitiveTypeAttribute(tinyxml2::XMLPrinter &printer, uint32_t t
         case 0xaf41354f: printer.PushAttribute("type", "int64");  break;
         case 0x7515a207: printer.PushAttribute("type", "float");  break;
         case 0xc609f663: printer.PushAttribute("type", "double"); break;
+        case 0x8955583e: printer.PushAttribute("type", "string"); break;
     }
     // clang-format on
 }
@@ -818,10 +819,7 @@ static void WriteInstance(tinyxml2::XMLPrinter &printer, ava::AvalancheDataForma
                     // @TODO: signed values seem wrong? showing -4 instead of 4
                     printer.PushText(v27);
                 } else {
-                    if (member_type->m_Type == ADF_TYPE_SCALAR) {
-                        printer.PushAttribute("type", adf->GetString(member_type->m_Name).c_str());
-                    }
-
+                    PushPrimitiveTypeAttribute(printer, member_type->m_TypeHash);
                     WriteInstance(printer, adf, header, member_type, data, (offset + member.m_Offset));
                 }
 
@@ -870,9 +868,7 @@ static void WriteInstance(tinyxml2::XMLPrinter &printer, ava::AvalancheDataForma
             }
 
             printer.OpenElement("array");
-            if (count == 0 || sub_type->m_Type == ADF_TYPE_SCALAR) {
-                printer.PushAttribute("type", adf->GetString(sub_type->m_Name).c_str());
-            }
+            PushPrimitiveTypeAttribute(printer, sub_type->m_TypeHash);
 
             // @TODO: don't write the count!
             printer.PushAttribute("count", count);
@@ -905,9 +901,7 @@ static void WriteInstance(tinyxml2::XMLPrinter &printer, ava::AvalancheDataForma
             }
 
             printer.OpenElement("inline_array");
-            if (sub_type->m_Type == ADF_TYPE_SCALAR) {
-                printer.PushAttribute("type", adf->GetString(sub_type->m_Name).c_str());
-            }
+            PushPrimitiveTypeAttribute(printer, sub_type->m_TypeHash);
 
             for (uint32_t i = 0; i < type->m_ArraySize; ++i) {
                 WriteInstance(printer, adf, header, sub_type, data, (offset + (size * i)));

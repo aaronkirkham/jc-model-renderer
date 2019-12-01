@@ -2,20 +2,6 @@
 
 #include "iimportexporter.h"
 
-#if 0
-#include <bitset>
-
-#include "iimportexporter.h"
-
-#include "../util.h"
-#include "../window.h"
-
-#include "../game/file_loader.h"
-#include "../game/formats/avalanche_data_format.h"
-
-#include <tinyxml2.h>
-#endif
-
 namespace ImportExport
 {
 class ADF2XML : public IImportExporter
