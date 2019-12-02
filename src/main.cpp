@@ -298,19 +298,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     if (filename.extension() == ".ddsc") {
                         std::vector<uint8_t> out_buffer;
                         if (FileLoader::Get()->ReadAVTX(data, &out_buffer)) {
-                            TextureManager::Get()->GetTexture(filename, &out_buffer, flags);
+                            TextureManager::Get()->GetTexture(filename, out_buffer, flags);
                             return true;
                         }
                     } else if (filename.extension() == ".hmddsc" || filename.extension() == ".atx1"
                                || filename.extension() == ".atx2") {
                         std::vector<uint8_t> out_buffer;
                         FileLoader::Get()->ParseTextureSource(&data, &out_buffer);
-                        TextureManager::Get()->GetTexture(filename, &out_buffer, flags);
+                        TextureManager::Get()->GetTexture(filename, out_buffer, flags);
                         return true;
                     }
                 }
 
-                TextureManager::Get()->GetTexture(filename, &data, flags);
+                TextureManager::Get()->GetTexture(filename, data, flags);
                 return true;
             });
 

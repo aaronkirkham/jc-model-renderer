@@ -278,22 +278,28 @@ void RenderBlockCharacter::Setup(RenderContext_t* context)
     // setup textures and blending
     switch (flags & BODY_PART) {
         case GEAR: {
-            IRenderBlock::BindTexture(1, m_SamplerState);
-            IRenderBlock::BindTexture(2, m_SamplerState);
-            IRenderBlock::BindTexture(3, m_SamplerState);
-            IRenderBlock::BindTexture(4, m_SamplerState);
-            IRenderBlock::BindTexture(9, m_SamplerState);
+            BindTexture(1, m_SamplerState);
+            BindTexture(2, m_SamplerState);
+            BindTexture(3, m_SamplerState);
+            BindTexture(4, m_SamplerState);
+            BindTexture(9, m_SamplerState);
 
             if (flags & USE_FEATURE_MAP) {
-                IRenderBlock::BindTexture(5, m_SamplerState);
+                BindTexture(5, m_SamplerState);
+            } else {
+                context->m_Renderer->ClearTexture(5);
             }
 
             if (flags & USE_WRINKLE_MAP) {
-                IRenderBlock::BindTexture(7, 6, m_SamplerState);
+                BindTexture(7, 6, m_SamplerState);
+            } else {
+                context->m_Renderer->ClearTexture(6);
             }
 
             if (flags & USE_CAMERA_LIGHTING) {
-                IRenderBlock::BindTexture(8, m_SamplerState);
+                BindTexture(8, m_SamplerState);
+            } else {
+                context->m_Renderer->ClearTexture(8);
             }
 
             if (m_Block.m_Attributes.m_Flags & TRANSPARENCY_ALPHABLENDING) {
@@ -308,7 +314,9 @@ void RenderBlockCharacter::Setup(RenderContext_t* context)
 
         case EYES: {
             if (m_Block.m_Attributes.m_Flags & USE_EYE_REFLECTION) {
-                IRenderBlock::BindTexture(10, 11, m_SamplerState);
+                BindTexture(10, 11, m_SamplerState);
+            } else {
+                context->m_Renderer->ClearTexture(11);
             }
 
             context->m_Renderer->SetBlendingEnabled(true);
@@ -318,8 +326,8 @@ void RenderBlockCharacter::Setup(RenderContext_t* context)
         }
 
         case HAIR: {
-            IRenderBlock::BindTexture(1, m_SamplerState);
-            IRenderBlock::BindTexture(2, m_SamplerState);
+            BindTexture(1, m_SamplerState);
+            BindTexture(2, m_SamplerState);
 
             if (m_Block.m_Attributes.m_Flags & TRANSPARENCY_ALPHABLENDING) {
                 context->m_Renderer->SetBlendingEnabled(true);
@@ -365,32 +373,32 @@ void RenderBlockCharacter::DrawUI()
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
     ImGui::Columns(3, nullptr, false);
     {
-        IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
+        DrawUI_Texture("DiffuseMap", 0);
 
         if ((flags & BODY_PART) == GEAR || (flags & BODY_PART) == HAIR) {
-            IRenderBlock::DrawUI_Texture("NormalMap", 1);
-            IRenderBlock::DrawUI_Texture("PropertiesMap", 2);
+            DrawUI_Texture("NormalMap", 1);
+            DrawUI_Texture("PropertiesMap", 2);
         }
 
         if ((flags & BODY_PART) == GEAR) {
-            IRenderBlock::DrawUI_Texture("DetailDiffuseMap", 3);
-            IRenderBlock::DrawUI_Texture("DetailNormalMap", 4);
+            DrawUI_Texture("DetailDiffuseMap", 3);
+            DrawUI_Texture("DetailNormalMap", 4);
 
             if (m_Block.m_Attributes.m_Flags & USE_FEATURE_MAP) {
-                IRenderBlock::DrawUI_Texture("FeatureMap", 5);
+                DrawUI_Texture("FeatureMap", 5);
             }
 
             if (m_Block.m_Attributes.m_Flags & USE_WRINKLE_MAP) {
-                IRenderBlock::DrawUI_Texture("WrinkleMap", 7);
+                DrawUI_Texture("WrinkleMap", 7);
             }
 
             if (m_Block.m_Attributes.m_Flags & USE_CAMERA_LIGHTING) {
-                IRenderBlock::DrawUI_Texture("CameraMap", 8);
+                DrawUI_Texture("CameraMap", 8);
             }
 
-            IRenderBlock::DrawUI_Texture("MetallicMap", 9);
+            DrawUI_Texture("MetallicMap", 9);
         } else if ((flags & BODY_PART) == EYES && flags & USE_EYE_REFLECTION) {
-            IRenderBlock::DrawUI_Texture("ReflectionMap", 10);
+            DrawUI_Texture("ReflectionMap", 10);
         }
     }
     ImGui::EndColumns();

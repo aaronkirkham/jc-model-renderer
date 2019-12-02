@@ -62,7 +62,7 @@ class IRenderBlock
         m_Textures[texture_index] = texture;
     }
 
-    void DrawUI_Texture(const std::string& title, uint32_t texture_slot);
+    void DrawUI_Texture(const std::string& title, uint32_t texture_index);
 
     virtual bool IsVisible() const
     {
@@ -83,11 +83,6 @@ class IRenderBlock
     {
         return m_IndexBuffer;
     }
-
-    /*virtual const std::vector<std::shared_ptr<Texture>>& GetTextures()
-    {
-        return m_Textures;
-    }*/
 
     void SetOwner(RenderBlockModel* owner)
     {

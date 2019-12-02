@@ -102,7 +102,7 @@ void RenderBlockProp::Setup(RenderContext_t* context)
     }
 
     // set the diffuse texture
-    IRenderBlock::BindTexture(0, m_SamplerState);
+    BindTexture(0, m_SamplerState);
 
     if (!(m_Block.m_Attributes.m_Flags & SUPPORT_OVERLAY)) {
         // set the culling mode
@@ -110,14 +110,16 @@ void RenderBlockProp::Setup(RenderContext_t* context)
             (!(m_Block.m_Attributes.m_Flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK : D3D11_CULL_NONE);
 
         // set the normals & properties textures
-        IRenderBlock::BindTexture(1, m_SamplerState);
-        IRenderBlock::BindTexture(2, m_SamplerState);
+        BindTexture(1, m_SamplerState);
+        BindTexture(2, m_SamplerState);
 
         // set the decal textures
         if (m_Block.m_Attributes.m_Flags & SUPPORT_DECALS) {
-            IRenderBlock::BindTexture(3, 4, m_SamplerState);
-            IRenderBlock::BindTexture(4, 5, m_SamplerState);
-            IRenderBlock::BindTexture(5, 6, m_SamplerState);
+            BindTexture(3, 4, m_SamplerState);
+            BindTexture(4, 5, m_SamplerState);
+            BindTexture(5, 6, m_SamplerState);
+        } else {
+            context->m_Renderer->ClearTextures(4, 6);
         }
     }
 
@@ -153,16 +155,16 @@ void RenderBlockProp::DrawUI()
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
     ImGui::Columns(3, nullptr, false);
     {
-        IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
+        DrawUI_Texture("DiffuseMap", 0);
 
         if (!(m_Block.m_Attributes.m_Flags & SUPPORT_OVERLAY)) {
-            IRenderBlock::DrawUI_Texture("NormalMap", 1);
-            IRenderBlock::DrawUI_Texture("PropertiesMap", 2);
+            DrawUI_Texture("NormalMap", 1);
+            DrawUI_Texture("PropertiesMap", 2);
 
             if (m_Block.m_Attributes.m_Flags & SUPPORT_DECALS) {
-                IRenderBlock::DrawUI_Texture("DecalDiffuseMap", 3);
-                IRenderBlock::DrawUI_Texture("DecalNormalMap", 4);
-                IRenderBlock::DrawUI_Texture("DecalPropertiesMap", 5);
+                DrawUI_Texture("DecalDiffuseMap", 3);
+                DrawUI_Texture("DecalNormalMap", 4);
+                DrawUI_Texture("DecalPropertiesMap", 5);
             }
         }
     }

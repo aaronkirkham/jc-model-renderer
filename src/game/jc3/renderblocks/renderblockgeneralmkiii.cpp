@@ -12,9 +12,8 @@
 #include "graphics/texture.h"
 #include "graphics/texture_manager.h"
 
-#include "game/render_block_factory.h"
-
 #include "game/formats/render_block_model.h"
+#include "game/render_block_factory.h"
 
 namespace jc3
 {
@@ -176,8 +175,68 @@ void RenderBlockGeneralMkIII::Setup(RenderContext_t* context)
     context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants[1], 2, m_cbMaterialConsts2);
 
     // set the textures
-    for (int i = 0; i < 4; ++i) {
-        IRenderBlock::BindTexture(i, m_SamplerState);
+    {
+        for (int i = 0; i < 4; ++i) {
+            BindTexture(i, m_SamplerState);
+        }
+
+        // overlay
+        if (flags & USE_OVERLAY || flags & USE_LAYERED) {
+            BindTexture(6, 4, m_SamplerState);
+            BindTexture(5, 5, m_SamplerState);
+
+            // LayeredMaskMap                    texture  float4          2d             t4      1
+            // LayeredHeightMap                  texture  float4          2d             t5      1
+        } else {
+            context->m_Renderer->ClearTextures(4, 5);
+        }
+
+        // layered
+        if (flags & USE_LAYERED) {
+            BindTexture(7, 6, m_SamplerState);
+            BindTexture(8, 7, m_SamplerState);
+            BindTexture(9, 8, m_SamplerState);
+            BindTexture(10, 9, m_SamplerState);
+
+            // LayeredAlbedoMap                  texture  float4          2d             t6      1
+            // LayeredGlossMap                   texture  float4          2d             t7      1
+            // LayeredMetallicMap                texture  float4          2d             t8      1
+            // LayeredNormalMap                  texture  float4          2d             t9      1
+        } else {
+            context->m_Renderer->ClearTextures(6, 9);
+        }
+
+        // USE_DECAL
+        if (flags & USE_DECAL) {
+            BindTexture(11, 33, m_SamplerState);
+            BindTexture(12, 34, m_SamplerState);
+            BindTexture(13, 35, m_SamplerState);
+            BindTexture(14, 36, m_SamplerState);
+
+            // DecalAlbedoMap                    texture  float4          2d            t33      1
+            // DecalGlossMap                     texture  float4          2d            t34      1
+            // DecalMetallicMap                  texture  float4          2d            t35      1
+            // DecalNormalMap                    texture  float4          2d            t36      1
+        } else {
+            context->m_Renderer->ClearTextures(33, 36);
+        }
+
+        // USE_DAMAGE
+        if (flags & USE_DAMAGE) {
+            BindTexture(15, 33, m_SamplerState);
+            BindTexture(16, 34, m_SamplerState);
+            BindTexture(17, 35, m_SamplerState);
+            BindTexture(18, 36, m_SamplerState);
+            BindTexture(19, 37, m_SamplerState);
+
+            // DamageAlbedoMap                   texture  float4          2d            t33      1
+            // DamageGlossMap                    texture  float4          2d            t34      1
+            // DamageMaskMap                     texture  float4          2d            t35      1
+            // DamageMetallicMap                 texture  float4          2d            t36      1
+            // DamageNormalMap                   texture  float4          2d            t37      1
+        } else {
+            context->m_Renderer->ClearTextures(33, 37);
+        }
     }
 
     // set the culling mode
@@ -327,10 +386,39 @@ void RenderBlockGeneralMkIII::DrawUI()
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
     ImGui::Columns(3, nullptr, false);
     {
-        IRenderBlock::DrawUI_Texture("Albedo1Map", 0);
-        IRenderBlock::DrawUI_Texture("Gloss1Map", 1);
-        IRenderBlock::DrawUI_Texture("Metallic1Map", 2);
-        IRenderBlock::DrawUI_Texture("Normal1Map", 3);
+        DrawUI_Texture("Albedo1Map", 0);
+        DrawUI_Texture("Gloss1Map", 1);
+        DrawUI_Texture("Metallic1Map", 2);
+        DrawUI_Texture("Normal1Map", 3);
+
+        const auto flags = m_Block.m_Attributes.m_Flags;
+
+        if (flags & USE_OVERLAY || flags & USE_LAYERED) {
+            DrawUI_Texture("LayeredMaskMap", 4);
+            DrawUI_Texture("LayeredHeightMap", 5);
+        }
+
+        if (flags & USE_LAYERED) {
+            DrawUI_Texture("LayeredAlbedoMap", 6);
+            DrawUI_Texture("LayeredGlossMap", 7);
+            DrawUI_Texture("LayeredMetallicMap", 8);
+            DrawUI_Texture("LayeredNormalMap", 9);
+        }
+
+        if (flags & USE_DECAL) {
+            DrawUI_Texture("DecalAlbedoMap", 11);
+            DrawUI_Texture("DecalGlossMap", 12);
+            DrawUI_Texture("DecalMetallicMap", 13);
+            DrawUI_Texture("DecalNormalMap", 14);
+        }
+
+        if (flags & USE_DAMAGE) {
+            DrawUI_Texture("DamageAlbedoMap", 15);
+            DrawUI_Texture("DamageGlossMap", 16);
+            DrawUI_Texture("DamageMaskMap", 17);
+            DrawUI_Texture("DamageMetallicMap", 18);
+            DrawUI_Texture("DamageNormalMap", 19);
+        }
     }
     ImGui::EndColumns();
 }
@@ -350,16 +438,11 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
     // temp
     m_Block.m_Attributes.m_Flags |= DISABLE_BACKFACE_CULLING;
 
-    // test
+    // @TODO
     m_MaterialParams[0] = 1.0f;
     m_MaterialParams[1] = 1.0f;
     m_MaterialParams[2] = 1.0f;
     m_MaterialParams[3] = 1.0f;
-
-    // textures
-    // TODO: move the std::vector from IRenderBlock. Each block has a different max amount
-    // of textures it can hold which NEED to written correctly when rebuilding the RBM
-    m_Textures.resize(20);
 
     std::vector<PackedVertexPosition> vertices_;
     std::vector<GeneralShortPacked>   data_;
@@ -382,21 +465,19 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
     }
 
     // load textures
+    MakeEmptyMaterials(jc::RenderBlocks::GENERALMKIII_TEXTURES_COUNT);
     for (const auto& mat : *materials) {
         const auto& [type, filename] = mat;
-        auto& texture                = TextureManager::Get()->GetTexture(filename.filename());
-        assert(texture);
-        texture->LoadFromFile(filename);
 
-        if (type == "diffuse") {
-            m_Textures[0] = std::move(texture);
-        } else if (type == "specular") {
-            m_Textures[1] = std::move(texture);
-        } else if (type == "metallic") {
-            m_Textures[2] = std::move(texture);
-        } else if (type == "normal") {
-            m_Textures[3] = std::move(texture);
-        }
+        // clang-format off
+        uint8_t index = 0;
+        if (type == "diffuse")       index = 0;
+        else if (type == "specular") index = 1;
+        else if (type == "metallic") index = 2;
+        else if (type == "normal")   index = 3;
+        // clang-format on
+
+        m_Textures[index]->LoadFromFile(filename);
     }
 
     // create buffers

@@ -94,7 +94,7 @@ void RenderBlockLandmark::Setup(RenderContext_t* context)
 
     // set the textures
     for (int i = 0; i < m_Textures.size(); ++i) {
-        IRenderBlock::BindTexture(i, m_SamplerState);
+        BindTexture(i, m_SamplerState);
     }
 
     // set the vertex shader resource
@@ -141,8 +141,8 @@ void RenderBlockLandmark::DrawUI()
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
     ImGui::Columns(3, nullptr, false);
     {
-        IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
-        IRenderBlock::DrawUI_Texture("PropertiesMap", 2);
+        DrawUI_Texture("DiffuseMap", 0);
+        DrawUI_Texture("PropertiesMap", 2);
     }
     ImGui::EndColumns();
 }

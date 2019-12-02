@@ -77,8 +77,8 @@ void RenderBlockCarPaintMM::Create()
         // clang-format on
 
         // create the vertex declaration
-        m_VertexDeclaration =
-            Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(), "CarPaintMM (deform)");
+        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(),
+                                                                       "CarPaintMM VertexDecl (deform)");
     } else if (m_ShaderName == "carpaintmm_skinned") {
 #ifdef DEBUG
         __debugbreak();
@@ -144,19 +144,19 @@ void RenderBlockCarPaintMM::Setup(RenderContext_t* context)
 
     // set the textures
     for (int i = 0; i < 10; ++i) {
-        IRenderBlock::BindTexture(i, m_SamplerState);
+        BindTexture(i, m_SamplerState);
     }
 
     // set the layered albedo map texture
     if (m_Block.m_Attributes.m_Flags & SUPPORT_LAYERED) {
-        IRenderBlock::BindTexture(10, 16);
+        BindTexture(10, 16);
     } else {
         context->m_Renderer->ClearTexture(16);
     }
 
     // set the overlay albedo map texture
     if (m_Block.m_Attributes.m_Flags & SUPPORT_OVERLAY) {
-        IRenderBlock::BindTexture(11, 17);
+        BindTexture(11, 17);
     } else {
         context->m_Renderer->ClearTexture(17);
     }
@@ -260,23 +260,23 @@ void RenderBlockCarPaintMM::DrawUI()
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
     ImGui::Columns(3, nullptr, false);
     {
-        IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
-        IRenderBlock::DrawUI_Texture("NormalMap", 1);
-        IRenderBlock::DrawUI_Texture("PropertyMap", 2);
-        IRenderBlock::DrawUI_Texture("TintMap", 3);
-        IRenderBlock::DrawUI_Texture("DamageNormalMap", 4);
-        IRenderBlock::DrawUI_Texture("DamageAlbedoMap", 5);
-        IRenderBlock::DrawUI_Texture("DirtMap", 6);
-        IRenderBlock::DrawUI_Texture("DecalAlbedoMap", 7);
-        IRenderBlock::DrawUI_Texture("DecalNormalMap", 8);
-        IRenderBlock::DrawUI_Texture("DecalPropertyMap", 9);
+        DrawUI_Texture("DiffuseMap", 0);
+        DrawUI_Texture("NormalMap", 1);
+        DrawUI_Texture("PropertyMap", 2);
+        DrawUI_Texture("TintMap", 3);
+        DrawUI_Texture("DamageNormalMap", 4);
+        DrawUI_Texture("DamageAlbedoMap", 5);
+        DrawUI_Texture("DirtMap", 6);
+        DrawUI_Texture("DecalAlbedoMap", 7);
+        DrawUI_Texture("DecalNormalMap", 8);
+        DrawUI_Texture("DecalPropertyMap", 9);
 
         if (m_Block.m_Attributes.m_Flags & SUPPORT_LAYERED) {
-            IRenderBlock::DrawUI_Texture("LayeredAlbedoMap", 10);
+            DrawUI_Texture("LayeredAlbedoMap", 10);
         }
 
         if (m_Block.m_Attributes.m_Flags & SUPPORT_OVERLAY) {
-            IRenderBlock::DrawUI_Texture("OverlayAlbedoMap", 11);
+            DrawUI_Texture("OverlayAlbedoMap", 11);
         }
     }
     ImGui::EndColumns();
@@ -314,17 +314,17 @@ void RenderBlockCarPaintMM::SetData(vertices_t* vertices, uint16s_t* indices, ma
     }
 
     // load textures
+    MakeEmptyMaterials(jc::RenderBlocks::CARPAINTMM_TEXTURES_COUNT);
     for (const auto& mat : *materials) {
         const auto& [type, filename] = mat;
-        auto& texture                = TextureManager::Get()->GetTexture(filename.filename());
-        assert(texture);
-        texture->LoadFromFile(filename);
 
-        if (type == "diffuse") {
-            m_Textures[0] = std::move(texture);
-        } else if (type == "normal") {
-            m_Textures[1] = std::move(texture);
-        }
+        // clang-format off
+        uint8_t index = 0;
+        if (type == "diffuse")       index = 0;
+        else if (type == "normal")   index = 1;
+        // clang-format on
+
+        m_Textures[index]->LoadFromFile(filename);
     }
 
     // create buffers

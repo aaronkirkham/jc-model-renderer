@@ -60,7 +60,7 @@ void DirectoryList::Draw(AvalancheArchive* current_archive, std::string acc_file
         }
 
         // render context menu
-        UI::Get()->RenderContextMenu(filename_with_path, 0,
+        UI::Get()->RenderContextMenu(filename_with_path, "",
                                      current_archive ? ContextMenuFlags_File | ContextMenuFlags_Archive
                                                      : ContextMenuFlags_File);
     }

@@ -25,10 +25,11 @@ struct UIEvents {
 };
 
 enum ContextMenuFlags {
-    ContextMenuFlags_None    = 0,
-    ContextMenuFlags_File    = 1 << 0,
-    ContextMenuFlags_Archive = 1 << 1,
-    ContextMenuFlags_Texture = 1 << 2,
+    ContextMenuFlags_None               = 0,
+    ContextMenuFlags_File               = 1 << 0,
+    ContextMenuFlags_Archive            = 1 << 1,
+    ContextMenuFlags_Texture            = 1 << 2,
+    ContextMenuFlags_RenderBlockTexture = 1 << 3,
 };
 
 enum TreeViewTab {
@@ -112,7 +113,8 @@ class UI : public Singleton<UI>
 
     void Render(RenderContext_t* context);
     void RenderSpinner(const std::string& str);
-    void RenderContextMenu(const std::filesystem::path& filename, uint32_t unique_id_extra = 0, uint32_t flags = 0);
+    void RenderContextMenu(const std::filesystem::path& filename, const std::string& uid_extra = "", uint32_t flags = 0,
+                           void* userdata = nullptr);
 
     void RenderBlockTexture(IRenderBlock* render_block, const std::string& title, std::shared_ptr<Texture> texture);
 

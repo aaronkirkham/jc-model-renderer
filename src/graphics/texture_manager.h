@@ -28,7 +28,7 @@ class TextureManager : public Singleton<TextureManager>
 
     std::shared_ptr<Texture> GetTexture(const std::filesystem::path& filename,
                                         uint8_t                      flags = TextureCreateFlags_CreateIfNotExists);
-    std::shared_ptr<Texture> GetTexture(const std::filesystem::path& filename, std::vector<uint8_t>* buffer,
+    std::shared_ptr<Texture> GetTexture(const std::filesystem::path& filename, const std::vector<uint8_t>& buffer,
                                         uint8_t flags = TextureCreateFlags_CreateIfNotExists);
 
     bool HasTexture(const std::filesystem::path& filename);

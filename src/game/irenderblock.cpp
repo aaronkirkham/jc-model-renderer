@@ -47,9 +47,7 @@ void IRenderBlock::Draw(RenderContext_t* context)
 
 void IRenderBlock::BindTexture(int32_t texture_index, int32_t slot, SamplerState_t* sampler)
 {
-    if (texture_index >= m_Textures.size()) {
-        return;
-    }
+    assert(texture_index < m_Textures.size());
 
     const auto& texture = m_Textures[texture_index];
     if (texture && texture->IsLoaded()) {
@@ -57,11 +55,9 @@ void IRenderBlock::BindTexture(int32_t texture_index, int32_t slot, SamplerState
     }
 }
 
-void IRenderBlock::DrawUI_Texture(const std::string& title, uint32_t texture_slot)
+void IRenderBlock::DrawUI_Texture(const std::string& title, uint32_t texture_index)
 {
-    if (texture_slot >= m_Textures.size()) {
-        return;
-    }
+    assert(texture_index < m_Textures.size());
 
-    UI::Get()->RenderBlockTexture(this, title, m_Textures[texture_slot]);
+    UI::Get()->RenderBlockTexture(this, title, m_Textures[texture_index]);
 }

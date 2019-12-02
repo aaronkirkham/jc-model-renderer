@@ -35,7 +35,7 @@ void IRenderBlock::ReadMaterials(std::istream& stream)
     uint32_t count;
     stream.read((char*)&count, sizeof(count));
 
-    m_Textures.resize(count);
+    MakeEmptyMaterials(count);
 
     for (uint32_t i = 0; i < count; ++i) {
         uint32_t length;
@@ -65,7 +65,7 @@ void IRenderBlock::WriteMaterials(std::ostream& stream)
 
     for (uint32_t i = 0; i < count; ++i) {
         const auto& texture = m_Textures[i];
-        if (texture) {
+        if (texture && texture->IsLoaded()) {
             const auto& filename = m_Textures[i]->GetFileName().generic_string();
             const auto  length   = static_cast<uint32_t>(filename.length());
 
@@ -78,5 +78,13 @@ void IRenderBlock::WriteMaterials(std::ostream& stream)
     }
 
     stream.write((char*)&m_MaterialParams, sizeof(m_MaterialParams));
+}
+
+void IRenderBlock::MakeEmptyMaterials(uint8_t count)
+{
+    m_Textures.resize(count);
+    for (decltype(count) i = 0; i < count; ++i) {
+        m_Textures[i] = std::make_shared<Texture>();
+    }
 }
 }; // namespace jc3

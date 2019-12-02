@@ -43,7 +43,7 @@ TextureManager::TextureManager()
                 ImGui::Image((*it)->GetSRV(), ImVec2((float)width, (float)height));
 
                 // render context menus so we can save/export from this window
-                UI::Get()->RenderContextMenu((*it)->GetFileName(), 0, ContextMenuFlags_Texture);
+                UI::Get()->RenderContextMenu((*it)->GetFileName(), "", ContextMenuFlags_Texture);
             }
             ImGui::End();
 
@@ -95,7 +95,7 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path&
 #endif
 
             if (success && HasTexture(filename)) {
-                m_Textures[key]->LoadFromBuffer(&data);
+                m_Textures[key]->LoadFromBuffer(data);
             }
         });
 
@@ -105,8 +105,8 @@ std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path&
     return nullptr;
 }
 
-std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path& filename, std::vector<uint8_t>* buffer,
-                                                    uint8_t flags)
+std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path& filename,
+                                                    const std::vector<uint8_t>& buffer, uint8_t flags)
 {
     const auto& name = filename.generic_string();
     const auto  key  = fnv_1_32::hash(name.c_str(), name.length());

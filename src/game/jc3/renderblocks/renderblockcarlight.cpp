@@ -151,12 +151,12 @@ void RenderBlockCarLight::DrawUI()
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
     ImGui::Columns(3, nullptr, false);
     {
-        IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
-        IRenderBlock::DrawUI_Texture("NormalMap", 1);
-        IRenderBlock::DrawUI_Texture("PropertyMap", 2);
+        DrawUI_Texture("DiffuseMap", 0);
+        DrawUI_Texture("NormalMap", 1);
+        DrawUI_Texture("PropertyMap", 2);
         // 3 unknown
-        IRenderBlock::DrawUI_Texture("NormalDetailMap", 4);
-        IRenderBlock::DrawUI_Texture("EmissiveMap", 5);
+        DrawUI_Texture("NormalDetailMap", 4);
+        DrawUI_Texture("EmissiveMap", 5);
     }
     ImGui::EndColumns();
 }

@@ -15,12 +15,15 @@ class Texture
     std::vector<uint8_t>      m_Buffer;
 
   public:
+    Texture() = default;
     Texture(const std::filesystem::path& filename);
-    Texture(const std::filesystem::path& filename, std::vector<uint8_t>* buffer);
+    Texture(const std::filesystem::path& filename, const std::vector<uint8_t>& buffer);
     virtual ~Texture();
 
-    bool LoadFromBuffer(std::vector<uint8_t>* buffer);
+    bool LoadFromBuffer(const std::vector<uint8_t>& buffer);
     bool LoadFromFile(const std::filesystem::path& filename);
+
+	void Unload();
 
     void Use(uint32_t slot, SamplerState_t* sampler = nullptr);
     void UseVS(uint32_t slot);

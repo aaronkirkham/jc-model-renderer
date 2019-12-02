@@ -100,11 +100,11 @@ UI::UI()
     // load game selection icons
     FileBuffer buffer;
     if (Window::Get()->LoadInternalResource(101, &buffer)) {
-        m_GameSelectionIcons[0] = std::make_unique<Texture>("jc3-icon.dds", &buffer);
+        m_GameSelectionIcons[0] = std::make_unique<Texture>("jc3-icon.dds", buffer);
     }
 
     if (Window::Get()->LoadInternalResource(102, &buffer)) {
-        m_GameSelectionIcons[1] = std::make_unique<Texture>("jc4-icon.dds", &buffer);
+        m_GameSelectionIcons[1] = std::make_unique<Texture>("jc4-icon.dds", buffer);
     }
 }
 
@@ -351,8 +351,7 @@ void UI::Render(RenderContext_t* context)
                                         if (success) {
                                             auto& buffer                 = std::any_cast<FileBuffer>(data);
                                             m_NewTextureSettings.Texture = TextureManager::Get()->GetTexture(
-                                                filename, &buffer,
-                                                TextureManager::TextureCreateFlags_CreateIfNotExists);
+                                                filename, buffer, TextureManager::TextureCreateFlags_CreateIfNotExists);
                                         }
                                     });
                             }
@@ -826,7 +825,7 @@ void UI::RenderFileTreeView(const glm::vec2& window_size)
                     }
 
                     // context menu
-                    RenderContextMenu(filepath, 0, ContextMenuFlags_Archive);
+                    RenderContextMenu(filepath, "", ContextMenuFlags_Archive);
 
                     if (open && archive->GetDirectoryList()) {
                         // draw the directory list
@@ -1083,9 +1082,10 @@ void UI::RenderSpinner(const std::string& str)
     ImGui::Text(str.c_str());
 }
 
-void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t unique_id_extra, uint32_t flags)
+void UI::RenderContextMenu(const std::filesystem::path& filename, const std::string& uid_extra, uint32_t flags,
+                           void* userdata)
 {
-    std::string unique_id = "context-menu-" + filename.generic_string() + "-" + std::to_string(unique_id_extra);
+    std::string unique_id = "context-menu-" + filename.generic_string() + "-" + uid_extra;
 
     ImGui::PushID(unique_id.c_str());
     ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1);
@@ -1133,6 +1133,18 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
         }
 #endif
 
+        // render block texture specific
+        if (flags & ContextMenuFlags_RenderBlockTexture) {
+            ImGui::Separator();
+
+            // clear current texture
+            if (ImGui::Selectable(ICON_FA_TRASH "  Remove Texture")) {
+                if (const auto tex = (Texture*)userdata) {
+                    tex->Unload();
+                }
+            }
+        }
+
         // custom context menus
         auto it = m_ContextMenuCallbacks.find(filename.extension().string());
         if (it != m_ContextMenuCallbacks.end()) {
@@ -1149,14 +1161,7 @@ void UI::RenderContextMenu(const std::filesystem::path& filename, uint32_t uniqu
 
 void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title, std::shared_ptr<Texture> texture)
 {
-    // TODO: Render an empty box if the texture isn't loaded. In some cases the slot doesn't
-    //			have a texture loaded, but supports it. Drag & Drop should work!!
-
-    if (!texture) {
-        return;
-    }
-
-    const auto  col_width          = (ImGui::GetWindowWidth() / ImGui::GetColumnsCount());
+    const float col_width          = (ImGui::GetWindowWidth() / ImGui::GetColumnsCount());
     const auto& filename_with_path = texture->GetFileName();
 
     ImGui::BeginGroup();
@@ -1165,18 +1170,21 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
         ImGui::Image(texture->GetSRV(), ImVec2(col_width, col_width / 2), ImVec2(0, 0), ImVec2(1, 1),
                      ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 1));
 
-        // tooltip
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(filename_with_path.filename().string().c_str());
-        }
+        if (texture->IsLoaded()) {
+            // tooltip
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip(filename_with_path.filename().string().c_str());
+            }
 
-        // open texture preview
-        if (texture->IsLoaded() && ImGui::IsItemClicked()) {
-            TextureManager::Get()->PreviewTexture(texture);
-        }
+            // open texture preview
+            if (ImGui::IsItemClicked()) {
+                TextureManager::Get()->PreviewTexture(texture);
+            }
 
-        // context menu
-        RenderContextMenu(filename_with_path, ImGui::GetColumnIndex(), ContextMenuFlags_Texture);
+            // context menu
+            RenderContextMenu(filename_with_path, title,
+                              (ContextMenuFlags_Texture | ContextMenuFlags_RenderBlockTexture), texture.get());
+        }
 
         // dragdrop payload
         if (const auto payload = UI::Get()->GetDropPayload(DragDropPayload_Texture)) {

@@ -125,7 +125,7 @@ void RenderBlockGeneral::Setup(RenderContext_t* context)
 
     // set the textures
     for (int i = 0; i < m_Textures.size(); ++i) {
-        IRenderBlock::BindTexture(i, m_SamplerState);
+        BindTexture(i, m_SamplerState);
     }
 
     // set the constant buffers
@@ -166,10 +166,10 @@ void RenderBlockGeneral::DrawUI()
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
     ImGui::Columns(3, nullptr, false);
     {
-        IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
-        IRenderBlock::DrawUI_Texture("NormalMap", 1);
-        IRenderBlock::DrawUI_Texture("PropertiesMap", 2);
-        IRenderBlock::DrawUI_Texture("AOBlendMap", 3);
+        DrawUI_Texture("DiffuseMap", 0);
+        DrawUI_Texture("NormalMap", 1);
+        DrawUI_Texture("PropertiesMap", 2);
+        DrawUI_Texture("AOBlendMap", 3);
     }
     ImGui::EndColumns();
 }

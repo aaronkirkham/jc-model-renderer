@@ -186,9 +186,9 @@ void RenderBlockCharacter::Setup(RenderContext_t* context)
     context->m_Renderer->SetPixelShaderConstants(m_PixelShaderConstants[2], 6, m_cbUnknownCB6);
 
     // set textures
-    IRenderBlock::BindTexture(0, m_SamplerState);
-    IRenderBlock::BindTexture(1, m_SamplerState);
-    IRenderBlock::BindTexture(2, m_SamplerState);
+    BindTexture(0, m_SamplerState);
+    BindTexture(1, m_SamplerState);
+    BindTexture(2, m_SamplerState);
 }
 
 void RenderBlockCharacter::DrawContextMenu()
@@ -401,7 +401,7 @@ void RenderBlockCharacter::DrawUI()
     {
         for (auto i = 0; i < m_Textures.size(); ++i) {
             const auto name = "Texture-" + std::to_string(i);
-            IRenderBlock::DrawUI_Texture(name, i);
+            DrawUI_Texture(name, i);
         }
     }
     ImGui::EndColumns();

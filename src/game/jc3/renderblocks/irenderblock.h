@@ -59,6 +59,8 @@ class IRenderBlock : public ::IRenderBlock
     void ReadMaterials(std::istream& stream);
     void WriteMaterials(std::ostream& stream);
 
+    void MakeEmptyMaterials(uint8_t count);
+
     void ReadSkinBatch(std::istream& stream, std::vector<jc3::CSkinBatch>* skin_batches)
     {
         uint32_t count;

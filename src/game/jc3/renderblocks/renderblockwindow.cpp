@@ -97,11 +97,13 @@ void RenderBlockWindow::Setup(RenderContext_t* context)
     }
 
     // set the textures
-    IRenderBlock::BindTexture(0, m_SamplerState);
+    BindTexture(0, m_SamplerState);
 
     if (!(m_Block.m_Attributes.m_Flags & SIMPLE)) {
-        IRenderBlock::BindTexture(1, 2, m_SamplerState);
-        IRenderBlock::BindTexture(2, 3, m_SamplerState);
+        BindTexture(1, 2, m_SamplerState);
+        BindTexture(2, 3, m_SamplerState);
+    } else {
+        context->m_Renderer->ClearTextures(2, 3);
     }
 
     // TODO: damage
@@ -177,16 +179,16 @@ void RenderBlockWindow::DrawUI()
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
     ImGui::Columns(3, nullptr, false);
     {
-        IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
+        DrawUI_Texture("DiffuseMap", 0);
 
         if (!(m_Block.m_Attributes.m_Flags & SIMPLE)) {
-            IRenderBlock::DrawUI_Texture("NormalMap", 1);
-            IRenderBlock::DrawUI_Texture("PropertyMap", 2);
+            DrawUI_Texture("NormalMap", 1);
+            DrawUI_Texture("PropertyMap", 2);
         }
 
         // damage
-        IRenderBlock::DrawUI_Texture("DamagePointNormalMap", 3);
-        IRenderBlock::DrawUI_Texture("DamagePointPropertyMap", 4);
+        DrawUI_Texture("DamagePointNormalMap", 3);
+        DrawUI_Texture("DamagePointPropertyMap", 4);
     }
     ImGui::EndColumns();
 }

@@ -19,7 +19,8 @@ static_assert(sizeof(GeneralMkIIIAttributes) == 0x68, "GeneralMkIIIAttributes al
 
 namespace jc::RenderBlocks
 {
-static constexpr uint8_t GENERALMKIII_VERSION = 5;
+static constexpr uint8_t GENERALMKIII_VERSION        = 5;
+static constexpr uint8_t GENERALMKIII_TEXTURES_COUNT = 20;
 
 struct GeneralMkIII {
     uint8_t                m_Version;

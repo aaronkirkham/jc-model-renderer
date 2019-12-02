@@ -12,7 +12,8 @@ static_assert(sizeof(CarPaintMMAttributes) == 0x8, "CarPaintMMAttributes alignme
 
 namespace jc::RenderBlocks
 {
-static constexpr uint8_t CARPAINTMM_VERSION = 14;
+static constexpr uint8_t CARPAINTMM_VERSION        = 14;
+static constexpr uint8_t CARPAINTMM_TEXTURES_COUNT = 12;
 
 struct CarPaintMM {
     uint8_t              m_Version;

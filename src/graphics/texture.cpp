@@ -16,7 +16,7 @@ Texture::Texture(const std::filesystem::path& filename)
 {
 }
 
-Texture::Texture(const std::filesystem::path& filename, std::vector<uint8_t>* buffer)
+Texture::Texture(const std::filesystem::path& filename, const std::vector<uint8_t>& buffer)
     : m_Filename(filename)
     , m_NameHash(ava::hashlittle(m_Filename.generic_string().c_str()))
 {
@@ -25,27 +25,19 @@ Texture::Texture(const std::filesystem::path& filename, std::vector<uint8_t>* bu
 
 Texture::~Texture()
 {
-    SAFE_RELEASE(m_SRV);
-    SAFE_RELEASE(m_Texture);
+    Unload();
 }
 
-bool Texture::LoadFromBuffer(std::vector<uint8_t>* buffer)
+bool Texture::LoadFromBuffer(const std::vector<uint8_t>& buffer)
 {
-    if (buffer->empty()) {
+    if (buffer.empty()) {
         return false;
     }
 
-#ifdef DEBUG
-    if (m_SRV || m_Texture) {
-        SPDLOG_INFO("Deleting existing texture before creating new one...");
-    }
-#endif
-
-    SAFE_RELEASE(m_SRV);
-    SAFE_RELEASE(m_Texture);
+    Unload();
 
     // create the dds texture resources
-    auto result = DirectX::CreateDDSTextureFromMemoryEx(Renderer::Get()->GetDevice(), buffer->data(), buffer->size(), 0,
+    auto result = DirectX::CreateDDSTextureFromMemoryEx(Renderer::Get()->GetDevice(), buffer.data(), buffer.size(), 0,
                                                         D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, false,
                                                         &m_Texture, &m_SRV);
 
@@ -67,7 +59,7 @@ bool Texture::LoadFromBuffer(std::vector<uint8_t>* buffer)
     }
 
     // store the buffer
-    m_Buffer = *buffer;
+    m_Buffer = buffer;
 
     if (FAILED(result)) {
         SPDLOG_ERROR("Failed to create texture \"{}\"", m_Filename.filename().string());
@@ -79,10 +71,14 @@ bool Texture::LoadFromBuffer(std::vector<uint8_t>* buffer)
 
 bool Texture::LoadFromFile(const std::filesystem::path& filename)
 {
+    if (!std::filesystem::exists(filename)) {
+        SPDLOG_ERROR("Texture does not exist! {}", filename.string());
+        return false;
+    }
+
     std::ifstream stream(filename, std::ios::binary);
     if (stream.fail()) {
         SPDLOG_ERROR("Failed to create texture from file \"{}\"", filename.filename().string());
-        // Window::Get()->ShowMessageBox("Failed to open texture \"" + filename.generic_string() + "\".");
         return false;
     }
 
@@ -91,11 +87,16 @@ bool Texture::LoadFromFile(const std::filesystem::path& filename)
     std::vector<uint8_t> buffer(size);
     stream.read((char*)buffer.data(), size);
 
-    SPDLOG_INFO("Read {} bytes from \"{}\"", size, filename.filename().string());
+    m_Filename = filename;
+    m_NameHash = ava::hashlittle(filename.generic_string().c_str());
 
-    auto result = LoadFromBuffer(&buffer);
-    stream.close();
-    return result;
+    return LoadFromBuffer(buffer);
+}
+
+void Texture::Unload()
+{
+    SAFE_RELEASE(m_SRV);
+    SAFE_RELEASE(m_Texture);
 }
 
 void Texture::Use(uint32_t slot, SamplerState_t* sampler)

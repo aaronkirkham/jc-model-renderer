@@ -230,15 +230,19 @@ void RenderBlockCharacterSkin::Setup(RenderContext_t* context)
 
     // set the textures
     for (int i = 0; i < 5; ++i) {
-        IRenderBlock::BindTexture(i, m_SamplerState);
+        BindTexture(i, m_SamplerState);
     }
 
     if (flags & USE_FEATURE_MAP) {
-        IRenderBlock::BindTexture(7, 5, m_SamplerState);
+        BindTexture(7, 5, m_SamplerState);
+    } else {
+        context->m_Renderer->ClearTexture(5);
     }
 
     if (flags & USE_WRINKLE_MAP) {
-        IRenderBlock::BindTexture(8, 6, m_SamplerState);
+        BindTexture(8, 6, m_SamplerState);
+    } else {
+        context->m_Renderer->ClearTexture(6);
     }
 
     // set the culling mode
@@ -281,18 +285,18 @@ void RenderBlockCharacterSkin::DrawUI()
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
     ImGui::Columns(3, nullptr, false);
     {
-        IRenderBlock::DrawUI_Texture("DiffuseMap", 0);
-        IRenderBlock::DrawUI_Texture("NormalMap", 1);
-        IRenderBlock::DrawUI_Texture("PropertiesMap", 2);
-        IRenderBlock::DrawUI_Texture("DetailDiffuseMap", 3);
-        IRenderBlock::DrawUI_Texture("DetailNormalMap", 4);
+        DrawUI_Texture("DiffuseMap", 0);
+        DrawUI_Texture("NormalMap", 1);
+        DrawUI_Texture("PropertiesMap", 2);
+        DrawUI_Texture("DetailDiffuseMap", 3);
+        DrawUI_Texture("DetailNormalMap", 4);
 
         if (m_Block.m_Attributes.m_Flags & USE_FEATURE_MAP) {
-            IRenderBlock::DrawUI_Texture("FeatureMap", 7);
+            DrawUI_Texture("FeatureMap", 7);
         }
 
         if (m_Block.m_Attributes.m_Flags & USE_WRINKLE_MAP) {
-            IRenderBlock::DrawUI_Texture("WrinkleMap", 8);
+            DrawUI_Texture("WrinkleMap", 8);
         }
     }
     ImGui::EndColumns();
