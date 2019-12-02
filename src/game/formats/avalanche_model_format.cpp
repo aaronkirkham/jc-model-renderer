@@ -120,6 +120,8 @@ void AvalancheModelFormat::Parse(const std::vector<uint8_t>& data, ParseCallback
                 if (success) {
                     ava::AvalancheModelFormat::ParseMeshc(data, &m_MeshAdf, &m_AmfMeshHeader, &m_LowMeshBuffers);
 
+                    m_BoundingBox = {m_AmfMeshHeader->m_BoundingBox.m_Min, m_AmfMeshHeader->m_BoundingBox.m_Max};
+
                     // get the high LOD mesh name (remove the leading "intermediate" path)
                     auto hrmesh_filename = std::string(m_MeshAdf->HashLookup(m_AmfMeshHeader->m_HighLodPath));
                     if (hrmesh_filename.find_first_of("intermediate/") == 0) {

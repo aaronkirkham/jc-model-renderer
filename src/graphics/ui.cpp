@@ -598,20 +598,10 @@ void UI::RenderMenuBar()
                         }
                     }
 
-                    // TODO: generate a bounding box for the whole model, instead of using the sub-mesh boxes.
                     for (const auto& model : AvalancheModelFormat::Instances) {
-                        /*if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
+                        if (ImGui::MenuItem(model.second->GetFileName().c_str())) {
                             Camera::Get()->FocusOn(model.second->GetBoundingBox());
-                        }*/
-
-                        /*
-                        for (const auto& render_block : model.second->GetRenderBlocks()) {
-                            const auto& name = ((jc4::IRenderBlock*)render_block)->m_Name;
-                            if (ImGui::MenuItem(name)) {
-                                Camera::Get()->FocusOn(model.second->GetBoundingBox());
-                            }
                         }
-                        */
                     }
 
                     ImGui::EndMenu();

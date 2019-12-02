@@ -119,7 +119,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                     continue;
                 }
 
-                if (GetAsyncKeyState(VK_F1)) {
+                if (GetAsyncKeyState(VK_F1) & 1) {
                     std::filesystem::path filename = "editor/entities/characters/main_characters/sheldon.ee";
                     FileLoader::Get()->ReadFile(filename, [&, filename](bool success, FileBuffer data) {
                         assert(success);
@@ -345,11 +345,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                 for (const auto& model : AvalancheModelFormat::Instances) {
                     // bounding boxes
                     if (g_DrawBoundingBoxes) {
-                        // UI::Get()->DrawBoundingBox(model.second->GetBoundingBox(), red);
+                        UI::Get()->DrawBoundingBox(model.second->GetBoundingBox(), red);
                     }
                 }
             } else {
-                // TODO: move the RenderBlockModel::DrawGizmos stuff in here.
                 for (const auto& model : RenderBlockModel::Instances) {
                     const auto& bounding_box = model.second->GetBoundingBox();
 
