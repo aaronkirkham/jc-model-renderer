@@ -48,17 +48,17 @@ void RenderBlockLandmark::Create()
     // clang-format on
 
     m_VertexDeclaration =
-        Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockLandmark");
+        Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "Landmark VertexDecl");
 
     // create the constant buffer
     m_VertexShaderConstants[0] =
-        Renderer::Get()->CreateConstantBuffer(m_cbVertexInstanceConsts, "RenderBlockLandmark cbVertexInstanceConsts");
+        Renderer::Get()->CreateConstantBuffer(m_cbVertexInstanceConsts, "Landmark VertexInstanceConsts");
     m_VertexShaderConstants[1] =
-        Renderer::Get()->CreateConstantBuffer(m_cbVertexMaterialConsts, "RenderBlockLandmark cbVertexMaterialConsts");
-    m_FragmentShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(
-        m_cbFragmentMaterialConsts, 3, "RenderBlockLandmark cbFragmentMaterialConsts");
-    m_FragmentShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(
-        m_cbFragmentInstanceConsts, "RenderBlockLandmark cbFragmentInstanceConsts");
+        Renderer::Get()->CreateConstantBuffer(m_cbVertexMaterialConsts, "Landmark VertexMaterialConsts");
+    m_FragmentShaderConstants[0] =
+        Renderer::Get()->CreateConstantBuffer(m_cbFragmentMaterialConsts, 3, "Landmark FragmentMaterialConsts");
+    m_FragmentShaderConstants[1] =
+        Renderer::Get()->CreateConstantBuffer(m_cbFragmentInstanceConsts, "Landmark FragmentInstanceConsts");
 }
 
 void RenderBlockLandmark::Setup(RenderContext_t* context)

@@ -234,11 +234,7 @@ class RenderBlockCarPaintMM : public IRenderBlock
     virtual void DrawContextMenu() override final;
     virtual void DrawUI() override final;
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
-    {
-        //
-    }
-
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final;
     virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
         using namespace jc::Vertex;

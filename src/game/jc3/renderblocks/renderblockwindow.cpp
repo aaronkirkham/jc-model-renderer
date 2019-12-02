@@ -43,13 +43,11 @@ void RenderBlockWindow::Create()
 
     // create the vertex declaration
     m_VertexDeclaration =
-        Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockWindow");
+        Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "Window VertexDecl");
 
     // create the constant buffers
-    m_VertexShaderConstants =
-        Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockWindow InstanceConsts");
-    m_FragmentShaderConstants =
-        Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, 3, "RenderBlockWindow MaterialConsts");
+    m_VertexShaderConstants   = Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "Window InstanceConsts");
+    m_FragmentShaderConstants = Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, 3, "Window MaterialConsts");
 
     // create the sampler states
     {
@@ -64,12 +62,12 @@ void RenderBlockWindow::Create()
         params.MinLOD         = 0.0f;
         params.MaxLOD         = 13.0f;
 
-        m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockWindow");
+        m_SamplerState = Renderer::Get()->CreateSamplerState(params, "Window SamplerState");
 
         // TODO: find out what the game is actually doing
         // couldn't find anything related to slot 15 in the RenderBlockWindow stuff
         params.Filter = D3D11_FILTER_COMPARISON_ANISOTROPIC;
-        _test         = Renderer::Get()->CreateSamplerState(params, "RenderBlockWindow _test");
+        _test         = Renderer::Get()->CreateSamplerState(params, "RenderBlockWindow SamplerState_test");
     }
 }
 

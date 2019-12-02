@@ -53,7 +53,7 @@ void RenderBlockCharacterSkin::Create()
 
             // create the vertex declaration
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(),
-                                                                           "RenderBlockCharacterSkin (4bones1uv)");
+                                                                           "CharacterSkin VertexDecl (4bones1uv)");
             break;
         }
 
@@ -74,7 +74,7 @@ void RenderBlockCharacterSkin::Create()
 
             // create the vertex declaration
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(),
-                                                                           "RenderBlockCharacterSkin (4bones2uvs)");
+                                                                           "CharacterSkin VertexDecl (4bones2uvs)");
             break;
         }
 
@@ -96,7 +96,7 @@ void RenderBlockCharacterSkin::Create()
 
             // create the vertex declaration
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(),
-                                                                           "RenderBlockCharacterSkin (4bones3uvs)");
+                                                                           "CharacterSkin VertexDecl (4bones3uvs)");
             break;
         }
 
@@ -119,7 +119,7 @@ void RenderBlockCharacterSkin::Create()
 
             // create the vertex declaration
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(),
-                                                                           "RenderBlockCharacterSkin (8bones1uv)");
+                                                                           "CharacterSkin VertexDecl (8bones1uv)");
             break;
         }
 
@@ -142,7 +142,7 @@ void RenderBlockCharacterSkin::Create()
 
             // create the vertex declaration
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(),
-                                                                           "RenderBlockCharacterSkin (8bones3uvs)");
+                                                                           "CharacterSkin VertexDecl (8bones3uvs)");
             break;
         }
 
@@ -166,18 +166,17 @@ void RenderBlockCharacterSkin::Create()
 
             // create the vertex declaration
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 8, m_VertexShader.get(),
-                                                                           "RenderBlockCharacterSkin (8bones3uvs)");
+                                                                           "CharacterSkin VertexDecl (8bones3uvs)");
             break;
         }
     }
 
     // create the constant buffer
-    m_VertexShaderConstants =
-        Renderer::Get()->CreateConstantBuffer(m_cbLocalConsts, "RenderBlockCharacterSkin cbLocalConsts");
+    m_VertexShaderConstants = Renderer::Get()->CreateConstantBuffer(m_cbLocalConsts, "CharacterSkin LocalConsts");
     m_FragmentShaderConstants[0] =
-        Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockCharacterSkin cbInstanceConsts");
+        Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "CharacterSkin InstanceConsts");
     m_FragmentShaderConstants[1] =
-        Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockCharacterSkin cbMaterialConsts");
+        Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "CharacterSkin MaterialConsts");
 
     // identity the palette data
     for (int i = 0; i < 70; ++i) {
@@ -200,7 +199,7 @@ void RenderBlockCharacterSkin::Create()
         params.MinLOD         = 0.0f;
         params.MaxLOD         = 13.0f;
 
-        m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCharacterSkin");
+        m_SamplerState = Renderer::Get()->CreateSamplerState(params, "CharacterSkin SamplerState");
     }
 }
 

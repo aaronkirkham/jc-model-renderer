@@ -71,7 +71,7 @@ void RenderBlockGeneral::Create()
         // clang-format on
 
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
-                                                                       "RenderBlockGeneral (unpacked)");
+                                                                       "General VertexDecl (unpacked)");
     } else {
         // clang-format off
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
@@ -82,16 +82,16 @@ void RenderBlockGeneral::Create()
         // clang-format on
 
         m_VertexDeclaration =
-            Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "RenderBlockGeneral (packed)");
+            Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "General VertexDecl (packed)");
     }
 
     // create the constant buffer
     m_VertexShaderConstants[0] =
-        Renderer::Get()->CreateConstantBuffer(m_cbVertexInstanceConsts, "RenderBlockGeneral cbVertexInstanceConsts");
+        Renderer::Get()->CreateConstantBuffer(m_cbVertexInstanceConsts, "General VertexInstanceConsts");
     m_VertexShaderConstants[1] =
-        Renderer::Get()->CreateConstantBuffer(m_cbVertexMaterialConsts, "RenderBlockGeneral cbVertexMaterialConsts");
-    m_FragmentShaderConstant = Renderer::Get()->CreateConstantBuffer(m_cbFragmentMaterialConsts,
-                                                                     "RenderBlockGeneral cbFragmentMaterialConsts");
+        Renderer::Get()->CreateConstantBuffer(m_cbVertexMaterialConsts, "General VertexMaterialConsts");
+    m_FragmentShaderConstant =
+        Renderer::Get()->CreateConstantBuffer(m_cbFragmentMaterialConsts, "General FragmentMaterialConsts");
 }
 
 void RenderBlockGeneral::Setup(RenderContext_t* context)

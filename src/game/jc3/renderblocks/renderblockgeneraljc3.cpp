@@ -50,7 +50,7 @@ void RenderBlockGeneralJC3::Create()
         // clang-format on
 
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
-                                                                       "RenderBlockGeneralJC3 (unpacked)");
+                                                                       "GeneralJC3 VertexDecl (unpacked)");
     } else {
         // clang-format off
         D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
@@ -61,18 +61,18 @@ void RenderBlockGeneralJC3::Create()
         // clang-format on
 
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
-                                                                       "RenderBlockGeneralJC3 (packed)");
+                                                                       "GeneralJC3 VertexDecl (packed)");
     }
 
     // create the constant buffer
     m_VertexShaderConstants[0] =
-        Renderer::Get()->CreateConstantBuffer(m_cbVertexInstanceConsts, "RenderBlockGeneralJC3 cbVertexInstanceConsts");
-    m_VertexShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(
-        m_cbVertexMaterialConsts, "RenderBlockGeneralJC3 m_cbVertexMaterialConsts");
-    m_FragmentShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(
-        m_cbFragmentMaterialConsts, "RenderBlockGeneralJC3 cbFragmentMaterialConsts");
-    m_FragmentShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(
-        m_cbFragmentInstanceConsts, "RenderBlockGeneralJC3 cbFragmentInstanceConsts");
+        Renderer::Get()->CreateConstantBuffer(m_cbVertexInstanceConsts, "GeneralJC3 VertexInstanceConsts");
+    m_VertexShaderConstants[1] =
+        Renderer::Get()->CreateConstantBuffer(m_cbVertexMaterialConsts, "GeneralJC3 VertexMaterialConsts");
+    m_FragmentShaderConstants[0] =
+        Renderer::Get()->CreateConstantBuffer(m_cbFragmentMaterialConsts, "GeneralJC3 FragmentMaterialConsts");
+    m_FragmentShaderConstants[1] =
+        Renderer::Get()->CreateConstantBuffer(m_cbFragmentInstanceConsts, "GeneralJC3 FragmentInstanceConsts");
 }
 
 void RenderBlockGeneralJC3::Setup(RenderContext_t* context)

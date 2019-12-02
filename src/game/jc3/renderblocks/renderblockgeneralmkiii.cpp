@@ -62,22 +62,22 @@ void RenderBlockGeneralMkIII::Create()
     // clang-format on
 
     // create the vertex declaration
-    m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
-                                                                   "RenderBlockGeneralMkIII (packed)");
+    m_VertexDeclaration =
+        Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "GeneralMkIII (packed)");
 
     // create the constant buffers
-    m_VertexShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "RenderBlockGeneralMkIII RBIInfo");
+    m_VertexShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "GeneralMkIII RBIInfo");
     m_VertexShaderConstants[1] =
-        Renderer::Get()->CreateConstantBuffer(m_cbInstanceAttributes, "RenderBlockGeneralMkIII InstanceAttributes");
+        Renderer::Get()->CreateConstantBuffer(m_cbInstanceAttributes, "GeneralMkIII InstanceAttributes");
     m_FragmentShaderConstants[0] =
-        Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, 2, "RenderBlockGeneralMkIII MaterialConsts");
+        Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, 2, "GeneralMkIII MaterialConsts");
     m_FragmentShaderConstants[1] =
-        Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts2, 18, "RenderBlockGeneralMkIII MaterialConsts2");
+        Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts2, 18, "GeneralMkIII MaterialConsts2");
 
     // create skinning palette buffer
     if (m_Block.m_Attributes.m_Flags & (IS_SKINNED | DESTRUCTION)) {
         m_VertexShaderConstants[2] =
-            Renderer::Get()->CreateConstantBuffer(m_cbSkinningConsts, "RenderBlockGeneralMkIII SkinningConsts");
+            Renderer::Get()->CreateConstantBuffer(m_cbSkinningConsts, "GeneralMkIII SkinningConsts");
 
         // identity the palette data
         for (int i = 0; i < 2; ++i) {
@@ -98,7 +98,7 @@ void RenderBlockGeneralMkIII::Create()
         params.MinLOD         = 0.0f;
         params.MaxLOD         = 13.0f;
 
-        m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockGeneralMkIII");
+        m_SamplerState = Renderer::Get()->CreateSamplerState(params, "GeneralMkIII SamplerState");
     }
 }
 
@@ -361,8 +361,8 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
     // of textures it can hold which NEED to written correctly when rebuilding the RBM
     m_Textures.resize(20);
 
-    std::vector<PackedVertexPosition> packed_vertices;
-    std::vector<GeneralShortPacked>   packed_data;
+    std::vector<PackedVertexPosition> vertices_;
+    std::vector<GeneralShortPacked>   data_;
 
     for (const auto& vertex : *vertices) {
         // vertices data
@@ -370,17 +370,15 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
         pos.x = pack<int16_t>(vertex.pos.x);
         pos.y = pack<int16_t>(vertex.pos.y);
         pos.z = pack<int16_t>(vertex.pos.z);
-        packed_vertices.emplace_back(std::move(pos));
+        vertices_.emplace_back(std::move(pos));
 
         // uv data
         GeneralShortPacked gsp{};
         gsp.u0 = pack<int16_t>(vertex.uv.x);
         gsp.v0 = pack<int16_t>(vertex.uv.y);
         gsp.n  = pack_normal(vertex.normal);
-
-        // TODO: generate tangent
-
-        packed_data.emplace_back(std::move(gsp));
+        // @TODO: tangent
+        data_.emplace_back(std::move(gsp));
     }
 
     // load textures
@@ -389,8 +387,6 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
         auto& texture                = TextureManager::Get()->GetTexture(filename.filename());
         assert(texture);
         texture->LoadFromFile(filename);
-
-        printf("[%s] %s\n", type.c_str(), filename.generic_string().c_str());
 
         if (type == "diffuse") {
             m_Textures[0] = std::move(texture);
@@ -403,10 +399,9 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
         }
     }
 
-    m_VertexBuffer     = Renderer::Get()->CreateBuffer(packed_vertices.data(), packed_vertices.size(),
-                                                   sizeof(PackedVertexPosition), VERTEX_BUFFER);
-    m_VertexBufferData = Renderer::Get()->CreateBuffer(packed_data.data(), packed_data.size(),
-                                                       sizeof(GeneralShortPacked), VERTEX_BUFFER);
-    m_IndexBuffer = Renderer::Get()->CreateBuffer(indices->data(), indices->size(), sizeof(uint16_t), INDEX_BUFFER);
+    // create buffers
+    m_VertexBuffer     = Renderer::Get()->CreateBuffer(vertices_, VERTEX_BUFFER, "GeneralMkIII VertexBuffer");
+    m_VertexBufferData = Renderer::Get()->CreateBuffer(data_, VERTEX_BUFFER, "GeneralMkIII VertexBufferData");
+    m_IndexBuffer      = Renderer::Get()->CreateBuffer(*indices, INDEX_BUFFER, "GeneralMkIII IndexBuffer");
 }
 }; // namespace jc3

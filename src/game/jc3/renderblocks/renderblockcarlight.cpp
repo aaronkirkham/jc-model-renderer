@@ -53,16 +53,13 @@ void RenderBlockCarLight::Create()
 
     // create the vertex declaration
     m_VertexDeclaration =
-        Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCarLight");
+        Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "CarLight VertexDecl");
 
     // create the constant buffers
-    m_VertexShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "RenderBlockCarLight RBIInfo");
-    m_VertexShaderConstants[1] =
-        Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockCarLight InstanceConsts");
-    m_VertexShaderConstants[2] =
-        Renderer::Get()->CreateConstantBuffer(m_cbDeformConsts, "RenderBlockCarLight DeformConsts");
-    m_FragmentShaderConstants =
-        Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockCarLight MaterialConsts");
+    m_VertexShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "CarLight RBIInfo");
+    m_VertexShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "CarLight InstanceConsts");
+    m_VertexShaderConstants[2] = Renderer::Get()->CreateConstantBuffer(m_cbDeformConsts, "CarLight DeformConsts");
+    m_FragmentShaderConstants  = Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "CarLight MaterialConsts");
 
     // create the sampler states
     {
@@ -77,7 +74,7 @@ void RenderBlockCarLight::Create()
         params.MinLOD         = 0.0f;
         params.MaxLOD         = 13.0f;
 
-        m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCarLight");
+        m_SamplerState = Renderer::Get()->CreateSamplerState(params, "CarLight SamplerState");
     }
 
     //

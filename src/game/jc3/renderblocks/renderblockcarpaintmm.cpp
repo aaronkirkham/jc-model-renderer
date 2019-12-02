@@ -9,6 +9,8 @@
 #include "graphics/imgui/imgui_disabled.h"
 #include "graphics/renderer.h"
 #include "graphics/shader_manager.h"
+#include "graphics/texture.h"
+#include "graphics/texture_manager.h"
 
 #include "game/render_block_factory.h"
 
@@ -60,7 +62,7 @@ void RenderBlockCarPaintMM::Create()
 
         // create the vertex declaration
         m_VertexDeclaration =
-            Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "RenderBlockCarPaintMM");
+            Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(), "CarPaintMM VertexDecl");
     } else if (m_ShaderName == "carpaintmm_deform") {
         // create the element input desc
         // clang-format off
@@ -75,8 +77,8 @@ void RenderBlockCarPaintMM::Create()
         // clang-format on
 
         // create the vertex declaration
-        m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(),
-                                                                       "RenderBlockCarPaintMM (deform)");
+        m_VertexDeclaration =
+            Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(), "CarPaintMM (deform)");
     } else if (m_ShaderName == "carpaintmm_skinned") {
 #ifdef DEBUG
         __debugbreak();
@@ -96,19 +98,16 @@ void RenderBlockCarPaintMM::Create()
     memset(&m_cbDeformConsts, 0, sizeof(m_cbDeformConsts));
 
     // create the constant buffers
-    m_VertexShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "RenderBlockCarPaintMM RBIInfo");
-    m_VertexShaderConstants[1] =
-        Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockCarPaintMM InstanceConsts");
-    m_VertexShaderConstants[2] =
-        Renderer::Get()->CreateConstantBuffer(m_cbDeformConsts, "RenderBlockCarPaintMM DeformConsts");
-    m_FragmentShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(
-        m_cbStaticMaterialParams, 20, "RenderBlockCarPaintMM CarPaintStaticMaterialParams");
-    m_FragmentShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(
-        m_cbDynamicMaterialParams, 5, "RenderBlockCarPaintMM CarPaintDynamicMaterialParams");
-    m_FragmentShaderConstants[2] = Renderer::Get()->CreateConstantBuffer(
-        m_cbDynamicObjectParams, "RenderBlockCarPaintMM CarPaintDynamicObjectParams");
-    m_FragmentShaderConstants[3] =
-        Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "RenderBlockCarPaintMM RBIInfo (fragment)");
+    m_VertexShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "CarPaintMM RBIInfo");
+    m_VertexShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "CarPaintMM InstanceConsts");
+    m_VertexShaderConstants[2] = Renderer::Get()->CreateConstantBuffer(m_cbDeformConsts, "CarPaintMM DeformConsts");
+    m_FragmentShaderConstants[0] =
+        Renderer::Get()->CreateConstantBuffer(m_cbStaticMaterialParams, 20, "CarPaintMM StaticMaterialParams");
+    m_FragmentShaderConstants[1] =
+        Renderer::Get()->CreateConstantBuffer(m_cbDynamicMaterialParams, 5, "CarPaintMM DynamicMaterialParams");
+    m_FragmentShaderConstants[2] =
+        Renderer::Get()->CreateConstantBuffer(m_cbDynamicObjectParams, "CarPaintMM DynamicObjectParams");
+    m_FragmentShaderConstants[3] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "CarPaintMM RBIInfo (fragment)");
 
     // create the sampler states
     {
@@ -123,7 +122,7 @@ void RenderBlockCarPaintMM::Create()
         params.MinLOD         = 0.0f;
         params.MaxLOD         = 13.0f;
 
-        m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCarPaintMM");
+        m_SamplerState = Renderer::Get()->CreateSamplerState(params, "CarPaintMM SamplerState");
     }
 }
 
@@ -281,5 +280,56 @@ void RenderBlockCarPaintMM::DrawUI()
         }
     }
     ImGui::EndColumns();
+}
+
+void RenderBlockCarPaintMM::SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials)
+{
+    using namespace jc::Vertex;
+
+    memset(&m_Block.m_Attributes, 0, sizeof(m_Block.m_Attributes));
+    memset(&m_cbStaticMaterialParams, 0, sizeof(m_cbStaticMaterialParams));
+    memset(&m_cbDynamicMaterialParams, 0, sizeof(m_cbDynamicMaterialParams));
+
+    // @TODO: deform table
+
+    m_Block.m_Version            = jc::RenderBlocks::CARPAINTMM_VERSION;
+    m_Block.m_Attributes.m_Flags = DISABLE_BACKFACE_CULLING;
+
+    std::vector<UnpackedVertexPosition> vertices_;
+    std::vector<UnpackedNormals>        data_;
+
+    // convert vertices
+    for (const auto& vertex : *vertices) {
+        // vertices data
+        UnpackedVertexPosition pos{vertex.pos.x, vertex.pos.y, vertex.pos.z};
+        vertices_.emplace_back(std::move(pos));
+
+        // uv data
+        UnpackedNormals uv_data{};
+        uv_data.u0 = vertex.uv.x;
+        uv_data.v0 = vertex.uv.y;
+        uv_data.n  = pack_normal(vertex.normal);
+        // @TODO: tangent
+        data_.emplace_back(std::move(uv_data));
+    }
+
+    // load textures
+    for (const auto& mat : *materials) {
+        const auto& [type, filename] = mat;
+        auto& texture                = TextureManager::Get()->GetTexture(filename.filename());
+        assert(texture);
+        texture->LoadFromFile(filename);
+
+        if (type == "diffuse") {
+            m_Textures[0] = std::move(texture);
+        } else if (type == "normal") {
+            m_Textures[1] = std::move(texture);
+        }
+    }
+
+    // create buffers
+    m_VertexBuffer        = Renderer::Get()->CreateBuffer(vertices_, VERTEX_BUFFER, "CarPaintMM VertexBuffer");
+    m_VertexBufferData[0] = Renderer::Get()->CreateBuffer(data_, VERTEX_BUFFER, "CarPaintMM VertexBufferData[0]");
+    m_IndexBuffer         = Renderer::Get()->CreateBuffer(*indices, INDEX_BUFFER, "CarPaintMM IndexBuffer");
 }
 }; // namespace jc3

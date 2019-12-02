@@ -71,7 +71,7 @@ void RenderBlockCharacter::Create()
 
             // create the vertex declaration
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(),
-                                                                           "RenderBlockCharacter (Packed4Bones1UV)");
+                                                                           "Character VertexDecl (Packed4Bones1UV)");
             break;
         }
 
@@ -92,7 +92,7 @@ void RenderBlockCharacter::Create()
 
             // create the vertex declaration
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(),
-                                                                           "RenderBlockCharacter (Packed4Bones2UVs)");
+                                                                           "Character VertexDecl (Packed4Bones2UVs)");
             break;
         }
 
@@ -114,7 +114,7 @@ void RenderBlockCharacter::Create()
 
             // create the vertex declaration
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 6, m_VertexShader.get(),
-                                                                           "RenderBlockCharacter (Packed4Bones3UVs)");
+                                                                           "Character VertexDecl (Packed4Bones3UVs)");
             break;
         }
 
@@ -137,7 +137,7 @@ void RenderBlockCharacter::Create()
 
             // create the vertex declaration
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(),
-                                                                           "RenderBlockCharacter (Packed8Bones1UV)");
+                                                                           "Character VertexDecl (Packed8Bones1UV)");
             break;
         }
 
@@ -160,7 +160,7 @@ void RenderBlockCharacter::Create()
 
             // create the vertex declaration
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 7, m_VertexShader.get(),
-                                                                           "RenderBlockCharacter (Packed8Bones2UVs)");
+                                                                           "Character VertexDecl (Packed8Bones2UVs)");
             break;
         }
 
@@ -184,18 +184,15 @@ void RenderBlockCharacter::Create()
 
             // create the vertex declaration
             m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 8, m_VertexShader.get(),
-                                                                           "RenderBlockCharacter (Packed8Bones3UVs)");
+                                                                           "Character VertexDecl (Packed8Bones3UVs)");
             break;
         }
     }
 
     // create the constant buffer
-    m_VertexShaderConstants =
-        Renderer::Get()->CreateConstantBuffer(m_cbLocalConsts, "RenderBlockCharacter cbLocalConsts");
-    m_PixelShaderConstants[0] =
-        Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "RenderBlockCharacter cbInstanceConsts");
-    m_PixelShaderConstants[1] =
-        Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockCharacter cbMaterialConsts");
+    m_VertexShaderConstants   = Renderer::Get()->CreateConstantBuffer(m_cbLocalConsts, "Character LocalConsts");
+    m_PixelShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbInstanceConsts, "Character InstanceConsts");
+    m_PixelShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "Character MaterialConsts");
 
     // reset fragment shader material consts
     memset(&m_cbMaterialConsts, 0, sizeof(m_cbMaterialConsts));
@@ -218,7 +215,7 @@ void RenderBlockCharacter::Create()
         params.MinLOD         = 0.0f;
         params.MaxLOD         = 13.0f;
 
-        m_SamplerState = Renderer::Get()->CreateSamplerState(params, "RenderBlockCharacter");
+        m_SamplerState = Renderer::Get()->CreateSamplerState(params, "Character SamplerState");
     }
 }
 

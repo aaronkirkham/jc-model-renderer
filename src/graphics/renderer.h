@@ -158,6 +158,11 @@ class Renderer : public Singleton<Renderer>
     IBuffer_t* CreateBuffer(const void* data, uint32_t count, uint32_t stride, BufferType type,
                             const char* debugName = nullptr);
 
+    template <typename T> IBuffer_t* CreateBuffer(const T& data, BufferType type, const char* debugName = nullptr)
+    {
+        return CreateBuffer(data.data(), data.size(), sizeof(decltype(data.back())), type, debugName);
+    }
+
     template <typename T> ConstantBuffer_t* CreateConstantBuffer(T& data, const char* debugName = nullptr)
     {
         return CreateConstantBuffer(data, sizeof(T) / 16, debugName);

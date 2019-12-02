@@ -55,7 +55,7 @@ void RenderBlockCharacter::Create(const std::string& type_id, IBuffer_t* vertex_
 
         // create the vertex declaration
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(),
-                                                                       "RenderBlockCharacter (CharacterMesh1UVMesh)");
+                                                                       "Character VertexDecl (CharacterMesh1UVMesh)");
     }
     // CharacterMesh2UVMesh
     else if (type_id == "CharacterMesh2UVMesh") {
@@ -76,7 +76,7 @@ void RenderBlockCharacter::Create(const std::string& type_id, IBuffer_t* vertex_
 
         // create the vertex declaration
         m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 5, m_VertexShader.get(),
-                                                                       "RenderBlockCharacter (CharacterMesh2UVMesh)");
+                                                                       "Character VertexDecl (CharacterMesh2UVMesh)");
 
     } else {
 #ifdef DEBUG
@@ -86,19 +86,15 @@ void RenderBlockCharacter::Create(const std::string& type_id, IBuffer_t* vertex_
 
     // create vertex shader constants
     m_VertexShaderConstants[0] =
-        Renderer::Get()->CreateConstantBuffer(m_VertexPerDrawConsts, "RenderBlockCharacter m_VertexPerDrawConsts");
-    m_VertexShaderConstants[1] =
-        Renderer::Get()->CreateConstantBuffer(m_cbSkinningConsts, "RenderBlockCharacter m_cbSkinningConsts");
-    m_VertexShaderConstants[2] =
-        Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "RenderBlockCharacter m_cbMaterialConsts");
+        Renderer::Get()->CreateConstantBuffer(m_VertexPerDrawConsts, "Character VertexPerDrawConsts");
+    m_VertexShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbSkinningConsts, "Character SkinningConsts");
+    m_VertexShaderConstants[2] = Renderer::Get()->CreateConstantBuffer(m_cbMaterialConsts, "Character MaterialConsts");
 
     // create pixel shader constants
-    m_PixelShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_DefaultPerDrawConstants,
-                                                                      "RenderBlockCharacter m_DefaultPerDrawConstants");
-    m_PixelShaderConstants[1] =
-        Renderer::Get()->CreateConstantBuffer(m_cbUnknownCB4, "RenderBlockCharacter m_cbUnknownCB4");
-    m_PixelShaderConstants[2] =
-        Renderer::Get()->CreateConstantBuffer(m_cbUnknownCB6, "RenderBlockCharacter m_cbUnknownCB6");
+    m_PixelShaderConstants[0] =
+        Renderer::Get()->CreateConstantBuffer(m_DefaultPerDrawConstants, "Character DefaultPerDrawConstants");
+    m_PixelShaderConstants[1] = Renderer::Get()->CreateConstantBuffer(m_cbUnknownCB4, "Character UnknownCB4");
+    m_PixelShaderConstants[2] = Renderer::Get()->CreateConstantBuffer(m_cbUnknownCB6, "Character UnknownCB6");
 
     // init the skinning palette data
     for (auto i = 0; i < 70; ++i) {
@@ -121,7 +117,7 @@ void RenderBlockCharacter::Create(const std::string& type_id, IBuffer_t* vertex_
     params.ComparisonFunc = D3D11_COMPARISON_NEVER;
     params.MinLOD         = 0.0f;
     params.MaxLOD         = 13.0f;
-    m_SamplerState        = Renderer::Get()->CreateSamplerState(params, "RenderBlockCharacter");
+    m_SamplerState        = Renderer::Get()->CreateSamplerState(params, "Character SamplerState");
 }
 
 void RenderBlockCharacter::Setup(RenderContext_t* context)
