@@ -41,7 +41,6 @@ class RenderBlockModel : public Factory<RenderBlockModel>
     bool ParseLOD(const std::vector<uint8_t>& buffer);
     bool ParseRBM(const std::vector<uint8_t>& buffer, bool add_to_render_list = true);
 
-    void UpdateBoundingBoxScale();
     void RecalculateBoundingBox();
 
     inline static bool                     LoadingFromRuntimeContainer = false;

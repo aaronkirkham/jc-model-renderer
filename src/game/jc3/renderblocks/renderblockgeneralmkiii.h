@@ -233,7 +233,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
             for (const auto& vertex : vb) {
                 vertex_t v;
-                v.pos = glm::vec3{vertex.x, vertex.y, vertex.z} * GetScale();
+                v.pos = glm::vec3{vertex.x, vertex.y, vertex.z};
                 vertices.emplace_back(std::move(v));
             }
         } else {
@@ -242,7 +242,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 
             for (const auto& vertex : vb) {
                 vertex_t v;
-                v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)} * GetScale();
+                v.pos = glm::vec3{unpack(vertex.x), unpack(vertex.y), unpack(vertex.z)};
                 vertices.emplace_back(std::move(v));
             }
         }

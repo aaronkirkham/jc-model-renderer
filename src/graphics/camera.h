@@ -33,7 +33,7 @@ class Camera : public Singleton<Camera>
 
     void      Update(RenderContext_t* context);
     void      UpdateViewport(const glm::vec2& size);
-    glm::vec2 WorldToScreen(const glm::vec3& world);
+    bool      WorldToScreen(const glm::vec3& world, glm::vec2* screen);
     glm::vec3 ScreenToWorld(const glm::vec2& screen);
 
     void                              FocusOn(const BoundingBox& box);

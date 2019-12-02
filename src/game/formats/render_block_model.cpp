@@ -216,8 +216,8 @@ bool RenderBlockModel::SaveFileCallback(const std::filesystem::path& filename, c
 
         // generate the rbm header
         RbmHeader header;
-        memcpy(&header.m_BoundingBoxMin, glm::value_ptr(bounding_box.GetMin()), sizeof(glm::vec3));
-        memcpy(&header.m_BoundingBoxMax, glm::value_ptr(bounding_box.GetMax()), sizeof(glm::vec3));
+        memcpy(&header.m_BoundingBoxMin, glm::value_ptr(bounding_box.m_Min), sizeof(glm::vec3));
+        memcpy(&header.m_BoundingBoxMax, glm::value_ptr(bounding_box.m_Max), sizeof(glm::vec3));
         header.m_NumberOfBlocks = render_blocks.size();
 
         // write the header
@@ -313,31 +313,23 @@ void RenderBlockModel::LoadFromRuntimeContainer(const std::filesystem::path&    
 #endif
 }
 
-void RenderBlockModel::UpdateBoundingBoxScale()
-{
-    const auto render_block =
-        std::max_element(m_RenderBlocks.begin(), m_RenderBlocks.end(),
-                         [](const IRenderBlock* a, const IRenderBlock* b) { return a->GetScale() < b->GetScale(); });
-
-    assert(render_block != m_RenderBlocks.end());
-    m_BoundingBox.SetScale((*render_block)->GetScale());
-}
-
 void RenderBlockModel::RecalculateBoundingBox()
 {
-    glm::vec3 min_{FLT_MAX};
-    glm::vec3 max_{-FLT_MAX};
+    glm::vec3 min{FLT_MAX};
+    glm::vec3 max{-FLT_MAX};
 
     for (const auto& render_block : m_RenderBlocks) {
         auto& [vertices, indices] = render_block->GetData();
+        const float scale         = render_block->GetScale();
 
         for (const auto& vertex : vertices) {
-            min_ = glm::min(min_, vertex.pos);
-            max_ = glm::max(max_, vertex.pos);
+            auto scaled_vertex = vertex.pos * scale;
+
+            min = glm::min(min, scaled_vertex);
+            max = glm::max(max, scaled_vertex);
         }
     }
 
-    m_BoundingBox.m_Min = min_;
-    m_BoundingBox.m_Max = max_;
-    UpdateBoundingBoxScale();
+    m_BoundingBox.m_Min = min;
+    m_BoundingBox.m_Max = max;
 }

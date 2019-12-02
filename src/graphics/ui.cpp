@@ -704,8 +704,8 @@ void UI::RenderMenuBar()
 
 void UI::RenderSceneView(const glm::vec2& window_size)
 {
-    ImGui::SetNextWindowPos({0, m_MainMenuBarHeight});
-    ImGui::SetNextWindowSize({window_size.x - m_SidebarWidth, window_size.y - m_MainMenuBarHeight});
+    ImGui::SetNextWindowPos({0, 0});
+    ImGui::SetNextWindowSize({window_size.x - m_SidebarWidth, window_size.y});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0, 0});
 
     const auto result = ImGui::Begin("Scene", nullptr,
@@ -1273,16 +1273,32 @@ void UI::RegisterContextMenuCallback(const std::vector<std::string>& extensions,
 
 void UI::DrawText(const std::string& text, const glm::vec3& position, const glm::vec4& colour, bool center)
 {
+    DrawText(text, position, colour, {}, center);
+}
+
+void UI::DrawText(const std::string& text, const glm::vec3& position, const glm::vec4& colour,
+                  const glm::vec4& shadow_colour, bool center)
+{
     assert(m_SceneDrawList);
 
-    const auto& screen = Camera::Get()->WorldToScreen(position);
-    if (center) {
-        const auto text_size = ImGui::CalcTextSize(text.c_str());
-        m_SceneDrawList->AddText(ImVec2{(screen.x - (text_size.x / 2)), (screen.y - (text_size.y / 2))},
-                                 ImColor{colour.x, colour.y, colour.z, colour.a}, text.c_str());
-    } else {
-        m_SceneDrawList->AddText(ImVec2{screen.x, screen.y}, ImColor{colour.x, colour.y, colour.z, colour.a},
-                                 text.c_str());
+    glm::vec2 screen;
+    if (Camera::Get()->WorldToScreen(position, &screen)) {
+        ImColor col_{colour.x, colour.y, colour.z, colour.a};
+        ImVec2  pos_{screen.x, screen.y};
+
+        if (center) {
+            const auto text_size = ImGui::CalcTextSize(text.c_str());
+            pos_                 = {(screen.x - (text_size.x / 2)), (screen.y - (text_size.y / 2))};
+        }
+
+        // draw shadow
+        if (shadow_colour.a) {
+            ImColor shadow_col_{shadow_colour.x, shadow_colour.y, shadow_colour.z, shadow_colour.a};
+            ImVec2  shadow_pos_{pos_.x + 1.0f, pos_.y + 1.0f};
+            m_SceneDrawList->AddText(shadow_pos_, shadow_col_, text.c_str());
+        }
+
+        m_SceneDrawList->AddText(pos_, col_, text.c_str());
     }
 }
 
@@ -1296,8 +1312,10 @@ void UI::DrawBoundingBox(const BoundingBox& bb, const glm::vec4& colour)
     for (auto i = 0; i < 8; ++i) {
         const auto world = glm::vec3{box[(i ^ (i >> 1)) & 1].x, box[(i >> 1) & 1].y, box[(i >> 2) & 1].z};
 
-        const auto& screen = Camera::Get()->WorldToScreen(world);
-        points[i]          = {screen.x, screen.y};
+        glm::vec2 screen;
+        if (Camera::Get()->WorldToScreen(world, &screen)) {
+            points[i] = {screen.x, screen.y};
+        }
     }
 
     const auto col = ImColor{colour.x, colour.y, colour.z, colour.a};

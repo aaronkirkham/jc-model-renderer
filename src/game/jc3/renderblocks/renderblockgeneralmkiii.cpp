@@ -14,6 +14,8 @@
 
 #include "game/render_block_factory.h"
 
+#include "game/formats/render_block_model.h"
+
 namespace jc3
 {
 RenderBlockGeneralMkIII::~RenderBlockGeneralMkIII()
@@ -115,7 +117,7 @@ void RenderBlockGeneralMkIII::Read(std::istream& stream)
     ReadMaterials(stream);
 
     // models/jc_environments/structures/military/shared/textures/metal_grating_001_alpha_dif.ddsc
-    if (m_Textures[0] && m_Textures[0]->GetHash() == 0x7D1AF10D) {
+    if (m_Textures[0] && m_Textures[0]->GetHash() == 0x7d1af10d) {
         m_Block.m_Attributes.m_Flags |= ANISOTROPIC_FILTERING;
     }
 
@@ -237,6 +239,12 @@ void RenderBlockGeneralMkIII::DrawUI()
     if (ImGui::Button("Material Consts")) {
         show_material_consts = !show_material_consts;
     }
+
+#ifdef _DEBUG
+    if (ImGui::Button("Recalc Bounding Box")) {
+        m_Owner->RecalculateBoundingBox();
+    }
+#endif
 
     if (show_material_consts) {
         ImGui::SetNextWindowSize({560, 460}, ImGuiCond_Appearing);

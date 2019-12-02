@@ -28,16 +28,12 @@ static auto SpeedMultiplier = [](float value) {
 
 Camera::Camera()
 {
-    const auto  window      = Window::Get();
-    const auto& window_size = window->GetSize();
-
     m_Position   = glm::vec3(0, 3, -10);
     m_Rotation   = glm::vec3(0, 0, 0);
-    m_Projection = glm::perspectiveFovLH(glm::radians(m_FOV), window_size.x, window_size.y, m_NearClip, m_FarClip);
-    m_Viewport   = window_size;
+    m_Viewport   = Window::Get()->GetSize();
+    m_Projection = glm::perspectiveFovLH(glm::radians(m_FOV), m_Viewport.x, m_Viewport.y, m_NearClip, m_FarClip);
 
-    // handle window losing focus
-    window->Events().FocusLost.connect([&] {
+    Window::Get()->Events().FocusLost.connect([&] {
         if (m_IsTranslatingView || m_IsRotatingView) {
             Window::Get()->CaptureMouse(false);
         }
@@ -72,10 +68,14 @@ void Camera::UpdateViewport(const glm::vec2& size)
     }
 }
 
-glm::vec2 Camera::WorldToScreen(const glm::vec3& world)
+bool Camera::WorldToScreen(const glm::vec3& world, glm::vec2* screen)
 {
-    const auto& screen = glm::project(world, m_View, m_Projection, glm::vec4(0, 0, m_Viewport));
-    return {screen.x, (m_Viewport.y - screen.y)};
+    const auto result = glm::project(world, m_View, m_Projection, glm::vec4(0, 0, m_Viewport));
+
+    screen->x = result.x;
+    screen->y = (m_Viewport.y - result.y);
+
+    return (result.z < 1.0f);
 }
 
 glm::vec3 Camera::ScreenToWorld(const glm::vec2& screen)

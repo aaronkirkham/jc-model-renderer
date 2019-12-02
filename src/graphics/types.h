@@ -112,7 +112,6 @@ struct SamplerState_t {
 struct BoundingBox {
     glm::vec3 m_Min;
     glm::vec3 m_Max;
-    float     m_Scale = 1.0f;
 
     BoundingBox()
         : m_Min({})
@@ -132,29 +131,24 @@ struct BoundingBox {
     {
     }
 
-    inline void SetScale(const float scale)
-    {
-        m_Scale = scale;
-    }
-
     inline glm::vec3 GetCenter() const
     {
-        return ((m_Max * m_Scale) + (m_Min * m_Scale)) * 0.5f;
+        return (m_Max + m_Min) * 0.5f;
     }
 
     inline glm::vec3 GetSize() const
     {
-        return ((m_Max * m_Scale) - (m_Min * m_Scale));
+        return (m_Max - m_Min);
     }
 
     inline glm::vec3 GetMin() const
     {
-        return (m_Min * m_Scale);
+        return m_Min;
     }
 
     inline glm::vec3 GetMax() const
     {
-        return (m_Max * m_Scale);
+        return m_Max;
     }
 };
 

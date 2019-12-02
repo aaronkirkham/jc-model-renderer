@@ -335,8 +335,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         ImportExportManager::Get()->Register<ImportExport::Wavefront_Obj>();
 
         // draw gizmos
+        // @TODO: move to UI.
         Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {
-            static auto white = glm::vec4{1, 1, 1, 0.6};
+            static auto white = glm::vec4{1, 1, 1, 0.7};
+            static auto black = glm::vec4{0, 0, 0, 0.8};
             static auto red   = glm::vec4{1, 0, 0, 1};
 
             if (g_IsJC4Mode) {
@@ -353,7 +355,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
 
                     // model labels
                     if (g_ShowModelLabels) {
-                        UI::Get()->DrawText(model.second->GetFileName(), bounding_box.GetCenter(), white, true);
+                        UI::Get()->DrawText(model.second->GetFileName(), bounding_box.GetCenter(), white, black, true);
                     }
 
                     // bounding boxes
