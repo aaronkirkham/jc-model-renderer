@@ -282,8 +282,7 @@ void RenderBlockCarPaintMM::SetData(vertices_t* vertices, uint16s_t* indices, ma
     memset(&m_Block.m_Attributes, 0, sizeof(m_Block.m_Attributes));
     memset(&m_cbStaticMaterialParams, 0, sizeof(m_cbStaticMaterialParams));
     memset(&m_cbDynamicMaterialParams, 0, sizeof(m_cbDynamicMaterialParams));
-
-    // @TODO: deform table
+    memset(&m_DeformTable, 0, sizeof(m_DeformTable));
 
     m_Block.m_Version            = jc::RenderBlocks::CARPAINTMM_VERSION;
     m_Block.m_Attributes.m_Flags = DISABLE_BACKFACE_CULLING;
@@ -318,6 +317,7 @@ void RenderBlockCarPaintMM::SetData(vertices_t* vertices, uint16s_t* indices, ma
         // clang-format on
 
         m_Textures[index]->LoadFromFile(filename);
+        m_Textures[index]->SetFileName(filename.filename()); // @HACK: so we dont write full path
     }
 
     // create buffers

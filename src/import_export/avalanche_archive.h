@@ -63,15 +63,16 @@ class AvalancheArchive : public IImportExporter
                 }
                 // read patched files directly from the table archive
                 else {
-                    const auto& [directory, archive, namehash] =
-                        FileLoader::Get()->LocateFileInDictionary(entry.m_Filename);
-
-                    std::vector<uint8_t> buffer;
-                    if (FileLoader::Get()->ReadFileFromArchive(directory, archive, namehash, &buffer)) {
-                        WriteBufferToFile(file_path, buffer);
-                    }
+                    FileLoader::Get()->ReadFileBatched(entry.m_Filename,
+                                                       [&, file_path](bool success, std::vector<uint8_t> buffer) {
+                                                           if (success) {
+                                                               WriteBufferToFile(file_path, buffer);
+                                                           }
+                                                       });
                 }
             }
+
+            FileLoader::Get()->RunFileBatches();
         } catch (const std::exception&) {
         }
     }

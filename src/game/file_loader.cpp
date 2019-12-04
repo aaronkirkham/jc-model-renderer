@@ -277,7 +277,7 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultC
 
     // check any loaded archives for the file
     const auto& [archive, entry] = GetStreamArchiveFromFile(filename);
-    if (archive && entry.m_Offset != 0 && entry.m_Offset != -1) {
+    if (archive && (entry.m_Offset != 0 && entry.m_Offset != -1)) {
         std::vector<uint8_t> buffer;
         ava::StreamArchive::ReadEntry(archive->GetBuffer(), entry, &buffer);
 

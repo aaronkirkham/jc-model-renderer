@@ -86,10 +86,6 @@ bool Texture::LoadFromFile(const std::filesystem::path& filename)
 
     std::vector<uint8_t> buffer(size);
     stream.read((char*)buffer.data(), size);
-
-    m_Filename = filename;
-    m_NameHash = ava::hashlittle(filename.generic_string().c_str());
-
     return LoadFromBuffer(buffer);
 }
 
@@ -120,6 +116,7 @@ void Texture::UseVS(uint32_t slot)
 void Texture::SetFileName(const std::filesystem::path& filename)
 {
     m_Filename = filename;
+    m_NameHash = ava::hashlittle(filename.generic_string().c_str());
 }
 
 const std::filesystem::path& Texture::GetFileName() const

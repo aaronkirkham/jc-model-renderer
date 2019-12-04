@@ -35,11 +35,13 @@ class RenderBlockGeneralMkIII : public IRenderBlock
 {
   private:
     enum {
-        DISABLE_BACKFACE_CULLING   = 0x1,
+        BACKFACE_CULLING           = 0x1,
         TRANSPARENCY_ALPHABLENDING = 0x2,
         TRANSPARENCY_ALPHATESTING  = 0x4,
         DYNAMIC_EMISSIVE           = 0x8,
+        WORLD_SPACE_NORMALS        = 0x10,
         IS_SKINNED                 = 0x20,
+        UNKNOWN                    = 0x40,
         USE_LAYERED                = 0x80,
         USE_OVERLAY                = 0x100,
         USE_DECAL                  = 0x200,

@@ -239,8 +239,8 @@ void RenderBlockGeneralMkIII::Setup(RenderContext_t* context)
     }
 
     // set the culling mode
-    context->m_Renderer->SetCullMode((!(m_Block.m_Attributes.m_Flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
-                                                                                                  : D3D11_CULL_NONE);
+    context->m_Renderer->SetCullMode((!(m_Block.m_Attributes.m_Flags & BACKFACE_CULLING)) ? D3D11_CULL_BACK
+                                                                                          : D3D11_CULL_NONE);
 
     // set the 2nd vertex buffers
     context->m_Renderer->SetVertexStream(m_VertexBufferData, 1);
@@ -437,15 +437,7 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
     m_Block.m_Attributes.m_Packed.m_Scale          = 1.0f;
     m_Block.m_Attributes.m_Packed.m_UV0Extent      = {1.0f, 1.0f};
     m_Block.m_Attributes.m_EmissiveStartFadeDistSq = 2000.f;
-
-    // temp
-    m_Block.m_Attributes.m_Flags |= DISABLE_BACKFACE_CULLING;
-
-    // @TODO
-    m_MaterialParams[0] = 1.0f;
-    m_MaterialParams[1] = 1.0f;
-    m_MaterialParams[2] = 1.0f;
-    m_MaterialParams[3] = 1.0f;
+    // m_Block.m_Attributes.m_Flags                   = BACKFACE_CULLING;
 
     std::vector<PackedVertexPosition> vertices_;
     std::vector<GeneralShortPacked>   data_;
@@ -481,6 +473,7 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
         // clang-format on
 
         m_Textures[index]->LoadFromFile(filename);
+        m_Textures[index]->SetFileName(filename.filename()); // @HACK: so we dont write full path
     }
 
     // create buffers

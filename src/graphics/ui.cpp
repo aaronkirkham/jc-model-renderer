@@ -669,7 +669,7 @@ void UI::RenderMenuBar()
             }
 
 #ifdef _DEBUG
-            if (ImGui::MenuItem("Show Demo Window")) {
+            if (ImGui::MenuItem("ImGui Demo Window")) {
                 g_ShowImGuiDemoWindow = !g_ShowImGuiDemoWindow;
             }
 #endif
