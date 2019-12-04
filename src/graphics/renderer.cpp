@@ -83,12 +83,16 @@ bool Renderer::Initialise(const HWND& hwnd)
     CreateBlendState();
 
     // create vertex shader global constants
-    m_GlobalConstants[0] = CreateConstantBuffer(m_cbVertexGlobalConsts, "Renderer VertexGlobalConstants");
+    m_VertexGlobalConstants = CreateConstantBuffer(m_cbVertexGlobalConsts, "Renderer VertexGlobalConstants");
     memset(&m_cbVertexGlobalConsts, 0, sizeof(m_cbVertexGlobalConsts));
 
     // create fragment shader global constants
-    m_GlobalConstants[1] = CreateConstantBuffer(m_cbFragmentGlobalConsts, "Renderer FragmentGlobalConstants");
+    m_FragmentGlobalConstants = CreateConstantBuffer(m_cbFragmentGlobalConsts, "Renderer FragmentGlobalConstants");
     memset(&m_cbFragmentGlobalConsts, 0, sizeof(m_cbFragmentGlobalConsts));
+
+    // create lighting frame constants
+    m_LightingFrameConstants = CreateConstantBuffer(m_cbLightingFrameConsts, "Renderer LightingFrameConstants");
+    memset(&m_cbLightingFrameConsts, 0, sizeof(m_cbLightingFrameConsts));
 
     // create alpha test constants
     m_AlphaTestConstants = CreateConstantBuffer(m_cbAlphaTestConsts, "Renderer AlphaTestConstants");
@@ -125,8 +129,9 @@ void Renderer::Shutdown()
     DestroyRenderTargets();
     DestroyGBuffer();
     DestroyDepthStencil();
-    DestroyBuffer(m_GlobalConstants[0]);
-    DestroyBuffer(m_GlobalConstants[1]);
+    DestroyBuffer(m_VertexGlobalConstants);
+    DestroyBuffer(m_FragmentGlobalConstants);
+    DestroyBuffer(m_LightingFrameConstants);
     DestroyBuffer(m_AlphaTestConstants);
 
     ImGui_ImplDX11_Shutdown();
@@ -806,7 +811,7 @@ void Renderer::UpdateGlobalConstants()
         m_cbVertexGlobalConsts.ViewProjectionMatrix3 = m_RenderContext.m_viewProjectionMatrix;
 
         // set the shader constants
-        SetVertexShaderConstants(m_GlobalConstants[0], 0, m_cbVertexGlobalConsts);
+        SetVertexShaderConstants(m_VertexGlobalConstants, 0, m_cbVertexGlobalConsts);
     }
 
     // update fragment shader constants
@@ -818,8 +823,13 @@ void Renderer::UpdateGlobalConstants()
         m_cbFragmentGlobalConsts.LightDirection2 = m_cbVertexGlobalConsts.LightDirection;
 
         // set the shader constants
-        SetPixelShaderConstants(m_GlobalConstants[1], 0, m_cbFragmentGlobalConsts);
+        SetPixelShaderConstants(m_FragmentGlobalConstants, 0, m_cbFragmentGlobalConsts);
     }
+}
+
+void Renderer::BindLightingConstants(uint32_t slot)
+{
+    SetPixelShaderConstants(m_LightingFrameConstants, slot, m_cbLightingFrameConsts);
 }
 
 void Renderer::AddToRenderList(const std::vector<IRenderBlock*>& renderblocks)

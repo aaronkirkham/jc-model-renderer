@@ -79,22 +79,24 @@ void RenderBlockWindow::Setup(RenderContext_t* context)
 
     IRenderBlock::Setup(context);
 
-    // setup the constant buffer
-    {
-        static const auto world = glm::scale(glm::mat4(1), glm::vec3{m_ScaleModifier});
+    static const auto world = glm::mat4(1);
 
-        // set vertex shader constants
-        m_cbInstanceConsts.World               = world;
-        m_cbInstanceConsts.WorldViewProjection = world * context->m_viewProjectionMatrix;
+    // set instance consts
+    m_cbInstanceConsts.World               = world;
+    m_cbInstanceConsts.WorldViewProjection = (world * context->m_viewProjectionMatrix);
+    context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbInstanceConsts);
 
-        // set fragment shaders constants
-        m_cbMaterialConsts.SpecGloss       = m_Block.m_Attributes.m_SpecGloss;
-        m_cbMaterialConsts.SpecFresnel     = m_Block.m_Attributes.m_SpecFresnel;
-        m_cbMaterialConsts.DiffuseRougness = m_Block.m_Attributes.m_DiffuseRougness;
-        m_cbMaterialConsts.TintPower       = m_Block.m_Attributes.m_TintPower;
-        m_cbMaterialConsts.MinAlpha        = m_Block.m_Attributes.m_MinAlpha;
-        m_cbMaterialConsts.UVScale         = m_Block.m_Attributes.m_UVScale;
-    }
+    // set material consts
+    m_cbMaterialConsts.SpecGloss       = m_Block.m_Attributes.m_SpecGloss;
+    m_cbMaterialConsts.SpecFresnel     = m_Block.m_Attributes.m_SpecFresnel;
+    m_cbMaterialConsts.DiffuseRougness = m_Block.m_Attributes.m_DiffuseRougness;
+    m_cbMaterialConsts.TintPower       = m_Block.m_Attributes.m_TintPower;
+    m_cbMaterialConsts.MinAlpha        = m_Block.m_Attributes.m_MinAlpha;
+    m_cbMaterialConsts.UVScale         = m_Block.m_Attributes.m_UVScale;
+    context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants, 1, m_cbMaterialConsts);
+
+    // set lighting consts
+    context->m_Renderer->BindLightingConstants(3);
 
     // set the textures
     BindTexture(0, m_SamplerState);
@@ -113,9 +115,9 @@ void RenderBlockWindow::Setup(RenderContext_t* context)
     // context->m_Renderer->SetSamplerState(_test, 15);
 
 #if 0
-        // set lighting textures
-        const auto gbuffer_diffuse = context->m_Renderer->GetGBufferSRV(0);
-        context->m_DeviceContext->PSSetShaderResources(15, 1, &gbuffer_diffuse);
+    // set lighting textures
+    const auto gbuffer_diffuse = context->m_Renderer->GetGBufferSRV(0);
+    context->m_DeviceContext->PSSetShaderResources(15, 1, &gbuffer_diffuse);
 #endif
 
     // enable blending
@@ -126,10 +128,6 @@ void RenderBlockWindow::Setup(RenderContext_t* context)
 
     // enable depth
     context->m_Renderer->SetDepthEnabled(true);
-
-    // set the constant buffers
-    context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants, 1, m_cbInstanceConsts);
-    context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants, 1, m_cbMaterialConsts);
 
     // set the culling mode
     if (m_Block.m_Attributes.m_Flags & ENABLE_BACKFACE_CULLING) {
@@ -167,13 +165,13 @@ void RenderBlockWindow::DrawContextMenu()
 void RenderBlockWindow::DrawUI()
 {
     ImGui::Text(ICON_FA_COGS "  Attributes");
-    ImGui::DragFloat("Specular Gloss", &m_Block.m_Attributes.m_SpecGloss, 0, 1);
-    ImGui::DragFloat("Specular Fresnel", &m_Block.m_Attributes.m_SpecFresnel, 0, 1);
-    ImGui::DragFloat("Diffuse Rougness", &m_Block.m_Attributes.m_DiffuseRougness, 0, 1);
-    ImGui::DragFloat("Tint Power", &m_Block.m_Attributes.m_TintPower, 0, 10);
-    ImGui::DragFloat("Min Alpha", &m_Block.m_Attributes.m_MinAlpha, 0, 1);
-    ImGui::DragFloat("UV Scale", &m_Block.m_Attributes.m_UVScale, 0, 1);
-    ImGui::DragFloat("Alpha", &m_cbMaterialConsts.Alpha, 0, 1);
+    ImGui::DragFloat("Specular Gloss", &m_Block.m_Attributes.m_SpecGloss);
+    ImGui::DragFloat("Specular Fresnel", &m_Block.m_Attributes.m_SpecFresnel);
+    ImGui::DragFloat("Diffuse Rougness", &m_Block.m_Attributes.m_DiffuseRougness);
+    ImGui::DragFloat("Tint Power", &m_Block.m_Attributes.m_TintPower);
+    ImGui::DragFloat("Min Alpha", &m_Block.m_Attributes.m_MinAlpha);
+    ImGui::DragFloat("UV Scale", &m_Block.m_Attributes.m_UVScale);
+    ImGui::DragFloat("Alpha", &m_cbMaterialConsts.Alpha, 0.001f, 0.0f, 1.0f);
 
     // Textures
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");

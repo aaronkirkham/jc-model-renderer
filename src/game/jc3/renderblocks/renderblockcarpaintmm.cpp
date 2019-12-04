@@ -6,7 +6,6 @@
 
 #include "graphics/imgui/fonts/fontawesome5_icons.h"
 #include "graphics/imgui/imgui_buttondropdown.h"
-#include "graphics/imgui/imgui_disabled.h"
 #include "graphics/renderer.h"
 #include "graphics/shader_manager.h"
 #include "graphics/texture.h"
@@ -216,8 +215,7 @@ void RenderBlockCarPaintMM::DrawUI()
     ImGui::SliderFloat4("Diffuse Wrap", glm::value_ptr(m_cbStaticMaterialParams.m_DiffuseWrap), 0, 1);
 
     // supports decals
-    ImGuiCustom::PushDisabled(!(m_Block.m_Attributes.m_Flags & SUPPORT_DECALS));
-    {
+    if (m_Block.m_Attributes.m_Flags & SUPPORT_DECALS) {
         ImGui::SliderFloat4("Decal Index", glm::value_ptr(m_cbDynamicObjectParams.m_DecalIndex), 0, 1);
         ImGui::SliderFloat4("Decal Width", glm::value_ptr(m_cbStaticMaterialParams.m_DecalWidth), 0, 1);
         ImGui::ColorEdit3("Decal 1 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal1Color));
@@ -226,26 +224,21 @@ void RenderBlockCarPaintMM::DrawUI()
         ImGui::ColorEdit3("Decal 4 Colour", glm::value_ptr(m_cbStaticMaterialParams.m_Decal4Color));
         ImGui::SliderFloat4("Decal Blend", glm::value_ptr(m_cbStaticMaterialParams.m_DecalBlend), 0, 1);
     }
-    ImGuiCustom::PopDisabled();
 
     // suports damage
-    ImGuiCustom::PushDisabled(!(m_Block.m_Attributes.m_Flags & SUPPORT_DAMAGE_BLEND));
-    {
+    if (m_Block.m_Attributes.m_Flags & SUPPORT_DAMAGE_BLEND) {
         ImGui::SliderFloat4("Damage", glm::value_ptr(m_cbStaticMaterialParams.m_Damage), 0, 1);
         ImGui::SliderFloat4("Damage Blend", glm::value_ptr(m_cbStaticMaterialParams.m_DamageBlend), 0, 1);
         ImGui::ColorEdit4("Damage Colour", glm::value_ptr(m_cbStaticMaterialParams.m_DamageColor));
     }
-    ImGuiCustom::PopDisabled();
 
     // supports dirt
-    ImGuiCustom::PushDisabled(!(m_Block.m_Attributes.m_Flags & SUPPORT_DIRT));
-    {
+    if (m_Block.m_Attributes.m_Flags & SUPPORT_DIRT) {
         ImGui::SliderFloat("Dirt Amount", &m_cbDynamicObjectParams.m_DirtAmount, 0, 5);
         ImGui::SliderFloat4("Dirt Params", glm::value_ptr(m_cbStaticMaterialParams.m_DirtParams), 0, 1);
         ImGui::SliderFloat4("Dirt Blend", glm::value_ptr(m_cbStaticMaterialParams.m_DirtBlend), 0, 1);
         ImGui::ColorEdit3("Dirt Colour", glm::value_ptr(m_cbStaticMaterialParams.m_DirtColor));
     }
-    ImGuiCustom::PopDisabled();
 
     ImGui::Text("Dynamic Material Params");
     ImGui::Separator();

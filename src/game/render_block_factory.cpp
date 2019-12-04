@@ -249,7 +249,7 @@ const std::vector<const char*>& RenderBlockFactory::GetValidRenderBlocks()
         "BuildingJC3", "CarLight",     "CarPaintMM", "Character", "CharacterSkin", "General",
         "GeneralJC3",  "GeneralMkIII", "Landmark",   "Prop",      "Window"
 #else
-        "GeneralMkIII"
+        "CarPaintMM", "GeneralMkIII"
 #endif
     };
     return valid_blocks;

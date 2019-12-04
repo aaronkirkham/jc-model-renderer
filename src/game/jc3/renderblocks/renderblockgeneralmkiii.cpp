@@ -6,7 +6,6 @@
 
 #include "graphics/imgui/fonts/fontawesome5_icons.h"
 #include "graphics/imgui/imgui_buttondropdown.h"
-#include "graphics/imgui/imgui_disabled.h"
 #include "graphics/renderer.h"
 #include "graphics/shader_manager.h"
 #include "graphics/texture.h"
@@ -288,12 +287,16 @@ void RenderBlockGeneralMkIII::DrawUI()
 {
     ImGui::Text(ICON_FA_COGS "  Attributes");
     ImGui::DragFloat("Scale", &m_Block.m_Attributes.m_Packed.m_Scale, 1.0f, 0.0f);
+    ImGui::DragFloat2("UV0Extent", glm::value_ptr(m_Block.m_Attributes.m_Packed.m_UV0Extent), 1.0f, 0.0f);
+    ImGui::DragFloat2("UV1Extent", glm::value_ptr(m_Block.m_Attributes.m_Packed.m_UV1Extent), 1.0f, 0.0f);
+    ImGui::DragFloat("ColourExtent", &m_Block.m_Attributes.m_Packed.m_ColourExtent, 1.0f, 0.0f);
+    // ImGui::ColorPicker4("Colour", &m_Block.m_Attributes.m_Packed.m_Colour, 1.0f, 0.0f);
     ImGui::DragFloat("Depth Bias", &m_Block.m_Attributes.m_DepthBias, 0.01f, 0.0f, 1.0f);
     ImGui::DragFloat("Emissive Start Fade Dist", &m_Block.m_Attributes.m_EmissiveStartFadeDistSq, 0.01f, 0.0f, 1.0f);
 
-    ImGuiCustom::PushDisabled(!(m_Block.m_Attributes.m_Flags & DYNAMIC_EMISSIVE));
-    ImGui::DragFloat("Emissive Time of Day Scale", &m_Block.m_Attributes.m_EmissiveTODScale, 0.01f, 0.0f, 1.0f);
-    ImGuiCustom::PopDisabled();
+    if (m_Block.m_Attributes.m_Flags & DYNAMIC_EMISSIVE) {
+        ImGui::DragFloat("Emissive Time of Day Scale", &m_Block.m_Attributes.m_EmissiveTODScale, 0.01f, 0.0f, 1.0f);
+    }
 
     if (ImGui::Button("Material Consts")) {
         show_material_consts = !show_material_consts;

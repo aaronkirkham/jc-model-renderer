@@ -28,7 +28,8 @@ struct RenderEvents {
     ksignals::Event<void(RenderContext_t*)> PostRender;
 };
 
-struct VertexGlobalConstants {
+#pragma pack(push, 1)
+struct VertexGlobalConsts {
     glm::mat4 ViewProjectionMatrix;  // 0 - 4
     glm::vec4 CameraPosition;        // 4 - 5
     glm::vec4 _unknown[2];           // 5 - 7
@@ -39,8 +40,9 @@ struct VertexGlobalConstants {
     glm::mat4 ViewProjectionMatrix3; // 33 - 37
     glm::vec4 _unknown3[12];         // 37 - 49
 };
+// static_assert(sizeof(VertexGlobalConsts) == 1520);
 
-struct FragmentGlobalConstants {
+struct FragmentGlobalConsts {
     glm::vec4 _unknown;            // 0 - 1
     glm::vec4 LightSpecularColour; // 1 - 2
     glm::vec4 LightDiffuseColour;  // 2 - 3
@@ -51,8 +53,31 @@ struct FragmentGlobalConstants {
     glm::vec4 LightDirection2;     // 31 - 32
     glm::vec4 _unknown4[63];       // 32 - 95
 };
+static_assert(sizeof(FragmentGlobalConsts) == 1520);
 
-struct AlphaTestConstants {
+struct LightingFrameConsts {
+    glm::vec4 PointLights[768];              // Offset:    0 Size: 12288
+    glm::vec4 SpotLights[1024];              // Offset: 12288 Size: 16384
+    glm::mat4 Projections[128];              // Offset: 28672 Size:  8192 [unused]
+    glm::vec4 SpotLightShadowFade[8];        // Offset: 36864 Size:   128
+    glm::mat4 WorldToLPVTransform;           // Offset: 36992 Size:    64 [unused]
+    glm::mat4 WorldToLPVUnsnappedTransform;  // Offset: 37056 Size:    64 [unused]
+    glm::mat4 WorldToLPVTransform2;          // Offset: 37120 Size:    64 [unused]
+    glm::mat4 WorldToLPVUnsnappedTransform2; // Offset: 37184 Size:    64 [unused]
+    glm::vec4 GroundFillFlux_1234;           // Offset: 37248 Size:    16
+    glm::vec4 GroundFillFlux_5678;           // Offset: 37264 Size:    16
+    glm::vec4 GroundFillFlux_9_Color;        // Offset: 37280 Size:    16
+    glm::vec3 AOLightInfluence;              // Offset: 37296 Size:    12
+    float     SkyAmbientSaturation;          // Offset: 37308 Size:     4
+    float     NearCascadeDampeningFactor;    // Offset: 37312 Size:     4 [unused]
+    float     EmissiveScale;                 // Offset: 37316 Size:     4 [unused]
+    int       bEnableGI;                     // Offset: 37320 Size:     4 [unused]
+    int       b3_padding0;                   // Offset: 37324 Size:     4 [unused]
+};
+static_assert(sizeof(LightingFrameConsts) == 37328);
+#pragma pack(pop)
+
+struct AlphaTestConsts {
     float AlphaMulRef[4] = {50.0f, -1.0f, 50.0f, -1.0f};
 };
 
@@ -76,11 +101,15 @@ class Renderer : public Singleton<Renderer>
     ID3D11DepthStencilView*                  m_DepthStencilView          = nullptr;
     ID3D11BlendState*                        m_BlendState                = nullptr;
 
-    std::array<ConstantBuffer_t*, 2> m_GlobalConstants    = {nullptr};
-    ConstantBuffer_t*                m_AlphaTestConstants = nullptr;
-    VertexGlobalConstants            m_cbVertexGlobalConsts;
-    FragmentGlobalConstants          m_cbFragmentGlobalConsts;
-    AlphaTestConstants               m_cbAlphaTestConsts;
+    // std::array<ConstantBuffer_t*, 2> m_GlobalConstants    = {nullptr};
+    ConstantBuffer_t*    m_VertexGlobalConstants   = nullptr;
+    ConstantBuffer_t*    m_FragmentGlobalConstants = nullptr;
+    ConstantBuffer_t*    m_LightingFrameConstants  = nullptr;
+    ConstantBuffer_t*    m_AlphaTestConstants      = nullptr;
+    VertexGlobalConsts   m_cbVertexGlobalConsts;
+    FragmentGlobalConsts m_cbFragmentGlobalConsts;
+    LightingFrameConsts  m_cbLightingFrameConsts;
+    AlphaTestConsts      m_cbAlphaTestConsts;
 
     glm::vec4 m_ClearColour = g_DefaultClearColour;
 
@@ -246,6 +275,8 @@ class Renderer : public Singleton<Renderer>
     void AddToRenderList(IRenderBlock* renderblock);
     void RemoveFromRenderList(const std::vector<IRenderBlock*>& renderblocks);
     void RemoveFromRenderList(IRenderBlock* renderblock);
+
+    void BindLightingConstants(uint32_t slot);
 
     ID3D11Device* GetDevice()
     {

@@ -4,20 +4,13 @@
 
 #pragma pack(push, 1)
 struct WindowAttributes {
-    union {
-        struct {
-            float m_SpecGloss;
-            float m_SpecFresnel;
-            float m_DiffuseRougness;
-            float m_TintPower;
-            float m_MinAlpha;
-            float m_UVScale;
-        };
-
-        float m_Data[6];
-    };
-
-    glm::vec3 _unknown;
+    float     m_SpecGloss;
+    float     m_SpecFresnel;
+    float     m_DiffuseRougness;
+    float     m_TintPower;
+    float     m_MinAlpha;
+    float     m_UVScale;
+    glm::vec3 m_Offset;
     uint32_t  m_Flags;
 };
 
@@ -25,7 +18,8 @@ static_assert(sizeof(WindowAttributes) == 0x28, "WindowAttributes alignment is w
 
 namespace jc::RenderBlocks
 {
-static constexpr uint8_t WINDOW_VERSION = 1;
+static constexpr uint8_t WINDOW_VERSION        = 1;
+static constexpr uint8_t WINDOW_TEXTURES_COUNT = 7;
 
 struct Window {
     uint8_t          m_Version;
@@ -59,7 +53,7 @@ class RenderBlockWindow : public IRenderBlock
         glm::vec2 unused_;                 // [unused]
         float     DamageMaskWeight = 1.0f; // [unused]
         float     DamageRampWeight = 0.5f; // [unused]
-        float     Alpha            = 1.0f;
+        float     Alpha            = 0.5f;
     } m_cbMaterialConsts;
 
     jc::RenderBlocks::Window m_Block;

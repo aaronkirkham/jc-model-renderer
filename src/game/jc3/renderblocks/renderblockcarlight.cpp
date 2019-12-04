@@ -31,7 +31,7 @@ RenderBlockCarLight::~RenderBlockCarLight()
 
 uint32_t RenderBlockCarLight::GetTypeHash() const
 {
-    return RenderBlockFactory::RB_BUILDINGJC3;
+    return RenderBlockFactory::RB_CARLIGHT;
 }
 
 void RenderBlockCarLight::Create()
@@ -90,31 +90,28 @@ void RenderBlockCarLight::Setup(RenderContext_t* context)
 
     IRenderBlock::Setup(context);
 
-    // setup the constant buffer
-    {
-        static const auto world = glm::mat4(1);
+    static const auto world = glm::mat4(1);
 
-        // set vertex shader constants
-        m_cbRBIInfo.ModelWorldMatrix = glm::scale(world, {1, 1, 1});
+    // rbi info consts
+    m_cbRBIInfo.ModelWorldMatrix = world;
+    context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 6, m_cbRBIInfo);
 
-        // set fragment shaders constants
-        m_cbMaterialConsts.SpecularGloss    = m_Block.m_Attributes.m_SpecularGloss;
-        m_cbMaterialConsts.Reflectivity     = m_Block.m_Attributes.m_Reflectivity;
-        m_cbMaterialConsts.SpecularFresnel  = m_Block.m_Attributes.m_SpecularFresnel;
-        m_cbMaterialConsts.DiffuseModulator = m_Block.m_Attributes.m_DiffuseModulator;
-        m_cbMaterialConsts.TilingUV         = {m_Block.m_Attributes.m_TilingUV, 1, 0};
-    }
+    // material consts
+    m_cbMaterialConsts.SpecularGloss    = m_Block.m_Attributes.m_SpecularGloss;
+    m_cbMaterialConsts.Reflectivity     = m_Block.m_Attributes.m_Reflectivity;
+    m_cbMaterialConsts.SpecularFresnel  = m_Block.m_Attributes.m_SpecularFresnel;
+    m_cbMaterialConsts.DiffuseModulator = m_Block.m_Attributes.m_DiffuseModulator;
+    m_cbMaterialConsts.TilingUV         = {m_Block.m_Attributes.m_TilingUV, 1, 0};
+    context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants, 2, m_cbMaterialConsts);
+
+    // @TODO: only when deform shader is used
+    // context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[1], 1, m_cbInstanceConsts);
+    // context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[2], 2, m_cbDeformConsts);
 
     // set the textures
     for (int i = 0; i < m_Textures.size(); ++i) {
-        IRenderBlock::BindTexture(i, m_SamplerState);
+        BindTexture(i, m_SamplerState);
     }
-
-    // set the constant buffers
-    context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[0], 6, m_cbRBIInfo);
-    context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[1], 1, m_cbInstanceConsts);
-    context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[2], 2, m_cbDeformConsts);
-    context->m_Renderer->SetPixelShaderConstants(m_FragmentShaderConstants, 2, m_cbMaterialConsts);
 
     // set the culling mode
     context->m_Renderer->SetCullMode((!(m_Block.m_Attributes.m_Flags & DISABLE_BACKFACE_CULLING)) ? D3D11_CULL_BACK
@@ -141,11 +138,11 @@ void RenderBlockCarLight::DrawUI()
 {
     ImGui::Text(ICON_FA_COGS "  Attributes");
 
-    ImGui::SliderFloat("Specular Gloss", &m_Block.m_Attributes.m_SpecularGloss, 0, 1);
-    ImGui::SliderFloat("Reflectivity", &m_Block.m_Attributes.m_Reflectivity, 0, 1);
-    ImGui::SliderFloat("Specular Fresnel", &m_Block.m_Attributes.m_SpecularFresnel, 0, 1);
+    ImGui::DragFloat("Specular Gloss", &m_Block.m_Attributes.m_SpecularGloss);
+    ImGui::DragFloat("Reflectivity", &m_Block.m_Attributes.m_Reflectivity);
+    ImGui::DragFloat("Specular Fresnel", &m_Block.m_Attributes.m_SpecularFresnel);
     ImGui::ColorEdit3("Diffuse Modulator", glm::value_ptr(m_Block.m_Attributes.m_DiffuseModulator));
-    ImGui::SliderFloat2("Tiling", glm::value_ptr(m_Block.m_Attributes.m_TilingUV), 0, 10);
+    ImGui::DragFloat2("Tiling", glm::value_ptr(m_Block.m_Attributes.m_TilingUV));
 
     // Textures
     ImGui::Text(ICON_FA_FILE_IMAGE "  Textures");
