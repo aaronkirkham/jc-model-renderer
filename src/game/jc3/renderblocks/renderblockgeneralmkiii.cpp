@@ -473,7 +473,11 @@ void RenderBlockGeneralMkIII::SetData(vertices_t* vertices, uint16s_t* indices, 
         // clang-format on
 
         m_Textures[index]->LoadFromFile(filename);
-        m_Textures[index]->SetFileName(filename.filename()); // @HACK: so we dont write full path
+
+        // @TODO: make this better.
+        auto filepath = m_Owner->GetPath().parent_path();
+        filepath /= "textures" / filename.filename();
+        m_Textures[index]->SetFileName(filepath);
     }
 
     // create buffers
