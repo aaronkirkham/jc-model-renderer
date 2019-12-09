@@ -11,9 +11,9 @@
 #include "graphics/texture.h"
 #include "graphics/texture_manager.h"
 
-#include "game/render_block_factory.h"
-
+#include "game/file_loader.h"
 #include "game/formats/render_block_model.h"
+#include "game/render_block_factory.h"
 
 namespace jc3
 {
@@ -318,7 +318,12 @@ void RenderBlockCarPaintMM::SetData(vertices_t* vertices, uint16s_t* indices, ma
         else if (type == "normal")   index = 1;
         // clang-format on
 
-        m_Textures[index]->LoadFromFile(filename);
+        // load texture
+        FileLoader::Get()->ReadTexture(filename, [&, index](bool success, std::vector<uint8_t> buffer) {
+            if (success) {
+                m_Textures[index]->LoadFromBuffer(buffer);
+            }
+        });
 
         // @TODO: make this better.
         auto filepath = m_Owner->GetPath().parent_path();

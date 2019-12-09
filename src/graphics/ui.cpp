@@ -1191,24 +1191,33 @@ void UI::RenderBlockTexture(IRenderBlock* render_block, const std::string& title
             SPDLOG_INFO("DropPayload Texture: \"{}\"", title);
             assert(payload->data.size() > 0);
 
+            // read texture buffer
             const auto& texture_filename = payload->data[0];
-            texture->LoadFromFile(texture_filename);
+            FileLoader::Get()->ReadTexture(
+                texture_filename, [render_block, texture, texture_filename](bool success, std::vector<uint8_t> buffer) {
+                    if (success) {
+                        // load texture
+                        texture->LoadFromBuffer(buffer);
 
-            // generate the new file path
-            const auto owner = render_block->GetOwner();
-            if (owner) {
-                auto filename = owner->GetPath().parent_path();
-                filename /= "textures" / texture_filename.filename();
+                        // generate the new file path
+                        const auto owner = render_block->GetOwner();
+                        if (owner) {
+                            auto filename = owner->GetPath().parent_path();
+                            filename /= "textures" / texture_filename.filename();
 
-                // update the texture name
-                texture->SetFileName(filename);
+                            // update the texture name
+                            texture->SetFileName(filename);
 
-                // add the file to the parent archive
-                const auto archive = owner->GetParentArchive();
-                if (archive) {
-                    archive->AddFile(filename, texture->GetBuffer());
-                }
-            }
+                            // add the file to the parent archive
+                            const auto archive = owner->GetParentArchive();
+                            if (archive) {
+                                archive->AddFile(filename, texture->GetBuffer());
+                            }
+                        }
+                    } else {
+                        SPDLOG_ERROR("Failed to load texture \"{}\"!", texture_filename.string());
+                    }
+                });
         }
     }
     ImGui::EndGroup();
