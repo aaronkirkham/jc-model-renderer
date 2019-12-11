@@ -13,7 +13,7 @@ struct CSkinBatch {
     int32_t  m_BatchSize;
     int32_t  m_Size;
     int32_t  m_Offset;
-    char     pad2[4];
+    char     alignment[4];
 };
 static_assert(sizeof(CSkinBatch) == 0x18, "CSkinBatch alignment is wrong!");
 

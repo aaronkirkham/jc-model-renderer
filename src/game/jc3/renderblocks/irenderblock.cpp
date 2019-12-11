@@ -9,8 +9,7 @@ namespace jc3
 {
 void IRenderBlock::DrawSkinBatches(RenderContext_t* context, const std::vector<jc3::CSkinBatch>& skin_batches)
 {
-    if (!m_Visible)
-        return;
+    assert(m_IndexBuffer);
 
     for (const auto& batch : skin_batches) {
         context->m_Renderer->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
