@@ -75,7 +75,7 @@ class RenderBlockGeneralMkIII : public IRenderBlock
     } m_cbInstanceAttributes;
 
     struct cbSkinningConsts {
-        glm::vec4 MatrixPalette[2];
+        glm::mat3x4 MatrixPalette[256];
     } m_cbSkinningConsts;
 
     struct MaterialConsts {

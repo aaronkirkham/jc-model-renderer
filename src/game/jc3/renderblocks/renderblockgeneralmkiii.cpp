@@ -53,16 +53,16 @@ void RenderBlockGeneralMkIII::Create()
     m_PixelShader  = ShaderManager::Get()->GetPixelShader("generalmkiii");
 
     // clang-format off
-    D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-        { "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-        { "TEXCOORD",   2,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-        { "TEXCOORD",   3,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
-    };
+	D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
+		{ "POSITION",   0,  DXGI_FORMAT_R16G16B16A16_SNORM,     0,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+		{ "TEXCOORD",   2,  DXGI_FORMAT_R16G16B16A16_SNORM,     1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+		{ "TEXCOORD",   3,  DXGI_FORMAT_R32G32B32_FLOAT,        1,  D3D11_APPEND_ALIGNED_ELEMENT,   D3D11_INPUT_PER_VERTEX_DATA,    0 },
+	};
     // clang-format on
 
     // create the vertex declaration
-    m_VertexDeclaration =
-        Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(), "GeneralMkIII (packed)");
+    m_VertexDeclaration = Renderer::Get()->CreateVertexDeclaration(inputDesc, 3, m_VertexShader.get(),
+                                                                   "GeneralMkIII VertexDecl (packed)");
 
     // create the constant buffers
     m_VertexShaderConstants[0] = Renderer::Get()->CreateConstantBuffer(m_cbRBIInfo, "GeneralMkIII RBIInfo");
@@ -76,11 +76,11 @@ void RenderBlockGeneralMkIII::Create()
     // create skinning palette buffer
     if (m_Block.m_Attributes.m_Flags & (IS_SKINNED | DESTRUCTION)) {
         m_VertexShaderConstants[2] =
-            Renderer::Get()->CreateConstantBuffer(m_cbSkinningConsts, "GeneralMkIII SkinningConsts");
+            Renderer::Get()->CreateConstantBuffer(m_cbSkinningConsts, 768, "GeneralMkIII SkinningConsts");
 
         // identity the palette data
-        for (int i = 0; i < 2; ++i) {
-            m_cbSkinningConsts.MatrixPalette[i] = glm::vec4(1);
+        for (int i = 0; i < 256; ++i) {
+            m_cbSkinningConsts.MatrixPalette[i] = glm::mat3x4(1);
         }
     }
 
@@ -133,6 +133,10 @@ void RenderBlockGeneralMkIII::Read(std::istream& stream)
     // read skin batches
     if (m_Block.m_Attributes.m_Flags & (IS_SKINNED | DESTRUCTION)) {
         ReadSkinBatch(stream, &m_SkinBatches);
+    }
+
+    if (m_Block.m_Attributes.m_Flags & DESTRUCTION) {
+        m_ShaderName = "generalmkiiidestructionskin";
     }
 
     // read index buffer
@@ -254,17 +258,14 @@ void RenderBlockGeneralMkIII::Draw(RenderContext_t* context)
     }
 
     if (m_Block.m_Attributes.m_Flags & DESTRUCTION) {
-        // skin batches
-        for (auto& batch : m_SkinBatches) {
-            // set the skinning palette data
-            context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[2], 3, m_cbSkinningConsts);
-
-            // draw the skin batch
-            context->m_Renderer->DrawIndexed(batch.m_Offset, batch.m_Size, m_IndexBuffer);
-        }
+        // set the skinning palette data
+        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[2], 3, m_cbSkinningConsts);
+        DrawSkinBatches(context, m_SkinBatches);
     } else if (m_Block.m_Attributes.m_Flags & IS_SKINNED) {
-        // TODO: skinning palette data
-        IRenderBlock::DrawSkinBatches(context, m_SkinBatches);
+        // set the skinning palette data
+        // @TODO: correct slot!
+        context->m_Renderer->SetVertexShaderConstants(m_VertexShaderConstants[2], 3, m_cbSkinningConsts);
+        DrawSkinBatches(context, m_SkinBatches);
     } else {
         IRenderBlock::Draw(context);
     }
