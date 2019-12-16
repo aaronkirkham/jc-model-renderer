@@ -8,7 +8,11 @@
 #include "graphics/imgui/imgui_buttondropdown.h"
 #include "graphics/renderer.h"
 #include "graphics/shader_manager.h"
+#include "graphics/texture.h"
+#include "graphics/texture_manager.h"
 
+#include "game/file_loader.h"
+#include "game/formats/render_block_model.h"
 #include "game/render_block_factory.h"
 
 namespace jc3
@@ -402,5 +406,73 @@ void RenderBlockCharacter::DrawUI()
         }
     }
     ImGui::EndColumns();
+}
+
+void RenderBlockCharacter::SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials)
+{
+    using namespace jc::Vertex;
+    using namespace jc::Vertex::RenderBlockCharacter;
+
+    memset(&m_Block.m_Attributes, 0, sizeof(m_Block.m_Attributes));
+
+    m_Block.m_Version            = jc::RenderBlocks::CHARACTER_VERSION;
+    m_Block.m_Attributes.m_Scale = 1.0f;
+    m_Block.m_Attributes.m_Flags = (DISABLE_BACKFACE_CULLING | GEAR);
+
+    std::vector<Packed4Bones1UV> vertices_;
+
+    for (const auto& vertex : *vertices) {
+        // vertices data
+        Packed4Bones1UV pos{};
+        pos.x = pack<int16_t>(vertex.pos.x);
+        pos.y = pack<int16_t>(vertex.pos.y);
+        pos.z = pack<int16_t>(vertex.pos.z);
+        // w0
+        // i0
+        pos.u0 = pack<int16_t>(vertex.uv.x);
+        pos.v0 = pack<int16_t>(vertex.uv.y);
+        // tangent
+        vertices_.emplace_back(std::move(pos));
+    }
+
+    // load textures
+    MakeEmptyMaterials(jc::RenderBlocks::CHARACTER_TEXTURES_COUNT);
+    for (const auto& mat : *materials) {
+        const auto& [type, filename] = mat;
+
+        // clang-format off
+        uint8_t index = 0;
+        if (type == "diffuse")       index = 0;
+        else if (type == "normal")   index = 1;
+        // clang-format on
+
+        // load texture
+        FileLoader::Get()->ReadTexture(filename, [&, index](bool success, std::vector<uint8_t> buffer) {
+            if (success) {
+                m_Textures[index]->LoadFromBuffer(buffer);
+            }
+        });
+
+        // @TODO: make this better.
+        auto filepath = m_Owner->GetPath().parent_path();
+        filepath /= "textures" / filename.filename();
+        m_Textures[index]->SetFileName(filepath);
+    }
+
+    // skin batches
+#ifdef _DEBUG
+    CSkinBatch davo_hat;
+    davo_hat.m_BatchLookup    = new int16_t[2];
+    davo_hat.m_BatchLookup[0] = 0;
+    davo_hat.m_BatchLookup[1] = 8;
+    davo_hat.m_BatchSize      = 2;
+    davo_hat.m_Size           = indices->size();
+    davo_hat.m_Offset         = 0;
+    m_SkinBatches.push_back(davo_hat);
+#endif
+
+    // create buffers
+    m_VertexBuffer = Renderer::Get()->CreateBuffer(vertices_, VERTEX_BUFFER, "Character VertexBuffer");
+    m_IndexBuffer  = Renderer::Get()->CreateBuffer(*indices, INDEX_BUFFER, "Character IndexBuffer");
 }
 }; // namespace jc3

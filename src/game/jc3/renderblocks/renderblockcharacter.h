@@ -26,7 +26,8 @@ static_assert(sizeof(CharacterAttributes) == 0x6C, "CharacterAttributes alignmen
 
 namespace jc::RenderBlocks
 {
-static constexpr uint8_t CHARACTER_VERSION = 9;
+static constexpr uint8_t CHARACTER_VERSION        = 9;
+static constexpr uint8_t CHARACTER_TEXTURES_COUNT = 11;
 
 struct Character {
     uint8_t             m_Version;
@@ -187,10 +188,7 @@ class RenderBlockCharacter : public jc3::IRenderBlock
     virtual void DrawContextMenu() override final;
     virtual void DrawUI() override final;
 
-    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final
-    {
-        //
-    }
+    virtual void SetData(vertices_t* vertices, uint16s_t* indices, materials_t* materials) override final;
 
     virtual std::tuple<vertices_t, uint16s_t> GetData() override final
     {
