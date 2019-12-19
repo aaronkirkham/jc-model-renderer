@@ -16,6 +16,7 @@
 #include "game/file_loader.h"
 #include "game/formats/avalanche_archive.h"
 #include "game/formats/avalanche_model_format.h"
+#include "game/formats/avalanche_texture.h"
 #include "game/formats/render_block_model.h"
 #include "game/formats/runtime_container.h"
 #include "game/irenderblock.h"
@@ -287,13 +288,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
         FileLoader::Get()->RegisterReadCallback({".modelc"}, AvalancheModelFormat::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({".ee", ".bl", ".nl", ".fl"}, AvalancheArchive::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback({".epe", ".blo"}, RuntimeContainer::ReadFileCallback);
+        FileLoader::Get()->RegisterReadCallback({".ddsc"}, AvalancheTexture::ReadFileCallback);
         FileLoader::Get()->RegisterReadCallback(
-            {".dds", ".ddsc", ".hmddsc", ".atx1", ".atx2"},
+            {".dds", ".hmddsc", ".atx1", ".atx2"},
             [&](const std::filesystem::path& filename, std::vector<uint8_t> data, bool external) {
                 const uint8_t flags = (TextureManager::TextureCreateFlags_CreateIfNotExists
                                        | TextureManager::TextureCreateFlags_IsUIRenderable);
 
-                // parse the compressed texture if the file was loaded from an external source
+// parse the compressed texture if the file was loaded from an external source
+#if 0
                 if (external) {
                     if (filename.extension() == ".ddsc") {
                         std::vector<uint8_t> out_buffer;
@@ -309,6 +312,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR psCmdLine,
                         return true;
                     }
                 }
+#endif
 
                 TextureManager::Get()->GetTexture(filename, data, flags);
                 return true;

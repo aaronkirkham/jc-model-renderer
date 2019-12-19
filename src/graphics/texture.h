@@ -3,6 +3,8 @@
 #include <d3d11.h>
 #include <filesystem>
 
+#include <avalanche_texture.h>
+
 struct SamplerState_t;
 class Texture
 {
@@ -23,7 +25,7 @@ class Texture
     bool LoadFromBuffer(const std::vector<uint8_t>& buffer);
     bool LoadFromFile(const std::filesystem::path& filename);
 
-	void Unload();
+    void Unload();
 
     void Use(uint32_t slot, SamplerState_t* sampler = nullptr);
     void UseVS(uint32_t slot);

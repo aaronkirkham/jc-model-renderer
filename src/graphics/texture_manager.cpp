@@ -17,9 +17,12 @@ TextureManager::TextureManager()
 {
     Renderer::Get()->Events().PostRender.connect([&](RenderContext_t* context) {
         for (auto it = m_PreviewTextures.begin(); it != m_PreviewTextures.end();) {
+
+            auto texture = (*it);
+
             bool open = true;
 
-            std::string title = ICON_FA_FILE_IMAGE "  " + (*it)->GetFileName().filename().string();
+            std::string title = ICON_FA_FILE_IMAGE "  " + texture->GetFileName().filename().string();
 
             // maintain aspect ratio
             /*ImGui::SetNextWindowSizeConstraints({128, 128}, {FLT_MAX, FLT_MAX}, [](ImGuiSizeCallbackData* data) {
@@ -40,10 +43,10 @@ TextureManager::TextureManager()
                 width -= (width % 2 != 0) ? 1 : 0;
                 height -= (height % 2 != 0) ? 1 : 0;
 
-                ImGui::Image((*it)->GetSRV(), ImVec2((float)width, (float)height));
+                ImGui::Image(texture->GetSRV(), ImVec2((float)width, (float)height));
 
                 // render context menus so we can save/export from this window
-                UI::Get()->RenderContextMenu((*it)->GetFileName(), "", ContextMenuFlags_Texture);
+                UI::Get()->RenderContextMenu(texture->GetFileName(), "", ContextMenuFlags_Texture);
             }
             ImGui::End();
 

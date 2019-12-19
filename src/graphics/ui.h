@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 #include <ksignals.h>
 
+#include <avalanche_texture.h>
+
 #include "import_export/iimportexporter.h"
 #include "singleton.h"
 
@@ -75,11 +77,6 @@ class UI : public Singleton<UI>
         IImportExporter*      Exporter           = nullptr;
         std::filesystem::path Filename           = "";
     } m_ExportSettings;
-
-    struct {
-        bool                     ShowSettings = false;
-        std::shared_ptr<Texture> Texture      = nullptr;
-    } m_NewTextureSettings;
 
     struct {
         bool                          ShowImporterSettings = false;

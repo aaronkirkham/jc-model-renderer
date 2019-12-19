@@ -24,6 +24,7 @@
 #include "game/file_loader.h"
 #include "game/formats/avalanche_archive.h"
 #include "game/formats/avalanche_model_format.h"
+#include "game/formats/avalanche_texture.h"
 #include "game/formats/render_block_model.h"
 #include "game/formats/runtime_container.h"
 #include "game/render_block_factory.h"
@@ -318,87 +319,161 @@ void UI::Render(RenderContext_t* context)
         ImGui::End();
     }
 
+#if 0
     // texture creator
-    if (m_NewTextureSettings.ShowSettings) {
-        ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
-        if (ImGui::Begin(ICON_FA_FILE_IMAGE "  New Texture", &m_NewTextureSettings.ShowSettings,
-                         ImGuiWindowFlags_NoCollapse)) {
-            ImGui::Columns(2, nullptr, false);
-            {
-                const auto col_width = (ImGui::GetWindowWidth() / ImGui::GetColumnsCount());
+    {
+        // enter name window
+        if (m_NewTextureSettings.ShowNameEdit) {
+            ImGui::SetNextWindowSize({370, 85}, ImGuiCond_Appearing);
+            if (ImGui::Begin(ICON_FA_FILE_IMAGE "  New Texture - Enter Name", &m_NewTextureSettings.ShowNameEdit,
+                             (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse))) {
+                ImGui::InputText("Filename", &m_NewTextureSettings.Filename);
 
-                // draw texture
-                ImGui::BeginGroup();
-                {
-                    if (m_NewTextureSettings.Texture) {
-                        ImGui::Text(m_NewTextureSettings.Texture->GetFileName().string().c_str());
-                        ImGui::Image(m_NewTextureSettings.Texture->GetSRV(), ImVec2(col_width, col_width), ImVec2(0, 0),
-                                     ImVec2(1, 1), ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 1));
-                    }
-
-                    // open texture preview
-                    /*if (texture->IsLoaded() && ImGui::IsItemClicked()) {
-                        TextureManager::Get()->PreviewTexture(texture);
-                    }*/
-
-                    // import from
-                    if (ImGuiCustom::BeginButtonDropDown("Import Texture From")) {
-                        const auto& importers = ImportExportManager::Get()->GetImportersFor(".ddsc");
-                        for (const auto& importer : importers) {
-                            if (ImGui::MenuItem(importer->GetExportName(), importer->GetExportExtension())) {
-                                UI::Events().ImportFileRequest(
-                                    importer, [&](bool success, std::filesystem::path filename, std::any data) {
-                                        if (success) {
-                                            auto& buffer                 = std::any_cast<FileBuffer>(data);
-                                            m_NewTextureSettings.Texture = TextureManager::Get()->GetTexture(
-                                                filename, buffer, TextureManager::TextureCreateFlags_CreateIfNotExists);
-                                        }
-                                    });
-                            }
-                        }
-
-                        ImGuiCustom::EndButtonDropDown();
-                    }
-                }
-                ImGui::EndGroup();
-                ImGui::NextColumn();
-
-                // draw text
-                if (m_NewTextureSettings.Texture) {
-                    const auto desc = m_NewTextureSettings.Texture->GetDesc();
-                    ImGui::Text("Width: %d", desc.Width);
-                    ImGui::Text("Height: %d", desc.Height);
-                    ImGui::Text("Format: %d (%s)", desc.Format, TextureManager::GetFormatString(desc.Format));
-                    ImGui::Text("MipLevels: %d", desc.MipLevels);
-
-                    // save texture as...
-                    if (ImGui::Button(ICON_FA_SAVE "  Save as...")) {
-                        FileBuffer buffer;
-                        if (FileLoader::Get()->WriteAVTX(m_NewTextureSettings.Texture.get(), &buffer)) {
-                            FileSelectionParams params{};
-                            params.Filename  = m_NewTextureSettings.Texture->GetFileName().stem().string();
-                            params.Extension = ".ddsc";
-                            params.Filters.emplace_back(FileSelectionFilter{"Avalanche Texture (*.ddsc)", "*.ddsc"});
-                            const auto& selected = Window::Get()->ShowSaveDialog("Save as...", params);
-
-                            if (!selected.empty()) {
-                                std::ofstream stream(selected, std::ios::binary);
-                                if (stream.fail()) {
-                                    Window::Get()->ShowMessageBox("Failed to save file.", MB_ICONEXCLAMATION | MB_OK);
-                                    return;
-                                }
-
-                                stream.write((char*)buffer.data(), buffer.size());
-                                stream.close();
-                            }
-                        }
-                    }
+                if (ImGui::Button("Create")) {
+                    m_NewTextureSettings.ShowNameEdit    = false;
+                    m_NewTextureSettings.ShowTextureEdit = true;
                 }
             }
-            ImGui::EndColumns();
+            ImGui::End();
         }
-        ImGui::End();
+
+        // texture edit window
+        if (m_NewTextureSettings.ShowTextureEdit) {
+            std::string title = ICON_FA_FILE_IMAGE " New Texture - " + m_NewTextureSettings.Filename + ".ddsc";
+
+            ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
+            if (ImGui::Begin(title.c_str(), &m_NewTextureSettings.ShowTextureEdit, ImGuiWindowFlags_NoCollapse)) {
+
+                ImGui::Text("Texture Streams");
+
+                ImGui::Columns(4, nullptr, true);
+                for (uint32_t i = 0; i < ava::AvalancheTexture::AVTX_MAX_STREAMS; ++i) {
+                    if (ImGui::GetColumnIndex() == 0) {
+                        ImGui::Separator();
+                    }
+
+                    ImGui::Text("Stream %d", (i + 1));
+
+                    if (m_NewTextureSettings.Textures[i]) {
+                        const auto& desc = m_NewTextureSettings.Textures[i]->GetDesc();
+
+                        ImGui::Text("%d x %d", desc.Width, desc.Height);
+                        ImGui::Text("%s", TextureManager::GetFormatString(desc.Format));
+
+                        ImGui::Image(m_NewTextureSettings.Textures[i]->GetSRV(), {100, 100});
+
+                        // ImGui::Button(ICON_FA_FILE_IMAGE "  Preview", ImVec2(-FLT_MIN, 0.0f));
+                        ImGui::Button(ICON_FA_SAVE "  Save as...", ImVec2(-FLT_MIN, 0.0f));
+                    } else {
+
+                        if (ImGuiCustom::BeginButtonDropDown("Import Texture From", ImVec2(-FLT_MIN, 0.0f))) {
+                            const auto& importers = ImportExportManager::Get()->GetImportersFor(".ddsc");
+                            for (const auto& importer : importers) {
+                                if (ImGui::MenuItem(importer->GetExportName(), importer->GetExportExtension())) {
+                                    UI::Events().ImportFileRequest(
+                                        importer, [&, i](bool success, std::filesystem::path filename, std::any data) {
+                                            if (success) {
+                                                auto& buffer                     = std::any_cast<FileBuffer>(data);
+                                                m_NewTextureSettings.Textures[i] = TextureManager::Get()->GetTexture(
+                                                    filename, buffer,
+                                                    TextureManager::TextureCreateFlags_CreateIfNotExists);
+                                            }
+                                        });
+                                }
+                            }
+
+                            ImGuiCustom::EndButtonDropDown();
+                        }
+                    }
+
+                    ImGui::NextColumn();
+                }
+                ImGui::EndColumns();
+                ImGui::Separator();
+
+#if 0
+                ImGui::Columns(2, nullptr, false);
+                {
+                    const auto col_width = (ImGui::GetWindowWidth() / ImGui::GetColumnsCount());
+
+                    // draw texture
+                    ImGui::BeginGroup();
+                    {
+                        if (m_NewTextureSettings.Texture) {
+                            ImGui::Text(m_NewTextureSettings.Texture->GetFileName().string().c_str());
+                            ImGui::Image(m_NewTextureSettings.Texture->GetSRV(), ImVec2(col_width, col_width),
+                                         ImVec2(0, 0), ImVec2(1, 1), ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 1));
+                        }
+
+                        // open texture preview
+                        /*if (texture->IsLoaded() && ImGui::IsItemClicked()) {
+                            TextureManager::Get()->PreviewTexture(texture);
+                        }*/
+
+                        // import from
+                        if (ImGuiCustom::BeginButtonDropDown("Import Texture From")) {
+                            const auto& importers = ImportExportManager::Get()->GetImportersFor(".ddsc");
+                            for (const auto& importer : importers) {
+                                if (ImGui::MenuItem(importer->GetExportName(), importer->GetExportExtension())) {
+                                    UI::Events().ImportFileRequest(
+                                        importer, [&](bool success, std::filesystem::path filename, std::any data) {
+                                            if (success) {
+                                                auto& buffer                 = std::any_cast<FileBuffer>(data);
+                                                m_NewTextureSettings.Texture = TextureManager::Get()->GetTexture(
+                                                    filename, buffer,
+                                                    TextureManager::TextureCreateFlags_CreateIfNotExists);
+                                            }
+                                        });
+                                }
+                            }
+
+                            ImGuiCustom::EndButtonDropDown();
+                        }
+                    }
+                    ImGui::EndGroup();
+                    ImGui::NextColumn();
+
+                    // draw text
+                    if (m_NewTextureSettings.Texture) {
+                        const auto desc = m_NewTextureSettings.Texture->GetDesc();
+                        ImGui::Text("Width: %d", desc.Width);
+                        ImGui::Text("Height: %d", desc.Height);
+                        ImGui::Text("Format: %d (%s)", desc.Format, TextureManager::GetFormatString(desc.Format));
+                        ImGui::Text("MipLevels: %d", desc.MipLevels);
+
+                        // save texture as...
+                        if (ImGui::Button(ICON_FA_SAVE "  Save as...")) {
+                            FileBuffer buffer;
+                            if (FileLoader::Get()->WriteAVTX(m_NewTextureSettings.Texture.get(), &buffer)) {
+                                FileSelectionParams params{};
+                                params.Filename  = m_NewTextureSettings.Texture->GetFileName().stem().string();
+                                params.Extension = ".ddsc";
+                                params.Filters.emplace_back(
+                                    FileSelectionFilter{"Avalanche Texture (*.ddsc)", "*.ddsc"});
+                                const auto& selected = Window::Get()->ShowSaveDialog("Save as...", params);
+
+                                if (!selected.empty()) {
+                                    std::ofstream stream(selected, std::ios::binary);
+                                    if (stream.fail()) {
+                                        Window::Get()->ShowMessageBox("Failed to save file.",
+                                                                      MB_ICONEXCLAMATION | MB_OK);
+                                        return;
+                                    }
+
+                                    stream.write((char*)buffer.data(), buffer.size());
+                                    stream.close();
+                                }
+                            }
+                        }
+                    }
+                }
+                ImGui::EndColumns();
+#endif
+            }
+            ImGui::End();
+        }
     }
+#endif
 
     // select importer
     {
@@ -496,8 +571,28 @@ void UI::Render(RenderContext_t* context)
         if (!open) {
             std::lock_guard<std::recursive_mutex> _lk{RuntimeContainer::InstancesMutex};
             it = RuntimeContainer::Instances.erase(it);
-        } else
+        } else {
             ++it;
+        }
+    }
+
+    // avalanche texture editor
+    for (auto it = AvalancheTexture::Instances.begin(); it != AvalancheTexture::Instances.end();) {
+        std::string title = ICON_FA_FILE_IMAGE "  " + (*it).second->GetFilePath().string();
+
+        bool open = true;
+        ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
+        if (ImGui::Begin(title.c_str(), &open, ImGuiWindowFlags_NoCollapse)) {
+            (*it).second->DrawUI();
+            ImGui::End();
+        }
+
+        if (!open) {
+            std::lock_guard<std::recursive_mutex> _lk{AvalancheTexture::InstancesMutex};
+            it = AvalancheTexture::Instances.erase(it);
+        } else {
+            ++it;
+        }
     }
 
 #ifdef _DEBUG
@@ -541,8 +636,7 @@ void UI::RenderMenuBar()
             }
 
             if (ImGui::MenuItem("Texture", ".ddsc")) {
-                m_NewTextureSettings.Texture      = nullptr;
-                m_NewTextureSettings.ShowSettings = true;
+                AvalancheTexture::make("new.ddsc");
             }
 
             if (ImGui::MenuItem("Resource Bundle", ".resourcebundle", nullptr, g_IsJC4Mode)) {

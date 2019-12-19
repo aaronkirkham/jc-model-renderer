@@ -259,6 +259,7 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultC
         status_text_id          = UI::Get()->PushStatusText(status_text);
     }
 
+#if 0
     // are we trying to load textures?
     if (filename.extension() == ".dds" || filename.extension() == ".ddsc" || filename.extension() == ".hmddsc"
         || filename.extension() == ".atx1" || filename.extension() == ".atx2") {
@@ -274,6 +275,7 @@ void FileLoader::ReadFile(const std::filesystem::path& filename, ReadFileResultC
             return ReadTexture(filename, callback);
         }
     }
+#endif
 
     // check any loaded archives for the file
     const auto& [archive, entry] = GetStreamArchiveFromFile(filename);

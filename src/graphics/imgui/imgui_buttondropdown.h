@@ -5,9 +5,9 @@
 
 namespace ImGuiCustom
 {
-inline bool BeginButtonDropDown(const char* label)
+inline bool BeginButtonDropDown(const char* label, const ImVec2& size_arg = {0, 0})
 {
-    bool pressed = ImGui::Button(label);
+    bool pressed = ImGui::Button(label, size_arg);
 
     auto        window = ImGui::GetCurrentWindow();
     const auto& style  = ImGui::GetStyle();
