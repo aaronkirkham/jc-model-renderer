@@ -15,12 +15,46 @@ struct SObjectID {
     SObjectNameHash m_Hash;
     uint16_t        m_UserData;
 
+    SObjectID() = default;
+    SObjectID(const uint64_t object_id)
+    {
+        m_UserData      = object_id;
+        m_Hash.m_First  = (object_id >> 0x30) & 0xFFFF;
+        m_Hash.m_Second = (object_id >> 0x20) & 0xFFFF;
+        m_Hash.m_Third  = (object_id >> 0x10) & 0xFFFF;
+    }
+
+    SObjectID(const uint64_t object_id, uint16_t user_data)
+    {
+        m_UserData      = user_data;
+        m_Hash.m_First  = (object_id >> 0x30) & 0xFFFF;
+        m_Hash.m_Second = (object_id >> 0x20) & 0xFFFF;
+        m_Hash.m_Third  = (object_id >> 0x10) & 0xFFFF;
+    }
+
+    // format used in .xml files output by Ricks tools.
+    std::string to_gibbed_str()
+    {
+        char buffer[18] = {0};
+        sprintf_s(buffer, "%04X%04X=%04X%04X", m_Hash.m_Second, m_Hash.m_First, m_UserData, m_Hash.m_Third);
+        return buffer;
+    }
+
+    std::string to_str()
+    {
+        char buffer[17] = {0};
+        sprintf_s(buffer, "%016llx", to_uint64());
+        return buffer;
+    }
+
     uint64_t to_uint64()
     {
         return m_UserData
                | ((m_Hash.m_Third | ((m_Hash.m_Second | ((uint64_t)m_Hash.m_First << 0x10)) << 0x10)) << 0x10);
     }
 };
+
+using SEventID = SObjectID;
 }; // namespace jc
 namespace jc::Vertex
 {

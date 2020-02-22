@@ -37,9 +37,9 @@
 extern bool g_IsJC4Mode;
 extern bool g_DrawBoundingBoxes;
 extern bool g_ShowModelLabels;
-static bool g_ShowSettingsWindow = false;
-static bool g_ShowAboutWindow    = false;
-static bool g_ShowNameHashWindow = false;
+static bool g_ShowSettingsWindow      = false;
+static bool g_ShowAboutWindow         = false;
+static bool g_ShowHashGeneratorWindow = false;
 
 #ifdef _DEBUG
 static bool g_CheckForUpdatesEnabled = false;
@@ -302,19 +302,79 @@ void UI::Render(RenderContext_t* context)
     }
 
     // name hash generator
-    if (g_ShowNameHashWindow) {
-        ImGui::SetNextWindowSize({370, 85}, ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("Name Hash Generator", &g_ShowNameHashWindow,
-                         (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse))) {
-            static std::string _string = "";
-            static uint32_t    _hash   = 0;
+    if (g_ShowHashGeneratorWindow) {
+        if (ImGui::Begin("Hash Generator", &g_ShowHashGeneratorWindow,
+                         (ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse))) {
+            if (ImGui::BeginTabBar("Hash Generator Tabs")) {
+                static ImGuiInputTextFlags flags =
+                    (ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_ReadOnly);
 
-            if (ImGui::InputText("Text to Hash", &_string)) {
-                _hash = _string.length() > 0 ? ava::hashlittle(_string.c_str()) : 0;
+                // name hash
+                if (ImGui::BeginTabItem("Name Hash")) {
+                    static std::string string = "";
+                    static uint32_t    hash   = 0;
+
+                    ImGui::TextWrapped("32 bit name hash generator using hashlittle.");
+
+                    if (ImGui::InputText("Input Text", &string)) {
+                        hash = string.length() > 0 ? ava::hashlittle(string.c_str()) : 0;
+                    }
+
+                    ImGui::InputInt("Result", (int32_t*)&hash, 0, 0, flags);
+
+                    ImGui::EndTabItem();
+                }
+
+                // event id
+                if (ImGui::BeginTabItem("Event ID")) {
+                    static std::string  string = "";
+                    static jc::SEventID event_id{};
+                    static uint64_t     hash = 0;
+
+                    ImGui::TextWrapped("64 bit event name hash generator using MurMur3.");
+
+                    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
+                    ImGui::TextWrapped("Same as Object ID but hash UserData will always be 0x0000.");
+                    ImGui::PopStyleVar();
+
+                    if (ImGui::InputText("Input Text", &string)) {
+                        event_id = jc::SEventID{ava::HashString64(string.c_str()), 0};
+                        hash     = event_id.to_uint64();
+                    }
+
+                    ImGui::InputScalar("Result", ImGuiDataType_U64, (void*)&hash, 0, 0, "%016llX", flags);
+                    ImGui::InputText("Result (gibbed)", &event_id.to_gibbed_str(),
+                                     ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_ReadOnly);
+
+                    ImGui::EndTabItem();
+                }
+
+                // objectid
+                if (ImGui::BeginTabItem("Object ID")) {
+                    static std::string   string = "";
+                    static jc::SObjectID object_id{0, 0xFFFF};
+                    static uint64_t      hash = object_id.to_uint64();
+
+                    ImGui::TextWrapped("64 bit object name hash generator using MurMur3.");
+
+                    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
+                    ImGui::TextWrapped("Same as Event ID but hash UserData will always be 0xFFFF.");
+                    ImGui::PopStyleVar();
+
+                    if (ImGui::InputText("Input Text", &string)) {
+                        object_id = jc::SObjectID{ava::HashString64(string.c_str()), 0xFFFF};
+                        hash      = object_id.to_uint64();
+                    }
+
+                    ImGui::InputScalar("Result", ImGuiDataType_U64, (void*)&hash, 0, 0, "%016llX", flags);
+                    ImGui::InputText("Result (gibbed)", &object_id.to_gibbed_str(),
+                                     ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_ReadOnly);
+
+                    ImGui::EndTabItem();
+                }
+
+                ImGui::EndTabBar();
             }
-
-            ImGui::InputInt("Result", (int32_t*)&_hash, 0, 0,
-                            ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_ReadOnly);
         }
         ImGui::End();
     }
@@ -737,8 +797,8 @@ void UI::RenderMenuBar()
 
         // tools
         if (ImGui::BeginMenu("Tools")) {
-            if (ImGui::MenuItem("Name Hash Generator")) {
-                g_ShowNameHashWindow = !g_ShowNameHashWindow;
+            if (ImGui::MenuItem("Hash Generator")) {
+                g_ShowHashGeneratorWindow = !g_ShowHashGeneratorWindow;
             }
 
             ImGui::EndMenu();
@@ -1055,7 +1115,8 @@ void UI::RenderModelsTab_RBM()
                                                     render_block->SetData(&vertices, &indices, &materials);
                                                     ((jc3::IRenderBlock*)render_block)->Create();
 
-                                                    // @TODO: should be handled by the RenderBlockModel class.
+                                                    // @TODO: should be handled by the RenderBlockModel
+                                                    // class.
                                                     Renderer::Get()->AddToRenderList(render_block);
 
                                                     // Update model bounding box
