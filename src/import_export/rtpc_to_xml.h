@@ -22,7 +22,7 @@ class RTPC2XML : public IImportExporter
 
     std::vector<std::string> GetImportExtension() override final
     {
-        return {".epe", ".blo"};
+        return {".epe", ".blo", ".rtpc", ".bin"};
     }
 
     const char* GetExportName() override final
