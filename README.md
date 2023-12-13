@@ -1,10 +1,13 @@
-## Just Cause Model Renderer
-An application to preview Just Cause's (3 and 4) Model files without the need for external tools. Open an archive and select the file you want to preview. You can do things like change shader attributes, replace textures and even export to a different format.
+## Avalanche Game Tools
+An application containing a series of tools required for modding Avalanche Engine games, including the Just Cause series, Generation Zero and Mad Max.
 
-<p align="center"><img src="https://kirkh.am/jc-model-renderer/window.png" alt="Just Cause Model Renderer Main Window" title="Main Window"></p>
+We support all the common file formats used in Avalanche Engine games (from 2015 to present), with the ability to edit files and repack within the application - you don't have to learn command line tools to use this.
+
+<p align="center"><img src="https://kirkh.am/jc-model-renderer/window-v2.png" alt="Avalanche Game Main Window" title="Main Window"></p>
 
 ### Build Requirements
- - Visual Studio 2017.3 or later
+ - Visual Studio 2022 or later
+ - Python 3.1 or later (only needed if you want to build the asset lookup files)
  
 ### Installation
 Download a version from [releases](https://github.com/aaronkirkham/jc-model-renderer/releases) __or__ build it yourself:
@@ -13,21 +16,8 @@ Download a version from [releases](https://github.com/aaronkirkham/jc-model-rend
  - Run `configure.ps1` with PowerShell
  - Build `out/jc-model-renderer.sln` in Visual Studio
 
-#### License
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+### Contributions
+Code contributions are welcomed and encouraged - if you have an idea for a feature or simply want to improve the code, feel free to create a Pull Request!
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+### License
+MIT.
