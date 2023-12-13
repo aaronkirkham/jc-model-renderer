@@ -7019,6 +7019,7 @@ cameras
 CANCEL
 CAnimRotation
 CanRotateInState
+capybara
 Cardboard
 cards_fan
 CAreaDamage
@@ -7197,6 +7198,13 @@ cover
 CoverPoint
 Covers
 cow
+cow_caracu_01
+cow_caracu_02
+cow_generic_01
+cow_holando_argentino_01
+cow_holando_argentino_02
+cow_indo_brazilian_01
+cow_indo_brazilian_02
 CParts
 CPlacementRule
 CPrimarySound
@@ -7312,6 +7320,7 @@ DOFHeightFalloff
 DOFSmoothness
 DOFSmoothnessNear
 dog
+domestic_pig
 DP_DOWN
 DP_LEFT
 DP_RIGHT
@@ -7426,6 +7435,7 @@ female_rebel_004_grapple_melee_immune
 female_rebel_005
 female_rebel_006
 female_rebel_007
+feral_hog
 file
 filename
 fins
@@ -7507,6 +7517,9 @@ glowstick_green
 glowstick_red
 glowstick_yellow
 goat
+goat_bhuj
+goat_generic
+goat_repartida
 goverment
 grapple_gunless
 GRAPPLE_MODIFIER
@@ -7629,6 +7642,7 @@ is_reversed
 is_shadow_caster
 Italian
 item_id
+Japanese
 juggernaut
 JUMP
 JumpAndFall
@@ -7638,6 +7652,7 @@ key
 Key
 keymap
 kick
+Korean
 L1
 L2
 L3
@@ -7694,6 +7709,10 @@ line_vertex_3
 line_vertex_4
 linear_attenuation
 linear_damping
+llama
+llama_01
+llama_02
+llama_03_sheared
 load
 load_max
 load_min
@@ -7724,6 +7743,7 @@ main001
 main002_autommune
 major
 make_dynamic
+make_fixed
 make_it_look_like_an_accident
 make_vulnerable
 Male
@@ -7829,6 +7849,8 @@ MEASURE_TOOL
 mech_arena_play_zone
 mech_enemy_cannon
 mech_enemy_minigun
+MECH_FIRE_GRAVITY_WEAPON
+MECH_FIRE_GRAVITY_WEAPON_PRIMARY
 MECH_FIRE_GRAVITY_WEAPON_SECONDARY
 MECH_FIRE_RIGHT_HAND_WEAPON
 mech_friendly_cannon
@@ -8082,6 +8104,7 @@ Police
 police_captain_001
 police_officer_001
 police_swat_001
+Polish
 poradzi?abym_sobie_lepiej_bez_twojej_pomocy!_wielkie_dzi?ki!
 port_gate_bridge_base_lod4.rbm
 post_battle_pocket_1
@@ -8215,6 +8238,7 @@ Rubber
 rudders
 rule
 running_kick
+Russian
 S_180_BACK_TO_MOVE_0_ADDITIVE
 S_90L_BACK_TO_MOVE_0_ADDITIVE
 S_90L_BACK_TO_MOVE_90L_ADDITIVE
@@ -9839,6 +9863,14 @@ sam_spotlight_01
 sam_wreck_fight
 Sand
 SAttachedEffect
+SAttachedEffect1
+SAttachedEffect2
+SAttachedEffect3
+SAttachedEffect4
+SAttachedEffect5
+SAttachedEffect6
+SAttachedEffect7
+SAttachedEffect8
 SAttachedEffectParam
 SAttachedEffectTable
 save
@@ -9928,6 +9960,7 @@ sides
 signal_jamming_tower
 Silo_MusicTrack
 SInventory
+SInventoryItemRef
 size
 Size
 skeletal_animated_object
@@ -10079,6 +10112,7 @@ SWeaponPoint1
 SWingsuitScoreTier
 tags
 TakeOffSpline
+tapir
 tank_bus_wreck
 tank_oldcompact_wreck
 tank_techinal_wreck
@@ -10767,6 +10801,7 @@ wgst002_skin_flame
 WheelBlown!
 width
 Wield
+wild_boar
 WingBeatFrequency
 WingLength
 WINGSUIT_AIRBRAKE

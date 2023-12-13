@@ -4,11 +4,7 @@
 # git clone https://github.com/aaronkirkham/py-lookup3
 # python setup.py install
 
-import sys
-import os
-import struct
-import lookup3
-import argparse
+import sys, os, struct, lookup3, argparse
 
 parser = argparse.ArgumentParser(description='Build filelist files for jc-model-renderer')
 parser.add_argument('--game', help='Game selector. (jc3 / jc4)')

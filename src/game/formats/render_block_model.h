@@ -1,78 +1,23 @@
-#pragma once
+#ifndef JCMR_FORMATS_RENDER_BLOCK_MODEL_H_HEADER_GUARD
+#define JCMR_FORMATS_RENDER_BLOCK_MODEL_H_HEADER_GUARD
 
-#include "factory.h"
+#include "../format.h"
 
-#include "graphics/types.h"
-
-#include <filesystem>
-
-class AvalancheArchive;
-class RuntimeContainer;
-class AvalancheDataFormat;
-class IRenderBlock;
-
-class RenderBlockModel : public Factory<RenderBlockModel>
+namespace jcmr
 {
-    using ParseCallback_t = std::function<void(bool)>;
+struct App;
 
-  private:
-    std::filesystem::path             m_Filename = "";
-    std::vector<IRenderBlock*>        m_RenderBlocks;
-    std::shared_ptr<AvalancheArchive> m_ParentArchive;
-    BoundingBox                       m_BoundingBox;
+namespace game::format
+{
+    struct RenderBlockModel : IFormat {
+        static RenderBlockModel* create(App& app);
+        static void              destroy(RenderBlockModel* instance);
 
-  public:
-    RenderBlockModel(const std::filesystem::path& filename);
-    virtual ~RenderBlockModel();
+        std::vector<const char*> get_extensions() override { return {"rbm", "lod"}; }
+        // u32 get_header_magic() const override { ava::RenderBlockModel::MAGIC }
+    };
 
-    virtual std::string GetFactoryKey() const
-    {
-        return m_Filename.string();
-    }
+} // namespace game::format
+} // namespace jcmr
 
-    static void ReadFileCallback(const std::filesystem::path& filename, const std::vector<uint8_t>& data,
-                                 bool external);
-    static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path);
-    static void ContextMenuUI(const std::filesystem::path& filename);
-
-    static void Load(const std::filesystem::path& filename);
-    static void LoadFromRuntimeContainer(const std::filesystem::path& filename, std::shared_ptr<RuntimeContainer> rc);
-
-    bool ParseLOD(const std::vector<uint8_t>& buffer);
-    bool ParseRBM(const std::vector<uint8_t>& buffer, bool add_to_render_list = true);
-
-    void RecalculateBoundingBox();
-
-    inline static bool                     LoadingFromRuntimeContainer = false;
-    inline static std::vector<std::string> SuppressedWarnings;
-
-    std::vector<IRenderBlock*>& GetRenderBlocks()
-    {
-        return m_RenderBlocks;
-    }
-
-    std::string GetFileName()
-    {
-        return m_Filename.filename().string();
-    }
-
-    std::string GetFilePath()
-    {
-        return m_Filename.parent_path().string();
-    }
-
-    const std::filesystem::path& GetPath()
-    {
-        return m_Filename;
-    }
-
-    const BoundingBox& GetBoundingBox()
-    {
-        return m_BoundingBox;
-    }
-
-    AvalancheArchive* GetParentArchive()
-    {
-        return m_ParentArchive.get();
-    }
-};
+#endif // JCMR_FORMATS_RENDER_BLOCK_MODEL_H_HEADER_GUARD

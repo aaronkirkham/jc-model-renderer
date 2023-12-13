@@ -1,9 +1,6 @@
 [submodule "vendor/imgui"]
 	path = vendor/imgui
 	url = https://github.com/ocornut/imgui.git
-[submodule "vendor/ksignals"]
-	path = vendor/ksignals
-	url = https://github.com/xforce/ksignals.git
 [submodule "vendor/glm"]
 	path = vendor/glm
 	url = https://github.com/g-truc/glm.git
@@ -25,3 +22,6 @@
 [submodule "vendor/rapidjson"]
 	path = vendor/rapidjson
 	url = git@github.com:Tencent/rapidjson.git
+[submodule "vendor/fmt"]
+	path = vendor/fmt
+	url = https://github.com/fmtlib/fmt.git

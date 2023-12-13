@@ -1,8 +1,4 @@
-import sys
-import os
-import struct
-import json
-import argparse
+import sys, os, struct, json, argparse
 from decimal import Decimal
 
 parser = argparse.ArgumentParser(description='Build namehash lookup files for jc-model-renderer')

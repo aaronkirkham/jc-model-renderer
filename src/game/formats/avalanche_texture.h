@@ -1,43 +1,26 @@
-#pragma once
+#ifndef JCMR_FORMATS_AVALANCHE_TEXTURE_H_HEADER_GUARD
+#define JCMR_FORMATS_AVALANCHE_TEXTURE_H_HEADER_GUARD
 
-#include "factory.h"
+#include "../format.h"
+#include "render/fonts/icons.h"
 
-#include <array>
-#include <filesystem>
-
-namespace ava::AvalancheTexture
+namespace jcmr
 {
-struct AvtxHeader;
-};
+struct App;
 
-class Texture;
-class AvalancheTexture : public Factory<AvalancheTexture>
+namespace game::format
 {
-  private:
-    std::filesystem::path                                                         m_Filename = "";
-    ava::AvalancheTexture::AvtxHeader                                             m_Header   = {};
-    std::array<std::unique_ptr<Texture>, ava::AvalancheTexture::AVTX_MAX_STREAMS> m_Textures = {nullptr};
+    struct AvalancheTexture : IFormat {
+        static AvalancheTexture* create(App& app);
+        static void              destroy(AvalancheTexture* instance);
 
-  public:
-    AvalancheTexture(const std::filesystem::path& filename);
-    AvalancheTexture(const std::filesystem::path& filename, const std::vector<uint8_t>& buffer, bool external = false);
-    virtual ~AvalancheTexture() = default;
+        const char* get_filetype_icon() const override { return ICON_FA_FILE_IMAGE; }
 
-    virtual std::string GetFactoryKey() const
-    {
-        return m_Filename.string();
-    }
+        std::vector<const char*> get_extensions() override { return {"ddsc"}; }
+        u32                      get_header_magic() const override { return ava::AvalancheTexture::AVTX_MAGIC; }
+    };
 
-    void Parse(const std::vector<uint8_t>& buffer);
+} // namespace game::format
+} // namespace jcmr
 
-    static void ReadFileCallback(const std::filesystem::path& filename, const std::vector<uint8_t>& data,
-                                 bool external);
-    static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path);
-
-    void DrawUI();
-
-    const std::filesystem::path& GetFilePath()
-    {
-        return m_Filename;
-    }
-};
+#endif // JCMR_FORMATS_AVALANCHE_TEXTURE_H_HEADER_GUARD

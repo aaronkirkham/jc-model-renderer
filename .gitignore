@@ -30,3 +30,4 @@
 
 out/
 src/assets.aps
+*.cache

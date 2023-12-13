@@ -1,0 +1,33 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "includePath": [
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/vendor/ava-format-lib/include",
+                "${workspaceFolder}/vendor/fmt/include",
+                "${workspaceFolder}/vendor/glm",
+                "${workspaceFolder}/vendor/imgui",
+                "${workspaceFolder}/vendor/rapidjson/include",
+                "${workspaceFolder}/vendor/tinyxml2"
+            ],
+            "defines": [
+                "_DEBUG",
+                "WIN32",
+                "_WIN32",
+                "WIN32_LEAN_AND_MEAN",
+                "IMGUI_DISABLE_OBSOLETE_FUNCTIONS"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "msvc-x64"
+        }
+    ],
+    "version": 4
+}

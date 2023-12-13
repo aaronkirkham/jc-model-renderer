@@ -1,7 +1,4 @@
-import sys
-import os
-import json
-import argparse
+import sys, os, json, argparse
 from pathlib import Path
 
 parser = argparse.ArgumentParser(description='Build dictionary lookup files for jc-model-renderer')

@@ -1,0 +1,14 @@
+{
+    "C/C++ Include Guard.Comment Style": "Line",
+    "C/C++ Include Guard.Macro Type": "Filepath",
+    "C/C++ Include Guard.Path Depth": 1,
+    "C/C++ Include Guard.Prefix": "JCMR_",
+    "C/C++ Include Guard.Remove Extension": false,
+    "C/C++ Include Guard.Suffix": "_HEADER_GUARD",
+    "C_Cpp.autoAddFileAssociations": false,
+    "C_Cpp.dimInactiveRegions": false,
+    "[cpp]": {
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "ms-vscode.cpptools"
+    }
+  }

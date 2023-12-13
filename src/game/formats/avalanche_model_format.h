@@ -1,103 +1,22 @@
-#pragma once
+#ifndef JCMR_FORMATS_AVALANCHE_MODEL_FORMAT_H_HEADER_GUARD
+#define JCMR_FORMATS_AVALANCHE_MODEL_FORMAT_H_HEADER_GUARD
 
-#include "factory.h"
+#include "../format.h"
 
-#include "graphics/types.h"
-
-#include <filesystem>
-#include <string>
-
-namespace ava
+namespace jcmr
 {
-namespace AvalancheDataFormat
+struct App;
+
+namespace game::format
 {
-    class ADF;
-};
-namespace AvalancheModelFormat
-{
-    struct SAmfModel;
-    struct SAmfMeshHeader;
-    struct SAmfMeshBuffers;
-}; // namespace AvalancheModelFormat
-}; // namespace ava
+    struct AvalancheModelFormat : IFormat {
+        static AvalancheModelFormat* create(App& app);
+        static void                  destroy(AvalancheModelFormat* instance);
 
-class AvalancheArchive;
-class IRenderBlock;
+        std::vector<const char*> get_extensions() override { return {"modelc"}; }
+    };
 
-class AvalancheModelFormat : public Factory<AvalancheModelFormat>
-{
-    using ParseCallback_t = std::function<void(bool)>;
+} // namespace game::format
+} // namespace jcmr
 
-  private:
-    std::filesystem::path                       m_Filename = "";
-    std::shared_ptr<AvalancheArchive>           m_ParentArchive;
-    ava::AvalancheDataFormat::ADF*              m_ModelAdf        = nullptr;
-    ava::AvalancheDataFormat::ADF*              m_MeshAdf         = nullptr;
-    ava::AvalancheDataFormat::ADF*              m_HRMeshAdf       = nullptr;
-    ava::AvalancheModelFormat::SAmfModel*       m_AmfModel        = nullptr;
-    ava::AvalancheModelFormat::SAmfMeshHeader*  m_AmfMeshHeader   = nullptr;
-    ava::AvalancheModelFormat::SAmfMeshBuffers* m_LowMeshBuffers  = nullptr;
-    ava::AvalancheModelFormat::SAmfMeshBuffers* m_HighMeshBuffers = nullptr;
-
-    std::vector<IRenderBlock*> m_RenderBlocks;
-    BoundingBox                m_BoundingBox;
-
-  public:
-    AvalancheModelFormat(const std::filesystem::path& filename);
-    virtual ~AvalancheModelFormat();
-
-    virtual std::string GetFactoryKey() const
-    {
-        return m_Filename.string();
-    }
-
-    static void ReadFileCallback(const std::filesystem::path& filename, const std::vector<uint8_t>& data,
-                                 bool external);
-    static bool SaveFileCallback(const std::filesystem::path& filename, const std::filesystem::path& path);
-    static void ContextMenuUI(const std::filesystem::path& filename);
-
-    static void Load(const std::filesystem::path& filename);
-
-    void Parse(const std::vector<uint8_t>& data, ParseCallback_t callback);
-    bool ParseMeshBuffers();
-
-    std::string GetFileName()
-    {
-        return m_Filename.filename().string();
-    }
-
-    std::string GetFilePath()
-    {
-        return m_Filename.parent_path().string();
-    }
-
-    const std::filesystem::path& GetPath()
-    {
-        return m_Filename;
-    }
-
-    ava::AvalancheDataFormat::ADF* GetModelAdf()
-    {
-        return m_ModelAdf;
-    }
-
-    ava::AvalancheDataFormat::ADF* GetMeshAdf()
-    {
-        return m_MeshAdf;
-    }
-
-    ava::AvalancheDataFormat::ADF* GetHighResMeshAdf()
-    {
-        return m_HRMeshAdf;
-    }
-
-    const std::vector<IRenderBlock*>& GetRenderBlocks()
-    {
-        return m_RenderBlocks;
-    }
-
-    const BoundingBox& GetBoundingBox()
-    {
-        return m_BoundingBox;
-    }
-};
+#endif // JCMR_FORMATS_AVALANCHE_MODEL_FORMAT_H_HEADER_GUARD
