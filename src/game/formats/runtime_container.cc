@@ -283,8 +283,9 @@ struct RuntimeContainerWrapper {
             return (*iter).second;
         }
 
-        // TODO : don't return temporary
-        return find_in_namehash_lookup_table(container->m_NameHash);
+        // cache the name from the lookup table
+        m_container_names.insert({container, find_in_namehash_lookup_table(container->m_NameHash)});
+        return m_container_names[container];
     }
 
     const RuntimeContainer::VariantData& get_variant_data(u32 namehash)
@@ -292,6 +293,8 @@ struct RuntimeContainerWrapper {
         auto iter = m_variant_names.find(namehash);
         return (*iter).second;
     }
+
+    const ava::RuntimePropertyContainer::Container& get_container() const { return m_container; }
 
   private:
     void update_container_display_names(ava::RuntimePropertyContainer::Container& container)
@@ -400,14 +403,30 @@ struct RuntimeContainerImpl final : RuntimeContainer {
         app.get_ui().on_render([this](RenderContext& context) {
             std::string _runtime_container_to_unload;
             for (auto& container : m_containers) {
-                bool open = true;
-
+                bool open  = true;
                 auto title = fmt::format("{} {}##rtpc_editor", get_filetype_icon(), container.first);
 
                 auto dock_id = m_app.get_ui().get_dockspace_id(UI::E_DOCKSPACE_RIGHT);
                 ImGui::SetNextWindowDockID(dock_id, ImGuiCond_Appearing); // TODO: ImGuiCond_FirstUseEver
 
-                if (ImGui::Begin(title.c_str(), &open, ImGuiWindowFlags_NoSavedSettings)) {
+                if (ImGui::Begin(title.c_str(), &open, (ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoSavedSettings))) {
+                    // menu bar
+                    if (ImGui::BeginMenuBar()) {
+                        if (ImGui::BeginMenu("File")) {
+                            // save file
+                            if (ImGui::Selectable(ICON_FA_SAVE " Save to...")) {
+                                std::filesystem::path path;
+                                if (os::get_open_folder(&path, os::FileDialogParams{})) {
+                                    m_app.save_file(this, container.first, path);
+                                }
+                            }
+
+                            ImGui::EndMenu();
+                        }
+
+                        ImGui::EndMenuBar();
+                    }
+
                     container.second.render();
                 }
 
@@ -452,8 +471,12 @@ struct RuntimeContainerImpl final : RuntimeContainer {
 
     bool save(const std::string& filename, ByteArray* out_buffer) override
     {
-        //
-        return false;
+        auto iter = m_containers.find(filename);
+        if (iter == m_containers.end()) return false;
+
+        auto& runtime_container = (*iter).second.get_container();
+        AVA_FL_ENSURE(ava::RuntimePropertyContainer::Write(runtime_container, out_buffer), false);
+        return true;
     }
 
     bool is_loaded(const std::string& filename) const override
