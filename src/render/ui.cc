@@ -77,6 +77,7 @@ struct UIImpl final : UI {
         // ImGui::ShowDemoWindow();
 
         draw_dockspace();
+        draw_main_menu();
         draw_hash_generator_widget();
 
         // render callbacks
@@ -198,80 +199,10 @@ struct UIImpl final : UI {
 
         ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
         ImGui::End();
+    }
 
-#if 0
-        // setup dock space
-        {
-            const auto id =
-                ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
-
-            // static bool _once = false;
-            if (!ImGui::DockBuilderGetNode(id)) {
-                // _once = true;
-
-                // ImGui::DockBuilderRemoveNode(id);
-                // ImGui::DockBuilderAddNode(id);
-
-                ImGui::DockBuilderSplitNode(id, ImGuiDir_Left, 0.2f, &m_dockspace_left, &m_dockspace_right);
-                m_dockspace_right_bottom =
-                    ImGui::DockBuilderSplitNode(m_dockspace_right, ImGuiDir_Down, 0.3f, nullptr, nullptr);
-
-                ImGui::DockBuilderFinish(id);
-            }
-        }
-#endif
-
-#if 0
-        const auto* viewport = ImGui::GetMainViewport();
-        ImGui::SetNextWindowPos(viewport->WorkPos);
-        ImGui::SetNextWindowSize(viewport->WorkSize);
-        ImGui::SetNextWindowViewport(viewport->ID);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-
-        ImGui::Begin("DockSpace", nullptr,
-                     (ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse
-                      | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus
-                      | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground));
-        ImGui::PopStyleVar(3);
-
-        const auto dockspace_id = ImGui::GetID("RootDockSpace");
-        ImGui::DockSpace(dockspace_id, ImVec2(0, 0), ImGuiDockNodeFlags_None);
-
-        const auto dockspace_id =
-            ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
-        // ImGui::Begin("DockSpace");
-
-        // const auto dockspace_id = ImGui::GetID("RootDockSpace");
-        if (!ImGui::DockBuilderGetNode(dockspace_id)) {
-            ImGui::DockBuilderRemoveNode(dockspace_id);
-            ImGui::DockBuilderAddNode(dockspace_id);
-
-            // build dockspace layout
-            ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.2f, &m_dockspace_left, &m_dockspace_right);
-            m_dockspace_right_bottom =
-                ImGui::DockBuilderSplitNode(m_dockspace_right, ImGuiDir_Down, 0.3f, nullptr, nullptr);
-
-            ImGui::DockBuilderFinish(dockspace_id);
-        }
-
-        // ImGui::DockSpace(dockspace_id);
-
-        // setup the initial layout
-        static bool _once = false;
-        if (!_once) {
-            _once = true;
-
-            ImGui::DockBuilderRemoveNode(dockspace_id);
-            ImGui::DockBuilderAddNode(dockspace_id,
-                                      ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_DockSpace);
-            ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
-
-            
-        }
-#endif
-
+    void draw_main_menu()
+    {
         // main menu bar
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
@@ -288,8 +219,6 @@ struct UIImpl final : UI {
 
             ImGui::EndMainMenuBar();
         }
-
-        // ImGui::End(); // DockSpace
     }
 
     void draw_hash_generator_widget()
