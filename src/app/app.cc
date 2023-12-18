@@ -5,6 +5,7 @@
 #include "app/allocator.h"
 #include "app/directory_list.h"
 #include "app/os.h"
+#include "app/settings.h"
 
 #include "game/fallback_format_handler.h"
 #include "game/format.h"
@@ -74,6 +75,8 @@ struct AppImpl final : App {
 
     ~AppImpl()
     {
+        // TODO : destroy all format handlers
+
         // game::format::FallbackFormatHandler::destroy(m_fallback_format_handler);
         Renderer::destroy(m_renderer);
     }
@@ -98,19 +101,8 @@ struct AppImpl final : App {
         // init renderer
         m_renderer->init(renderer_args);
 
-        // game related
+        // preload lookup table
         load_namehash_lookup_table();
-        m_current_game = IGame::create(EGame::EGAME_JUSTCAUSE3, *this);
-        // m_current_game = IGame::create(EGame::EGAME_JUSTCAUSE4, *this);
-
-        // DEBUGGING, REMOVE ME LATER
-        // auto handler = get_format_handler_for_file(
-        //     "editor/entities/jc_weapons/01_one_handed/w011_pistol_u_pozhar_98/w011_pistol_u_pozhar_98.wtunec");
-        // ASSERT(handler != nullptr);
-        // handler->load(
-        //     "editor/entities/jc_weapons/01_one_handed/w011_pistol_u_pozhar_98/w011_pistol_u_pozhar_98.wtunec");
-        // LOG_INFO("app::on_init - exiting..");
-        // exit(1);
     }
 
     void on_shutdown() override
@@ -147,6 +139,20 @@ struct AppImpl final : App {
                 break;
             }
         }
+    }
+
+    void change_game(EGame game) override
+    {
+        LOG_INFO("App : changing game...");
+
+        if (m_current_game) {
+            IGame::destroy(m_current_game);
+            m_current_game = nullptr;
+        }
+
+        if (game == EGame::EGAME_COUNT) return;
+
+        m_current_game = IGame::create(game, *this);
     }
 
     bool save_file(game::IFormat* format, const std::string& filename, const std::filesystem::path& path) override
@@ -247,13 +253,15 @@ struct AppImpl final : App {
     void register_file_read_handler(FileHandler_t callback) override { m_file_read_handlers.emplace_back(callback); }
     const std::vector<FileHandler_t>& get_file_read_handlers() const override { return m_file_read_handlers; }
 
+    Settings& get_settings() override { return m_settings; }
     Renderer& get_renderer() override { return *m_renderer; }
     UI&       get_ui() override { return m_renderer->get_ui(); }
-    IGame&    get_game() override { return *m_current_game; }
+    IGame*    get_game() override { return m_current_game; }
 
   private:
     DefaultAllocator m_main_allocator;
     IAllocator&      m_allocator;
+    Settings         m_settings;
 
     os::Window*    m_window;
     Renderer*      m_renderer                = nullptr;
@@ -281,12 +289,14 @@ ByteArray App::load_internal_resource(i32 resource_id)
     const auto resource_info = FindResource(handle, MAKEINTRESOURCE(resource_id), RT_RCDATA);
     if (!resource_info) {
         DEBUG_BREAK();
+        LOG_ERROR("App : load_internal_resource {} failed! (FindResource)", resource_id);
         return {};
     }
 
     const auto resource_data = LoadResource(handle, resource_info);
     if (!resource_data) {
         DEBUG_BREAK();
+        LOG_ERROR("App : load_internal_resource {} failed! (LoadResource)", resource_id);
         return {};
     }
 

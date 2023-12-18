@@ -75,7 +75,7 @@ struct AvalancheTextureImpl final : AvalancheTexture {
 
         LOG_INFO("AvalancheTexture : loading \"{}\"...", filename);
 
-        auto texture = m_app.get_game().create_texture(filename);
+        auto texture = m_app.get_game()->create_texture(filename);
         m_textures.insert({filename, std::move(texture)});
         return true;
     }

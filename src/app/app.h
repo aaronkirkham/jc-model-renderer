@@ -18,6 +18,8 @@ namespace game
 struct IGame;
 struct Renderer;
 struct UI;
+struct Settings;
+enum class EGame;
 
 struct App {
     using FileHandler_t          = std::function<bool(const std::string& filename, ByteArray* out_buffer)>;
@@ -34,6 +36,8 @@ struct App {
     virtual void on_tick()                        = 0;
     virtual void on_event(const os::Event& event) = 0;
 
+    virtual void change_game(EGame game) = 0;
+
     virtual bool save_file(game::IFormat* format, const std::string& filename, const std::filesystem::path& path) = 0;
     virtual bool write_binary_file(const std::filesystem::path& path, ByteArray& buffer)                          = 0;
 
@@ -44,9 +48,10 @@ struct App {
     virtual void                              register_file_read_handler(FileHandler_t callback) = 0;
     virtual const std::vector<FileHandler_t>& get_file_read_handlers() const                     = 0;
 
+    virtual Settings& get_settings() = 0;
     virtual Renderer& get_renderer() = 0;
     virtual UI&       get_ui()       = 0;
-    virtual IGame&    get_game()     = 0;
+    virtual IGame*    get_game()     = 0;
 
     static ByteArray load_internal_resource(i32 resource_id);
 };

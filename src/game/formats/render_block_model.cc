@@ -106,7 +106,7 @@ struct RenderBlockModelImpl final : RenderBlockModel {
             return false;
         }
 
-        auto* resource_manager = m_app.get_game().get_resource_manager();
+        auto* resource_manager = m_app.get_game()->get_resource_manager();
 
         ByteArray buffer;
         if (!resource_manager->read(filename, &buffer)) {
@@ -124,7 +124,7 @@ struct RenderBlockModelImpl final : RenderBlockModel {
             std::vector<game::IRenderBlock*> render_blocks;
             render_blocks.reserve(blocks.size());
             for (auto& block : blocks) {
-                auto* render_block = (game::justcause3::RenderBlock*)m_app.get_game().create_render_block(block.first);
+                auto* render_block = (game::justcause3::RenderBlock*)m_app.get_game()->create_render_block(block.first);
                 if (render_block) {
                     render_block->set_resource_manager(resource_manager);
                     render_block->read(std::move(block.second));

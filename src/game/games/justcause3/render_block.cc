@@ -32,7 +32,7 @@ void RenderBlock::read_textures(std::istream& stream)
         stream.read(filename.get(), length);
         filename[length] = '\0';
 
-        m_textures[i] = m_app.get_game().create_texture(filename.get());
+        m_textures[i] = m_app.get_game()->create_texture(filename.get());
     }
 
     // read material params

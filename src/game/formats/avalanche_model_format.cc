@@ -116,7 +116,7 @@ struct AmfModelInstance {
   private:
     bool load_meshc()
     {
-        auto* resource_manager = m_app.get_game().get_resource_manager();
+        auto* resource_manager = m_app.get_game()->get_resource_manager();
 
         auto* mesh_filename = m_model_adf->HashLookup(m_model->m_Mesh);
         LOG_INFO("AvalancheModelFormat : loading meshc \"{}\" {:x}...", mesh_filename, m_model->m_Mesh);
@@ -298,7 +298,7 @@ struct AmfModelInstance {
 
     bool load_hrmeshc()
     {
-        auto* resource_manager = m_app.get_game().get_resource_manager();
+        auto* resource_manager = m_app.get_game()->get_resource_manager();
 
         auto* hrmesh_filename = m_mesh_adf->HashLookup(m_mesh_header->m_HighLodPath);
         LOG_INFO("AvalancheModelFormat : loading hrmeshc \"{}\" {:x}...", hrmesh_filename,
@@ -319,14 +319,14 @@ struct AmfModelInstance {
 
     void create_render_blocks()
     {
-        auto& game = m_app.get_game();
+        auto* game = m_app.get_game();
 
         ProfileBlock _("AvalancheModelFormat : create render blocks");
 
         for (auto& material : m_model->m_Materials) {
-            auto* render_block = (game::justcause4::RenderBlock*)game.create_render_block(material.m_RenderBlockId);
+            auto* render_block = (game::justcause4::RenderBlock*)game->create_render_block(material.m_RenderBlockId);
             if (render_block) {
-                render_block->set_resource_manager(game.get_resource_manager());
+                render_block->set_resource_manager(game->get_resource_manager());
                 render_block->read(material.m_Attributes);
                 render_blocks.emplace_back(std::move(render_block));
             } else {
@@ -441,7 +441,7 @@ struct AvalancheModelFormatImpl final : AvalancheModelFormat {
 
         LOG_INFO("AvalancheModelFormat : loading \"{}\"...", filename);
 
-        auto* resource_manager = m_app.get_game().get_resource_manager();
+        auto* resource_manager = m_app.get_game()->get_resource_manager();
 
         ByteArray buffer;
         if (!resource_manager->read(filename, &buffer)) {
@@ -480,10 +480,7 @@ struct AvalancheModelFormatImpl final : AvalancheModelFormat {
         return false;
     }
 
-    bool is_loaded(const std::string& filename) const override
-    {
-        return m_models.find(filename) != m_models.end();
-    }
+    bool is_loaded(const std::string& filename) const override { return m_models.find(filename) != m_models.end(); }
 
   private:
     App& m_app;

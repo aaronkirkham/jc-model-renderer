@@ -420,9 +420,9 @@ struct RenderBlockCharacterImpl final : RenderBlockCharacter {
   private:
     void create_shaders(u32 flags, u32 stride)
     {
-        m_vertex_shader = m_app.get_game().create_shader(VertexShaders[stride], Shader::E_SHADER_TYPE_VERTEX);
-        m_pixel_shader = m_app.get_game().create_shader((flags & BODY_PART) != HAIR ? "character" : "characterhair_msk",
-                                                        Shader::E_SHADER_TYPE_PIXEL);
+        m_vertex_shader = m_app.get_game()->create_shader(VertexShaders[stride], Shader::E_SHADER_TYPE_VERTEX);
+        m_pixel_shader  = m_app.get_game()->create_shader(
+            (flags & BODY_PART) != HAIR ? "character" : "characterhair_msk", Shader::E_SHADER_TYPE_PIXEL);
 
         if (stride == Packed4Bones1UV) {
             m_vertex_shader->set_vertex_layout({

@@ -436,7 +436,7 @@ struct RendererImpl final : Renderer {
             set_depth_enabled(true);
             m_device_context->OMSetRenderTargets(m_gbuffer.size(), &m_gbuffer[0], m_depth_stencil_view);
 
-            m_app.get_game().setup_render_constants(m_context);
+            // m_app.get_game()->setup_render_constants(m_context);
 
             // draw render lsits
             for (auto* render_block : m_render_list) {

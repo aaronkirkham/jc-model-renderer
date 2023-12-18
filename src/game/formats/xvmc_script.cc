@@ -136,7 +136,7 @@ struct XVMCScriptImpl final : XVMCScript {
 
         LOG_INFO("XVMCScript : loading \"{}\"...", filename);
 
-        auto* resource_manager = m_app.get_game().get_resource_manager();
+        auto* resource_manager = m_app.get_game()->get_resource_manager();
 
         ByteArray buffer;
         if (!resource_manager->read(filename, &buffer)) {

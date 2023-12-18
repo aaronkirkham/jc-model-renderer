@@ -67,7 +67,7 @@ struct AvalancheDataFormatImpl final : AvalancheDataFormat {
 
         LOG_INFO("AvalancheDataFormat : loading \"{}\"...", filename);
 
-        auto* resource_manager = m_app.get_game().get_resource_manager();
+        auto* resource_manager = m_app.get_game()->get_resource_manager();
 
         ByteArray buffer;
         if (!resource_manager->read(filename, &buffer)) {

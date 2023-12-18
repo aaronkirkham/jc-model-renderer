@@ -28,7 +28,7 @@ struct ResourceManagerImpl final : ResourceManager {
 
     void load_dictionary(i32 resource_id) override
     {
-        LOG_INFO("ResourceManager : loading dictionary (resource_id={})...", resource_id);
+        LOG_INFO("ResourceManager : loading dictionary...");
 
         auto buffer = App::load_internal_resource(resource_id);
         ASSERT(!buffer.empty());

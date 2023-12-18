@@ -448,7 +448,7 @@ struct RuntimeContainerImpl final : RuntimeContainer {
     {
         LOG_INFO("RuntimeContainer : loading \"{}\"...", filename);
 
-        auto* resource_manager = m_app.get_game().get_resource_manager();
+        auto* resource_manager = m_app.get_game()->get_resource_manager();
 
         ByteArray buffer;
         if (!resource_manager->read(filename, &buffer)) {

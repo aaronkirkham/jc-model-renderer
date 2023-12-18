@@ -105,7 +105,7 @@ struct ExportedEntityImpl final : ExportedEntity {
 
         LOG_INFO("ExportedEntity : loading \"{}\"...", filename);
 
-        auto* resource_manager = m_app.get_game().get_resource_manager();
+        auto* resource_manager = m_app.get_game()->get_resource_manager();
 
         ByteArray buffer;
         if (!resource_manager->read(filename, &buffer)) {
@@ -234,7 +234,7 @@ struct ExportedEntityImpl final : ExportedEntity {
 
     bool parse_archive_entries(const std::string& filename, const ByteArray& buffer)
     {
-        auto* resource_manager = m_app.get_game().get_resource_manager();
+        auto* resource_manager = m_app.get_game()->get_resource_manager();
 
         std::vector<ava::StreamArchive::ArchiveEntry> entries;
         AVA_FL_ENSURE(ava::StreamArchive::Parse(buffer, &entries), false);
@@ -270,7 +270,7 @@ struct ExportedEntityImpl final : ExportedEntity {
 
         LOG_INFO("ExportedEntity : loading (slow mode) \"{}\"...", filename);
 
-        auto* resource_manager = m_app.get_game().get_resource_manager();
+        auto* resource_manager = m_app.get_game()->get_resource_manager();
 
         ByteArray buffer;
         if (!resource_manager->read(filename, &buffer)) {
