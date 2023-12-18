@@ -3,6 +3,8 @@
 
 #include "app/os.h"
 
+struct ImFont;
+
 namespace jcmr
 {
 struct App;
@@ -41,7 +43,8 @@ struct UI {
 
     virtual void draw_context_menu(const std::string& filename, game::IFormat* format, u32 flags) = 0;
 
-    virtual void on_render(RenderCallback_t callback) = 0;
+    virtual void          on_render(RenderCallback_t callback) = 0;
+    virtual const ImFont* get_large_font() const               = 0;
 
     virtual const u32 get_dockspace_id(DockSpacePosition position) const = 0;
 };

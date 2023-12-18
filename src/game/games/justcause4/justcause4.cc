@@ -2,6 +2,9 @@
 
 #include "justcause4.h"
 
+#include "app/app.h"
+#include "app/settings.h"
+
 #include "game/games/justcause4/renderblocks/renderblockcharacter.h"
 #include "game/name_hash_lookup.h"
 #include "game/render_block.h"
@@ -19,21 +22,19 @@ struct JustCause4Impl final : JustCause4 {
     JustCause4Impl(App& app)
         : m_app(app)
     {
-        LOG_INFO("JustCause4Impl");
+        m_directory = m_app.get_settings().get<const char*>("jc4_path");
 
         m_resource_manager = ResourceManager::create(app);
         m_resource_manager->set_base_path(m_directory);
         m_resource_manager->load_dictionary(INTERNAL_RESOURCE_JUSTCAUSE4_DICTIONARY);
 
         auto oodle_lib_path = fmt::format("{}\\oo2core_7_win64.dll", m_directory.string());
-        LOG_INFO("oodle_lib_path: {}", oodle_lib_path);
-
-        // E:\\Epic Games\\JustCause4\\oo2core_7_win64.dll
         AVA_FL_ENSURE(ava::Oodle::LoadLib(oodle_lib_path.c_str()));
 
         // load shader bundle : ShadersDX11_F.shader_bundle
 
-        // test_load();
+        // load_shader_bundle();
+        // init_shader_constants();
     }
 
     ~JustCause4Impl()
@@ -42,44 +43,13 @@ struct JustCause4Impl final : JustCause4 {
         ResourceManager::destroy(m_resource_manager);
     }
 
-    void test_load()
-    {
-        using namespace ava;
-
-        ByteArray buffer;
-        if (!m_resource_manager->read("text/master_eng.stringlookup", &buffer)) {
-            DEBUG_BREAK();
-            return;
-        }
-
-        // std::vector<StreamArchive::ArchiveEntry> entries;
-        // AVA_FL_ENSURE(StreamArchive::Parse(buffer, &entries));
-
-        // for (const auto& entry : entries) {
-        //     LOG_INFO("{} [{:x}] @ {} {}", entry.m_Filename, entry.m_NameHash, entry.m_Offset, entry.m_Size);
-        // }
-
-        // auto it = std::find_if(entries.begin(), entries.end(), [](const StreamArchive::ArchiveEntry& entry) {
-        //     return entry.m_Filename
-        //            == "editor/entities/characters/combatants/rebels/sargento_quest_rebels/"
-        //               "sargentos_rebel_female_02.epe";
-        // });
-
-        // ASSERT(it != entries.end());
-        // auto entry = (*it);
-
-        // ByteArray entry_buffer;
-        // AVA_FL_ENSURE(StreamArchive::ReadEntry(buffer, entry, &entry_buffer));
-
-        LOG_INFO("all done :-)");
-        exit(1);
-    }
-
     IRenderBlock* create_render_block(u32 typehash) override
     {
+        using namespace jcmr::game::justcause4;
         using namespace ava::RenderBlockModel;
+
         switch (typehash) {
-            case RB_CHARACTER: return justcause4::RenderBlockCharacter::create(m_app);
+            case RB_CHARACTER: return RenderBlockCharacter::create(m_app);
         }
 
         return nullptr;
@@ -102,7 +72,7 @@ struct JustCause4Impl final : JustCause4 {
 
   private:
     App&                  m_app;
-    std::filesystem::path m_directory        = "E:\\SteamLibrary\\steamapps\\common\\Just Cause 4";
+    std::filesystem::path m_directory;
     ResourceManager*      m_resource_manager = nullptr;
 };
 

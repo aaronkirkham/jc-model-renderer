@@ -103,8 +103,10 @@ namespace os
 
     ByteArray map_view_of_file(const char* filename, u64 offset, u64 size);
 
-    bool get_open_file(std::filesystem::path* out_path, FileDialogParams& params);
-    bool get_open_folder(std::filesystem::path* out_path, FileDialogParams& params);
+    bool get_open_file(FileDialogParams& params, std::filesystem::path* out_path);
+    bool get_open_file(const char* title, FileDialogParams& params, std::filesystem::path* out_path);
+    bool get_open_folder(FileDialogParams& params, std::filesystem::path* out_path);
+    bool get_open_folder(const char* title, FileDialogParams& params, std::filesystem::path* out_path);
 } // namespace os
 } // namespace jcmr
 

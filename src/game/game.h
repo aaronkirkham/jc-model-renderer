@@ -39,6 +39,7 @@ struct IGame {
 
     virtual void setup_render_constants(RenderContext& context) {}
 
+    virtual const char*                  get_title() const     = 0;
     virtual const std::filesystem::path& get_directory() const = 0;
 
     virtual ResourceManager* get_resource_manager() = 0;

@@ -44,8 +44,8 @@ namespace jcmr::game::format
 
 static const char* variant_data_type_to_string(u32 datatype)
 {
-    if (datatype == RuntimeContainer::VARIANT_DATATYPE_NAMEHASH)
-        return " (namehash)";
+    if (datatype == RuntimeContainer::VARIANT_DATATYPE_HASH)
+        return " (hash)";
     else if (datatype == RuntimeContainer::VARIANT_DATATYPE_GUID)
         return " (guid)";
     else if (datatype == RuntimeContainer::VARIANT_DATATYPE_COLOUR)
@@ -114,7 +114,7 @@ struct RuntimeContainerWrapper {
                         case T_VARIANT_INTEGER: {
                             auto value = variant.as<i32>();
                             if (ImGui::InputInt("", &value, 0, 0,
-                                                (datatype == RuntimeContainer::VARIANT_DATATYPE_NAMEHASH)
+                                                (datatype == RuntimeContainer::VARIANT_DATATYPE_HASH)
                                                     ? ImGuiInputTextFlags_CharsHexadecimal
                                                     : ImGuiInputTextFlags_CharsDecimal)) {
                                 variant.m_Value = value;
@@ -380,7 +380,7 @@ struct RuntimeContainerWrapper {
         };
 
         if (IS_KNOWN_KEY(s_hash_keys) || string_contains(name, "hash")) {
-            datatype = RuntimeContainer::VARIANT_DATATYPE_NAMEHASH;
+            datatype = RuntimeContainer::VARIANT_DATATYPE_HASH;
         } else if (IS_KNOWN_KEY(s_guid_keys)) {
             datatype = RuntimeContainer::VARIANT_DATATYPE_GUID;
         } else if (IS_KNOWN_KEY(s_colour_keys) || string_contains(name, "color")) {
@@ -416,7 +416,7 @@ struct RuntimeContainerImpl final : RuntimeContainer {
                             // save file
                             if (ImGui::Selectable(ICON_FA_SAVE " Save to...")) {
                                 std::filesystem::path path;
-                                if (os::get_open_folder(&path, os::FileDialogParams{})) {
+                                if (os::get_open_folder(os::FileDialogParams{}, &path)) {
                                     m_app.save_file(this, container.first, path);
                                 }
                             }

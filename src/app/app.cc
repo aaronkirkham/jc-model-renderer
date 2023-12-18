@@ -30,6 +30,8 @@
 
 namespace jcmr
 {
+static const char* APP_MAIN_TITLE = "Avalanche Game Tools";
+
 struct AppImpl final : App {
   public:
     AppImpl(const AppImpl&)        = delete;
@@ -59,6 +61,14 @@ struct AppImpl final : App {
             if (ImGui::Begin("Files")) {
                 if (!m_current_game) return;
 
+                // CTRL + SHIFT + F will focus on the search input
+                const auto& io = ImGui::GetIO();
+                if (!io.WantCaptureKeyboard) {
+                    if (io.KeyCtrl && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_F, false)) {
+                        ImGui::SetKeyboardFocusHere();
+                    }
+                }
+
                 auto& tree = m_current_game->get_resource_manager()->get_dictionary_tree();
                 tree.render_search_input();
 
@@ -84,7 +94,7 @@ struct AppImpl final : App {
     void on_init() override
     {
         os::InitWindowArgs args{};
-        args.name  = "Avalanche Game Tools";
+        args.name  = APP_MAIN_TITLE;
         args.size  = {1920, 1080};
         args.flags = os::InitWindowArgs::CENTERED;
 
@@ -143,16 +153,24 @@ struct AppImpl final : App {
 
     void change_game(EGame game) override
     {
-        LOG_INFO("App : changing game...");
-
+        // unload the current game
         if (m_current_game) {
             IGame::destroy(m_current_game);
             m_current_game = nullptr;
         }
 
-        if (game == EGame::EGAME_COUNT) return;
+        // if we're setting an invalid game (done to get back to the homepage ui screen) reset the title and early out
+        if (game == EGame::EGAME_COUNT) {
+            os::set_window_title(m_window, APP_MAIN_TITLE);
+            return;
+        }
 
+        // create the new game instance
         m_current_game = IGame::create(game, *this);
+
+        // update title
+        auto title = fmt::format("{} - {}", APP_MAIN_TITLE, m_current_game->get_title());
+        os::set_window_title(m_window, title.c_str());
     }
 
     bool save_file(game::IFormat* format, const std::string& filename, const std::filesystem::path& path) override

@@ -4,6 +4,7 @@
 
 #include "app/app.h"
 #include "app/os.h"
+#include "app/settings.h"
 
 #include "game/format.h"
 #include "game/game.h"
@@ -43,7 +44,8 @@ struct UIImpl final : UI {
 
         // load fonts
         const float font_size = (16.0f * (os::get_dpi() / 96.0f));
-        io.Fonts->AddFontFromMemoryCompressedTTF(poppins600_compressed_data, poppins600_compressed_size, font_size);
+        m_base_font =
+            io.Fonts->AddFontFromMemoryCompressedTTF(poppins600_compressed_data, poppins600_compressed_size, font_size);
 
         // merge font awesome icons
         {
@@ -58,6 +60,10 @@ struct UIImpl final : UI {
             io.Fonts->AddFontFromMemoryCompressedTTF(fasolid900_compressed_data, fasolid900_compressed_size,
                                                      (font_size * 0.7f), &merge_cfg, icon_ranges);
         }
+
+        const float large_font_size = (32.0f * (os::get_dpi() / 96.0f));
+        m_large_font = io.Fonts->AddFontFromMemoryCompressedTTF(poppins600_compressed_data, poppins600_compressed_size,
+                                                                large_font_size);
 
         // load icons
         m_jc3_icon_texture = create_texture("app_internal/jc3.dds", 101);
@@ -126,7 +132,7 @@ struct UIImpl final : UI {
             // save file
             if (ImGui::Selectable(ICON_FA_SAVE " Save to...")) {
                 std::filesystem::path path;
-                if (os::get_open_folder(&path, os::FileDialogParams{})) {
+                if (os::get_open_folder(os::FileDialogParams{}, &path)) {
                     m_app.save_file(format, filename, path);
                 }
             }
@@ -146,7 +152,7 @@ struct UIImpl final : UI {
 
                     if (ImGui::Selectable(ICON_FA_FILE_EXPORT " Export")) {
                         std::filesystem::path path;
-                        if (os::get_open_folder(&path, os::FileDialogParams{})) {
+                        if (os::get_open_folder(os::FileDialogParams{}, &path)) {
                             format->export_to(filename, path);
                         }
                     }
@@ -164,6 +170,8 @@ struct UIImpl final : UI {
 
     void on_render(RenderCallback_t callback) override { m_render_callbacks.push_back(callback); }
 
+    const ImFont* get_large_font() const override { return m_large_font; }
+
     const u32 get_dockspace_id(DockSpacePosition position) const override
     {
         switch (position) {
@@ -179,6 +187,27 @@ struct UIImpl final : UI {
   private:
     void draw_homepage()
     {
+        static auto locate_exe = [&](const char* settings_key, const char* title, const char* filename) -> bool {
+            os::FileDialogFilter filter;
+            strcpy_s(filter.name, "Executable (*.exe)");
+            strcpy_s(filter.spec, "*.exe");
+
+            os::FileDialogParams params;
+            strcpy_s(params.filename, filename);
+            strcpy_s(params.extension, "exe");
+            params.filters.emplace_back(std::move(filter));
+
+            std::filesystem::path path;
+            if (!os::get_open_file(title, params, &path)) return false;
+            if (path.empty()) return false;
+
+            std::filesystem::path exe_path = path.parent_path() / std::string(filename);
+            if (!std::filesystem::exists(exe_path)) return false;
+
+            m_app.get_settings().set(settings_key, exe_path.parent_path().generic_string().c_str());
+            return true;
+        };
+
         const auto* viewport = ImGui::GetMainViewport();
 
         ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -191,19 +220,50 @@ struct UIImpl final : UI {
              | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground);
 
         if (ImGui::Begin("##homepage", nullptr, host_window_flags)) {
-            static ImVec2 icon_size(300, 444);
+            ImGui::PushFont(m_large_font);
+            ImGui::Text("Select a Game");
+            ImGui::PopFont();
+
+            static ImVec2 image_size(300, 444);
+            static ImVec2 uv_0(0, 0);
+            static ImVec2 uv_1(1, 1);
+            static ImVec4 bg_col(0, 0, 0, 0);
 
             if (m_jc3_icon_texture) {
-                if (ImGui::ImageButton("##jc3", m_jc3_icon_texture->get_srv(), icon_size)) {
-                    m_app.change_game(EGame::EGAME_JUSTCAUSE3);
+                const auto jc3_path = std::string(m_app.get_settings().get("jc3_path", ""));
+
+                ImVec4 tint_col(1, 1, 1, 1);
+                if (jc3_path.empty()) tint_col.w = 0.25f;
+
+                if (ImGui::ImageButton("##jc3", m_jc3_icon_texture->get_srv(), image_size, uv_0, uv_1, bg_col,
+                                       tint_col)) {
+                    if (jc3_path.empty()) {
+                        if (locate_exe("jc3_path", "Find your Just Cause 3 executable location", "JustCause3.exe")) {
+                            m_app.change_game(EGame::EGAME_JUSTCAUSE3);
+                        }
+                    } else {
+                        m_app.change_game(EGame::EGAME_JUSTCAUSE3);
+                    }
                 }
             }
 
             ImGui::SameLine();
 
             if (m_jc4_icon_texture) {
-                if (ImGui::ImageButton("##jc4", m_jc4_icon_texture->get_srv(), icon_size)) {
-                    m_app.change_game(EGame::EGAME_JUSTCAUSE4);
+                const auto jc4_path = std::string(m_app.get_settings().get("jc4_path", ""));
+
+                ImVec4 tint_col(1, 1, 1, 1);
+                if (jc4_path.empty()) tint_col.w = 0.25f;
+
+                if (ImGui::ImageButton("##jc4", m_jc4_icon_texture->get_srv(), image_size, uv_0, uv_1, bg_col,
+                                       tint_col)) {
+                    if (jc4_path.empty()) {
+                        if (locate_exe("jc4_path", "Find your Just Cause 4 executable location", "JustCause4.exe")) {
+                            m_app.change_game(EGame::EGAME_JUSTCAUSE4);
+                        }
+                    } else {
+                        m_app.change_game(EGame::EGAME_JUSTCAUSE4);
+                    }
                 }
             }
         }
@@ -375,6 +435,8 @@ struct UIImpl final : UI {
     App&                          m_app;
     Renderer&                     m_renderer;
     std::vector<RenderCallback_t> m_render_callbacks;
+    ImFont*                       m_base_font              = nullptr;
+    ImFont*                       m_large_font             = nullptr;
     bool                          m_show_hash_generator    = false;
     game::IFormat*                m_context_format_handler = nullptr;
     ImGuiID                       m_dockspace_left         = -1;

@@ -37,7 +37,7 @@ struct RenderBlockModelImpl final : RenderBlockModel {
                             // save file
                             if (ImGui::Selectable(ICON_FA_SAVE " Save to...")) {
                                 std::filesystem::path path;
-                                if (os::get_open_folder(&path, os::FileDialogParams{})) {
+                                if (os::get_open_folder(os::FileDialogParams{}, &path)) {
                                     m_app.save_file(this, render_block.first, path);
                                 }
                             }

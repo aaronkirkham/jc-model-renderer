@@ -13,9 +13,9 @@ namespace game::format
         using VariantData = std::tuple<std::string, bool, u32>;
 
         enum VariantDataType : u8 {
-            VARIANT_DATATYPE_NAMEHASH = 0,
-            VARIANT_DATATYPE_GUID     = 1,
-            VARIANT_DATATYPE_COLOUR   = 2,
+            VARIANT_DATATYPE_HASH   = 0,
+            VARIANT_DATATYPE_GUID   = 1,
+            VARIANT_DATATYPE_COLOUR = 2,
 
             VARIANT_DATATYPE_COUNT,
         };

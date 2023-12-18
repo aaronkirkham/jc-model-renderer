@@ -314,7 +314,7 @@ template <i32 N> static void toWChar(WCHAR (&out)[N], const char* in)
 
 template <i32 N> struct WCharString {
     WCharString(const char* rhs) { toWChar(data, rhs); }
-          operator const WCHAR*() const { return data; }
+    operator const WCHAR*() const { return data; }
     WCHAR data[N];
 };
 
@@ -339,6 +339,9 @@ static bool create_file_dialog(std::filesystem::path* out_path, const CLSID& cls
             if (params.filename[0] != '\0') {
                 WCharString<MAX_PATH_LENGTH> tmp(params.filename);
                 dialog->SetFileName(tmp);
+
+                // WCharString<MAX_PATH_LENGTH> tmp2("hello");
+                // dialog->SetFileNameLabel(tmp2);
             }
 
             // set default extension
@@ -402,15 +405,25 @@ static bool create_file_dialog(std::filesystem::path* out_path, const CLSID& cls
     return result;
 }
 
-bool get_open_file(std::filesystem::path* out_path, FileDialogParams& params)
+bool get_open_file(FileDialogParams& params, std::filesystem::path* out_path)
 {
-    return create_file_dialog(out_path, CLSID_FileOpenDialog, "Select file", params, FOS_FILEMUSTEXIST,
+    return get_open_file("Select file", params, out_path);
+}
+
+bool get_open_file(const char* title, FileDialogParams& params, std::filesystem::path* out_path)
+{
+    return create_file_dialog(out_path, CLSID_FileOpenDialog, title, params, FOS_FILEMUSTEXIST,
                               s_app_context.windows[0]);
 }
 
-bool get_open_folder(std::filesystem::path* out_path, FileDialogParams& params)
+bool get_open_folder(FileDialogParams& params, std::filesystem::path* out_path)
 {
-    return create_file_dialog(out_path, CLSID_FileOpenDialog, "Select folder", params,
-                              (FOS_PICKFOLDERS | FOS_PATHMUSTEXIST), s_app_context.windows[0]);
+    return get_open_folder("Select folder", params, out_path);
+}
+
+bool get_open_folder(const char* title, FileDialogParams& params, std::filesystem::path* out_path)
+{
+    return create_file_dialog(out_path, CLSID_FileOpenDialog, title, params, (FOS_PICKFOLDERS | FOS_PATHMUSTEXIST),
+                              s_app_context.windows[0]);
 }
 } // namespace jcmr::os

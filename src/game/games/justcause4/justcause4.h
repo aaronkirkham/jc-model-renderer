@@ -8,6 +8,8 @@ namespace jcmr::game
 struct JustCause4 : IGame {
     static JustCause4* create(App& app);
     static void        destroy(JustCause4* inst);
+
+    const char* get_title() const override { return "Just Cause 4"; }
 };
 } // namespace jcmr::game
 

@@ -5,6 +5,7 @@
 #include "app/app.h"
 #include "app/directory_list.h"
 #include "app/profile.h"
+#include "app/settings.h"
 #include "app/utils.h"
 
 #include "game/games/justcause3/renderblocks/renderblockcharacter.h"
@@ -21,9 +22,6 @@
 #include <AvaFormatLib/legacy/string_lookup.h>
 #include <AvaFormatLib/util/byte_vector_stream.h>
 
-// tmp
-#include <game/formats/avalanche_data_format.h>
-
 namespace jcmr::game
 {
 static constexpr i32 INTERNAL_RESOURCE_JUSTCAUSE3_DICTIONARY = 128;
@@ -32,7 +30,9 @@ struct JustCause3Impl final : JustCause3 {
     JustCause3Impl(App& app)
         : m_app(app)
     {
-        m_resource_manager = ResourceManager::create(app);
+        m_directory = m_app.get_settings().get<const char*>("jc3_path");
+
+        m_resource_manager = ResourceManager::create(m_app);
         m_resource_manager->set_base_path(m_directory);
         m_resource_manager->set_flags(ResourceManager::E_FLAG_LEGACY_ARCHIVE_TABLE);
         m_resource_manager->load_dictionary(INTERNAL_RESOURCE_JUSTCAUSE3_DICTIONARY);
@@ -82,11 +82,13 @@ struct JustCause3Impl final : JustCause3 {
 
     IRenderBlock* create_render_block(u32 typehash) override
     {
+        using namespace jcmr::game::justcause3;
         using namespace ava::RenderBlockModel;
+
         switch (typehash) {
-            case RB_CHARACTER: return justcause3::RenderBlockCharacter::create(m_app);
-            case RB_CHARACTERSKIN: return justcause3::RenderBlockCharacterSkin::create(m_app);
-            case RB_GENERALMKIII: return justcause3::RenderBlockGeneralMkIII::create(m_app);
+            case RB_CHARACTER: return RenderBlockCharacter::create(m_app);
+            case RB_CHARACTERSKIN: return RenderBlockCharacterSkin::create(m_app);
+            case RB_GENERALMKIII: return RenderBlockGeneralMkIII::create(m_app);
         }
 
         return nullptr;
@@ -257,7 +259,7 @@ struct JustCause3Impl final : JustCause3 {
 
   private:
     App&                               m_app;
-    std::filesystem::path              m_directory               = "E:\\SteamLibrary\\steamapps\\common\\Just Cause 3";
+    std::filesystem::path              m_directory;
     ResourceManager*                   m_resource_manager        = nullptr;
     ava::AvalancheDataFormat::ADF*     m_shader_adf              = nullptr;
     ava::ShaderBundle::SShaderLibrary* m_shader_library          = nullptr;
