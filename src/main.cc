@@ -13,5 +13,6 @@ int main(int argc, char** argv)
 
     auto* app = App::create();
     os::init(*app);
+    App::destroy(app);
     return 1;
 }
