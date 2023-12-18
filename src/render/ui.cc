@@ -6,12 +6,14 @@
 #include "app/os.h"
 
 #include "game/format.h"
+#include "game/game.h"
 
 #include "render/fonts/fa_solid_900.h"
 #include "render/fonts/icons.h"
 #include "render/fonts/poppins_600.h"
 #include "render/imguiex.h"
 #include "render/renderer.h"
+#include "render/texture.h"
 
 #include <backends/imgui_impl_dx11.h>
 #include <backends/imgui_impl_win32.h>
@@ -56,6 +58,15 @@ struct UIImpl final : UI {
             io.Fonts->AddFontFromMemoryCompressedTTF(fasolid900_compressed_data, fasolid900_compressed_size,
                                                      (font_size * 0.7f), &merge_cfg, icon_ranges);
         }
+
+        // load icons
+        m_jc3_icon_texture = create_texture("app_internal/jc3.dds", 101);
+        m_jc4_icon_texture = create_texture("app_internal/jc4.dds", 102);
+    }
+
+    std::shared_ptr<Texture> create_texture(const std::string& filename, i32 resource_id)
+    {
+        return m_renderer.create_texture(filename, m_app.load_internal_resource(resource_id));
     }
 
     void shutdown() override
@@ -76,13 +87,24 @@ struct UIImpl final : UI {
     {
         // ImGui::ShowDemoWindow();
 
-        draw_dockspace();
-        draw_main_menu();
-        draw_hash_generator_widget();
+        if (m_change_game_next_frame) {
+            m_change_game_next_frame = false;
+            m_app.change_game(EGame::EGAME_COUNT);
+        }
 
-        // render callbacks
-        for (auto& callback : m_render_callbacks) {
-            callback(context);
+        if (!m_app.get_game()) {
+            draw_homepage();
+        } else {
+            draw_main_dockspace();
+            draw_main_menu();
+            // TODO : move elsewhere
+            //        would be nice to have a "widgets" directory where we can house small things like this.
+            draw_hash_generator_widget();
+
+            // render callbacks
+            for (auto& callback : m_render_callbacks) {
+                callback(context);
+            }
         }
 
         ImGui::Render();
@@ -155,7 +177,7 @@ struct UIImpl final : UI {
     }
 
   private:
-    void draw_dockspace()
+    void draw_homepage()
     {
         const auto* viewport = ImGui::GetMainViewport();
 
@@ -163,11 +185,44 @@ struct UIImpl final : UI {
         ImGui::SetNextWindowSize(viewport->WorkSize);
         ImGui::SetNextWindowViewport(viewport->ID);
 
-        ImGuiWindowFlags host_window_flags = 0;
-        host_window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize
-                             | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking;
-        host_window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-        host_window_flags |= ImGuiWindowFlags_NoBackground;
+        static ImGuiWindowFlags host_window_flags =
+            (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize
+             | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoBringToFrontOnFocus
+             | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground);
+
+        if (ImGui::Begin("##homepage", nullptr, host_window_flags)) {
+            static ImVec2 icon_size(300, 444);
+
+            if (m_jc3_icon_texture) {
+                if (ImGui::ImageButton("##jc3", m_jc3_icon_texture->get_srv(), icon_size)) {
+                    m_app.change_game(EGame::EGAME_JUSTCAUSE3);
+                }
+            }
+
+            ImGui::SameLine();
+
+            if (m_jc4_icon_texture) {
+                if (ImGui::ImageButton("##jc4", m_jc4_icon_texture->get_srv(), icon_size)) {
+                    m_app.change_game(EGame::EGAME_JUSTCAUSE4);
+                }
+            }
+        }
+
+        ImGui::End();
+    }
+
+    void draw_main_dockspace()
+    {
+        const auto* viewport = ImGui::GetMainViewport();
+
+        ImGui::SetNextWindowPos(viewport->WorkPos);
+        ImGui::SetNextWindowSize(viewport->WorkSize);
+        ImGui::SetNextWindowViewport(viewport->ID);
+
+        static ImGuiWindowFlags host_window_flags =
+            (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize
+             | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoBringToFrontOnFocus
+             | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground);
 
         char label[32];
         ImFormatString(label, IM_ARRAYSIZE(label), "DockSpaceViewport_%08X", viewport->ID);
@@ -206,6 +261,10 @@ struct UIImpl final : UI {
         // main menu bar
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
+                if (ImGui::MenuItem("Change Game")) {
+                    m_change_game_next_frame = true;
+                }
+
                 ImGui::EndMenu();
             }
 
@@ -321,6 +380,9 @@ struct UIImpl final : UI {
     ImGuiID                       m_dockspace_left         = -1;
     ImGuiID                       m_dockspace_right        = -1;
     ImGuiID                       m_dockspace_right_bottom = -1;
+    std::shared_ptr<Texture>      m_jc3_icon_texture;
+    std::shared_ptr<Texture>      m_jc4_icon_texture;
+    bool                          m_change_game_next_frame = false;
 };
 
 UI* UI::create(App& app, Renderer& renderer)
