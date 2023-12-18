@@ -475,7 +475,7 @@ struct RuntimeContainerImpl final : RuntimeContainer {
         if (iter == m_containers.end()) return false;
 
         auto& runtime_container = (*iter).second.get_container();
-        AVA_FL_ENSURE(ava::RuntimePropertyContainer::Write(runtime_container, out_buffer), false);
+        AVA_FL_ENSURE(ava::RuntimePropertyContainer::Write(runtime_container, 1, out_buffer), false);
         return true;
     }
 
