@@ -35,7 +35,14 @@ struct IGame {
 
     virtual game::IRenderBlock*      create_render_block(u32 typehash)                          = 0;
     virtual std::shared_ptr<Texture> create_texture(const std::string& filename)                = 0;
+    virtual std::shared_ptr<Texture> create_texture(const ava::AvalancheTexture::TextureEntry& entry,
+                                                    const ByteArray&                           buffer)                    = 0;
+    virtual std::shared_ptr<Texture> create_raw_texture(const std::string& filename)            = 0;
     virtual std::shared_ptr<Shader>  create_shader(const std::string& filename, u8 shader_type) = 0;
+
+    using TextureEntryBufferPair = std::pair<ava::AvalancheTexture::TextureEntry, ByteArray>;
+    virtual std::vector<TextureEntryBufferPair> load_textures(const std::string&                 filename,
+                                                              ava::AvalancheTexture::AvtxHeader* out_header) = 0;
 
     virtual void setup_render_constants(RenderContext& context) {}
 

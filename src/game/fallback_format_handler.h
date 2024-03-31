@@ -15,7 +15,8 @@ namespace game::format
         static FallbackFormatHandler* create(App& app);
         static void                   destroy(FallbackFormatHandler* instance);
 
-        virtual const char* get_filetype_icon() const { return ICON_FA_FILE; }
+        virtual const char* get_name() const override { return ""; }
+        virtual const char* get_filetype_icon() const override { return ICON_FA_FILE; }
 
         bool can_be_exported() const override { return true; }
 

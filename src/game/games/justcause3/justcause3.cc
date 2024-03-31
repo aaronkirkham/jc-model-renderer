@@ -121,6 +121,42 @@ struct JustCause3Impl final : JustCause3 {
 
         LOG_INFO("JustCause3 : create_texture - using best texture {}x{}", entry.m_Width, entry.m_Height);
 
+        auto dds_buffer = create_dds_from_texture_entry(entry, texture_buffer);
+        return renderer.create_texture(filename, std::move(dds_buffer));
+    }
+
+    std::shared_ptr<Texture> create_texture(const ava::AvalancheTexture::TextureEntry& entry,
+                                            const ByteArray&                           buffer) override
+    {
+        auto dds_buffer = create_dds_from_texture_entry(entry, buffer);
+        // return m_app.get_renderer().create_texture(filename, std::move(dds_buffer));
+
+        auto texture = std::shared_ptr<Texture>(Texture::create("", m_app.get_renderer()));
+        texture->load(buffer);
+        return texture;
+    }
+
+    std::shared_ptr<Texture> create_raw_texture(const std::string& filename) override
+    {
+        // use cached texture if it's available
+        auto& renderer = m_app.get_renderer();
+        if (auto texture = renderer.get_texture(filename); texture) {
+            return texture;
+        }
+
+        ByteArray buffer;
+        if (!m_resource_manager->read(filename, &buffer)) {
+            LOG_ERROR("JustCause3 : create_raw_texture - failed to load texture \"{}\"", filename);
+            return nullptr;
+        }
+
+        auto texture = std::shared_ptr<Texture>(Texture::create(filename, m_app.get_renderer()));
+        texture->load(buffer);
+        return texture;
+    }
+
+    ByteArray create_dds_from_texture_entry(const ava::AvalancheTexture::TextureEntry& entry, const ByteArray& buffer)
+    {
         DDS_HEADER header{};
         header.size        = sizeof(DDS_HEADER);
         header.flags       = (DDS_TEXTURE | DDSD_MIPMAPCOUNT);
@@ -134,10 +170,10 @@ struct JustCause3Impl final : JustCause3 {
         const bool is_dxt10 = (header.ddspf.fourCC == MAKEFOURCC('D', 'X', '1', '0'));
 
         ByteArray dds_buffer(sizeof(DDS_MAGIC) + sizeof(DDS_HEADER) + (is_dxt10 ? sizeof(DDS_HEADER_DXT10) : 0)
-                             + texture_buffer.size());
+                             + buffer.size());
+
         ava::utils::ByteVectorStream stream(&dds_buffer);
         stream.setp(0);
-
         stream.write(DDS_MAGIC);
         stream.write(header);
 
@@ -149,8 +185,9 @@ struct JustCause3Impl final : JustCause3 {
             stream.write(dxt10_header);
         }
 
-        stream.write(texture_buffer);
-        return renderer.create_texture(filename, std::move(dds_buffer));
+        // write raw texture buffer data
+        stream.write(buffer);
+        return dds_buffer;
     }
 
     // TODO : this should be moved into IGame probably. There're no differences between JC3/JC4.
@@ -186,6 +223,43 @@ struct JustCause3Impl final : JustCause3 {
 
         ByteArray buffer((*iter).m_BinaryData.begin(), (*iter).m_BinaryData.end());
         return renderer.create_shader(filename, shader_type, std::move(buffer));
+    }
+
+    std::vector<TextureEntryBufferPair> load_textures(const std::string&                 filename,
+                                                      ava::AvalancheTexture::AvtxHeader* out_header)
+    {
+        ByteArray buffer;
+        if (!m_resource_manager->read(filename, &buffer)) {
+            LOG_ERROR("JustCause3 : load_textures - failed to load texture \"{}\"", filename);
+            return {};
+        }
+
+        // attempt to read source file
+        auto      source_filename = utils::replace(filename, ".ddsc", ".hmddsc");
+        ByteArray source_buffer;
+        if (m_resource_manager->read(source_filename, &source_buffer)) {
+            LOG_INFO("JustCause3 : load_textures - loaded source texture \"{}\"", source_filename);
+        }
+
+        // ava::AvalancheTexture::AvtxHeader                header{};
+        std::vector<ava::AvalancheTexture::TextureEntry> entries;
+        std::vector<ByteArray>                           buffers;
+        AVA_FL_ENSURE(ava::AvalancheTexture::ReadAllEntries(buffer, out_header, &entries, &buffers, source_buffer), {});
+
+        ASSERT(entries.size() == buffers.size());
+
+        LOG_INFO("load_textures success. {} entries.", entries.size());
+
+        std::vector<TextureEntryBufferPair> result;
+        result.reserve(entries.size());
+
+        // create dds textures for all entries
+        for (size_t i = 0; i < entries.size(); ++i) {
+            auto dds_buffer = create_dds_from_texture_entry(entries[i], buffers[i]);
+            result.push_back(std::make_pair(entries[i], dds_buffer));
+        }
+
+        return result;
     }
 
     void setup_render_constants(RenderContext& context) override

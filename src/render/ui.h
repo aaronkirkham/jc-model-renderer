@@ -43,6 +43,8 @@ struct UI {
 
     virtual void draw_context_menu(const std::string& filename, game::IFormat* format, u32 flags) = 0;
 
+    virtual bool draw_format_menu_bar(game::IFormat* format, const std::string& filename) = 0;
+
     virtual void          on_render(RenderCallback_t callback) = 0;
     virtual const ImFont* get_large_font() const               = 0;
 

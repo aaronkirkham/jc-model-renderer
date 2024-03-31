@@ -15,7 +15,8 @@
                 "${workspaceFolder}/vendor/glm",
                 "${workspaceFolder}/vendor/imgui",
                 "${workspaceFolder}/vendor/rapidjson/include",
-                "${workspaceFolder}/vendor/tinyxml2"
+                "${workspaceFolder}/vendor/tinyxml2",
+                "${workspaceFolder}/vendor/argparse"
             ],
             "defines": [
                 "_DEBUG",

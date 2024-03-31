@@ -61,10 +61,29 @@ struct JustCause4Impl final : JustCause4 {
         return nullptr;
     }
 
+    std::shared_ptr<Texture> create_texture(const ava::AvalancheTexture::TextureEntry& entry,
+                                            const ByteArray&                           buffer) override
+    {
+        // TODO
+        return nullptr;
+    }
+
+    std::shared_ptr<Texture> create_raw_texture(const std::string& filename) override
+    {
+        // TODO
+        return nullptr;
+    }
+
     std::shared_ptr<Shader> create_shader(const std::string& filename, u8 shader_type) override
     {
         // TODO
         return nullptr;
+    }
+
+    std::vector<TextureEntryBufferPair> load_textures(const std::string&                 filename,
+                                                      ava::AvalancheTexture::AvtxHeader* out_header)
+    {
+        return {};
     }
 
     const std::filesystem::path& get_directory() const override { return m_directory; }

@@ -25,7 +25,7 @@ struct App {
     using FileHandler_t          = std::function<bool(const std::string& filename, ByteArray* out_buffer)>;
     using DirectoryTreeHandler_t = std::function<bool(const std::string& filename, const std::string& path)>;
 
-    static App* create();
+    static App* create(EGame startup_game);
     static void destroy(App* app);
 
     App()          = default;
@@ -41,9 +41,10 @@ struct App {
     virtual bool save_file(game::IFormat* format, const std::string& filename, const std::filesystem::path& path) = 0;
     virtual bool write_binary_file(const std::filesystem::path& path, ByteArray& buffer)                          = 0;
 
-    virtual void           register_format_handler(game::IFormat* format)                       = 0;
-    virtual game::IFormat* get_format_handler(u32 extension_hash) const                         = 0;
-    virtual game::IFormat* get_format_handler_for_file(const std::filesystem::path& path) const = 0;
+    virtual void                               register_format_handler(game::IFormat* format)                       = 0;
+    virtual game::IFormat*                     get_format_handler(u32 extension_hash) const                         = 0;
+    virtual game::IFormat*                     get_format_handler_for_file(const std::filesystem::path& path) const = 0;
+    virtual const std::unordered_map<u32, game::IFormat*>& get_format_handlers() const                                          = 0;
 
     virtual void                              register_file_read_handler(FileHandler_t callback) = 0;
     virtual const std::vector<FileHandler_t>& get_file_read_handlers() const                     = 0;

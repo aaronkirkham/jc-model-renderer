@@ -13,6 +13,8 @@ namespace game::format
         static RenderBlockModel* create(App& app);
         static void              destroy(RenderBlockModel* instance);
 
+        virtual const char* get_name() const { return "Render Block Model"; }
+
         std::vector<const char*> get_extensions() override { return {"rbm", "lod"}; }
         // u32 get_header_magic() const override { ava::RenderBlockModel::MAGIC }
     };

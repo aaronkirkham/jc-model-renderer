@@ -5,6 +5,7 @@
 #include "app/app.h"
 #include "app/os.h"
 #include "app/settings.h"
+#include "app/utils.h"
 
 #include "game/format.h"
 #include "game/game.h"
@@ -168,6 +169,40 @@ struct UIImpl final : UI {
         ImGui::PopStyleColor();
     }
 
+    bool draw_format_menu_bar(game::IFormat* format, const std::string& filename)
+    {
+        bool close_button_pressed = false;
+
+        if (ImGui::BeginMenuBar()) {
+            if (ImGui::BeginMenu("File")) {
+                // save file
+                if (ImGui::Selectable(ICON_FA_SAVE " Save to...")) {
+                    std::filesystem::path path;
+                    if (os::get_open_folder(os::FileDialogParams{}, &path)) {
+                        m_app.save_file(format, filename, path);
+                    }
+                }
+
+                // save to dropzone
+                if (ImGui::Selectable(ICON_FA_SAVE " Save to dropzone")) {
+                    m_app.save_file(format, filename, "dropzone");
+                }
+
+                // close
+                ImGui::Separator();
+                if (ImGui::Selectable(ICON_FA_WINDOW_CLOSE " Close")) {
+                    close_button_pressed = true;
+                }
+
+                ImGui::EndMenu();
+            }
+
+            ImGui::EndMenuBar();
+        }
+
+        return !close_button_pressed;
+    }
+
     void on_render(RenderCallback_t callback) override { m_render_callbacks.push_back(callback); }
 
     const ImFont* get_large_font() const override { return m_large_font; }
@@ -323,6 +358,25 @@ struct UIImpl final : UI {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Change Game")) {
                     m_change_game_next_frame = true;
+                }
+
+                ImGui::Separator();
+                if (ImGui::MenuItem("Exit")) {
+                    os::quit();
+                }
+
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Create")) {
+                for (const auto& [hash, handler] : m_app.get_format_handlers()) {
+                    if (handler->can_be_created()) {
+                        auto title      = fmt::format("{} {}", handler->get_filetype_icon(), handler->get_name());
+                        auto extensions = utils::join(handler->create_extensions(), ", ");
+                        if (ImGui::MenuItem(title.c_str(), extensions.c_str())) {
+                            handler->create_empty();
+                        }
+                    }
                 }
 
                 ImGui::EndMenu();

@@ -37,8 +37,9 @@ struct AppImpl final : App {
     AppImpl(const AppImpl&)        = delete;
     void operator=(const AppImpl&) = delete;
 
-    AppImpl()
+    AppImpl(EGame startup_game)
         : m_allocator(m_main_allocator)
+        , m_startup_game(startup_game)
     {
         m_renderer = Renderer::create(*this);
 
@@ -113,6 +114,12 @@ struct AppImpl final : App {
 
         // preload lookup table
         load_namehash_lookup_table();
+
+        // change to the startup game
+        if (m_startup_game != EGame::EGAME_COUNT) {
+            change_game(m_startup_game);
+            m_startup_game = EGame::EGAME_COUNT;
+        }
     }
 
     void on_shutdown() override
@@ -268,6 +275,8 @@ struct AppImpl final : App {
         return (*iter).second;
     }
 
+    const std::unordered_map<u32, game::IFormat*>& get_format_handlers() const override { return m_format_handlers; }
+
     void register_file_read_handler(FileHandler_t callback) override { m_file_read_handlers.emplace_back(callback); }
     const std::vector<FileHandler_t>& get_file_read_handlers() const override { return m_file_read_handlers; }
 
@@ -281,6 +290,7 @@ struct AppImpl final : App {
     IAllocator&      m_allocator;
     Settings         m_settings;
 
+    EGame          m_startup_game = EGame::EGAME_COUNT;
     os::Window*    m_window;
     Renderer*      m_renderer                = nullptr;
     IGame*         m_current_game            = nullptr;
@@ -290,9 +300,9 @@ struct AppImpl final : App {
     std::vector<FileHandler_t>              m_file_read_handlers;
 };
 
-App* App::create()
+App* App::create(EGame startup_game = EGame::EGAME_COUNT)
 {
-    return new AppImpl;
+    return new AppImpl(startup_game);
 }
 
 void App::destroy(App* app)

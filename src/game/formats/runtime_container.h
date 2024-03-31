@@ -23,6 +23,8 @@ namespace game::format
         static RuntimeContainer* create(App& app);
         static void              destroy(RuntimeContainer* instance);
 
+        virtual const char* get_name() const { return "Runtime Property Container"; }
+
         std::vector<const char*> get_extensions() override { return {"epe", "blo"}; }
         u32                      get_header_magic() const override { return ava::RuntimePropertyContainer::RTPC_MAGIC; }
     };

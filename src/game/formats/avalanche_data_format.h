@@ -13,6 +13,7 @@ namespace game::format
         static AvalancheDataFormat* create(App& app);
         static void                 destroy(AvalancheDataFormat* instance);
 
+        virtual const char* get_name() const { return "Avalanche Data Format"; }
         virtual const char* get_filetype_icon() const { return ICON_FA_CODE; }
 
         bool can_be_exported() const override { return true; }

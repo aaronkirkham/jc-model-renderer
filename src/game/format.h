@@ -18,9 +18,15 @@ struct IFormat {
 
     // directory_list specifics
     virtual bool        wants_to_override_directory_tree() const { return false; }
+    virtual const char* get_name() const = 0;
     virtual const char* get_filetype_icon() const { return ICON_FA_FILE; }
     virtual void        directory_tree_handler(const std::string& filename, const std::string& path) {}
     virtual void        context_menu_handler(const std::string& filename) {}
+
+    // creation
+    virtual bool                     can_be_created() const { return false; }
+    virtual std::vector<const char*> create_extensions() const { return {}; }
+    virtual bool                     create_empty() { return false; }
 
     // import/export specifics
     virtual bool can_be_imported() const { return false; }

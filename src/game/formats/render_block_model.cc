@@ -32,31 +32,8 @@ struct RenderBlockModelImpl final : RenderBlockModel {
                 if (ImGui::Begin(render_block.first.c_str(), &open,
                                  (ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoSavedSettings))) {
                     // menu bar
-                    if (ImGui::BeginMenuBar()) {
-                        if (ImGui::BeginMenu("File")) {
-                            // save file
-                            if (ImGui::Selectable(ICON_FA_SAVE " Save to...")) {
-                                std::filesystem::path path;
-                                if (os::get_open_folder(os::FileDialogParams{}, &path)) {
-                                    m_app.save_file(this, render_block.first, path);
-                                }
-                            }
-
-                            // save to dropzone
-                            if (ImGui::Selectable(ICON_FA_SAVE " Save to dropzone")) {
-                                m_app.save_file(this, render_block.first, "dropzone");
-                            }
-
-                            // close
-                            ImGui::Separator();
-                            if (ImGui::Selectable(ICON_FA_WINDOW_CLOSE " Close")) {
-                                open = false;
-                            }
-
-                            ImGui::EndMenu();
-                        }
-
-                        ImGui::EndMenuBar();
+                    if (!m_app.get_ui().draw_format_menu_bar(this, render_block.first)) {
+                        open = false;
                     }
 
                     // draw render blocks

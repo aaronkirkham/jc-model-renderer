@@ -14,9 +14,13 @@ namespace game::format
         static AvalancheTexture* create(App& app);
         static void              destroy(AvalancheTexture* instance);
 
+        const char* get_name() const override { return "Avalanche Texture"; }
         const char* get_filetype_icon() const override { return ICON_FA_FILE_IMAGE; }
 
-        std::vector<const char*> get_extensions() override { return {"ddsc"}; }
+        bool                     can_be_created() const override { return true; }
+        std::vector<const char*> create_extensions() const override { return {"ddsc"}; }
+
+        std::vector<const char*> get_extensions() override { return {"ddsc", "dds"}; }
         u32                      get_header_magic() const override { return ava::AvalancheTexture::AVTX_MAGIC; }
     };
 

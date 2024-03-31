@@ -46,6 +46,19 @@ static std::string join(const std::vector<std::string>& strings, const std::stri
     return out;
 }
 
+static std::string join(const std::vector<const char*>& strings, const std::string& delimiter)
+{
+    std::string out;
+    if (auto i = strings.begin(), e = strings.end(); i != e) {
+        out += *i++;
+        for (; i != e; ++i) {
+            out.append(delimiter).append(*i);
+        }
+    }
+
+    return out;
+}
+
 static std::string replace(std::string string, const char* search, const char* replace)
 {
     return string.replace(string.find(search), strlen(search), replace);

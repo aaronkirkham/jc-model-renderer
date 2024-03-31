@@ -13,6 +13,8 @@ namespace game::format
         static XVMCScript* create(App& app);
         static void        destroy(XVMCScript* instance);
 
+        virtual const char* get_name() const { return "XVM Script"; }
+
         std::vector<const char*> get_extensions() override { return {"xvmc"}; }
     };
 } // namespace game::format

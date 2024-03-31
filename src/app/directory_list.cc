@@ -155,6 +155,11 @@ static bool matches_search_terms(DirectoryList& directory_list)
     return false;
 }
 
+// extensions we're going to globally filter from the directory list
+static inline std::array kGlobalExtensionFilter{
+    "toc"_hash_little,
+};
+
 void DirectoryList::render(App& app, const std::string& tooltip_prefix)
 {
     // folders
@@ -196,6 +201,12 @@ void DirectoryList::render(App& app, const std::string& tooltip_prefix)
         // TODO : don't filter the file if the handler wants to override the tree.
         //        this will make it possible to open .ee archives while filtering and still see all the sub-files.
         if (has_search_terms() && filename.find(s_search_terms) == std::string::npos) {
+            continue;
+        }
+        // global extension filter
+        else if (!has_search_terms()
+                 && std::find(kGlobalExtensionFilter.begin(), kGlobalExtensionFilter.end(), extension_hash)
+                        != kGlobalExtensionFilter.end()) {
             continue;
         }
 

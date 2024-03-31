@@ -70,16 +70,20 @@ struct RuntimeContainerWrapper {
 
         ImGui::PushID((void*)&container);
 
-        u32 flags = ImGuiTreeNodeFlags_SpanAvailWidth;
-
-        // open the root tree by default
+        // don't create a tree node for the root element
         static auto s_root_container_hash = "root"_hash_little;
         if (container.m_NameHash == s_root_container_hash) {
-            flags |= ImGuiTreeNodeFlags_DefaultOpen;
+            // draw child containers
+            for (auto& child : container.m_Containers) {
+                render(child);
+            }
+
+            ImGui::PopID();
+            return;
         }
 
         auto title = get_container_display_name(&container);
-        if (ImGui::TreeNodeEx(title.c_str(), flags)) {
+        if (ImGui::TreeNodeEx(title.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth)) {
             // draw variants
             if (ImGuiEx::BeginWidgetTableLayout()) {
                 for (auto& variant : container.m_Variants) {
@@ -475,6 +479,9 @@ struct RuntimeContainerImpl final : RuntimeContainer {
         if (iter == m_containers.end()) return false;
 
         auto& runtime_container = (*iter).second.get_container();
+        // TODO : some way of specifying format versions depending on the loaded game
+        //        jc3 = version 1
+        //        jc4 = version 3
         AVA_FL_ENSURE(ava::RuntimePropertyContainer::Write(runtime_container, 1, out_buffer), false);
         return true;
     }

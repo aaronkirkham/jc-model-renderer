@@ -14,8 +14,9 @@ namespace game::format
         static ExportedEntity* create(App& app);
         static void            destroy(ExportedEntity* instance);
 
-        bool        wants_to_override_directory_tree() const override { return true; }
-        const char* get_filetype_icon() const override { return ICON_FA_FILE_ARCHIVE; }
+        bool                wants_to_override_directory_tree() const override { return true; }
+        virtual const char* get_name() const { return "Exported Entity"; }
+        const char*         get_filetype_icon() const override { return ICON_FA_FILE_ARCHIVE; }
 
         bool can_be_exported() const override { return true; }
 

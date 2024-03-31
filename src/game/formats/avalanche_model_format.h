@@ -13,6 +13,8 @@ namespace game::format
         static AvalancheModelFormat* create(App& app);
         static void                  destroy(AvalancheModelFormat* instance);
 
+        virtual const char* get_name() const { return "Avalanche Model Format"; }
+
         std::vector<const char*> get_extensions() override { return {"modelc"}; }
     };
 
