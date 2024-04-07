@@ -213,7 +213,7 @@ struct AppImpl final : App {
         return write_binary_file(filepath, buffer);
     }
 
-    bool write_binary_file(const std::filesystem::path& path, ByteArray& buffer) override
+    bool write_binary_file(const std::filesystem::path& path, const ByteArray& buffer) override
     {
         std::ofstream stream(path, std::ios::binary);
         if (stream.fail()) return false;

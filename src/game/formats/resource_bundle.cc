@@ -25,9 +25,8 @@ struct ResourceBundleObject {
         , buffers(std::move(buffers))
     {
         for (const auto& entry : entries) {
-            auto name = std::string(find_in_namehash_lookup_table(entry.m_NameHash));
-
             // generate name if empty
+            auto name = std::string(find_in_namehash_lookup_table(entry.m_NameHash));
             if (name.empty()) {
                 name = fmt::format("{:#04x}", entry.m_NameHash);
 
@@ -55,8 +54,8 @@ struct ResourceBundleObject {
 
         const auto entry_namehash = (*it).second;
 
-        // TODO : probably a better way of doing this instead of a 2nd find - can we just store a pointer on the
-        // unordered_map?
+        // TODO : probably a better way of doing this instead of a 2nd find - can't store a pointer as the vector might
+        // realloc when we support inserting new files..
         auto entry_it = std::find_if(entries.begin(), entries.end(),
                                      [entry_namehash](const ava::ResourceBundle::ResourceEntry& entry) {
                                          return entry.m_NameHash == entry_namehash;
@@ -145,6 +144,50 @@ struct ResourceBundleImpl final : ResourceBundle {
         if (ImGui::Selectable(ICON_FA_WINDOW_CLOSE " Close")) {
             unload(filename);
         }
+    }
+
+    bool export_to(const std::string& filename, const std::filesystem::path& path) override
+    {
+        LOG_INFO("ResourceBundle -> export_to({}, {})", filename, path.generic_string());
+
+        // get the loaded resource bundle
+        auto iter            = m_resource_bundles.find(filename);
+        bool load_file_first = (iter == m_resource_bundles.end());
+
+        if (load_file_first) {
+            if (!load(filename)) return false;
+            iter = m_resource_bundles.find(filename);
+        }
+
+        const auto& export_path = path / std::filesystem::path(filename).stem();
+        std::filesystem::create_directories(export_path);
+
+        for (size_t i = 0; i < (*iter).second.entries.size(); ++i) {
+            const auto& entry  = (*iter).second.entries[i];
+            const auto& buffer = (*iter).second.buffers[i];
+
+            // generate filename if empty
+            auto name = std::string(find_in_namehash_lookup_table(entry.m_NameHash));
+            if (name.empty()) {
+                name = fmt::format("{:#04x}", entry.m_NameHash);
+
+                // append extension if we know the hash
+                auto extension = find_in_namehash_lookup_table(entry.m_ExtensionHash);
+                if (strlen(extension) > 0) {
+                    name += extension;
+                }
+            }
+
+            const auto& export_filename = export_path / name;
+            std::filesystem::create_directories(export_filename.parent_path());
+
+            if (!m_app.write_binary_file(export_filename, buffer)) {
+                LOG_WARNING("ResourceBundle : failed to write \"{}\" from archive.", name);
+            }
+        }
+
+        if (load_file_first) unload(filename);
+        return true;
     }
 
   private:
