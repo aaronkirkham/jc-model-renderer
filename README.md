@@ -13,8 +13,8 @@ We support all the common file formats used in Avalanche Engine games (from 2015
 Download a version from [releases](https://github.com/aaronkirkham/jc-model-renderer/releases) __or__ build it yourself:
  - Clone this repository
  - Run `git submodule update --init --recursive`
- - Run `configure.ps1` with PowerShell
- - Build `out/jc-model-renderer.sln` in Visual Studio
+ - Run `./build_and_run.sh` to build and run, or run `python build.py` manually.
+ - After the first initial run, you can open and build `out/jc-model-renderer.sln` in Visual Studio if preferred.
 
 ### Contributions
 Code contributions are welcomed and encouraged - if you have an idea for a feature or simply want to improve the code, feel free to create a Pull Request!
