@@ -407,28 +407,16 @@ struct RuntimeContainerImpl final : RuntimeContainer {
         app.get_ui().on_render([this](RenderContext& context) {
             std::string _runtime_container_to_unload;
             for (auto& container : m_containers) {
-                bool open  = true;
                 auto title = fmt::format("{} {}##rtpc_editor", get_filetype_icon(), container.first);
 
                 auto dock_id = m_app.get_ui().get_dockspace_id(UI::E_DOCKSPACE_RIGHT);
                 ImGui::SetNextWindowDockID(dock_id, ImGuiCond_Appearing); // TODO: ImGuiCond_FirstUseEver
 
+                bool open = true;
                 if (ImGui::Begin(title.c_str(), &open, (ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoSavedSettings))) {
                     // menu bar
-                    if (ImGui::BeginMenuBar()) {
-                        if (ImGui::BeginMenu("File")) {
-                            // save file
-                            if (ImGui::Selectable(ICON_FA_SAVE " Save to...")) {
-                                std::filesystem::path path;
-                                if (os::get_open_folder(os::FileDialogParams{}, &path)) {
-                                    m_app.save_file(this, container.first, path);
-                                }
-                            }
-
-                            ImGui::EndMenu();
-                        }
-
-                        ImGui::EndMenuBar();
+                    if (!m_app.get_ui().draw_format_menu_bar(this, container.first)) {
+                        open = false;
                     }
 
                     container.second.render();
