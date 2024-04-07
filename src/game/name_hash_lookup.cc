@@ -3,6 +3,7 @@
 #include "name_hash_lookup.h"
 
 #include "app/app.h"
+#include "app/profile.h"
 
 #include <AvaFormatLib/util/byte_array_buffer.h>
 #include <rapidjson/document.h>
@@ -19,6 +20,7 @@ static LookupTable s_namehash_lookup_table;
 
 void load_namehash_lookup_table()
 {
+    ProfileBlock _("Namehash lookup table load");
     ASSERT(!s_namehash_lookup_table_is_loaded);
 
     auto buffer = App::load_internal_resource(INTERNAL_RESOURCE_FILELIST);
@@ -40,7 +42,7 @@ void load_namehash_lookup_table()
     }
 
     s_namehash_lookup_table_is_loaded = true;
-    LOG_INFO("namehash lookup table is loaded. {} entries.", s_namehash_lookup_table.size());
+    LOG_INFO("namehash lookup table loaded {} entries.", s_namehash_lookup_table.size());
 }
 
 const char* find_in_namehash_lookup_table(u32 namehash)

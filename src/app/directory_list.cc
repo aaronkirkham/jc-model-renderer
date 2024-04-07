@@ -160,19 +160,21 @@ static inline std::array kGlobalExtensionFilter{
     "toc"_hash_little,
 };
 
-void DirectoryList::render(App& app, const std::string& tooltip_prefix)
+void DirectoryList::render(App& app, const std::string& tooltip_prefix, bool filter_by_search_terms)
 {
     // folders
     for (auto& folder : folders) {
         bool should_open_tree_node = false;
 
-        // ignore this folder if it doesn't contain anything which matches our search terms
-        if (has_search_terms() && !matches_search_terms(folder)) {
-            continue;
-        }
-        // we have search terms, AND something in this directory matches the terms
-        else if (has_search_terms() && strlen(s_search_terms) >= 4) {
-            should_open_tree_node = true;
+        if (filter_by_search_terms) {
+            // ignore this folder if it doesn't contain anything which matches our search terms
+            if (has_search_terms() && !matches_search_terms(folder)) {
+                continue;
+            }
+            // we have search terms, AND something in this directory matches the terms
+            else if (has_search_terms() && strlen(s_search_terms) >= 4) {
+                should_open_tree_node = true;
+            }
         }
 
         auto& key = folder.name;
@@ -190,7 +192,7 @@ void DirectoryList::render(App& app, const std::string& tooltip_prefix)
         app.get_ui().draw_context_menu(folder.path, nullptr, UI::E_CONTEXT_FOLDER);
 
         if (tree_open) {
-            folder.render(app, tooltip_prefix);
+            folder.render(app, tooltip_prefix, filter_by_search_terms);
             ImGui::TreePop();
         }
     }
@@ -200,7 +202,7 @@ void DirectoryList::render(App& app, const std::string& tooltip_prefix)
         // skip the current file if we're searching and the filename doesn't contain the search terms
         // TODO : don't filter the file if the handler wants to override the tree.
         //        this will make it possible to open .ee archives while filtering and still see all the sub-files.
-        if (has_search_terms() && filename.find(s_search_terms) == std::string::npos) {
+        if (has_search_terms() && filter_by_search_terms && filename.find(s_search_terms) == std::string::npos) {
             continue;
         }
         // global extension filter

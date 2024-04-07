@@ -87,6 +87,24 @@ static bool find_insensitive(const std::string& haystack, const std::string& nee
                           [](char ch1, char ch2) { return toupper(ch1) == toupper(ch2); });
     return (it != haystack.end());
 }
+
+static std::string bytes_to_string(uint64_t bytes, const char* format = "{} {}")
+{
+    static const char* s_suffixes[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB"};
+    if (bytes == 0) {
+        return fmt::format(format, bytes, s_suffixes[0]);
+    }
+
+    auto size = bytes;
+    u32  s    = 0;
+    while (size >= 1024) {
+        ++s;
+        size /= 1024;
+    }
+
+    ASSERT(s <= lengthOf(s_suffixes));
+    return fmt::format(format, size, s_suffixes[s]);
+}
 } // namespace jcmr::utils
 
 #endif // JCMR_APP_UTILS_H_HEADER_GUARD

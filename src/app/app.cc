@@ -18,6 +18,7 @@
 #include "game/formats/avalanche_texture.h"
 #include "game/formats/exported_entity.h"
 #include "game/formats/render_block_model.h"
+#include "game/formats/resource_bundle.h"
 #include "game/formats/runtime_container.h"
 #include "game/formats/xvmc_script.h"
 
@@ -53,6 +54,7 @@ struct AppImpl final : App {
         register_format_handler(game::format::AvalancheModelFormat::create(*this));
         register_format_handler(game::format::AvalancheDataFormat::create(*this));
         register_format_handler(game::format::XVMCScript::create(*this));
+        register_format_handler(game::format::ResourceBundle::create(*this));
 
         // render dictionary
         m_renderer->get_ui().on_render([this](RenderContext&) {
@@ -74,7 +76,7 @@ struct AppImpl final : App {
                 tree.render_search_input();
 
                 if (ImGui::BeginChild("##scroll", ImVec2(0, 0), 0, ImGuiWindowFlags_HorizontalScrollbar)) {
-                    tree.render(*this);
+                    tree.render(*this, "", true);
                 }
 
                 ImGui::EndChild();

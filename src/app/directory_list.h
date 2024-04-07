@@ -23,7 +23,7 @@ struct DirectoryList {
     void sort();
 
     void render_search_input();
-    void render(App& app, const std::string& tooltip_prefix = "");
+    void render(App& app, const std::string& tooltip_prefix = "", bool filter_by_search_terms = false);
 
   private:
     void insert_part(const std::string& part, const std::string& full_path);
