@@ -11,28 +11,27 @@
 #include "render/renderer.h"
 #include "render/ui.h"
 
+#include <imgui_memory_editor/imgui_memory_editor.h>
+
 namespace jcmr::game::format
 {
 struct FallbackFormatHandlerImpl final : FallbackFormatHandler {
     FallbackFormatHandlerImpl(App& app)
         : m_app(app)
     {
+        m_memory_editor.ReadOnly = true;
+
         app.get_ui().on_render([this](RenderContext& context) {
             std::string _file_to_unload;
             for (auto& file : m_loaded_files) {
-                bool open = true;
-                ImGui::SetNextWindowSize({850, 500}, ImGuiCond_Appearing);
+                auto dock_id = m_app.get_ui().get_dockspace_id(UI::E_DOCKSPACE_RIGHT);
+                ImGui::SetNextWindowDockID(dock_id, ImGuiCond_Appearing); // TODO: ImGuiCond_FirstUseEver
 
                 auto title = fmt::format("{} {}", ICON_FA_FILE, file.first.c_str());
 
+                bool open = true;
                 if (ImGui::Begin(title.c_str(), &open, ImGuiWindowFlags_NoSavedSettings)) {
-                    auto size = ImGui::GetContentRegionAvail();
-
-                    // ImGui::PushItemWidth(-1);
-                    // TODO : hex editor view
-                    // https://github.com/ocornut/imgui_club/blob/main/imgui_memory_editor/imgui_memory_editor.h
-                    ImGui::InputTextMultiline("##text_editor", (char*)file.second.data(), file.second.size(), size,
-                                              ImGuiInputTextFlags_ReadOnly);
+                    m_memory_editor.DrawContents((char*)file.second.data(), file.second.size());
                 }
 
                 if (!open) {
@@ -87,6 +86,7 @@ struct FallbackFormatHandlerImpl final : FallbackFormatHandler {
   private:
     App&                                       m_app;
     std::unordered_map<std::string, ByteArray> m_loaded_files;
+    MemoryEditor                               m_memory_editor;
 };
 
 FallbackFormatHandler* FallbackFormatHandler::create(App& app)

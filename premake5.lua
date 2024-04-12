@@ -50,6 +50,7 @@ project "jc-model-renderer"
     "vendor/glm",
     "vendor/httplib",
     "vendor/imgui",
+    "vendor/imgui_club",
     "vendor/rapidjson/include",
     "vendor/spdlog/include",
     "vendor/tinyxml2",

@@ -14,6 +14,7 @@
                 "${workspaceFolder}/vendor/fmt/include",
                 "${workspaceFolder}/vendor/glm",
                 "${workspaceFolder}/vendor/imgui",
+                "${workspaceFolder}/vendor/imgui_club",
                 "${workspaceFolder}/vendor/rapidjson/include",
                 "${workspaceFolder}/vendor/tinyxml2",
                 "${workspaceFolder}/vendor/argparse"
