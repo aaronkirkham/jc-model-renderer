@@ -30,6 +30,7 @@
 
 out/
 src/assets.aps
+src_old/
 *.cache
 settings.json
 imgui.ini
