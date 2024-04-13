@@ -19,8 +19,6 @@ struct FallbackFormatHandlerImpl final : FallbackFormatHandler {
     FallbackFormatHandlerImpl(App& app)
         : m_app(app)
     {
-        m_memory_editor.ReadOnly = true;
-
         app.get_ui().on_render([this](RenderContext& context) {
             std::string _file_to_unload;
             for (auto& file : m_loaded_files) {
@@ -30,8 +28,13 @@ struct FallbackFormatHandlerImpl final : FallbackFormatHandler {
                 auto title = fmt::format("{} {}", ICON_FA_FILE, file.first.c_str());
 
                 bool open = true;
-                if (ImGui::Begin(title.c_str(), &open, ImGuiWindowFlags_NoSavedSettings)) {
-                    m_memory_editor.DrawContents((char*)file.second.data(), file.second.size());
+                if (ImGui::Begin(title.c_str(), &open, (ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoSavedSettings))) {
+                    // menu bar
+                    if (!m_app.get_ui().draw_format_menu_bar(this, file.first)) {
+                        open = false;
+                    }
+
+                    m_memory_editor.DrawContents((void*)file.second.data(), file.second.size());
                 }
 
                 if (!open) {
@@ -74,8 +77,11 @@ struct FallbackFormatHandlerImpl final : FallbackFormatHandler {
 
     bool save(const std::string& filename, ByteArray* out_buffer) override
     {
-        //
-        return false;
+        auto iter = m_loaded_files.find(filename);
+        if (iter == m_loaded_files.end()) return false;
+
+        *out_buffer = (*iter).second;
+        return true;
     }
 
     bool is_loaded(const std::string& filename) const override

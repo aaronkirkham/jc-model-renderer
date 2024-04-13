@@ -89,6 +89,12 @@ struct AppImpl final : App {
             if (ImGui::Begin("Dropzone")) {
                 auto& tree = m_current_game->get_dropzone_tree();
 
+                // WIP
+                // TODO : need to add some kind of flags to the DirectoryList so that we can control how the context
+                //        menu works in this context. we don't want to allow users to save to the dropzone from here as
+                //        it doesn't make much sense. we also want the file to load directly from disk when opening, and
+                //        not be loaded from archives.
+
                 if (!tree.empty()) {
                     tree.render_search_input();
 
