@@ -278,6 +278,7 @@ struct AppImpl final : App {
     }
 
     const std::unordered_map<u32, game::IFormat*>& get_format_handlers() const override { return m_format_handlers; }
+    game::IFormat* get_fallback_format_handler() const { return m_fallback_format_handler; }
 
     void register_file_read_handler(FileHandler_t callback) override { m_file_read_handlers.emplace_back(callback); }
     const std::vector<FileHandler_t>& get_file_read_handlers() const override { return m_file_read_handlers; }

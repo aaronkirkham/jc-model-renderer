@@ -45,6 +45,7 @@ struct App {
     virtual game::IFormat* get_format_handler(u32 extension_hash) const                         = 0;
     virtual game::IFormat* get_format_handler_for_file(const std::filesystem::path& path) const = 0;
     virtual const std::unordered_map<u32, game::IFormat*>& get_format_handlers() const          = 0;
+    virtual game::IFormat*                                 get_fallback_format_handler() const  = 0;
 
     virtual void                              register_file_read_handler(FileHandler_t callback) = 0;
     virtual const std::vector<FileHandler_t>& get_file_read_handlers() const                     = 0;

@@ -130,17 +130,46 @@ struct UIImpl final : UI {
                 format = context_menu_get_format_handler_for_file(filename);
             }
 
-            // save file
-            if (ImGui::Selectable(ICON_FA_SAVE " Save to...")) {
-                std::filesystem::path path;
-                if (os::get_open_folder(os::FileDialogParams{}, &path)) {
-                    m_app.save_file(format, filename, path);
+            // open buttons
+            if (format) {
+                auto* fallback_handler = m_app.get_fallback_format_handler();
+
+                // open file
+                // NOTE : don't show this button if the handler for this file is the fallback handler
+                if (format != fallback_handler) {
+                    if (ImGui::Selectable(ICON_FA_FOLDER_OPEN " Open")) {
+                        if (!format->load(filename)) {
+                            LOG_ERROR("Failed to load file '{}' with handler '{}'!", filename, format->get_name());
+                            DEBUG_BREAK();
+                        }
+                    }
                 }
+
+                // open file with hex editor
+                if (ImGui::Selectable(ICON_FA_FOLDER_OPEN " Open in Hex Editor")) {
+                    if (fallback_handler && !fallback_handler->load(filename)) {
+                        LOG_ERROR("Failed to load file '{}' with fallback handler!", filename);
+                        DEBUG_BREAK();
+                    }
+                }
+
+                ImGui::Separator();
             }
 
-            // save to dropzone
-            if (ImGui::Selectable(ICON_FA_SAVE " Save to dropzone")) {
-                m_app.save_file(format, filename, "dropzone");
+            // save buttons
+            {
+                // save file
+                if (ImGui::Selectable(ICON_FA_SAVE " Save to...")) {
+                    std::filesystem::path path;
+                    if (os::get_open_folder(os::FileDialogParams{}, &path)) {
+                        m_app.save_file(format, filename, path);
+                    }
+                }
+
+                // save to dropzone
+                if (ImGui::Selectable(ICON_FA_SAVE " Save to dropzone")) {
+                    m_app.save_file(format, filename, "dropzone");
+                }
             }
 
             // format specific
