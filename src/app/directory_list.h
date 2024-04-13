@@ -21,6 +21,8 @@ struct DirectoryList {
 
     void add(const std::string& filepath);
     void sort();
+    void clear();
+    bool empty() const;
 
     void render_search_input();
     void render(App& app, const std::string& tooltip_prefix = "", bool filter_by_search_terms = false);

@@ -33,6 +33,7 @@ struct JustCause4Impl final : JustCause4 {
 
         // load shader bundle : ShadersDX11_F.shader_bundle
 
+        load_dropzone(m_directory);
         // load_shader_bundle();
         // init_shader_constants();
     }

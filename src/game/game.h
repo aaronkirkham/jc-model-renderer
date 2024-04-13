@@ -3,6 +3,8 @@
 
 #include "platform.h"
 
+#include "app/directory_list.h"
+
 namespace ava::AvalancheTexture
 {
 struct TextureEntry;
@@ -50,6 +52,10 @@ struct IGame {
     virtual const std::filesystem::path& get_directory() const = 0;
 
     virtual ResourceManager* get_resource_manager() = 0;
+
+    DirectoryList  m_dropzone_tree;
+    void           load_dropzone(const std::filesystem::path& path);
+    DirectoryList& get_dropzone_tree() { return m_dropzone_tree; }
 };
 } // namespace jcmr
 

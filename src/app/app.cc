@@ -28,6 +28,7 @@
 #include <Windows.h>
 #include <fstream>
 #include <imgui.h>
+#include <imgui_internal.h>
 
 namespace jcmr
 {
@@ -59,8 +60,8 @@ struct AppImpl final : App {
         // render dictionary
         m_renderer->get_ui().on_render([this](RenderContext&) {
             auto dock_id = m_renderer->get_ui().get_dockspace_id(UI::E_DOCKSPACE_LEFT);
-            ImGui::SetNextWindowDockID(dock_id, ImGuiCond_Appearing);
 
+            ImGui::SetNextWindowDockID(dock_id, ImGuiCond_Once);
             if (ImGui::Begin("Files")) {
                 if (!m_current_game) return;
 
@@ -83,6 +84,32 @@ struct AppImpl final : App {
             }
 
             ImGui::End();
+
+            ImGui::SetNextWindowDockID(dock_id, ImGuiCond_Once);
+            if (ImGui::Begin("Dropzone")) {
+                auto& tree = m_current_game->get_dropzone_tree();
+
+                if (!tree.empty()) {
+                    tree.render_search_input();
+
+                    if (ImGui::BeginChild("##scroll", ImVec2(0, 0), 0, ImGuiWindowFlags_HorizontalScrollbar)) {
+                        tree.render(*this, "", true);
+                    }
+
+                    ImGui::EndChild();
+                } else {
+                    ImGui::TextDisabled("You don't have any files in your dropzone folder.");
+                }
+            }
+
+            ImGui::End();
+
+            // focus the files tab by default
+            static bool _once = false;
+            if (!_once) {
+                ImGui::FocusWindow(ImGui::FindWindowByName("Files"));
+                _once = true;
+            }
         });
     }
 

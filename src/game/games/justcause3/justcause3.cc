@@ -37,6 +37,7 @@ struct JustCause3Impl final : JustCause3 {
         m_resource_manager->set_flags(ResourceManager::E_FLAG_LEGACY_ARCHIVE_TABLE);
         m_resource_manager->load_dictionary(INTERNAL_RESOURCE_JUSTCAUSE3_DICTIONARY);
 
+        load_dropzone(m_directory);
         load_shader_bundle();
         init_shader_constants();
     }

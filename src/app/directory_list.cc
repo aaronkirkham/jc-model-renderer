@@ -82,6 +82,17 @@ void DirectoryList::sort()
     }
 }
 
+void DirectoryList::clear()
+{
+    folders.clear();
+    files.clear();
+}
+
+bool DirectoryList::empty() const
+{
+    return folders.empty() && files.empty();
+}
+
 void DirectoryList::render_search_input()
 {
     const auto& style       = ImGui::GetStyle();
