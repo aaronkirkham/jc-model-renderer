@@ -7,11 +7,6 @@
 namespace jcmr
 {
 struct CameraImpl final : Camera {
-    CameraImpl(Renderer& renderer)
-        : m_renderer(renderer)
-    {
-    }
-
     void rotate(float yaw, float pitch) override
     {
         auto rot = m_rotation;
@@ -30,7 +25,7 @@ struct CameraImpl final : Camera {
 
     void update(RenderContext& context) override
     {
-        update_matrices(context.width, context.height);
+        update_matrices();
 
         // update the render context
         context.proj_matrix      = m_projection_matrix;
@@ -38,16 +33,18 @@ struct CameraImpl final : Camera {
         context.view_proj_matrix = m_view_projection_matrix;
     }
 
-    void resize(u32 width, u32 height) override { m_projection_dirty = true; }
+    void resize(u32 width, u32 height) override
+    {
+        m_projection_dirty = true;
+        update_matrices(width, height);
+    }
 
   private:
-    void update_matrices(u32 width, u32 height)
+    void update_matrices(u32 width = 0, u32 height = 0)
     {
-        if (width == 0 || height == 0) return;
-
         bool view_projection_dirty = false;
 
-        if (m_projection_dirty) {
+        if (m_projection_dirty && (width != 0 && height != 0)) {
             m_projection_matrix =
                 glm::perspectiveFov(glm::radians(m_fov), (float)width, (float)height, m_near_clip, m_far_clip);
             m_projection_dirty    = false;
@@ -68,22 +65,21 @@ struct CameraImpl final : Camera {
     }
 
   private:
-    Renderer& m_renderer;
-    float     m_fov                    = 45.0f;
-    float     m_near_clip              = 0.1f;
-    float     m_far_clip               = 10'000.0f;
-    vec3      m_position               = vec3(0, 1, -5);
-    quat      m_rotation               = quat();
-    mat4      m_view_matrix            = mat4(1);
-    mat4      m_projection_matrix      = mat4(1);
-    mat4      m_view_projection_matrix = mat4(1);
-    bool      m_view_dirty             = true;
-    bool      m_projection_dirty       = true;
+    float m_fov                    = 45.0f;
+    float m_near_clip              = 0.1f;
+    float m_far_clip               = 10'000.0f;
+    vec3  m_position               = vec3(0, 1, -5);
+    quat  m_rotation               = quat();
+    mat4  m_view_matrix            = mat4(1);
+    mat4  m_projection_matrix      = mat4(1);
+    mat4  m_view_projection_matrix = mat4(1);
+    bool  m_view_dirty             = true;
+    bool  m_projection_dirty       = true;
 };
 
-Camera* Camera::create(Renderer& renderer)
+Camera* Camera::create()
 {
-    return new CameraImpl(renderer);
+    return new CameraImpl();
 }
 
 void Camera::destroy(Camera* instance)

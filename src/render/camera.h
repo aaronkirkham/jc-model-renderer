@@ -9,7 +9,7 @@ struct Renderer;
 struct RenderContext;
 
 struct Camera {
-    static Camera* create(Renderer& renderer);
+    static Camera* create();
     static void    destroy(Camera* instance);
 
     virtual ~Camera() = default;

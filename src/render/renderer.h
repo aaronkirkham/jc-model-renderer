@@ -10,7 +10,6 @@ struct ID3D11Device;
 struct ID3D11DeviceContext;
 struct ID3D11Texture2D;
 struct ID3D11SamplerState;
-struct ID3D11ShaderResourceView;
 struct DDS_PIXELFORMAT;
 struct D3D11_SAMPLER_DESC;
 enum D3D11_BLEND : int;
@@ -25,7 +24,6 @@ struct Renderer;
 struct Texture;
 struct Shader;
 struct UI;
-struct Camera;
 struct RenderPipeline;
 
 namespace game
@@ -38,8 +36,6 @@ struct RenderContext {
     Renderer*            renderer       = nullptr;
     ID3D11Device*        device         = nullptr;
     ID3D11DeviceContext* device_context = nullptr;
-    u32                  width          = 0;
-    u32                  height         = 0;
     std::array<float, 4> clear_colour   = {0, 0, 0, 1};
     mat4                 view_matrix;
     mat4                 proj_matrix;
@@ -95,8 +91,7 @@ struct Renderer {
     virtual bool init(const InitRendererArgs& init_renderer_args) = 0;
     virtual void shutdown()                                       = 0;
 
-    virtual void resize(u32 width, u32 height)         = 0;
-    virtual void resize_gbuffer(u32 width, u32 height) = 0;
+    virtual void resize(u32 width, u32 height) = 0;
 
     virtual std::shared_ptr<Texture> create_texture(const std::string& filename, const ByteArray& buffer) = 0;
     virtual std::shared_ptr<Texture> get_texture(const std::string& filename)                             = 0;
@@ -147,22 +142,13 @@ struct Renderer {
     virtual void draw_indexed(Buffer* buffer, u32 start_index = 0)        = 0;
     virtual void draw_indexed(Buffer* buffer, u32 start_index, u32 count) = 0;
 
-    virtual void            set_pipeline(RenderPipeline* pipeline) = 0;
-    virtual RenderPipeline* get_pipeline() const                   = 0;
-
     virtual void register_pipeline(RenderPipeline* pipeline)   = 0;
     virtual void unregister_pipeline(RenderPipeline* pipeline) = 0;
-
-    virtual const ID3D11ShaderResourceView* get_framebuffer(uint8_t index = 0) const = 0;
-
-    // virtual void add_to_renderlist(const std::vector<game::IRenderBlock*>& render_blocks)      = 0;
-    // virtual void remove_from_renderlist(const std::vector<game::IRenderBlock*>& render_blocks) = 0;
 
     virtual void frame() = 0;
 
     virtual const RenderContext& get_context() const = 0;
     virtual UI&                  get_ui()            = 0;
-    virtual Camera&              get_camera()        = 0;
 };
 } // namespace jcmr
 

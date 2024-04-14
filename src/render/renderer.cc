@@ -9,7 +9,6 @@
 #include "game/render_block.h"
 #include "game/resource_manager.h"
 
-#include "render/camera.h"
 #include "render/dds_texture_loader.h"
 #include "render/render_pipeline.h"
 #include "render/shader.h"
@@ -31,8 +30,7 @@ struct RendererImpl final : Renderer {
     RendererImpl(App& app)
         : m_app(app)
     {
-        m_ui     = UI::create(app, *this);
-        m_camera = Camera::create(*this);
+        m_ui = UI::create(app, *this);
 
         // render output buffer
         m_ui->on_render([&](RenderContext&) {
@@ -49,14 +47,14 @@ struct RendererImpl final : Renderer {
 
     ~RendererImpl()
     {
-        Camera::destroy(m_camera);
+        //
         UI::destroy(m_ui);
     }
 
     bool init(const InitRendererArgs& init_renderer_args) override
     {
         create_device(init_renderer_args);
-        // create_depth_stencil(init_renderer_args.width, init_renderer_args.height);
+        // create_depth_stencil_state(init_renderer_args.width, init_renderer_args.height);
         create_render_target(init_renderer_args.width, init_renderer_args.height);
         // create_gbuffers(init_renderer_args.width, init_renderer_args.height);
         create_blend_state();
@@ -89,8 +87,8 @@ struct RendererImpl final : Renderer {
         m_device_context->RSSetState(nullptr);
 
         destroy_render_target();
-        destroy_gbuffers();
-        destroy_depth_stencil();
+        // destroy_gbuffers();
+        destroy_depth_stencil_state();
 
         SAFE_RELEASE(m_rasterizer_state);
         SAFE_RELEASE(m_blend_state);
@@ -129,30 +127,6 @@ struct RendererImpl final : Renderer {
         // if (m_camera) {
         //     m_camera->resize(width, height);
         // }
-    }
-
-    void resize_gbuffer(u32 width, u32 height) override
-    {
-        LOG_INFO("renderer::resize_gbuffer {} {}", width, height);
-
-        destroy_gbuffers();
-        destroy_depth_stencil();
-
-        create_gbuffers(width, height);
-        create_depth_stencil(width, height);
-
-        m_context.width  = width;
-        m_context.height = height;
-
-        if (m_camera) {
-            m_camera->resize(width, height);
-        }
-
-        D3D11_VIEWPORT viewport{};
-        viewport.Width    = width;
-        viewport.Height   = height;
-        viewport.MaxDepth = 1.0f;
-        m_device_context->RSSetViewports(1, &viewport);
     }
 
     std::shared_ptr<Texture> create_texture(const std::string& filename, const ByteArray& buffer) override
@@ -415,9 +389,6 @@ struct RendererImpl final : Renderer {
         m_device_context->DrawIndexed(count, start_index, 0);
     }
 
-    void            set_pipeline(RenderPipeline* pipeline) { m_pipeline = pipeline; }
-    RenderPipeline* get_pipeline() const { return m_pipeline; }
-
     void register_pipeline(RenderPipeline* pipeline) override
     {
         auto it = std::find(m_pipelines.begin(), m_pipelines.end(), pipeline);
@@ -431,32 +402,6 @@ struct RendererImpl final : Renderer {
         ASSERT(it != m_pipelines.end());
         m_pipelines.erase(it);
     }
-
-    const ID3D11ShaderResourceView* get_framebuffer(uint8_t index) const override
-    {
-        ASSERT(index <= m_gbuffer_srv.size()); // TODO : static_assert
-        return m_gbuffer_srv[index];
-    }
-
-#if 0
-    void add_to_renderlist(const std::vector<game::IRenderBlock*>& render_blocks) override
-    {
-        std::copy(render_blocks.begin(), render_blocks.end(), std::back_inserter(m_render_list));
-
-        // sort by opaque items, so that transparent blocks will be under them
-        // std::sort(m_render_list.begin(), m_render_list.end(),
-        //           [](game::IRenderBlock* lhs, game::IRenderBlock* rhs) { return lhs->IsOpaque() > rhs->IsOpaque();
-        //           });
-    }
-
-    void remove_from_renderlist(const std::vector<game::IRenderBlock*>& render_blocks) override
-    {
-        for (const auto& render_block : render_blocks) {
-            m_render_list.erase(std::remove(m_render_list.begin(), m_render_list.end(), render_block),
-                                m_render_list.end());
-        }
-    }
-#endif
 
     void frame() override
     {
@@ -477,31 +422,21 @@ struct RendererImpl final : Renderer {
 
             m_device_context->ClearRenderTargetView(m_back_buffer, m_context.clear_colour.data());
 
-            if (m_depth_stencil_view) {
-                m_device_context->ClearDepthStencilView(m_depth_stencil_view, (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL),
-                                                        1.0f, 0);
-            }
-
-            // gbuffers
-            for (auto* render_target : m_gbuffer) {
-                if (!render_target) continue;
-                m_device_context->ClearRenderTargetView(render_target, m_context.clear_colour.data());
+            for (const auto* pipeline : m_pipelines) {
+                pipeline->clear(m_context.clear_colour.data());
             }
         }
 
         // update camera
-        m_camera->update(m_context);
+        // m_camera->update(m_context);
 
         // global constants
         // TODO
 
-        // render pipeline
-        if (m_pipeline) {
-            set_depth_enabled(true);
-            m_device_context->OMSetRenderTargets(m_gbuffer.size(), &m_gbuffer[0], m_depth_stencil_view);
-
+        // render pipelines
+        for (const auto* pipeline : m_pipelines) {
             m_app.get_game()->setup_render_constants(m_context);
-            m_pipeline->render(m_context);
+            pipeline->render(m_context);
         }
 
         // render ui
@@ -516,7 +451,6 @@ struct RendererImpl final : Renderer {
 
     const RenderContext& get_context() const override { return m_context; }
     UI&                  get_ui() override { return *m_ui; }
-    Camera&              get_camera() override { return *m_camera; }
 
   private:
     void create_device(const InitRendererArgs& init_renderer_args)
@@ -566,7 +500,7 @@ struct RendererImpl final : Renderer {
 #endif
     }
 
-    void create_depth_stencil(u32 width, u32 height)
+    void create_depth_stencil_state(u32 width, u32 height)
     {
         D3D11_DEPTH_STENCIL_DESC desc{};
         desc.DepthEnable                  = true;
@@ -601,35 +535,14 @@ struct RendererImpl final : Renderer {
 
         // enable depth
         m_device_context->OMSetDepthStencilState(m_depth_stencil_enabled_state, 1);
-
-        // create the depth buffer texture
-        m_depth_texture =
-            create_texture(width, height, DXGI_FORMAT_R24G8_TYPELESS,
-                           (D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE), "Renderer depth stencil texture");
-
-        // create depth stencil view
-        D3D11_DEPTH_STENCIL_VIEW_DESC view_desc;
-        view_desc.Format             = DXGI_FORMAT_D24_UNORM_S8_UINT;
-        view_desc.ViewDimension      = D3D11_DSV_DIMENSION_TEXTURE2D;
-        view_desc.Texture2D.MipSlice = 0;
-        view_desc.Flags              = 0;
-
-        result = m_device->CreateDepthStencilView(m_depth_texture, &view_desc, &m_depth_stencil_view);
-        ASSERT(SUCCEEDED(result));
-
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
-        D3D_SET_OBJECT_NAME_A(m_depth_stencil_view, "Renderer depth stencil view");
-#endif
     }
 
-    void destroy_depth_stencil()
+    void destroy_depth_stencil_state()
     {
         m_device_context->OMSetDepthStencilState(nullptr, 0);
 
         SAFE_RELEASE(m_depth_stencil_enabled_state);
         SAFE_RELEASE(m_depth_stencil_disabled_state);
-        SAFE_RELEASE(m_depth_stencil_view);
-        SAFE_RELEASE(m_depth_texture);
     }
 
     void create_render_target(u32 width, u32 height)
@@ -663,58 +576,6 @@ struct RendererImpl final : Renderer {
 
         // free back buffer
         SAFE_RELEASE(m_back_buffer);
-    }
-
-    void create_render_target(u32 width, u32 height, DXGI_FORMAT format, ID3D11RenderTargetView** out_render_target,
-                              ID3D11ShaderResourceView** out_srv, const char* debug_name)
-    {
-        auto _tex_debug_name = fmt::format("Renderer GBuffer {} Texture", debug_name);
-
-        auto* texture = create_texture(width, height, format, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE),
-                                       _tex_debug_name.c_str());
-
-        auto hr = m_device->CreateRenderTargetView(texture, nullptr, out_render_target);
-        ASSERT(SUCCEEDED(hr));
-
-        D3D11_SHADER_RESOURCE_VIEW_DESC desc{};
-        desc.Format        = format;
-        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        desc.Texture2D     = {0, (UINT)-1};
-        hr                 = m_device->CreateShaderResourceView(texture, &desc, out_srv);
-        ASSERT(SUCCEEDED(hr));
-
-        if (texture) {
-            texture->Release();
-            texture = nullptr;
-        }
-
-#ifdef RENDERER_REPORT_LIVE_OBJECTS
-        auto _rt_debug_name = fmt::format("Renderer GBuffer {}", debug_name);
-        D3D_SET_OBJECT_NAME_A(*out_render_target, _rt_debug_name.c_str());
-
-        auto _srv_debug_name = fmt::format("Renderer GBuffer {} SRV", debug_name);
-        D3D_SET_OBJECT_NAME_A(*out_srv, _srv_debug_name.c_str());
-#endif
-    }
-
-    void create_gbuffers(u32 width, u32 height)
-    {
-        create_render_target(width, height, DXGI_FORMAT_R8G8B8A8_UNORM, &m_gbuffer[0], &m_gbuffer_srv[0], "Diffuse");
-        create_render_target(width, height, DXGI_FORMAT_R10G10B10A2_UNORM, &m_gbuffer[1], &m_gbuffer_srv[1], "Normal");
-        create_render_target(width, height, DXGI_FORMAT_R8G8B8A8_UNORM, &m_gbuffer[2], &m_gbuffer_srv[2], "Properties");
-        create_render_target(width, height, DXGI_FORMAT_R8G8B8A8_UNORM, &m_gbuffer[3], &m_gbuffer_srv[3],
-                             "PropertiesEx");
-    }
-
-    void destroy_gbuffers()
-    {
-        for (auto* render_target_srv : m_gbuffer_srv) {
-            SAFE_RELEASE(render_target_srv);
-        }
-
-        for (auto* render_target : m_gbuffer) {
-            SAFE_RELEASE(render_target);
-        }
     }
 
     void create_blend_state()
@@ -788,28 +649,19 @@ struct RendererImpl final : Renderer {
     }
 
   private:
-    App&          m_app;
-    UI*           m_ui     = nullptr;
-    Camera*       m_camera = nullptr;
-    RenderContext m_context;
-
-    RenderPipeline*              m_pipeline = nullptr;
+    App&                         m_app;
+    UI*                          m_ui = nullptr;
+    RenderContext                m_context;
     std::vector<RenderPipeline*> m_pipelines;
 
-    ID3D11Device*                            m_device         = nullptr;
-    ID3D11DeviceContext*                     m_device_context = nullptr;
-    IDXGISwapChain*                          m_swap_chain     = nullptr;
-    ID3D11RenderTargetView*                  m_back_buffer    = nullptr;
-    std::array<ID3D11RenderTargetView*, 4>   m_gbuffer        = {nullptr};
-    std::array<ID3D11ShaderResourceView*, 4> m_gbuffer_srv    = {nullptr};
-
-    ID3D11Texture2D*         m_depth_texture                = nullptr;
+    ID3D11Device*            m_device                       = nullptr;
+    ID3D11DeviceContext*     m_device_context               = nullptr;
+    IDXGISwapChain*          m_swap_chain                   = nullptr;
+    ID3D11RenderTargetView*  m_back_buffer                  = nullptr;
     ID3D11DepthStencilState* m_depth_stencil_enabled_state  = nullptr;
     ID3D11DepthStencilState* m_depth_stencil_disabled_state = nullptr;
-    ID3D11DepthStencilView*  m_depth_stencil_view           = nullptr;
     ID3D11BlendState*        m_blend_state                  = nullptr;
     ID3D11RasterizerState*   m_rasterizer_state             = nullptr;
-
 #ifdef _DEBUG
     ID3D11Debug* m_debugger = nullptr;
 #endif

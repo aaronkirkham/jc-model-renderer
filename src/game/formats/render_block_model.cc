@@ -46,10 +46,6 @@ struct RenderBlockRenderer {
 
     ~RenderBlockRenderer()
     {
-        if (m_app.get_renderer().get_pipeline() == m_pipeline) {
-            m_app.get_renderer().set_pipeline(nullptr);
-        }
-
         if (m_pipeline) {
             RenderPipeline::destroy(m_pipeline);
             m_pipeline = nullptr;
@@ -62,8 +58,15 @@ struct RenderBlockRenderer {
 
     void resize(u32 width, u32 height)
     {
+        if (!m_initialized) {
+            m_pipeline->init(width, height);
+            m_initialized = true;
+            m_width       = width;
+            m_height      = height;
+        }
+
         if (m_width != width || m_height != height) {
-            m_app.get_renderer().resize_gbuffer(width, height);
+            m_pipeline->resize(width, height);
             m_width  = width;
             m_height = height;
         }
@@ -74,13 +77,8 @@ struct RenderBlockRenderer {
         auto avail_size = ImGui::GetContentRegionAvail();
         resize((u32)avail_size.x, (u32)avail_size.y);
 
-        // TODO : each pipeline will need it's own g-buffer textures as if we want to render 2 things side by side, it
-        //        currently won't work.
-        m_app.get_renderer().set_pipeline(m_pipeline);
-
         // draw framebuffer
-        auto* framebuffer =
-            const_cast<ID3D11ShaderResourceView*>(m_app.get_renderer().get_framebuffer(m_preview_buffer));
+        auto* framebuffer = const_cast<ID3D11ShaderResourceView*>(m_pipeline->get_framebuffer(m_preview_buffer));
         ImGui::Image(framebuffer, avail_size);
 
         // viewport camera control
@@ -98,7 +96,7 @@ struct RenderBlockRenderer {
             const float yaw   = signum(delta.x) * (powf(fabsf(delta.x / 220), 1.2f));
             const float pitch = signum(delta.y) * (powf(fabsf(delta.y / 220), 1.2f));
 
-            auto& camera = m_app.get_renderer().get_camera();
+            auto& camera = m_pipeline->get_camera();
             camera.rotate(yaw, pitch);
         }
     }
@@ -109,6 +107,7 @@ struct RenderBlockRenderer {
   public:
     App&                       m_app;
     std::vector<IRenderBlock*> m_render_blocks;
+    bool                       m_initialized = false;
     RenderPipeline*            m_pipeline;
     u32                        m_width          = 0;
     u32                        m_height         = 0;
