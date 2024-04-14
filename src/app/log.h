@@ -16,15 +16,15 @@ template <typename... Args> void log_info(const char* format, const Args&... arg
 
 template <typename... Args> void log_warning(const char* format, const Args&... args)
 {
-    fmt::print(fg(fmt::terminal_color::magenta), "WARNING: ");
-    fmt::vprint(format, fmt::make_format_args(args...));
+    fmt::print(fg(fmt::terminal_color::magenta), "!! WARNING !! ");
+    fmt::print(fg(fmt::terminal_color::magenta), format, args...);
     fmt::print("\n");
 }
 
 template <typename... Args> void log_error(const char* format, const Args&... args)
 {
-    fmt::print(fg(fmt::terminal_color::red), "ERROR: ");
-    fmt::vprint(format, fmt::make_format_args(args...));
+    fmt::print(fg(fmt::terminal_color::red), "!! ERROR !! ");
+    fmt::print(fg(fmt::terminal_color::red), format, args...);
     fmt::print("\n");
 }
 
@@ -32,7 +32,7 @@ template <typename... Args> void log_fatal(const char* format, const Args&... ar
 {
     auto str = fmt::vformat(format, fmt::make_format_args(args...));
 
-    fmt::print(bg(fmt::terminal_color::red) | fg(fmt::terminal_color::black), "FATAL:");
+    fmt::print(bg(fmt::terminal_color::red) | fg(fmt::terminal_color::black), "!! FATAL !!");
     fmt::print(" {}", str);
     fmt::print("\n");
 
