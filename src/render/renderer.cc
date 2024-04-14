@@ -470,7 +470,12 @@ struct RendererImpl final : Renderer {
 
         // clear buffers
         {
-            m_device_context->ClearRenderTargetView(m_back_buffer, m_context.clear_colour);
+            // TODO : we still want users to select their own background colour at somepoint (good for screenshots as
+            //        you could green-screen in the old version)
+            const auto& col        = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
+            m_context.clear_colour = {col.x, col.y, col.z, col.w};
+
+            m_device_context->ClearRenderTargetView(m_back_buffer, m_context.clear_colour.data());
 
             if (m_depth_stencil_view) {
                 m_device_context->ClearDepthStencilView(m_depth_stencil_view, (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL),
@@ -480,7 +485,7 @@ struct RendererImpl final : Renderer {
             // gbuffers
             for (auto* render_target : m_gbuffer) {
                 if (!render_target) continue;
-                m_device_context->ClearRenderTargetView(render_target, m_context.clear_colour);
+                m_device_context->ClearRenderTargetView(render_target, m_context.clear_colour.data());
             }
         }
 

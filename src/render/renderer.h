@@ -34,13 +34,13 @@ namespace game
 }
 
 struct RenderContext {
-    float                dt              = 0.0f;
-    Renderer*            renderer        = nullptr;
-    ID3D11Device*        device          = nullptr;
-    ID3D11DeviceContext* device_context  = nullptr;
-    u32                  width           = 0;
-    u32                  height          = 0;
-    float                clear_colour[4] = {0, 0, 0, 1};
+    float                dt             = 0.0f;
+    Renderer*            renderer       = nullptr;
+    ID3D11Device*        device         = nullptr;
+    ID3D11DeviceContext* device_context = nullptr;
+    u32                  width          = 0;
+    u32                  height         = 0;
+    std::array<float, 4> clear_colour   = {0, 0, 0, 1};
     mat4                 view_matrix;
     mat4                 proj_matrix;
     mat4                 view_proj_matrix;
