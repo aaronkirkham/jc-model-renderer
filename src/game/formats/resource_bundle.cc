@@ -62,7 +62,7 @@ struct ResourceBundleObject {
                                      });
         if (entry_it == entries.end()) return false;
 
-        auto index = std::distance(entries.begin(), entry_it);
+        auto index = (size_t)std::distance(entries.begin(), entry_it);
         ASSERT(index <= buffers.size());
         *out_buffer = buffers[index];
         return true;
