@@ -11,9 +11,10 @@
 
 #include <backends/imgui_impl_win32.h>
 
+#define NO_RENDERDOC
 #ifndef NO_RENDERDOC
 #include "renderdoc_app.h"
-static RENDERDOC_API_1_1_2* s_rdoc_api = nullptr;
+static RENDERDOC_API_1_3_0* s_rdoc_api = nullptr;
 #endif
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -27,6 +28,10 @@ struct AppContext {
     bool                 quit = false;
     WNDCLASS             wc{};
     std::vector<Window*> windows;
+
+#ifndef NO_RENDERDOC
+    void* renderdoc_handle = nullptr;
+#endif
 
     Window* find_window(WindowHandle handle) const
     {
@@ -91,6 +96,7 @@ void init(App& app)
                     break;
                 }
 
+#if 0
                 case WM_ENTERSIZEMOVE: {
                     window->resizing = true;
                     return 0;
@@ -113,6 +119,7 @@ void init(App& app)
 
                     return 0;
                 }
+#endif
 
                 case WM_ACTIVATE: {
                     if (wParam == WA_INACTIVE) {
@@ -149,12 +156,15 @@ void init(App& app)
     ASSERT(SUCCEEDED(result));
 
 #ifndef NO_RENDERDOC
-    if (auto* handle = GetModuleHandle("renderdoc.dll")) {
+    if (auto* handle = LoadLibrary("renderdoc.dll")) {
         auto RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(handle, "RENDERDOC_GetAPI");
-        auto ret              = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, (void**)&s_rdoc_api);
+        auto ret              = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_3_0, (void**)&s_rdoc_api);
         ASSERT(ret == 1);
 
+        s_app_context.renderdoc_handle = handle;
         LOG_INFO("renderdoc.dll is loaded.");
+    } else {
+        LOG_ERROR("Failed to load renderdoc.dll! (error {})", GetLastError());
     }
 #endif
 
@@ -191,6 +201,13 @@ void init(App& app)
 void shutdown()
 {
     UnregisterClass(WNDCLASS_NAME, s_app_context.wc.hInstance);
+
+#ifndef NO_RENDERDOC
+    if (s_app_context.renderdoc_handle) {
+        FreeLibrary((HMODULE)s_app_context.renderdoc_handle);
+        s_app_context.renderdoc_handle = nullptr;
+    }
+#endif
 }
 
 Window* create_window(const InitWindowArgs& init_window_args)
