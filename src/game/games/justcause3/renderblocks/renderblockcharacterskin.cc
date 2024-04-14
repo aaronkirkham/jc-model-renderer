@@ -195,7 +195,7 @@ struct RenderBlockCharacterSkinImpl final : RenderBlockCharacterSkin {
         IMGUIEX_TABLE_COL("CharacterSkin UI :-)", ImGui::Text("..."));
     }
 
-    bool setup(RenderContext& context) override
+    bool setup(const RenderContext& context) override
     {
         if (!IRenderBlock::setup(context)) {
             return false;
@@ -253,7 +253,7 @@ struct RenderBlockCharacterSkinImpl final : RenderBlockCharacterSkin {
         return true;
     }
 
-    void draw(RenderContext& context) override
+    void draw(const RenderContext& context) override
     {
         for (const auto& batch : m_skin_batches) {
             context.renderer->draw_indexed(m_index_buffer, batch.m_Offset, batch.m_Size);

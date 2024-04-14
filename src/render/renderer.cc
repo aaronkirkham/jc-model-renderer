@@ -11,6 +11,7 @@
 
 #include "render/camera.h"
 #include "render/dds_texture_loader.h"
+#include "render/render_pipeline.h"
 #include "render/shader.h"
 #include "render/texture.h"
 #include "render/ui.h"
@@ -39,13 +40,7 @@ struct RendererImpl final : Renderer {
             ImGui::SetNextWindowDockID(dock_id, ImGuiCond_Appearing);
 
             if (ImGui::Begin("Output", nullptr)) {
-
-                auto avail = ImGui::GetContentRegionAvail();
-
-                ImGui::Image(m_gbuffer_srv[0], {avail.x, 600});
-                ImGui::Image(m_gbuffer_srv[1], {avail.x, 600});
-                ImGui::Image(m_gbuffer_srv[2], {avail.x, 600});
-                ImGui::Image(m_gbuffer_srv[3], {avail.x, 600});
+                ImGui::Dummy(ImGui::GetContentRegionAvail());
             }
 
             ImGui::End();
@@ -61,15 +56,19 @@ struct RendererImpl final : Renderer {
     bool init(const InitRendererArgs& init_renderer_args) override
     {
         create_device(init_renderer_args);
-        create_depth_stencil(init_renderer_args.width, init_renderer_args.height);
+        // create_depth_stencil(init_renderer_args.width, init_renderer_args.height);
         create_render_target(init_renderer_args.width, init_renderer_args.height);
-        create_gbuffers(init_renderer_args.width, init_renderer_args.height);
+        // create_gbuffers(init_renderer_args.width, init_renderer_args.height);
         create_blend_state();
         create_rasterizer_state();
 
         m_context.renderer       = this;
         m_context.device         = m_device;
         m_context.device_context = m_device_context;
+
+        // m_context.width          = init_renderer_args.width;
+        // m_context.height         = init_renderer_args.height;
+        // m_camera->resize(m_context.width, m_context.height);
 
         m_ui->init(init_renderer_args.window_handle);
         return true;
@@ -112,15 +111,48 @@ struct RendererImpl final : Renderer {
         if (!m_device || !m_device_context) return;
         if (width == 0 || height == 0) return;
 
+        LOG_INFO("renderer::resize {} {}", width, height);
+
         destroy_render_target();
-        destroy_gbuffers();
-        destroy_depth_stencil();
+        // destroy_gbuffers();
+        // destroy_depth_stencil();
 
         m_swap_chain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
 
-        create_depth_stencil(width, height);
-        create_gbuffers(width, height);
+        // create_depth_stencil(width, height);
+        // create_gbuffers(width, height);
         create_render_target(width, height);
+
+        // m_context.width  = width;
+        // m_context.height = height;
+
+        // if (m_camera) {
+        //     m_camera->resize(width, height);
+        // }
+    }
+
+    void resize_gbuffer(u32 width, u32 height) override
+    {
+        LOG_INFO("renderer::resize_gbuffer {} {}", width, height);
+
+        destroy_gbuffers();
+        destroy_depth_stencil();
+
+        create_gbuffers(width, height);
+        create_depth_stencil(width, height);
+
+        m_context.width  = width;
+        m_context.height = height;
+
+        if (m_camera) {
+            m_camera->resize(width, height);
+        }
+
+        D3D11_VIEWPORT viewport{};
+        viewport.Width    = width;
+        viewport.Height   = height;
+        viewport.MaxDepth = 1.0f;
+        m_device_context->RSSetViewports(1, &viewport);
     }
 
     std::shared_ptr<Texture> create_texture(const std::string& filename, const ByteArray& buffer) override
@@ -170,7 +202,8 @@ struct RendererImpl final : Renderer {
         return shader;
     }
 
-    ID3D11Texture2D* create_texture(u32 width, u32 height, u32 format, u32 bind_flags, const char* debug_name) override
+    ID3D11Texture2D* create_texture(u32 width, u32 height, u32 format, u32 bind_flags,
+                                    const char* debug_name) const override
     {
         D3D11_TEXTURE2D_DESC desc{};
         desc.Width              = width;
@@ -195,7 +228,7 @@ struct RendererImpl final : Renderer {
         return texture;
     }
 
-    Sampler* create_sampler(const D3D11_SAMPLER_DESC& desc, const char* debug_name) override
+    Sampler* create_sampler(const D3D11_SAMPLER_DESC& desc, const char* debug_name) const override
     {
         ID3D11SamplerState* sampler = nullptr;
         auto                hr      = m_device->CreateSamplerState(&desc, &sampler);
@@ -208,7 +241,7 @@ struct RendererImpl final : Renderer {
         return sampler;
     }
 
-    Buffer* create_buffer(const void* data, u32 count, u32 stride, u32 type, const char* debug_name) override
+    Buffer* create_buffer(const void* data, u32 count, u32 stride, u32 type, const char* debug_name) const override
     {
         auto buffer    = new Buffer;
         buffer->count  = count;
@@ -237,7 +270,7 @@ struct RendererImpl final : Renderer {
         return buffer;
     }
 
-    Buffer* create_constant_buffer(const void* data, u32 vec4count, const char* debug_name = nullptr) override
+    Buffer* create_constant_buffer(const void* data, u32 vec4count, const char* debug_name = nullptr) const override
     {
         auto buffer    = new Buffer;
         buffer->count  = 1;
@@ -265,7 +298,7 @@ struct RendererImpl final : Renderer {
         return buffer;
     }
 
-    bool map_buffer(Buffer* buffer, const void* data, u64 size) override
+    bool map_buffer(Buffer* buffer, const void* data, u64 size) const override
     {
         D3D11_MAPPED_SUBRESOURCE mapping{};
         if (FAILED(m_device_context->Map(buffer->ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapping))) {
@@ -277,7 +310,7 @@ struct RendererImpl final : Renderer {
         return true;
     }
 
-    void destroy_buffer(Buffer* buffer) override
+    void destroy_buffer(Buffer* buffer) const override
     {
         if (buffer) {
             if (buffer->ptr) buffer->ptr->Release();
@@ -287,7 +320,7 @@ struct RendererImpl final : Renderer {
 
     // TODO : might be nice to move this into the Buffer class itself.
     //        Buffer::map(data, size) would be a nice API.
-    void set_vertex_shader_constants(Buffer* buffer, u32 slot, const void* data, u64 size) override
+    void set_vertex_shader_constants(Buffer* buffer, u32 slot, const void* data, u64 size) const override
     {
         ASSERT(buffer);
         ASSERT(buffer->ptr);
@@ -299,7 +332,7 @@ struct RendererImpl final : Renderer {
 
     // TODO : might be nice to move this into the Buffer class itself.
     //        Buffer::map(data, size) would be a nice API.
-    void set_pixel_shader_constants(Buffer* buffer, u32 slot, const void* data, u64 size) override
+    void set_pixel_shader_constants(Buffer* buffer, u32 slot, const void* data, u64 size) const override
     {
         ASSERT(buffer);
         ASSERT(buffer->ptr);
@@ -309,7 +342,7 @@ struct RendererImpl final : Renderer {
         }
     }
 
-    void set_vertex_stream(Buffer* buffer, i32 slot, u32 offset) override
+    void set_vertex_stream(Buffer* buffer, i32 slot, u32 offset) const override
     {
         ASSERT(buffer);
         ASSERT(buffer->ptr);
@@ -317,7 +350,7 @@ struct RendererImpl final : Renderer {
         m_device_context->IASetVertexBuffers(slot, 1, &buffer->ptr, &buffer->stride, &offset);
     }
 
-    void set_texture(Texture* texture, i32 slot, Sampler* sampler) override
+    void set_texture(Texture* texture, i32 slot, Sampler* sampler) const override
     {
         ID3D11ShaderResourceView* srv = nullptr;
         if (texture) srv = texture->get_srv();
@@ -326,13 +359,13 @@ struct RendererImpl final : Renderer {
         if (sampler) m_device_context->PSSetSamplers(slot, 1, &sampler);
     }
 
-    void set_sampler(Sampler* sampler, i32 slot) override
+    void set_sampler(Sampler* sampler, i32 slot) const override
     {
         ASSERT(sampler);
         m_device_context->PSSetSamplers(slot, 1, &sampler);
     }
 
-    void set_depth_enabled(bool state) override
+    void set_depth_enabled(bool state) const override
     {
         m_device_context->OMSetDepthStencilState(state ? m_depth_stencil_enabled_state : m_depth_stencil_disabled_state,
                                                  1);
@@ -382,6 +415,30 @@ struct RendererImpl final : Renderer {
         m_device_context->DrawIndexed(count, start_index, 0);
     }
 
+    void            set_pipeline(RenderPipeline* pipeline) { m_pipeline = pipeline; }
+    RenderPipeline* get_pipeline() const { return m_pipeline; }
+
+    void register_pipeline(RenderPipeline* pipeline) override
+    {
+        auto it = std::find(m_pipelines.begin(), m_pipelines.end(), pipeline);
+        ASSERT(it == m_pipelines.end());
+        m_pipelines.push_back(pipeline);
+    }
+
+    void unregister_pipeline(RenderPipeline* pipeline) override
+    {
+        auto it = std::find(m_pipelines.begin(), m_pipelines.end(), pipeline);
+        ASSERT(it != m_pipelines.end());
+        m_pipelines.erase(it);
+    }
+
+    const ID3D11ShaderResourceView* get_framebuffer(uint8_t index) const override
+    {
+        ASSERT(index <= m_gbuffer_srv.size()); // TODO : static_assert
+        return m_gbuffer_srv[index];
+    }
+
+#if 0
     void add_to_renderlist(const std::vector<game::IRenderBlock*>& render_blocks) override
     {
         std::copy(render_blocks.begin(), render_blocks.end(), std::back_inserter(m_render_list));
@@ -399,6 +456,7 @@ struct RendererImpl final : Renderer {
                                 m_render_list.end());
         }
     }
+#endif
 
     void frame() override
     {
@@ -412,16 +470,17 @@ struct RendererImpl final : Renderer {
 
         // clear buffers
         {
-            float col[4] = {0, 0, 0, 255};
-            m_device_context->ClearRenderTargetView(m_back_buffer, col);
-            m_device_context->ClearDepthStencilView(m_depth_stencil_view, (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL),
-                                                    1.0f, 0);
+            m_device_context->ClearRenderTargetView(m_back_buffer, m_context.clear_colour);
 
-            // clear gbuffers
+            if (m_depth_stencil_view) {
+                m_device_context->ClearDepthStencilView(m_depth_stencil_view, (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL),
+                                                        1.0f, 0);
+            }
+
+            // gbuffers
             for (auto* render_target : m_gbuffer) {
-                if (render_target) {
-                    m_device_context->ClearRenderTargetView(render_target, col);
-                }
+                if (!render_target) continue;
+                m_device_context->ClearRenderTargetView(render_target, m_context.clear_colour);
             }
         }
 
@@ -431,26 +490,19 @@ struct RendererImpl final : Renderer {
         // global constants
         // TODO
 
-        // render geometry
-        {
+        // render pipeline
+        if (m_pipeline) {
             set_depth_enabled(true);
             m_device_context->OMSetRenderTargets(m_gbuffer.size(), &m_gbuffer[0], m_depth_stencil_view);
 
-            // m_app.get_game()->setup_render_constants(m_context);
-
-            // draw render lsits
-            for (auto* render_block : m_render_list) {
-                if (render_block->setup(m_context)) {
-                    render_block->draw(m_context);
-                    set_default_render_state();
-                }
-            }
+            m_app.get_game()->setup_render_constants(m_context);
+            m_pipeline->render(m_context);
         }
 
         // render ui
         {
             set_depth_enabled(false);
-            m_device_context->OMSetRenderTargets(1, &m_back_buffer, m_depth_stencil_view);
+            m_device_context->OMSetRenderTargets(1, &m_back_buffer, nullptr);
             m_ui->render(m_context);
         }
 
@@ -590,7 +642,7 @@ struct RendererImpl final : Renderer {
         D3D_SET_OBJECT_NAME_A(m_back_buffer, "Renderer back buffer render target");
 #endif
 
-        m_device_context->OMSetRenderTargets(1, &m_back_buffer, m_depth_stencil_view);
+        m_device_context->OMSetRenderTargets(1, &m_back_buffer, nullptr);
 
         D3D11_VIEWPORT viewport{};
         viewport.Width    = width;
@@ -608,16 +660,13 @@ struct RendererImpl final : Renderer {
         SAFE_RELEASE(m_back_buffer);
     }
 
-    void create_render_target_and_srv(u32 width, u32 height, DXGI_FORMAT format,
-                                      ID3D11RenderTargetView** out_render_target, ID3D11ShaderResourceView** out_srv,
-                                      const char* debug_name)
+    void create_render_target(u32 width, u32 height, DXGI_FORMAT format, ID3D11RenderTargetView** out_render_target,
+                              ID3D11ShaderResourceView** out_srv, const char* debug_name)
     {
         auto _tex_debug_name = fmt::format("Renderer GBuffer {} Texture", debug_name);
-        auto _rt_debug_name  = fmt::format("Renderer GBuffer {}", debug_name);
-        auto _srv_debug_name = fmt::format("Renderer GBuffer {} SRV", debug_name);
 
-        auto texture = create_texture(width, height, format, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE),
-                                      _tex_debug_name.c_str());
+        auto* texture = create_texture(width, height, format, (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE),
+                                       _tex_debug_name.c_str());
 
         auto hr = m_device->CreateRenderTargetView(texture, nullptr, out_render_target);
         ASSERT(SUCCEEDED(hr));
@@ -629,34 +678,38 @@ struct RendererImpl final : Renderer {
         hr                 = m_device->CreateShaderResourceView(texture, &desc, out_srv);
         ASSERT(SUCCEEDED(hr));
 
-        SAFE_RELEASE(texture);
+        if (texture) {
+            texture->Release();
+            texture = nullptr;
+        }
 
 #ifdef RENDERER_REPORT_LIVE_OBJECTS
+        auto _rt_debug_name = fmt::format("Renderer GBuffer {}", debug_name);
         D3D_SET_OBJECT_NAME_A(*out_render_target, _rt_debug_name.c_str());
+
+        auto _srv_debug_name = fmt::format("Renderer GBuffer {} SRV", debug_name);
         D3D_SET_OBJECT_NAME_A(*out_srv, _srv_debug_name.c_str());
 #endif
     }
 
     void create_gbuffers(u32 width, u32 height)
     {
-
-        create_render_target_and_srv(width, height, DXGI_FORMAT_R8G8B8A8_UNORM, &m_gbuffer[0], &m_gbuffer_srv[0],
-                                     "Diffuse");
-        create_render_target_and_srv(width, height, DXGI_FORMAT_R10G10B10A2_UNORM, &m_gbuffer[1], &m_gbuffer_srv[1],
-                                     "Normal");
-        create_render_target_and_srv(width, height, DXGI_FORMAT_R8G8B8A8_UNORM, &m_gbuffer[2], &m_gbuffer_srv[2],
-                                     "Properties");
-        create_render_target_and_srv(width, height, DXGI_FORMAT_R8G8B8A8_UNORM, &m_gbuffer[3], &m_gbuffer_srv[3],
-                                     "PropertiesEx");
+        create_render_target(width, height, DXGI_FORMAT_R8G8B8A8_UNORM, &m_gbuffer[0], &m_gbuffer_srv[0], "Diffuse");
+        create_render_target(width, height, DXGI_FORMAT_R10G10B10A2_UNORM, &m_gbuffer[1], &m_gbuffer_srv[1], "Normal");
+        create_render_target(width, height, DXGI_FORMAT_R8G8B8A8_UNORM, &m_gbuffer[2], &m_gbuffer_srv[2], "Properties");
+        create_render_target(width, height, DXGI_FORMAT_R8G8B8A8_UNORM, &m_gbuffer[3], &m_gbuffer_srv[3],
+                             "PropertiesEx");
     }
 
     void destroy_gbuffers()
     {
-        for (auto* render_target_srv : m_gbuffer_srv)
+        for (auto* render_target_srv : m_gbuffer_srv) {
             SAFE_RELEASE(render_target_srv);
+        }
 
-        for (auto* render_target : m_gbuffer)
+        for (auto* render_target : m_gbuffer) {
             SAFE_RELEASE(render_target);
+        }
     }
 
     void create_blend_state()
@@ -735,6 +788,9 @@ struct RendererImpl final : Renderer {
     Camera*       m_camera = nullptr;
     RenderContext m_context;
 
+    RenderPipeline*              m_pipeline = nullptr;
+    std::vector<RenderPipeline*> m_pipelines;
+
     ID3D11Device*                            m_device         = nullptr;
     ID3D11DeviceContext*                     m_device_context = nullptr;
     IDXGISwapChain*                          m_swap_chain     = nullptr;
@@ -755,8 +811,6 @@ struct RendererImpl final : Renderer {
 
     std::unordered_map<std::string, std::weak_ptr<Texture>> m_texture_cache;
     std::unordered_map<std::string, std::weak_ptr<Shader>>  m_shader_cache;
-
-    std::vector<game::IRenderBlock*> m_render_list;
 };
 
 Renderer* Renderer::create(App& app)

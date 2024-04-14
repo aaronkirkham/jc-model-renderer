@@ -14,7 +14,11 @@ struct Camera {
 
     virtual ~Camera() = default;
 
+    // virtual void translate()                    = 0;
+    virtual void rotate(float yaw, float pitch) = 0;
+
     virtual void update(RenderContext& context) = 0;
+    virtual void resize(u32 width, u32 height)  = 0;
 };
 } // namespace jcmr
 

@@ -198,6 +198,7 @@ struct UIImpl final : UI {
         ImGui::PopStyleColor();
     }
 
+    // TODO : some way to allow us to add more items to this..
     bool draw_format_menu_bar(game::IFormat* format, const std::string& filename)
     {
         bool close_button_pressed = false;

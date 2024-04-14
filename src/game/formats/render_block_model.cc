@@ -11,7 +11,9 @@
 
 #include "game/name_hash_lookup.h"
 
+#include "render/camera.h"
 #include "render/imguiex.h"
+#include "render/render_pipeline.h"
 #include "render/renderer.h"
 #include "render/ui.h"
 
@@ -20,6 +22,103 @@
 
 namespace jcmr::game::format
 {
+template <typename T> inline T signum(T a)
+{
+    return a > 0 ? (T)1 : (a < 0 ? (T)-1 : 0);
+}
+
+struct RenderBlockRenderer {
+    RenderBlockRenderer(App& app, const std::vector<IRenderBlock*>& render_blocks)
+        : m_app(app)
+        , m_render_blocks(std::move(render_blocks))
+    {
+        m_pipeline = RenderPipeline::create(app);
+
+        m_pipeline->set_render_callback([&](const RenderContext& context) {
+            for (auto* render_block : m_render_blocks) {
+                if (render_block->setup(context)) {
+                    render_block->draw(context);
+                    // set_default_render_state();
+                }
+            }
+        });
+    }
+
+    ~RenderBlockRenderer()
+    {
+        if (m_app.get_renderer().get_pipeline() == m_pipeline) {
+            m_app.get_renderer().set_pipeline(nullptr);
+        }
+
+        if (m_pipeline) {
+            RenderPipeline::destroy(m_pipeline);
+            m_pipeline = nullptr;
+        }
+
+        for (auto* block : m_render_blocks) {
+            delete block;
+        }
+    }
+
+    void resize(u32 width, u32 height)
+    {
+        if (m_width != width || m_height != height) {
+            m_app.get_renderer().resize_gbuffer(width, height);
+            m_width  = width;
+            m_height = height;
+        }
+    }
+
+    void render_preview()
+    {
+        auto avail_size = ImGui::GetContentRegionAvail();
+        resize((u32)avail_size.x, (u32)avail_size.y);
+
+        // TODO : each pipeline will need it's own g-buffer textures as if we want to render 2 things side by side, it
+        //        currently won't work.
+        m_app.get_renderer().set_pipeline(m_pipeline);
+
+        // draw framebuffer
+        auto* framebuffer =
+            const_cast<ID3D11ShaderResourceView*>(m_app.get_renderer().get_framebuffer(m_preview_buffer));
+        ImGui::Image(framebuffer, avail_size);
+
+        // viewport camera control
+        if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+            m_mouse_down     = true;
+            m_mouse_down_pos = ImGui::GetIO().MousePos;
+        } else if (m_mouse_down && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            m_mouse_down     = false;
+            m_mouse_down_pos = {};
+        } else if (m_mouse_down) {
+            const auto&  pos = ImGui::GetIO().MousePos;
+            const ImVec2 delta{(m_mouse_down_pos.x - pos.x), (m_mouse_down_pos.y - pos.y)};
+            m_mouse_down_pos = pos;
+
+            const float yaw   = signum(delta.x) * (powf(fabsf(delta.x / 220), 1.2f));
+            const float pitch = signum(delta.y) * (powf(fabsf(delta.y / 220), 1.2f));
+
+            auto& camera = m_app.get_renderer().get_camera();
+            camera.rotate(yaw, pitch);
+        }
+    }
+
+    RenderPipeline*                   get_pipeline() const { return m_pipeline; }
+    const std::vector<IRenderBlock*>& get_render_blocks() const { return m_render_blocks; }
+
+  public:
+    App&                       m_app;
+    std::vector<IRenderBlock*> m_render_blocks;
+    RenderPipeline*            m_pipeline;
+    u32                        m_width          = 0;
+    u32                        m_height         = 0;
+    int32_t                    m_preview_buffer = 0;
+
+  private:
+    bool   m_mouse_down = false;
+    ImVec2 m_mouse_down_pos{};
+};
+
 struct RenderBlockModelImpl final : RenderBlockModel {
     RenderBlockModelImpl(App& app)
         : m_app(app)
@@ -27,8 +126,10 @@ struct RenderBlockModelImpl final : RenderBlockModel {
         app.get_ui().on_render([this](RenderContext& context) {
             std::string _render_block_to_unload;
             for (auto& render_block : m_render_blocks) {
+                auto dock_id = m_app.get_ui().get_dockspace_id(UI::E_DOCKSPACE_RIGHT);
+                ImGui::SetNextWindowDockID(dock_id, ImGuiCond_Appearing); // TODO: ImGuiCond_FirstUseEver
+
                 bool open = true;
-                ImGui::SetNextWindowSize({800, 600}, ImGuiCond_Appearing);
                 if (ImGui::Begin(render_block.first.c_str(), &open,
                                  (ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoSavedSettings))) {
                     // menu bar
@@ -36,22 +137,54 @@ struct RenderBlockModelImpl final : RenderBlockModel {
                         open = false;
                     }
 
-                    // draw render blocks
-                    for (auto* block : render_block.second) {
-                        ImGui::PushID(block);
+                    auto* render_block_renderer = render_block.second;
 
-                        if (ImGui::CollapsingHeader(block->get_type_name())) {
-                            ImGui::Indent();
+                    if (ImGuiEx::BeginWidgetTableLayout(0.5f)) {
+                        // left
+                        {
+                            ImGui::TableNextRow();
+                            ImGui::TableNextColumn();
 
+                            // G-Buffer texture preview
+                            // TODO : Move this to the menu bar instead.
                             if (ImGuiEx::BeginWidgetTableLayout()) {
-                                block->draw_ui();
+                                static const char* S_GBUFFER_NAMES[] = {"Diffuse", "Normal", "Properties",
+                                                                        "PropertiesEx"};
+                                IMGUIEX_TABLE_COL("G-Buffer",
+                                                  ImGui::Combo("##preview_buffer",
+                                                               &render_block_renderer->m_preview_buffer,
+                                                               S_GBUFFER_NAMES, IM_ARRAYSIZE(S_GBUFFER_NAMES)));
+                                ImGuiEx::EndWidgetTableLayout();
                             }
 
-                            ImGuiEx::EndWidgetTableLayout();
-                            ImGui::Unindent();
+                            render_block_renderer->render_preview();
                         }
 
-                        ImGui::PopID();
+                        // right
+                        {
+                            ImGui::TableNextColumn();
+                            ImGui::SetNextItemWidth(-1);
+                            // ImGui::PushID(label);
+                            for (auto* render_block : render_block.second->get_render_blocks()) {
+                                ImGui::PushID(render_block);
+
+                                if (ImGui::CollapsingHeader(render_block->get_type_name())) {
+                                    ImGui::Indent();
+
+                                    if (ImGuiEx::BeginWidgetTableLayout()) {
+                                        render_block->draw_ui();
+                                    }
+
+                                    ImGuiEx::EndWidgetTableLayout();
+                                    ImGui::Unindent();
+                                }
+
+                                ImGui::PopID();
+                            }
+                            // ImGui::PopID();
+                        }
+
+                        ImGuiEx::EndWidgetTableLayout();
                     }
                 }
 
@@ -95,11 +228,11 @@ struct RenderBlockModelImpl final : RenderBlockModel {
         AVA_FL_ENSURE(ava::RenderBlockModel::Parse(buffer, &blocks), false);
 
         // create render blocks
+        std::vector<game::IRenderBlock*> render_blocks;
+        render_blocks.reserve(blocks.size());
         {
             ProfileBlock _("RenderBlockModel : create render blocks");
 
-            std::vector<game::IRenderBlock*> render_blocks;
-            render_blocks.reserve(blocks.size());
             for (auto& block : blocks) {
                 auto* render_block = (game::justcause3::RenderBlock*)m_app.get_game()->create_render_block(block.first);
                 if (render_block) {
@@ -111,11 +244,11 @@ struct RenderBlockModelImpl final : RenderBlockModel {
                 }
             }
 
-            render_blocks.shrink_to_fit(); // because we might have failed to create some blocks.
-            m_render_blocks.insert({filename, std::move(render_blocks)});
+            render_blocks.shrink_to_fit(); // because we might have failed to create some blocks with unknown types.
         }
 
-        m_app.get_renderer().add_to_renderlist(m_render_blocks[filename]);
+        auto* renderer = new RenderBlockRenderer(m_app, render_blocks);
+        m_render_blocks.insert({filename, renderer});
         return true;
     }
 
@@ -124,18 +257,17 @@ struct RenderBlockModelImpl final : RenderBlockModel {
         auto iter = m_render_blocks.find(filename);
         if (iter == m_render_blocks.end()) return;
 
-        auto& render_blocks = (*iter).second;
-        m_app.get_renderer().remove_from_renderlist(render_blocks);
-
-        for (auto* block : render_blocks) {
-            delete block;
-        }
+        auto* render_block_renderer = (*iter).second;
+        delete render_block_renderer;
 
         m_render_blocks.erase(iter);
     }
 
     bool save(const std::string& filename, ByteArray* out_buffer) override
     {
+        return false;
+
+#if 0
         auto iter = m_render_blocks.find(filename);
         if (iter == m_render_blocks.end()) return false;
 
@@ -164,6 +296,7 @@ struct RenderBlockModelImpl final : RenderBlockModel {
         }
 
         return true;
+#endif
     }
 
     bool is_loaded(const std::string& filename) const override
@@ -172,9 +305,8 @@ struct RenderBlockModelImpl final : RenderBlockModel {
     }
 
   private:
-    App& m_app;
-
-    std::unordered_map<std::string, std::vector<game::IRenderBlock*>> m_render_blocks;
+    App&                                                  m_app;
+    std::unordered_map<std::string, RenderBlockRenderer*> m_render_blocks;
 };
 
 RenderBlockModel* RenderBlockModel::create(App& app)

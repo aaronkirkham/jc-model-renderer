@@ -19,7 +19,7 @@ IRenderBlock::~IRenderBlock()
     renderer.destroy_buffer(m_index_buffer);
 }
 
-bool IRenderBlock::setup(RenderContext& context)
+bool IRenderBlock::setup(const RenderContext& context)
 {
     if (!m_vertex_shader || !m_pixel_shader || !m_vertex_buffer) return false;
 
@@ -36,7 +36,7 @@ bool IRenderBlock::setup(RenderContext& context)
     return true;
 }
 
-void IRenderBlock::draw(RenderContext& context)
+void IRenderBlock::draw(const RenderContext& context)
 {
     if (m_index_buffer) {
         context.renderer->draw_indexed(m_index_buffer);

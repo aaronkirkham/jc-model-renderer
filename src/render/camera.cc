@@ -12,12 +12,25 @@ struct CameraImpl final : Camera {
     {
     }
 
+    void rotate(float yaw, float pitch) override
+    {
+        auto rot = m_rotation;
+
+        // yaw
+        rot = glm::angleAxis(yaw, vec3(0, -1, 0)) * rot;
+        rot = glm::normalize(rot);
+
+        // pitch
+        rot = glm::angleAxis(pitch, glm::rotate(rot, vec3(-1, 0, 0))) * rot;
+        rot = glm::normalize(rot);
+
+        m_rotation   = rot;
+        m_view_dirty = true;
+    }
+
     void update(RenderContext& context) override
     {
-        if (m_is_dirty) {
-            update_matrices();
-            m_is_dirty = false;
-        }
+        update_matrices(context.width, context.height);
 
         // update the render context
         context.proj_matrix      = m_projection_matrix;
@@ -25,20 +38,33 @@ struct CameraImpl final : Camera {
         context.view_proj_matrix = m_view_projection_matrix;
     }
 
+    void resize(u32 width, u32 height) override { m_projection_dirty = true; }
+
   private:
-    void update_matrices()
+    void update_matrices(u32 width, u32 height)
     {
-        // TODO
-        float width  = 1920.0f;
-        float height = 1080.0f;
+        if (width == 0 || height == 0) return;
 
-        m_projection_matrix = glm::perspectiveFovLH(glm::radians(m_fov), width, height, m_near_clip, m_far_clip);
+        bool view_projection_dirty = false;
 
-        m_view_matrix = glm::translate(mat4(1), m_position);
-        m_view_matrix *= glm::toMat4(m_rotation);
-        m_view_matrix = glm::inverse(m_view_matrix);
+        if (m_projection_dirty) {
+            m_projection_matrix =
+                glm::perspectiveFov(glm::radians(m_fov), (float)width, (float)height, m_near_clip, m_far_clip);
+            m_projection_dirty    = false;
+            view_projection_dirty = true;
+        }
 
-        m_view_projection_matrix = (m_projection_matrix * m_view_matrix);
+        if (m_view_dirty) {
+            m_view_matrix         = glm::toMat4(m_rotation);
+            m_view_matrix         = glm::translate(m_view_matrix, m_position);
+            m_view_matrix         = glm::inverse(m_view_matrix);
+            m_view_dirty          = false;
+            view_projection_dirty = true;
+        }
+
+        if (view_projection_dirty) {
+            m_view_projection_matrix = (m_projection_matrix * m_view_matrix);
+        }
     }
 
   private:
@@ -46,12 +72,13 @@ struct CameraImpl final : Camera {
     float     m_fov                    = 45.0f;
     float     m_near_clip              = 0.1f;
     float     m_far_clip               = 10'000.0f;
-    vec3      m_position               = vec3(0, 3, -10);
+    vec3      m_position               = vec3(0, 1, -5);
     quat      m_rotation               = quat();
     mat4      m_view_matrix            = mat4(1);
     mat4      m_projection_matrix      = mat4(1);
     mat4      m_view_projection_matrix = mat4(1);
-    bool      m_is_dirty               = true;
+    bool      m_view_dirty             = true;
+    bool      m_projection_dirty       = true;
 };
 
 Camera* Camera::create(Renderer& renderer)

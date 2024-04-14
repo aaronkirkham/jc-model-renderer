@@ -263,7 +263,6 @@ struct RenderBlockCharacterImpl final : RenderBlockCharacter {
         IMGUIEX_TABLE_COL("Night Visibility", ImGui::DragFloat("##night_visibility", &m_attributes.night_visibility));
         IMGUIEX_TABLE_COL("Dirt Factor", ImGui::DragFloat("##dirt_factor", &m_attributes.dirt_factor));
         IMGUIEX_TABLE_COL("Emissive", ImGui::DragFloat("##emissive", &m_attributes.emissive));
-        IMGUIEX_TABLE_COL("Diffuse Wrap", ImGui::DragFloat("##diffuse_wrap", &m_attributes.diffuse_wrap));
 
         // LOG_INFO(" - anisotropic={}, {}, {}, {}", m_attributes.anisotropic.x, m_attributes.anisotropic.y,
         //          m_attributes.anisotropic.z, m_attributes.anisotropic.w);
@@ -291,7 +290,7 @@ struct RenderBlockCharacterImpl final : RenderBlockCharacter {
         }
     }
 
-    bool setup(RenderContext& context) override
+    bool setup(const RenderContext& context) override
     {
         if (!IRenderBlock::setup(context)) {
             return false;
@@ -410,7 +409,7 @@ struct RenderBlockCharacterImpl final : RenderBlockCharacter {
         return true;
     }
 
-    void draw(RenderContext& context) override
+    void draw(const RenderContext& context) override
     {
         for (const auto& batch : m_skin_batches) {
             context.renderer->draw_indexed(m_index_buffer, batch.m_Offset, batch.m_Size);

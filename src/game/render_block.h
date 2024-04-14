@@ -33,8 +33,8 @@ namespace game
 
         virtual void draw_ui() {}
 
-        virtual bool setup(RenderContext& context);
-        virtual void draw(RenderContext& context);
+        virtual bool setup(const RenderContext& context);
+        virtual void draw(const RenderContext& context);
 
         // virtual bool bind_texture(i32 index, i32 slot) = 0;
 

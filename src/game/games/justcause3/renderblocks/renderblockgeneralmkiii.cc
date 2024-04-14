@@ -123,7 +123,7 @@ struct RenderBlockGeneralMkIIIImpl final : RenderBlockGeneralMkIII {
         }
     }
 
-    bool setup(RenderContext& context) override
+    bool setup(const RenderContext& context) override
     {
         if (!IRenderBlock::setup(context)) {
             return false;

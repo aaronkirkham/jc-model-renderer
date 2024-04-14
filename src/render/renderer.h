@@ -10,6 +10,7 @@ struct ID3D11Device;
 struct ID3D11DeviceContext;
 struct ID3D11Texture2D;
 struct ID3D11SamplerState;
+struct ID3D11ShaderResourceView;
 struct DDS_PIXELFORMAT;
 struct D3D11_SAMPLER_DESC;
 enum D3D11_BLEND : int;
@@ -25,6 +26,7 @@ struct Texture;
 struct Shader;
 struct UI;
 struct Camera;
+struct RenderPipeline;
 
 namespace game
 {
@@ -32,10 +34,13 @@ namespace game
 }
 
 struct RenderContext {
-    float                dt             = 0.0f;
-    Renderer*            renderer       = nullptr;
-    ID3D11Device*        device         = nullptr;
-    ID3D11DeviceContext* device_context = nullptr;
+    float                dt              = 0.0f;
+    Renderer*            renderer        = nullptr;
+    ID3D11Device*        device          = nullptr;
+    ID3D11DeviceContext* device_context  = nullptr;
+    u32                  width           = 0;
+    u32                  height          = 0;
+    float                clear_colour[4] = {0, 0, 0, 1};
     mat4                 view_matrix;
     mat4                 proj_matrix;
     mat4                 view_proj_matrix;
@@ -90,7 +95,8 @@ struct Renderer {
     virtual bool init(const InitRendererArgs& init_renderer_args) = 0;
     virtual void shutdown()                                       = 0;
 
-    virtual void resize(u32 width, u32 height) = 0;
+    virtual void resize(u32 width, u32 height)         = 0;
+    virtual void resize_gbuffer(u32 width, u32 height) = 0;
 
     virtual std::shared_ptr<Texture> create_texture(const std::string& filename, const ByteArray& buffer) = 0;
     virtual std::shared_ptr<Texture> get_texture(const std::string& filename)                             = 0;
@@ -100,38 +106,38 @@ struct Renderer {
     virtual std::shared_ptr<Shader> get_shader(const std::string& filename) = 0;
 
     virtual ID3D11Texture2D* create_texture(u32 width, u32 height, u32 format, u32 bind_flags,
-                                            const char* debug_name = "") = 0;
+                                            const char* debug_name = "") const = 0;
 
-    virtual Sampler* create_sampler(const D3D11_SAMPLER_DESC& desc, const char* debug_name) = 0;
+    virtual Sampler* create_sampler(const D3D11_SAMPLER_DESC& desc, const char* debug_name) const = 0;
 
     virtual Buffer* create_buffer(const void* data, u32 count, u32 stride, u32 type,
-                                  const char* debug_name = nullptr)                                           = 0;
-    virtual Buffer* create_constant_buffer(const void* data, u32 vec4count, const char* debug_name = nullptr) = 0;
-    virtual bool    map_buffer(Buffer* buffer, const void* data, u64 size)                                    = 0;
-    virtual void    destroy_buffer(Buffer* buffer)                                                            = 0;
+                                  const char* debug_name = nullptr) const                                           = 0;
+    virtual Buffer* create_constant_buffer(const void* data, u32 vec4count, const char* debug_name = nullptr) const = 0;
+    virtual bool    map_buffer(Buffer* buffer, const void* data, u64 size) const                                    = 0;
+    virtual void    destroy_buffer(Buffer* buffer) const                                                            = 0;
 
-    virtual void set_vertex_shader_constants(Buffer* buffer, u32 slot, const void* data, u64 size) = 0;
-    virtual void set_pixel_shader_constants(Buffer* buffer, u32 slot, const void* data, u64 size)  = 0;
+    virtual void set_vertex_shader_constants(Buffer* buffer, u32 slot, const void* data, u64 size) const = 0;
+    virtual void set_pixel_shader_constants(Buffer* buffer, u32 slot, const void* data, u64 size) const  = 0;
 
-    template <typename T> Buffer* create_constant_buffer(T& data, const char* debug_name = nullptr)
+    template <typename T> Buffer* create_constant_buffer(T& data, const char* debug_name = nullptr) const
     {
         return create_constant_buffer(&data, (sizeof(T) / 16), debug_name);
     }
 
-    template <typename T> void set_vertex_shader_constants(Buffer* buffer, u32 slot, T& data)
+    template <typename T> void set_vertex_shader_constants(Buffer* buffer, u32 slot, T& data) const
     {
         return set_vertex_shader_constants(buffer, slot, &data, sizeof(T));
     }
 
-    template <typename T> void set_pixel_shader_constants(Buffer* buffer, u32 slot, T& data)
+    template <typename T> void set_pixel_shader_constants(Buffer* buffer, u32 slot, T& data) const
     {
         return set_pixel_shader_constants(buffer, slot, &data, sizeof(T));
     }
 
-    virtual void set_vertex_stream(Buffer* buffer, i32 slot, u32 offset = 0)         = 0;
-    virtual void set_texture(Texture* texture, i32 slot, Sampler* sampler = nullptr) = 0;
-    virtual void set_sampler(Sampler* sampler, i32 slot)                             = 0;
-    virtual void set_depth_enabled(bool state)                                       = 0;
+    virtual void set_vertex_stream(Buffer* buffer, i32 slot, u32 offset = 0) const         = 0;
+    virtual void set_texture(Texture* texture, i32 slot, Sampler* sampler = nullptr) const = 0;
+    virtual void set_sampler(Sampler* sampler, i32 slot) const                             = 0;
+    virtual void set_depth_enabled(bool state) const                                       = 0;
 
     virtual void set_cull_mode(D3D11_CULL_MODE mode) = 0;
     virtual void set_fill_mode(D3D11_FILL_MODE mode) = 0;
@@ -141,8 +147,16 @@ struct Renderer {
     virtual void draw_indexed(Buffer* buffer, u32 start_index = 0)        = 0;
     virtual void draw_indexed(Buffer* buffer, u32 start_index, u32 count) = 0;
 
-    virtual void add_to_renderlist(const std::vector<game::IRenderBlock*>& render_blocks)      = 0;
-    virtual void remove_from_renderlist(const std::vector<game::IRenderBlock*>& render_blocks) = 0;
+    virtual void            set_pipeline(RenderPipeline* pipeline) = 0;
+    virtual RenderPipeline* get_pipeline() const                   = 0;
+
+    virtual void register_pipeline(RenderPipeline* pipeline)   = 0;
+    virtual void unregister_pipeline(RenderPipeline* pipeline) = 0;
+
+    virtual const ID3D11ShaderResourceView* get_framebuffer(uint8_t index = 0) const = 0;
+
+    // virtual void add_to_renderlist(const std::vector<game::IRenderBlock*>& render_blocks)      = 0;
+    // virtual void remove_from_renderlist(const std::vector<game::IRenderBlock*>& render_blocks) = 0;
 
     virtual void frame() = 0;
 
